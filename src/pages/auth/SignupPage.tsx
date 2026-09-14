@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Store } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 
 export function SignupPage() {
@@ -45,7 +45,7 @@ export function SignupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm">
-          <Store size={28} className="mx-auto text-brand-600" aria-hidden />
+          <Logo size={32} withWordmark={false} className="justify-center" />
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Vérifiez votre email</h1>
           <p className="mt-2 text-sm text-gray-600">
             Un email de confirmation a été envoyé à <strong>{email}</strong>. Cliquez sur le lien
@@ -63,7 +63,7 @@ export function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <Store size={28} className="text-brand-600" aria-hidden />
+          <Logo size={32} withWordmark={false} />
           <h1 className="text-lg font-semibold text-gray-900">Créer ta boutique</h1>
           <p className="text-sm text-gray-500">Crée ton compte pour commencer</p>
         </div>
@@ -102,7 +102,7 @@ export function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60"
+            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {loading ? 'Création…' : 'Créer mon compte'}
           </button>

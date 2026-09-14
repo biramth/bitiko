@@ -122,7 +122,7 @@ export function CatalogPage() {
                     key={p}
                     onClick={() => setPage(p)}
                     className={`h-9 w-9 rounded-full text-sm font-medium ${
-                      p === page ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                      p === page ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
                     {p}

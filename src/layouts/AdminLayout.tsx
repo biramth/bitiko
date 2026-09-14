@@ -1,14 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Package,
-  Tags,
-  ShoppingBag,
-  Settings,
-  LogOut,
-  Store,
-} from 'lucide-react'
+import { LayoutDashboard, Package, Tags, ShoppingBag, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
+import { Logo } from '@/components/ui/Logo'
 
 const navItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -29,9 +22,8 @@ export function AdminLayout() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white p-4 md:flex md:flex-col">
-        <div className="mb-6 flex items-center gap-2 px-2 font-semibold text-gray-900">
-          <Store size={20} className="text-brand-600" aria-hidden />
-          <span>Espace boutique</span>
+        <div className="mb-6 px-2">
+          <Logo size={24} />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {navItems.map(({ to, label, icon: Icon, end }) => (
@@ -52,7 +44,7 @@ export function AdminLayout() {
 
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
-          <span className="font-semibold text-gray-900">Espace boutique</span>
+          <Logo size={22} />
           <button onClick={() => signOut()} aria-label="Déconnexion">
             <LogOut size={20} className="text-gray-600" />
           </button>

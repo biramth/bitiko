@@ -3,6 +3,9 @@ import type { TenantContext } from '@/types'
 const ROOT_DOMAIN = import.meta.env.VITE_ROOT_DOMAIN as string | undefined
 const DEV_SHOP_SLUG = import.meta.env.VITE_DEV_SHOP_SLUG as string | undefined
 
+/** Root domain for display purposes (onboarding preview) even before one is configured. */
+export const DISPLAY_ROOT_DOMAIN = ROOT_DOMAIN ?? 'bitiko.shop'
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 
 /**
@@ -56,6 +59,7 @@ const RESERVED_SLUGS = new Set([
   'dashboard',
   'inscription',
   'connexion',
+  'bitiko',
 ])
 
 const SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/
@@ -68,4 +72,10 @@ export function shopUrl(slug: string): string {
   if (!ROOT_DOMAIN) return `/?boutique=${slug}`
   const protocol = window.location.protocol
   return `${protocol}//${slug}.${ROOT_DOMAIN}`
+}
+
+/** Link back to the Bitiko marketing site from a shop's own storefront. */
+export function platformUrl(): string {
+  if (!ROOT_DOMAIN) return '/'
+  return `${window.location.protocol}//${ROOT_DOMAIN}`
 }

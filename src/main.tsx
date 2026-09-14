@@ -7,6 +7,12 @@ import { AuthProvider } from '@/features/auth/AuthContext'
 import { CartProvider } from '@/features/cart/CartContext'
 import { TenantProvider } from '@/features/tenant/TenantContext'
 import { queryClient } from '@/lib/queryClient'
+import '@fontsource/inter/latin-400.css'
+import '@fontsource/inter/latin-500.css'
+import '@fontsource/inter/latin-600.css'
+import '@fontsource/sora/latin-600.css'
+import '@fontsource/sora/latin-700.css'
+import '@fontsource/sora/latin-800.css'
 import '@/index.css'
 
 createRoot(document.getElementById('root')!).render(

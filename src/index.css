@@ -2,17 +2,38 @@
 
 @theme {
   --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Sora", "Inter", system-ui, sans-serif;
 
-  --color-brand-50: #fdf4ff;
-  --color-brand-100: #fae8ff;
-  --color-brand-200: #f5d0fe;
-  --color-brand-300: #f0abfc;
-  --color-brand-400: #e879f9;
-  --color-brand-500: #d946ef;
-  --color-brand-600: #c026d3;
-  --color-brand-700: #a21caf;
-  --color-brand-800: #86198f;
-  --color-brand-900: #701a75;
+  /* Brand: terracotta — market energy, warmth. Primary buttons/links/accents. */
+  --color-brand-50: #fdf3ee;
+  --color-brand-100: #fbe2d3;
+  --color-brand-200: #f5c2a3;
+  --color-brand-300: #eea073;
+  --color-brand-400: #e37e4b;
+  --color-brand-500: #d9612e;
+  --color-brand-600: #c2481c;
+  --color-brand-700: #9c3814;
+  --color-brand-800: #7a2c10;
+  --color-brand-900: #5c210c;
+
+  /* Ink: deep indigo-night — headings, dark surfaces, trust. */
+  --color-ink-50: #f1f0f7;
+  --color-ink-100: #e1defa;
+  --color-ink-200: #c4bff0;
+  --color-ink-500: #4b4785;
+  --color-ink-700: #2e2a5c;
+  --color-ink-800: #221f45;
+  --color-ink-900: #17152e;
+
+  /* Gold: market-sunrise accent — sparing use (highlights, badges). */
+  --color-gold-300: #f6cc4d;
+  --color-gold-400: #f2b705;
+  --color-gold-500: #d9a203;
+
+  /* Sand: warm neutral background for marketing/auth surfaces. */
+  --color-sand-50: #fffbf5;
+  --color-sand-100: #fdf3e7;
+  --color-sand-200: #f7e6d0;
 }
 
 :root {
@@ -24,4 +45,10 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
 }

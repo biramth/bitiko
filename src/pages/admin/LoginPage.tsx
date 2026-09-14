@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Store } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 
 export function LoginPage() {
@@ -34,7 +34,7 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <Store size={28} className="text-brand-600" aria-hidden />
+          <Logo size={32} withWordmark={false} />
           <h1 className="text-lg font-semibold text-gray-900">Espace boutique</h1>
           <p className="text-sm text-gray-500">Connectez-vous pour gérer votre boutique</p>
         </div>
@@ -72,7 +72,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60"
+            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>

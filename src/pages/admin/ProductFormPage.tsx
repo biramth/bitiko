@@ -259,7 +259,7 @@ export function ProductFormPage() {
           <button
             type="submit"
             disabled={saveMutation.isPending}
-            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60"
+            className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
           </button>

@@ -10,4 +10,10 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  build: {
+    // Fonts should stay as separate cacheable files, never inlined as
+    // base64 into the JS/CSS bundle — matters a lot on the slower mobile
+    // connections this app targets.
+    assetsInlineLimit: 0,
+  },
 })

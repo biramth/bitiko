@@ -27,7 +27,7 @@ export function HomePage() {
           )}
           <Link
             to="/catalogue"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-white hover:bg-brand-700"
           >
             Voir la boutique
             <ArrowRight size={16} aria-hidden />

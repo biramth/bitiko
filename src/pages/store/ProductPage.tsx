@@ -122,7 +122,7 @@ export function ProductPage() {
             <button
               onClick={handleAddToCart}
               disabled={outOfStock}
-              className="flex-1 rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex-1 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {outOfStock ? 'Rupture de stock' : added ? 'Ajouté ✓' : 'Ajouter au panier'}
             </button>

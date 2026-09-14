@@ -2,6 +2,8 @@ import { Link, Outlet } from 'react-router-dom'
 import { ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
+import { Logo } from '@/components/ui/Logo'
+import { platformUrl } from '@/lib/tenant'
 
 export function StoreLayout() {
   const { itemCount } = useCart()
@@ -51,6 +53,12 @@ export function StoreLayout() {
         <p>
           © {new Date().getFullYear()} {shopName}. Tous droits réservés.
         </p>
+        <a
+          href={platformUrl()}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600"
+        >
+          Propulsé par <Logo size={14} withWordmark={false} /> <span className="font-semibold">Bitiko</span>
+        </a>
       </footer>
     </div>
   )

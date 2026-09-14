@@ -1,6 +1,8 @@
-# Boutique en ligne — SaaS multi-boutiques
+# Bitiko — SaaS multi-boutiques
 
-Plateforme façon Shopify : n'importe quel commerçant peut créer un compte, obtenir sa boutique en ligne (catalogue, panier, commandes relayées vers WhatsApp) et la gérer depuis un dashboard — sans compte client, sans paiement en ligne.
+Plateforme façon Shopify pensée pour l'Afrique : n'importe quel commerçant peut créer un compte, obtenir sa boutique en ligne (catalogue, panier, commandes relayées vers WhatsApp) et la gérer depuis un dashboard — sans compte client, sans paiement en ligne compliqué, rapide même sur une connexion mobile moyenne.
+
+**Marque** : *Bitiko*, de « bitik » — le mot wolof pour « petite boutique » (lui-même adapté du français, utilisé au quotidien au Sénégal et en Afrique de l'Ouest francophone). Identité visuelle : terracotta (`#c2481c`) comme couleur principale, indigo profond (`#221f45`) pour le texte/les surfaces sombres, or (`#f2b705`) en accent ponctuel, fond sable chaud pour le marketing. Typo : Sora (titres) + Inter (texte), auto-hébergées via `@fontsource`. Logo : [`src/components/ui/Logo.tsx`](src/components/ui/Logo.tsx) (aussi le favicon, [`public/favicon.svg`](public/favicon.svg)). Tokens de couleur/police définis dans [`src/index.css`](src/index.css).
 
 **Stack** : React + TypeScript + Vite + Tailwind CSS v4 + React Router + TanStack Query + Supabase (Postgres, Auth, Storage, RLS). Le calcul du total et la validation du stock vivent dans une fonction Postgres appelée depuis le client — pas de serveur séparé pour ça. Une future automatisation (domaines personnalisés, facturation) passera par des **Vercel Serverless Functions** (dossier `api/`, déployées avec le frontend, sans infra à gérer) quand ce sera nécessaire.
 

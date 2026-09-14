@@ -38,7 +38,7 @@ export function OrdersPage() {
             key={status}
             onClick={() => setStatusFilter(status)}
             className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-              statusFilter === status ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              statusFilter === status ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {status === 'all' ? 'Toutes' : ORDER_STATUS_LABELS[status]}
@@ -102,7 +102,7 @@ export function OrdersPage() {
               key={p}
               onClick={() => setPage(p)}
               className={`h-9 w-9 rounded-full text-sm font-medium ${
-                p === page ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                p === page ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {p}

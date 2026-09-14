@@ -94,7 +94,7 @@ export function CartPage() {
 
       <Link
         to="/commande"
-        className="mt-6 block w-full rounded-lg bg-gray-900 py-3 text-center text-sm font-medium text-white hover:bg-gray-800"
+        className="mt-6 block w-full rounded-lg bg-brand-600 py-3 text-center text-sm font-medium text-white hover:bg-brand-700"
       >
         Passer la commande
       </Link>
