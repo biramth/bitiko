@@ -20,7 +20,7 @@ create policy "product-images: owner insert" on storage.objects
     and exists (
       select 1 from public.products p
       join public.shops s on s.id = p.shop_id
-      where p.id::text = (storage.foldername(name))[1]
+      where p.id::text = (storage.foldername(storage.objects.name))[1]
         and s.owner_id = auth.uid()
     )
   );
@@ -31,7 +31,7 @@ create policy "product-images: owner delete" on storage.objects
     and exists (
       select 1 from public.products p
       join public.shops s on s.id = p.shop_id
-      where p.id::text = (storage.foldername(name))[1]
+      where p.id::text = (storage.foldername(storage.objects.name))[1]
         and s.owner_id = auth.uid()
     )
   );
@@ -45,7 +45,7 @@ create policy "shop-assets: owner write" on storage.objects
     bucket_id = 'shop-assets'
     and exists (
       select 1 from public.shops s
-      where s.id::text = (storage.foldername(name))[1]
+      where s.id::text = (storage.foldername(storage.objects.name))[1]
         and s.owner_id = auth.uid()
     )
   );
@@ -55,7 +55,7 @@ create policy "shop-assets: owner update" on storage.objects
     bucket_id = 'shop-assets'
     and exists (
       select 1 from public.shops s
-      where s.id::text = (storage.foldername(name))[1]
+      where s.id::text = (storage.foldername(storage.objects.name))[1]
         and s.owner_id = auth.uid()
     )
   );
@@ -65,7 +65,7 @@ create policy "shop-assets: owner delete" on storage.objects
     bucket_id = 'shop-assets'
     and exists (
       select 1 from public.shops s
-      where s.id::text = (storage.foldername(name))[1]
+      where s.id::text = (storage.foldername(storage.objects.name))[1]
         and s.owner_id = auth.uid()
     )
   );

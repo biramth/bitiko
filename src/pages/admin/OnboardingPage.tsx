@@ -23,9 +23,9 @@ export function OnboardingPage() {
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>(
-    'idle',
-  )
+  const [slugStatus, setSlugStatus] = useState<
+    'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'
+  >('idle')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,8 +46,11 @@ export function OnboardingPage() {
       try {
         const available = await isSlugAvailable(slug)
         setSlugStatus(available ? 'available' : 'taken')
-      } catch {
-        setSlugStatus('idle')
+      } catch (err) {
+        setSlugStatus('error')
+        setError(
+          err instanceof Error ? err.message : 'Impossible de vérifier la disponibilité du nom.',
+        )
       }
     }, 400)
     return () => clearTimeout(timeout)
@@ -63,13 +66,16 @@ export function OnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       navigate('/admin', { replace: true })
     },
-    onError: () => setError('Impossible de créer la boutique. Réessayez.'),
+    onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
   })
 
   if (shopLoading) return <Spinner />
   if (existingShop) return <Navigate to="/admin" replace />
 
-  const canSubmit = name.trim().length > 0 && slugStatus === 'available' && whatsappNumber.trim().length > 0
+  const canSubmit =
+    name.trim().length > 0 &&
+    (slugStatus === 'available' || slugStatus === 'error') &&
+    whatsappNumber.trim().length > 0
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
@@ -134,6 +140,13 @@ export function OnboardingPage() {
               {slugStatus === 'invalid' && (
                 <span className="flex items-center gap-1 text-red-600">
                   <XCircle size={14} /> 3 caractères minimum, lettres/chiffres/tirets
+                </span>
+              )}
+              {slugStatus === 'error' && (
+                <span className="flex items-center gap-1 text-red-600">
+                  <XCircle size={14} />
+                  Vérification impossible — la base de données Supabase semble inaccessible
+                  (as-tu appliqué les migrations SQL ?)
                 </span>
               )}
             </p>
