@@ -1,4 +1,5 @@
 import { Store } from 'lucide-react'
+import { platformUrl } from '@/lib/tenant'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function ShopNotFoundPage() {
@@ -12,6 +13,12 @@ export function ShopNotFoundPage() {
         Cette adresse ne correspond à aucune boutique active. Vérifiez le lien ou contactez le
         commerçant.
       </p>
+      <a
+        href={platformUrl()}
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+      >
+        Créer votre boutique
+      </a>
     </div>
   )
 }

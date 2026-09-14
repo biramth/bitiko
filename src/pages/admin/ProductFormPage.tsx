@@ -17,6 +17,7 @@ async function getProductById(id: string): Promise<ProductWithRelations | null> 
     .from('products')
     .select('*, category:categories(*), images:product_images(*)')
     .eq('id', id)
+    .order('sort_order', { referencedTable: 'product_images', ascending: true })
     .maybeSingle()
   if (error) throw error
   return data as ProductWithRelations | null
@@ -83,6 +84,8 @@ export function ProductFormPage() {
     },
     onSuccess: (product) => {
       queryClient.invalidateQueries({ queryKey: ['products', 'admin', shop?.id] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'active'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
       if (!isEditing) {
         navigate(`/admin/produits/${product.id}`, { replace: true })
       }

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { updateShop, uploadShopLogo } from '@/services/shop.service'
+import { normalizeCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -39,7 +40,7 @@ export function SettingsPage() {
         name: name.trim(),
         description: description.trim() || null,
         whatsapp_number: whatsappNumber.trim(),
-        currency,
+        currency: normalizeCurrency(currency),
         address: address.trim() || null,
         logo_url: logoUrl,
       }),
@@ -91,6 +92,10 @@ export function SettingsPage() {
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
+          if (normalizeCurrency(currency) !== currency.trim().toUpperCase()) {
+            setError('Code devise invalide. Utilisez un code ISO 4217 à 3 lettres (ex. XOF, EUR, USD).')
+            return
+          }
           saveMutation.mutate()
         }}
         className="mt-6 space-y-4"

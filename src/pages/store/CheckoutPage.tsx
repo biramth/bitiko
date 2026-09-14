@@ -1,9 +1,15 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { CheckCircle2, MessageCircle } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { createOrder, buildWhatsAppMessage, buildWhatsAppUrl } from '@/services/order.service'
+import {
+  createOrder,
+  buildWhatsAppMessage,
+  buildWhatsAppUrl,
+  type CreateOrderResult,
+} from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -11,39 +17,83 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 export function CheckoutPage() {
   const { items, subtotal, clear } = useCart()
   const { shop } = useTenant()
-  const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
   usePageSeo({ title: shop ? `Commande — ${shop.name}` : 'Commande', noindex: true })
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
+  const [orderResult, setOrderResult] = useState<CreateOrderResult | null>(null)
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const result = await createOrder({
+      return createOrder({
         shopId: shop.id,
         customerName,
         customerPhone,
         items,
       })
-      return result
     },
     onSuccess: (result) => {
-      const message = buildWhatsAppMessage({
-        orderNumber: result.orderNumber,
-        items: result.items,
-        total: result.total,
-        customerName,
-        customerPhone,
-        formatCurrency: (amount) => formatCurrency(amount, currency),
-      })
+      setOrderResult(result)
       clear()
-      const url = buildWhatsAppUrl(shop!.whatsapp_number, message)
-      window.location.href = url
-      navigate('/', { replace: true })
     },
   })
+
+  if (!shop) return null
+
+  if (orderResult) {
+    const message = buildWhatsAppMessage({
+      orderNumber: orderResult.orderNumber,
+      items: orderResult.items,
+      total: orderResult.total,
+      customerName,
+      customerPhone,
+      formatCurrency: (amount) => formatCurrency(amount, currency),
+    })
+    const whatsappUrl = buildWhatsAppUrl(shop.whatsapp_number, message)
+
+    return (
+      <div className="mx-auto max-w-lg px-4 py-10 text-center sm:px-6">
+        <CheckCircle2 size={48} className="mx-auto text-emerald-500" aria-hidden />
+        <h1 className="mt-4 text-2xl font-semibold text-gray-900">Commande créée !</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Commande{' '}
+          <span className="font-semibold text-gray-900">{orderResult.orderNumber}</span>{' '}
+          enregistrée. Ouvrez WhatsApp pour l'envoyer au vendeur.
+        </p>
+
+        <div className="mt-6 rounded-lg border border-gray-200 p-4 text-left">
+          <ul className="space-y-1 text-sm text-gray-600">
+            {orderResult.items.map((item, index) => (
+              <li key={index} className="flex justify-between gap-4">
+                <span>
+                  {item.productName} × {item.quantity}
+                </span>
+                <span>{formatCurrency(item.subtotal, currency)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 text-sm font-semibold text-gray-900">
+            <span>Total ({currency})</span>
+            <span>{formatCurrency(orderResult.total, currency)}</span>
+          </div>
+        </div>
+
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-6 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          <MessageCircle size={18} aria-hidden /> Envoyer sur WhatsApp
+        </a>
+        <Link to="/" className="mt-3 inline-block text-sm font-medium text-gray-600 hover:text-gray-900">
+          Retour à la boutique
+        </Link>
+      </div>
+    )
+  }
 
   if (items.length === 0) {
     return (
@@ -74,9 +124,12 @@ export function CheckoutPage() {
           ))}
         </ul>
         <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 font-semibold text-gray-900">
-          <span>Total</span>
+          <span>Total estimé</span>
           <span>{formatCurrency(subtotal, currency)}</span>
         </div>
+        <p className="mt-2 text-xs text-gray-500">
+          Le total définitif est recalculé au moment de la commande (prix et stock à jour).
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">

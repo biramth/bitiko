@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { LayoutDashboard, Package, Tags, ShoppingBag, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { Logo } from '@/components/ui/Logo'
+import { Spinner } from '@/components/ui/Spinner'
 
 const navItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -58,7 +60,9 @@ export function AdminLayout() {
           ))}
         </nav>
         <main className="flex-1 p-4 sm:p-6">
-          <Outlet />
+          <Suspense fallback={<Spinner />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

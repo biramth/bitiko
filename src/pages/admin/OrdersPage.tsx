@@ -22,12 +22,13 @@ export function OrdersPage() {
   const currency = shop?.currency ?? 'XOF'
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['orders', shop?.id, page],
-    queryFn: () => listOrders(shop!.id, page),
+    queryKey: ['orders', shop?.id, statusFilter, page],
+    queryFn: () =>
+      listOrders(shop!.id, page, statusFilter === 'all' ? undefined : statusFilter),
     enabled: !!shop?.id,
   })
 
-  const orders = data?.orders.filter((o) => statusFilter === 'all' || o.status === statusFilter) ?? []
+  const orders = data?.orders ?? []
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ORDERS_PAGE_SIZE)) : 1
 
   return (
@@ -38,7 +39,10 @@ export function OrdersPage() {
         {STATUS_FILTERS.map((status) => (
           <button
             key={status}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => {
+              setStatusFilter(status)
+              setPage(1)
+            }}
             className={`rounded-full px-3 py-1.5 text-sm font-medium ${
               statusFilter === status ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}

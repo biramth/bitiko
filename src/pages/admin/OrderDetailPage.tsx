@@ -31,6 +31,7 @@ export function OrderDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       queryClient.invalidateQueries({ queryKey: ['orders', shop?.id] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
     },
   })
 
@@ -57,11 +58,20 @@ export function OrderDetailPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-medium text-gray-500">Client</h2>
           <p className="mt-1 font-medium text-gray-900">{order.customer_name}</p>
-          <p className="text-sm text-gray-600">{order.customer_phone}</p>
+          <a
+            href={`tel:${order.customer_phone}`}
+            className="text-sm text-brand-700 hover:text-brand-800"
+          >
+            {order.customer_phone}
+          </a>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-medium text-gray-500">Changer le statut</h2>
+          <label htmlFor="orderStatus" className="sr-only">
+            Statut de la commande
+          </label>
           <select
+            id="orderStatus"
             value={order.status}
             onChange={(e) => statusMutation.mutate(e.target.value as OrderStatus)}
             disabled={statusMutation.isPending}

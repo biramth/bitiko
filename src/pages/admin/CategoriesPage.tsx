@@ -40,7 +40,11 @@ export function CategoriesPage() {
     enabled: !!shop?.id,
   })
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['categories', shop?.id] })
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['categories', shop?.id] })
+    queryClient.invalidateQueries({ queryKey: ['category-product-counts', shop?.id] })
+    queryClient.invalidateQueries({ queryKey: ['products', 'active'] })
+  }
 
   const createMutation = useMutation({
     mutationFn: (categoryName: string) =>
@@ -87,6 +91,7 @@ export function CategoriesPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nouvelle catégorie"
+          aria-label="Nom de la nouvelle catégorie"
           className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
         />
         <button

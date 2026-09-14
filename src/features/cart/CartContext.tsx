@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CART_STORAGE_KEY } from '@/config/constants'
 import { useTenant } from '@/features/tenant/TenantContext'
+import { listProductsByIds } from '@/services/product.service'
 import type { CartItem } from '@/types'
 
 interface CartContextValue {
@@ -79,6 +81,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const clear = () => setItems([])
+
+  // Keep prices/stocks in the cart in sync with the database: a merchant can
+  // change a price or run out of stock while a customer still has items in
+  // their cart. Stale items (deactivated or deleted products) are removed,
+  // and quantities above the available stock are clamped.
+  const productIds = useMemo(() => [...new Set(items.map((i) => i.productId))], [items])
+  const syncKey = productIds.slice().sort().join(',')
+
+  const { data: synced } = useQuery({
+    queryKey: ['cart-sync', shopId, syncKey],
+    queryFn: () => listProductsByIds(productIds),
+    enabled: productIds.length > 0,
+    staleTime: 60_000,
+  })
+
+  useEffect(() => {
+    if (!synced) return
+    setItems((prev) => {
+      let changed = false
+      const next = prev
+        .map((item) => {
+          const current = synced.find((p) => p.id === item.productId && p.active)
+          if (!current || current.stock <= 0) {
+            changed = true
+            return null
+          }
+          let updated = item
+          if (current.price !== item.price) {
+            changed = true
+            updated = { ...updated, price: current.price }
+          }
+          const quantity = Math.min(item.quantity, current.stock)
+          if (quantity !== updated.quantity) {
+            changed = true
+            updated = { ...updated, quantity }
+          }
+          return updated
+        })
+        .filter((i): i is CartItem => i !== null)
+      return changed ? next : prev
+    })
+  }, [synced])
 
   const itemCount = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items])
   const subtotal = useMemo(

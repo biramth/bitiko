@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { Logo } from '@/components/ui/Logo'
+import { Spinner } from '@/components/ui/Spinner'
 import { platformUrl } from '@/lib/tenant'
 
 export function StoreLayout() {
@@ -46,7 +48,9 @@ export function StoreLayout() {
       </header>
 
       <main className="flex-1">
-        <Outlet />
+        <Suspense fallback={<Spinner />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className="border-t border-gray-200 py-8 text-center text-sm text-gray-500">

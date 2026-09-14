@@ -4,6 +4,7 @@ import { PackageSearch, Search } from 'lucide-react'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useCategories } from '@/features/categories/useCategories'
 import { useActiveProducts } from '@/features/products/useProducts'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ProductCard } from '@/features/products/ProductCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -17,7 +18,8 @@ export function CatalogPage() {
   usePageSeo({ title: shop ? `Catalogue — ${shop.name}` : 'Catalogue' })
   const { data: categories } = useCategories(shop?.id)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [search, setSearch] = useState(searchParams.get('recherche') ?? '')
+  const [searchInput, setSearchInput] = useState(searchParams.get('recherche') ?? '')
+  const search = useDebouncedValue(searchInput, 300)
   const [page, setPage] = useState(1)
 
   const categorySlug = searchParams.get('categorie') ?? ''
@@ -47,9 +49,15 @@ export function CatalogPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
           <input
             type="search"
-            value={search}
+            value={searchInput}
             onChange={(e) => {
-              setSearch(e.target.value)
+              setSearchInput(e.target.value)
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev)
+                if (e.target.value) next.set('recherche', e.target.value)
+                else next.delete('recherche')
+                return next
+              })
               setPage(1)
             }}
             placeholder="Rechercher un produit…"
@@ -100,6 +108,12 @@ export function CatalogPage() {
       </div>
 
       <div className="mt-8">
+        {!isLoading && !isError && result && result.total > 0 && (
+          <p className="mb-4 text-sm text-gray-500">
+            {result.total} produit{result.total > 1 ? 's' : ''}
+            {search ? ` pour « ${search} »` : ''}
+          </p>
+        )}
         {isLoading && <Spinner />}
         {isError && <ErrorMessage />}
         {!isLoading && !isError && (result?.products.length ?? 0) === 0 && (

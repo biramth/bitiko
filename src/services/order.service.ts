@@ -58,16 +58,25 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 }
 
-export async function listOrders(shopId: string, page = 1): Promise<{ orders: Order[]; total: number }> {
+export async function listOrders(
+  shopId: string,
+  page = 1,
+  status?: OrderStatus,
+): Promise<{ orders: Order[]; total: number }> {
   const from = (page - 1) * ORDERS_PAGE_SIZE
   const to = from + ORDERS_PAGE_SIZE - 1
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('orders')
     .select('*', { count: 'exact' })
     .eq('shop_id', shopId)
+
+  if (status) query = query.eq('status', status)
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to)
+
   if (error) throw error
   return { orders: data ?? [], total: count ?? 0 }
 }

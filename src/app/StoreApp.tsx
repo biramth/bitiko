@@ -1,9 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { storeRoutes } from '@/routes/StoreRoutes'
+import { StoreRoutes } from '@/routes/StoreRoutes'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
 import { Spinner } from '@/components/ui/Spinner'
+
+const NotFoundPage = lazy(() =>
+  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+)
 
 export function StoreApp() {
   const { isLoading, notFound } = useTenant()
@@ -20,8 +24,15 @@ export function StoreApp() {
 
   return (
     <Routes>
-      {storeRoutes}
-      <Route path="*" element={<NotFoundPage />} />
+      <StoreRoutes />
+      <Route
+        path="*"
+        element={
+          <Suspense fallback={<Spinner />}>
+            <NotFoundPage />
+          </Suspense>
+        }
+      />
     </Routes>
   )
 }

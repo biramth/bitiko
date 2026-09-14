@@ -76,16 +76,19 @@ export function ProductPage() {
             )}
           </div>
           {images.length > 1 && (
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex gap-2" role="tablist" aria-label={`Photos de ${product.name}`}>
               {images.map((img, i) => (
                 <button
                   key={img.id}
+                  role="tab"
+                  aria-selected={i === activeImage}
+                  aria-label={`Afficher la photo ${i + 1} sur ${images.length}`}
                   onClick={() => setActiveImage(i)}
                   className={`h-16 w-16 overflow-hidden rounded-lg border-2 ${
                     i === activeImage ? 'border-gray-900' : 'border-transparent'
                   }`}
                 >
-                  <img src={img.public_url} alt="" className="h-full w-full object-cover" />
+                  <img src={img.public_url} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -135,6 +138,16 @@ export function ProductPage() {
             >
               {outOfStock ? 'Rupture de stock' : added ? 'Ajouté ✓' : 'Ajouter au panier'}
             </button>
+          </div>
+          <div aria-live="polite">
+            {added && (
+              <Link
+                to="/panier"
+                className="mt-3 inline-block text-sm font-medium text-brand-700 hover:text-brand-800"
+              >
+                Voir le panier →
+              </Link>
+            )}
           </div>
         </div>
       </div>

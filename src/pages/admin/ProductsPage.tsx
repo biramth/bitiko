@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ImageOff, Package, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopProducts } from '@/features/products/useProducts'
-import { deleteProduct, updateProduct } from '@/services/product.service'
+import { deleteProductCompletely, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -17,7 +17,11 @@ export function ProductsPage() {
   const queryClient = useQueryClient()
   const currency = shop?.currency ?? 'XOF'
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['products', 'admin', shop?.id] })
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['products', 'admin', shop?.id] })
+    queryClient.invalidateQueries({ queryKey: ['products', 'active'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
+  }
 
   const toggleActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateProduct(id, { active }),
@@ -25,7 +29,7 @@ export function ProductsPage() {
   })
 
   const remove = useMutation({
-    mutationFn: deleteProduct,
+    mutationFn: deleteProductCompletely,
     onSuccess: invalidate,
   })
 
