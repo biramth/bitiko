@@ -10,8 +10,10 @@ import { ensureProfile } from '@/services/profile.service'
 import { slugify } from '@/utils/format'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function OnboardingPage() {
+  usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
   const { user } = useAuth()
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
   const navigate = useNavigate()

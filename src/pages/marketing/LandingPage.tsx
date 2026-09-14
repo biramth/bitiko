@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, MessageCircle, Package, ShieldCheck, Smartphone, Wifi, Zap } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 const features = [
   {
@@ -37,6 +38,12 @@ const features = [
 ]
 
 export function LandingPage() {
+  usePageSeo({
+    title: 'Bitiko — Crée ta boutique en ligne, vends sur WhatsApp',
+    description:
+      "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
+  })
+
   return (
     <div className="flex min-h-screen flex-col bg-sand-50">
       <header className="border-b border-sand-200">

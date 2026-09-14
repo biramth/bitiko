@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { slugify } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import type { ProductImage, ProductWithRelations } from '@/types'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
@@ -24,6 +25,10 @@ async function getProductById(id: string): Promise<ProductWithRelations | null> 
 export function ProductFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEditing = !!id
+  usePageSeo({
+    title: isEditing ? 'Modifier le produit — Bitiko' : 'Nouveau produit — Bitiko',
+    noindex: true,
+  })
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: shop } = useMyShop()

@@ -5,8 +5,10 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { updateShop, uploadShopLogo } from '@/services/shop.service'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function SettingsPage() {
+  usePageSeo({ title: 'Paramètres — Bitiko', noindex: true })
   const { data: shop, isLoading } = useMyShop()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)

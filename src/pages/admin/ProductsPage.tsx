@@ -8,8 +8,10 @@ import { formatCurrency } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function ProductsPage() {
+  usePageSeo({ title: 'Produits — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { data: products, isLoading, isError } = useShopProducts(shop?.id)
   const queryClient = useQueryClient()

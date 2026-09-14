@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function NotFoundPage() {
+  usePageSeo({ title: 'Page introuvable', noindex: true })
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
       <h1 className="text-3xl font-semibold text-gray-900">404</h1>

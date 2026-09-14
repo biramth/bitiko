@@ -6,6 +6,7 @@ import { formatCurrency } from '@/utils/format'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/config/constants'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -17,6 +18,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export function DashboardPage() {
+  usePageSeo({ title: 'Tableau de bord — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const {
     data: stats,

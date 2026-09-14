@@ -100,6 +100,17 @@ Le premier compte commerçant et sa boutique se créent ensuite directement dans
 
 Si la confirmation d'email est activée sur ton projet Supabase (réglage par défaut), le commerçant doit valider son email avant que la session ne soit active — l'app l'informe et le renvoie vers `/admin/login`.
 
+### Auth : Google et emails
+
+- **Google (OAuth)** : activer le provider « Google » dans **Authentication → Providers** et renseigner les identifiants créés dans Google Cloud Console (Client ID + Client secret, type « Application web »). Côté Google Cloud, ajouter l'URI de redirection autorisée `https://<project-ref>.supabase.co/auth/v1/callback`.
+- **URL de redirection** : dans **Authentication → URL Configuration**, ajouter à la liste autorisée chaque origine utilisée — `http://localhost:5173` en local, puis `https://<domaine>` et `https://*.<domaine>` en prod. C'est vers `<origine>/auth/callback` que reviennent Google et les liens de confirmation d'email.
+- **Emails de confirmation** : ils passent par le service interne de Supabase et peuvent être lents ou atterrir en spam. Pour une livraison fiable (indispensable en prod), configurer un **SMTP personnalisé** dans **Authentication → Settings** (Resend, Mailgun, SendGrid…). En attendant, si un email n'arrive pas : vérifier les spams puis toucher « Renvoyer l'email » dans l'app.
+
+### SEO
+
+- **Balises par page** : `usePageSeo` (`src/hooks/usePageSeo.ts`) met à jour `title`, `description` et Open Graph à chaque navigation ; les pages produit injectent en plus du JSON-LD Product (`src/hooks/useProductStructuredData.ts`). Côté client uniquement — les bots qui n'exécutent pas de JS (aperçus WhatsApp/Facebook) reçoivent les balises statiques d'`index.html`.
+- **robots.txt / sitemap.xml** : servis par des fonctions Vercel (`api/robots.ts`, `api/sitemap.ts`, réécritures dans `vercel.json`) pour s'adapter à l'hôte — sitemap de la plateforme sur le domaine racine, sitemap du catalogue (produits actifs uniquement) sur chaque sous-domaine boutique. Les fonctions lisent les mêmes variables d'environnement que le frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`) : elles doivent donc aussi être définies dans les Project Settings Vercel.
+
 ## Lancer en développement
 
 ```bash

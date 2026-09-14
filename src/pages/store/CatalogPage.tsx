@@ -10,9 +10,11 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { ProductFilters } from '@/services/product.service'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CatalogPage() {
   const { shop } = useTenant()
+  usePageSeo({ title: shop ? `Catalogue — ${shop.name}` : 'Catalogue' })
   const { data: categories } = useCategories(shop?.id)
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('recherche') ?? '')

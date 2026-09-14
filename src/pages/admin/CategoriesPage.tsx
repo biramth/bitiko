@@ -9,8 +9,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Category } from '@/types'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CategoriesPage() {
+  usePageSeo({ title: 'Catégories — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')

@@ -4,10 +4,12 @@ import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CartPage() {
   const { items, subtotal, updateQuantity, removeItem } = useCart()
   const { shop } = useTenant()
+  usePageSeo({ title: shop ? `Panier — ${shop.name}` : 'Panier', noindex: true })
   const currency = shop?.currency ?? 'XOF'
 
   if (items.length === 0) {

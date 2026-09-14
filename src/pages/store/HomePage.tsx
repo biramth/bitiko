@@ -7,9 +7,15 @@ import { ProductCard } from '@/features/products/ProductCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function HomePage() {
   const { shop } = useTenant()
+  usePageSeo({
+    title: shop ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne',
+    description: shop?.description ?? undefined,
+    image: shop?.logo_url,
+  })
   const { data: categories } = useCategories(shop?.id)
   const { data: productResult, isLoading: productsLoading, isError } = useActiveProducts(
     shop ? { shopId: shop.id, sort: 'recent', page: 1 } : null,

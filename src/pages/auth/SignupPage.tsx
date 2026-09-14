@@ -2,15 +2,19 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
+import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function SignupPage() {
-  const { session, signUp } = useAuth()
+  usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
+  const { session, signUp, resendConfirmation } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
+  const [resent, setResent] = useState(false)
 
   if (session) return <Navigate to="/admin" replace />
 
@@ -48,12 +52,33 @@ export function SignupPage() {
           <Logo size={32} withWordmark={false} className="justify-center" />
           <h1 className="mt-3 text-lg font-semibold text-gray-900">Vérifiez votre email</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Un email de confirmation a été envoyé à <strong>{email}</strong>. Cliquez sur le lien
-            puis connectez-vous pour créer votre boutique.
+            Un email de confirmation a été envoyé à <strong>{email}</strong>. Clique sur le lien
+            puis connecte-toi pour créer ta boutique.
           </p>
-          <Link to="/admin/login" className="mt-4 inline-block text-sm font-medium text-brand-700">
-            Aller à la connexion
-          </Link>
+          {resent ? (
+            <p className="mt-3 text-sm font-medium text-emerald-700">Email renvoyé.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                const { error: resendError } = await resendConfirmation(email)
+                if (resendError) {
+                  setError(resendError)
+                } else {
+                  setResent(true)
+                }
+              }}
+              className="mt-3 text-sm font-medium text-brand-700 underline hover:no-underline"
+            >
+              Renvoyer l'email
+            </button>
+          )}
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          <div className="mt-4">
+            <Link to="/admin/login" className="inline-block text-sm font-medium text-brand-700">
+              Aller à la connexion
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -66,6 +91,14 @@ export function SignupPage() {
           <Logo size={32} withWordmark={false} />
           <h1 className="text-lg font-semibold text-gray-900">Créer ta boutique</h1>
           <p className="text-sm text-gray-500">Crée ton compte pour commencer</p>
+        </div>
+
+        <GoogleSignInButton label="S'inscrire avec Google" />
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">ou</span>
+          <div className="h-px flex-1 bg-gray-200" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

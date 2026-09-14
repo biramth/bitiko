@@ -6,12 +6,14 @@ import { useTenant } from '@/features/tenant/TenantContext'
 import { createOrder, buildWhatsAppMessage, buildWhatsAppUrl } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CheckoutPage() {
   const { items, subtotal, clear } = useCart()
   const { shop } = useTenant()
   const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
+  usePageSeo({ title: shop ? `Commande — ${shop.name}` : 'Commande', noindex: true })
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')

@@ -8,6 +8,8 @@ import { useCart } from '@/features/cart/CartContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { formatCurrency } from '@/utils/format'
+import { usePageSeo } from '@/hooks/usePageSeo'
+import { useProductStructuredData } from '@/hooks/useProductStructuredData'
 
 export function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -17,6 +19,14 @@ export function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [added, setAdded] = useState(false)
+  const currency = shop?.currency ?? 'XOF'
+
+  usePageSeo({
+    title: product ? (shop ? `${product.name} — ${shop.name}` : product.name) : 'Produit',
+    description: product?.description ?? undefined,
+    image: product?.images[0]?.public_url,
+  })
+  useProductStructuredData(product ?? null, currency)
 
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
@@ -33,7 +43,6 @@ export function ProductPage() {
 
   const images = product.images
   const outOfStock = product.stock <= 0
-  const currency = shop?.currency ?? 'XOF'
 
   const handleAddToCart = () => {
     addItem({

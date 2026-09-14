@@ -1,6 +1,9 @@
 import { Store } from 'lucide-react'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function ShopNotFoundPage() {
+  usePageSeo({ title: 'Boutique introuvable', noindex: true })
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
       <Store size={40} className="text-gray-300" aria-hidden />

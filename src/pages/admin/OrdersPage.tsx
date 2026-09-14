@@ -10,10 +10,12 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { OrderStatus } from '@/types'
+import { usePageSeo } from '@/hooks/usePageSeo'
 
 const STATUS_FILTERS: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'paid', 'delivered', 'cancelled']
 
 export function OrdersPage() {
+  usePageSeo({ title: 'Commandes — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')

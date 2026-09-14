@@ -9,9 +9,12 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import type { OrderStatus } from '@/types'
 
+import { usePageSeo } from '@/hooks/usePageSeo'
+
 const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'paid', 'delivered', 'cancelled']
 
 export function OrderDetailPage() {
+  usePageSeo({ title: 'Commande — Bitiko', noindex: true })
   const { id } = useParams<{ id: string }>()
   const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
