@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Tags, Trash2, X } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createCategory, deleteCategory, listCategories, updateCategory } from '@/services/category.service'
 import { supabase } from '@/lib/supabaseClient'
 import { slugify } from '@/utils/format'
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import type { Category } from '@/types'
 
 export function CategoriesPage() {
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<Category | null>(null)

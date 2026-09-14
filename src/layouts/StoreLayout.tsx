@@ -1,11 +1,11 @@
 import { Link, Outlet } from 'react-router-dom'
 import { ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 
 export function StoreLayout() {
   const { itemCount } = useCart()
-  const { data: shop } = useShop()
+  const { shop } = useTenant()
   const shopName = shop?.name ?? 'Boutique'
 
   return (

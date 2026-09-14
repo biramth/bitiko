@@ -6,7 +6,7 @@ import { ProductPage } from '@/pages/store/ProductPage'
 import { CartPage } from '@/pages/store/CartPage'
 import { CheckoutPage } from '@/pages/store/CheckoutPage'
 
-export const publicRoutes = (
+export const storeRoutes = (
   <Route element={<StoreLayout />}>
     <Route index element={<HomePage />} />
     <Route path="catalogue" element={<CatalogPage />} />

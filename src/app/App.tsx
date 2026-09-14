@@ -1,14 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
-import { publicRoutes } from '@/routes/PublicRoutes'
-import { adminRoutes } from '@/routes/AdminRoutes'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { useTenant } from '@/features/tenant/TenantContext'
+import { PlatformRoutes } from '@/routes/PlatformRoutes'
+import { StoreApp } from './StoreApp'
 
 export function App() {
-  return (
-    <Routes>
-      {publicRoutes}
-      {adminRoutes}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  )
+  const { tenant } = useTenant()
+  return tenant.type === 'platform' ? <PlatformRoutes /> : <StoreApp />
 }

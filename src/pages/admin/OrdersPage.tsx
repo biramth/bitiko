@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { listOrders } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, ORDERS_PAGE_SIZE } from '@/config/constants'
@@ -14,7 +14,7 @@ import type { OrderStatus } from '@/types'
 const STATUS_FILTERS: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'paid', 'delivered', 'cancelled']
 
 export function OrdersPage() {
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
   const currency = shop?.currency ?? 'XOF'

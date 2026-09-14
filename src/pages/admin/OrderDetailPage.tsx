@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getOrderById, updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/config/constants'
@@ -13,7 +13,7 @@ const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'paid', 'delivered', 'c
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
   const currency = shop?.currency ?? 'XOF'
 

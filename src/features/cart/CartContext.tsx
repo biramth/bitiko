@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CART_STORAGE_KEY } from '@/config/constants'
+import { useTenant } from '@/features/tenant/TenantContext'
 import type { CartItem } from '@/types'
 
 interface CartContextValue {
@@ -14,9 +15,13 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
-function readCart(): CartItem[] {
+function storageKey(shopId: string | undefined) {
+  return `${CART_STORAGE_KEY}:${shopId ?? 'none'}`
+}
+
+function readCart(shopId: string | undefined): CartItem[] {
   try {
-    const raw = localStorage.getItem(CART_STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey(shopId))
     if (!raw) return []
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed : []
@@ -26,15 +31,25 @@ function readCart(): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => readCart())
+  // Real subdomains already isolate localStorage per shop; this key also
+  // keeps carts separate when previewing several shops on the same
+  // localhost origin via ?boutique=<slug> during development.
+  const { shop } = useTenant()
+  const shopId = shop?.id
+  const [items, setItems] = useState<CartItem[]>(() => readCart(shopId))
+
+  useEffect(() => {
+    setItems(readCart(shopId))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopId])
 
   useEffect(() => {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+      localStorage.setItem(storageKey(shopId), JSON.stringify(items))
     } catch {
       // localStorage unavailable (private mode, quota) — cart just won't persist
     }
-  }, [items])
+  }, [items, shopId])
 
   const addItem = (item: CartItem) => {
     setItems((prev) => {

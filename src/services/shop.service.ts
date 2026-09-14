@@ -1,13 +1,65 @@
 import { supabase } from '@/lib/supabaseClient'
-import type { Shop } from '@/types'
+import type { Shop, TenantContext } from '@/types'
 
-/**
- * Single-tenant for now: returns the first (and only) shop row.
- * Table is structured with shop_id everywhere so this can become
- * a lookup-by-domain/slug later without touching callers.
- */
-export async function getShop(): Promise<Shop | null> {
-  const { data, error } = await supabase.from('shops').select('*').limit(1).maybeSingle()
+export async function getShopByTenant(tenant: TenantContext): Promise<Shop | null> {
+  if (tenant.type !== 'shop') return null
+
+  if (tenant.slug !== undefined) {
+    const { data, error } = await supabase.from('shops').select('*').ilike('slug', tenant.slug).maybeSingle()
+    if (error) throw error
+    return data
+  }
+
+  const { data, error } = await supabase
+    .from('shops')
+    .select('*')
+    .ilike('custom_domain', tenant.customDomain)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/** The shop owned by the currently authenticated merchant (admin dashboard). */
+export async function getMyShop(userId: string): Promise<Shop | null> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('*')
+    .eq('owner_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function isSlugAvailable(slug: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('id')
+    .ilike('slug', slug)
+    .maybeSingle()
+  if (error) throw error
+  return !data
+}
+
+export interface CreateShopInput {
+  ownerId: string
+  name: string
+  slug: string
+  whatsappNumber: string
+  currency?: string
+}
+
+export async function createShop(input: CreateShopInput): Promise<Shop> {
+  const { data, error } = await supabase
+    .from('shops')
+    .insert({
+      owner_id: input.ownerId,
+      name: input.name,
+      slug: input.slug,
+      whatsapp_number: input.whatsappNumber,
+      currency: input.currency ?? 'XOF',
+    })
+    .select()
+    .single()
   if (error) throw error
   return data
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ImageOff, Trash2, Upload } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { createProduct, updateProduct } from '@/services/product.service'
 import { deleteProductImage, uploadProductImage } from '@/services/productImage.service'
@@ -26,7 +26,7 @@ export function ProductFormPage() {
   const isEditing = !!id
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const { data: categories } = useCategories(shop?.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
 

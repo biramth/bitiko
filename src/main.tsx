@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { App } from '@/app/App'
 import { AuthProvider } from '@/features/auth/AuthContext'
 import { CartProvider } from '@/features/cart/CartContext'
+import { TenantProvider } from '@/features/tenant/TenantContext'
 import { queryClient } from '@/lib/queryClient'
 import '@/index.css'
 
@@ -12,11 +13,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </CartProvider>
+        <BrowserRouter>
+          <TenantProvider>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </TenantProvider>
+        </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

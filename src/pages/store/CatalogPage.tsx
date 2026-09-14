@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PackageSearch, Search } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 import { useCategories } from '@/features/categories/useCategories'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { ProductCard } from '@/features/products/ProductCard'
@@ -12,7 +12,7 @@ import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { ProductFilters } from '@/services/product.service'
 
 export function CatalogPage() {
-  const { data: shop } = useShop()
+  const { shop } = useTenant()
   const { data: categories } = useCategories(shop?.id)
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('recherche') ?? '')

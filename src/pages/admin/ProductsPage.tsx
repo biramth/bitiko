@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ImageOff, Package, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopProducts } from '@/features/products/useProducts'
 import { deleteProduct, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
@@ -10,7 +10,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export function ProductsPage() {
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const { data: products, isLoading, isError } = useShopProducts(shop?.id)
   const queryClient = useQueryClient()
   const currency = shop?.currency ?? 'XOF'

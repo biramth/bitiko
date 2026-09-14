@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, PackageSearch } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 import { useCategories } from '@/features/categories/useCategories'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { ProductCard } from '@/features/products/ProductCard'
@@ -9,13 +9,11 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export function HomePage() {
-  const { data: shop, isLoading: shopLoading } = useShop()
+  const { shop } = useTenant()
   const { data: categories } = useCategories(shop?.id)
   const { data: productResult, isLoading: productsLoading, isError } = useActiveProducts(
     shop ? { shopId: shop.id, sort: 'recent', page: 1 } : null,
   )
-
-  if (shopLoading) return <Spinner />
 
   return (
     <div>

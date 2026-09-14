@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getDashboardStats } from '@/services/dashboard.service'
 import { formatCurrency } from '@/utils/format'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/config/constants'
@@ -17,7 +17,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export function DashboardPage() {
-  const { data: shop } = useShop()
+  const { data: shop } = useMyShop()
   const {
     data: stats,
     isLoading,

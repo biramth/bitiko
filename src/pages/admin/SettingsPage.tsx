@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useShop } from '@/features/shop-settings/useShop'
+import { ExternalLink } from 'lucide-react'
+import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { updateShop, uploadShopLogo } from '@/services/shop.service'
+import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 
 export function SettingsPage() {
-  const { data: shop, isLoading } = useShop()
+  const { data: shop, isLoading } = useMyShop()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -40,7 +42,7 @@ export function SettingsPage() {
         logo_url: logoUrl,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shop'] })
+      queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     },
@@ -64,6 +66,24 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="text-xl font-semibold text-gray-900">Paramètres de la boutique</h1>
+
+      <div className="mt-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+        <div>
+          <p className="text-xs font-medium text-gray-500">Adresse de votre boutique</p>
+          <p className="text-sm font-medium text-gray-900">{shopUrl(shop.slug)}</p>
+        </div>
+        <a
+          href={shopUrl(shop.slug)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800"
+        >
+          Voir <ExternalLink size={14} />
+        </a>
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        Domaine personnalisé bientôt disponible pour remplacer cette adresse.
+      </p>
 
       <form
         onSubmit={(e) => {

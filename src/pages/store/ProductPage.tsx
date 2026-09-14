@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ImageOff, Minus, Plus } from 'lucide-react'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 import { useProduct } from '@/features/products/useProducts'
 import { StockBadge } from '@/features/products/StockBadge'
 import { useCart } from '@/features/cart/CartContext'
@@ -11,7 +11,7 @@ import { formatCurrency } from '@/utils/format'
 
 export function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { data: shop } = useShop()
+  const { shop } = useTenant()
   const { data: product, isLoading, isError } = useProduct(shop?.id, slug)
   const { addItem } = useCart()
   const [quantity, setQuantity] = useState(1)

@@ -28,3 +28,8 @@ export interface CartItem {
 export interface OrderWithItems extends Order {
   items: OrderItem[]
 }
+
+export type TenantContext =
+  | { type: 'platform' }
+  | { type: 'shop'; slug: string; customDomain?: undefined }
+  | { type: 'shop'; slug?: undefined; customDomain: string }

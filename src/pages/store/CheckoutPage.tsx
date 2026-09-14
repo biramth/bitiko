@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useCart } from '@/features/cart/CartContext'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 import { createOrder, buildWhatsAppMessage, buildWhatsAppUrl } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
 export function CheckoutPage() {
   const { items, subtotal, clear } = useCart()
-  const { data: shop } = useShop()
+  const { shop } = useTenant()
   const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
 

@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom'
 import { ImageOff, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
-import { useShop } from '@/features/shop-settings/useShop'
+import { useTenant } from '@/features/tenant/TenantContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
 
 export function CartPage() {
   const { items, subtotal, updateQuantity, removeItem } = useCart()
-  const { data: shop } = useShop()
+  const { shop } = useTenant()
   const currency = shop?.currency ?? 'XOF'
 
   if (items.length === 0) {

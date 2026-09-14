@@ -31,6 +31,8 @@ export interface Database {
           id: string
           owner_id: string
           name: string
+          slug: string
+          custom_domain: string | null
           description: string | null
           logo_url: string | null
           whatsapp_number: string
@@ -44,6 +46,8 @@ export interface Database {
           id?: string
           owner_id: string
           name: string
+          slug: string
+          custom_domain?: string | null
           description?: string | null
           logo_url?: string | null
           whatsapp_number: string
@@ -57,6 +61,8 @@ export interface Database {
           id?: string
           owner_id?: string
           name?: string
+          slug?: string
+          custom_domain?: string | null
           description?: string | null
           logo_url?: string | null
           whatsapp_number?: string
