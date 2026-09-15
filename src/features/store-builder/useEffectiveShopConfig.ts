@@ -69,9 +69,11 @@ export function useEffectiveConfig(
     sections = homeDraft?.sections ?? shop?.layout_sections ?? buildDefaultSections()
   } else {
     const stored = shop?.page_templates?.[templateKey]
-    const draftSections: LayoutSection[] | undefined =
-      templateUpdate?.sections ?? stored?.draft
     const published: LayoutSection[] | undefined = stored?.published
+    // Drafts (from a saved store-wide template) only render in preview mode,
+    // like the home page — customers always see the published layout.
+    const draftSections: LayoutSection[] | undefined =
+      templateUpdate?.sections ?? (isDraftPreview ? shop?.builder_draft?.templates?.[templateKey] : undefined)
     sections = draftSections ?? published ?? buildDefaultSystemTemplate(templateKey)
     draftThemeColor = templateUpdate?.themeColor ?? homeDraft?.themeColor
     draftThemeConfig = templateUpdate?.themeConfig ?? homeDraft?.themeConfig

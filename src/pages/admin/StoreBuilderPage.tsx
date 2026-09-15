@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { useBuilderState, type BuilderTarget } from '@/features/store-builder/useBuilderState'
+import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
@@ -31,7 +31,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
-import type { LayoutSection, SectionType, SystemTemplateKey } from '@/types/builder'
+import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
 
 export function StoreBuilderPage() {
   usePageSeo({ title: 'Personnaliser ma boutique — Bitiko', noindex: true })
@@ -123,62 +123,114 @@ const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
   checkout: ['checkout', 'text'],
 }
 
+/** Persist an applied store-wide template as the shop's whole-store draft
+ *  (theme + home + all four system templates), so the entire store previews the
+ *  new design before anything is published. */
+function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unknown> {
+  return (template) =>
+    updateShop(shop.id, {
+      builder_draft: {
+        sections: ensurePinnedSections(template.layout.home),
+        themeColor: template.themeColor,
+        themeConfig: template.themeConfig,
+        templates: {
+          catalogue: template.layout.catalogue,
+          product: template.layout.product,
+          cart: template.layout.cart,
+          checkout: template.layout.checkout,
+        },
+      },
+    })
+}
+
+/** Publish the WHOLE store at once: the global theme, the home sections and
+ *  every system template's published layout (using the live snapshot for the
+ *  active context, the store-wide draft — or what's already published — for
+ *  the others). This is the "publish the template" action the merchant expects. */
+function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
+  const draft = shop.builder_draft
+  const homeSections: LayoutSection[] =
+    context.kind === 'home' ? snap.sections : draft?.sections ?? shop.layout_sections
+
+  const systemPublished = (key: SystemTemplateKey): LayoutSection[] => {
+    const live = context.kind === 'system' && context.key === key ? snap.sections : undefined
+    return (
+      live ??
+      draft?.templates?.[key] ??
+      shop.page_templates?.[key]?.published ??
+      buildDefaultSystemTemplate(key)
+    )
+  }
+
+  return updateShop(shop.id, {
+    layout_sections: homeSections,
+    theme_color: snap.themeColor,
+    theme_config: snap.themeConfig,
+    page_templates: {
+      catalogue: { published: systemPublished('catalogue') },
+      product: { published: systemPublished('product') },
+      cart: { published: systemPublished('cart') },
+      checkout: { published: systemPublished('checkout') },
+    },
+    builder_draft: null,
+  })
+}
+
 function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
+  const shared = {
+    initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
+    initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+    storeApplyDraft: storeApplyDraft(shop),
+    publish: (snap: BuilderSnapshot) => publishStore(shop, context, snap),
+    invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
+  }
+
   if (context.kind === 'home') {
     return {
+      ...shared,
       initialSections: ensurePinnedSections(shop.builder_draft?.sections ?? shop.layout_sections),
-      initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
-      initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+      templateSections: (tpl) => ensurePinnedSections(tpl.layout.home),
       saveDraft: (snap) =>
         updateShop(shop.id, {
-          builder_draft: { sections: snap.sections, themeColor: snap.themeColor, themeConfig: snap.themeConfig },
+          builder_draft: {
+            sections: snap.sections,
+            themeColor: snap.themeColor,
+            themeConfig: snap.themeConfig,
+            templates: shop.builder_draft?.templates,
+          },
         }),
-      publish: (snap) =>
-        updateShop(shop.id, {
-          layout_sections: snap.sections,
-          theme_color: snap.themeColor,
-          theme_config: snap.themeConfig,
-          builder_draft: null,
-        }),
-      invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
     }
   }
 
   if (context.kind === 'system') {
-    const stored = shop.page_templates?.[context.key]
     return {
-      initialSections: (stored?.draft ?? stored?.published) ?? buildDefaultSystemTemplate(context.key),
-      initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
-      initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+      ...shared,
+      initialSections:
+        shop.builder_draft?.templates?.[context.key] ??
+        shop.page_templates?.[context.key]?.published ??
+        buildDefaultSystemTemplate(context.key),
+      templateSections: (tpl) => tpl.layout[context.key],
       saveDraft: (snap) =>
         updateShop(shop.id, {
-          page_templates: {
-            ...(shop.page_templates ?? {}),
-            [context.key]: { ...(shop.page_templates?.[context.key] ?? {}), draft: { sections: snap.sections } },
+          builder_draft: {
+            sections: shop.builder_draft?.sections ?? shop.layout_sections,
+            themeColor: snap.themeColor,
+            themeConfig: snap.themeConfig,
+            templates: {
+              ...(shop.builder_draft?.templates ?? {}),
+              [context.key]: snap.sections,
+            },
           },
         }),
-      publish: (snap) => {
-        const rest = { ...(shop.page_templates?.[context.key] ?? {}) }
-        delete rest.draft
-        return updateShop(shop.id, {
-          theme_color: snap.themeColor,
-          theme_config: snap.themeConfig,
-          page_templates: {
-            ...(shop.page_templates ?? {}),
-            [context.key]: { ...rest, published: { sections: snap.sections } },
-          },
-        })
-      },
-      invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
     }
   }
 
   // Custom page — content lives in `pages`, the theme is still shop-wide.
   const page = context.page
   return {
+    ...shared,
     initialSections: (page.draft_content ?? page.content) as LayoutSection[],
-    initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
-    initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+    templateSections: (_tpl, initialSections) => initialSections,
     saveDraft: (snap) => updatePage(page.id, { draft_content: snap.sections as LayoutSection[] }),
     publish: async (snap) => {
       await updatePage(page.id, {
@@ -269,6 +321,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
   const previewTemplateKey = context.kind === 'system' ? context.key : undefined
   const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
   const draftBadge = context.kind === 'page' && !context.page.is_published
+  const publishesStore = context.kind !== 'page'
 
   return (
     <>
@@ -288,7 +341,9 @@ function StoreBuilder({ shop }: { shop: Shop }) {
         onNavigate={handleNavigate}
         pages={pages}
         activeKey={activeKey}
+        publishesStore={publishesStore}
       />
+
       <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
       <ConfirmDialog
         open={deleteOpen}
@@ -322,6 +377,7 @@ function BuilderEditor({
   onNavigate,
   pages,
   activeKey,
+  publishesStore,
 }: {
   shop: Shop
   target: BuilderTarget
@@ -337,6 +393,7 @@ function BuilderEditor({
   onNavigate: (path: string) => void
   pages: StorePage[]
   activeKey: ActiveKey
+  publishesStore: boolean
 }) {
   const builder = useBuilderState(target)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
@@ -524,8 +581,12 @@ function BuilderEditor({
       {/* ── Dialogs ─────────────────────────────────────────── */}
       <ConfirmDialog
         open={publishConfirmOpen}
-        title="Publier ces changements ?"
-        description="Ils seront immédiatement visibles par vos clients."
+        title={publishesStore ? "Publier le design de toute la boutique ?" : 'Publier cette page ?'}
+        description={
+          publishesStore
+            ? 'Le thème et la mise en page de l\u2019accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients.'
+            : 'Le contenu de cette page sera immédiatement visible par vos clients.'
+        }
         confirmLabel="Publier"
         pendingLabel="Publication…"
         pending={builder.publishMutation.isPending}

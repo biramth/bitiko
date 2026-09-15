@@ -14,9 +14,9 @@ export interface BuilderSnapshot {
   themeConfig: ThemeConfig
 }
 
-/** Decouples the builder from the entity it's editing (home page or a custom
- * page). The parent constructs one of these and the hook never knows whether
- * it's persisting to `shops` or `pages`. */
+/** Decouples the builder from the entity it's editing (the whole store or a
+ *  custom page). The parent constructs one of these and the hook never knows
+ *  whether it's persisting to `shops` or `pages`. */
 export interface BuilderTarget {
   initialSections: LayoutSection[]
   initialThemeColor: string
@@ -25,6 +25,13 @@ export interface BuilderTarget {
   saveDraft: (snapshot: BuilderSnapshot) => Promise<unknown>
   /** Persist published state (called on "Publier"). */
   publish: (snapshot: BuilderSnapshot) => Promise<unknown>
+  /** Sections the active context should show when a store-wide template is
+   *  applied (home → home layout, a system template → its own layout, a custom
+   *  page → its current content, untouched by templates). */
+  templateSections?: (template: StoreTemplate, current: LayoutSection[]) => LayoutSection[]
+  /** Persist an applied store-wide template as the shop's draft, so the whole
+   *  store previews the new design before anything is published. */
+  storeApplyDraft?: (template: StoreTemplate) => Promise<unknown>
   /** Query keys to invalidate after a successful save. */
   invalidateKeys?: { queryKey: string[] }[]
 }
@@ -119,9 +126,22 @@ export function useBuilderState(target: BuilderTarget) {
     commit({ ...snapshot, sections: next })
   }
 
+  /** Apply a store-wide template: keep the visible buffer's history, persist the
+   *  whole-store draft, and make the current context show the template's layout
+   *  for it. */
   const applyTemplate = (template: StoreTemplate) => {
-    commit({ sections: template.sections, themeColor: template.themeColor, themeConfig: template.themeConfig })
+    const sections = target.templateSections ? target.templateSections(template, snapshot.sections) : template.layout.home
+    commit({ sections, themeColor: template.themeColor, themeConfig: template.themeConfig })
     setSelectedSectionId(null)
+    if (target.storeApplyDraft) {
+      void target
+        .storeApplyDraft(template)
+        .then(() => {
+          setDirty(false)
+          invalidate()
+        })
+        .catch(() => setDirty(true))
+    }
   }
 
   const setThemeColor = (color: string) => commit({ ...snapshot, themeColor: color })

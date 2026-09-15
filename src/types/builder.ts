@@ -148,26 +148,42 @@ export interface ThemeConfig {
   contentWidth: ContentWidth
 }
 
+/** A store-wide WIP snapshot: the global theme, the home page sections and
+ *  the draft body sections of every system template (catalogue, product, cart,
+ *  checkout). Everything lives in this single jsonb so that applying — and
+ *  publishing — a template touches the whole store at once. */
 export interface BuilderDraft {
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  /** Draft body sections of the system templates, keyed by template. */
+  templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
 }
 
-/** System storefront templates (catalogue, product, cart, checkout). Each has
- *  its own independent body sections, mirroring Shopify's per-template editor.
- *  Stored as a jsonb map on `shops.page_templates`; the home page keeps its
- *  existing `layout_sections` / `builder_draft` columns. */
+/** System storefront pages (catalogue, product, cart, checkout). The published
+ *  body sections of each are stored as an array under `shops.page_templates`;
+ *  their drafts live store-wide in `builder_draft.templates`. The home page
+ *  keeps its existing `layout_sections` / `builder_draft` columns. */
 export type SystemTemplateKey = 'catalogue' | 'product' | 'cart' | 'checkout'
 
 export interface SystemTemplateState {
-  draft?: LayoutSection[]
   published?: LayoutSection[]
 }
 
 export type SystemTemplateMap = Partial<Record<SystemTemplateKey, SystemTemplateState>>
 
 export const SYSTEM_TEMPLATE_KEYS: SystemTemplateKey[] = ['catalogue', 'product', 'cart', 'checkout']
+
+/** A full-store design shipped by a template: the global theme plus a layout
+ *  for every storefront page (home + the four system templates). Custom
+ *  merchant pages keep their own content but inherit the same global theme. */
+export interface StoreTemplateLayout {
+  home: LayoutSection[]
+  catalogue: LayoutSection[]
+  product: LayoutSection[]
+  cart: LayoutSection[]
+  checkout: LayoutSection[]
+}
 
 export interface StoreTemplate {
   key: string
@@ -176,5 +192,5 @@ export interface StoreTemplate {
   swatch: [string, string]
   themeColor: string
   themeConfig: ThemeConfig
-  sections: LayoutSection[]
+  layout: StoreTemplateLayout
 }

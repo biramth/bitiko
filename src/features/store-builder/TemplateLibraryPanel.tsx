@@ -3,10 +3,11 @@ import { STORE_TEMPLATES } from '@/config/storeTemplates'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { StoreTemplate } from '@/types/builder'
 
-/** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch. */
+/** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch.
+ *  Uses the template's home layout to pick the mockup composition. */
 function TemplateThumbnail({ template }: { template: StoreTemplate }) {
   const [accent, secondary] = template.swatch
-  const hasCategories = template.sections.some((s) => s.type === 'categories')
+  const hasCategories = template.layout.home.some((s) => s.type === 'categories')
 
   return (
     <div
@@ -43,8 +44,9 @@ export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTem
   return (
     <div>
       <p className="mb-4 text-sm text-gray-500">
-        Chaque template est une boutique complète (mise en page, thème et exemples de textes) — un point de départ à
-        personnaliser ensuite bloc par bloc.
+        Chaque template redessine toute votre boutique d'un coup : thème (couleurs, typographie, boutons) et mise
+        en page de l'accueil, du catalogue, de la fiche produit, du panier et de la commande. Il est appliqué en
+        brouillon — prévisualisez, puis publiez.
       </p>
       <div className="space-y-3">
         {STORE_TEMPLATES.map((template) => (
@@ -65,13 +67,13 @@ export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTem
 
       <ConfirmDialog
         open={pendingTemplate !== null}
-        title="Remplacer la mise en page actuelle ?"
+        title="Appliquer ce template à toute la boutique ?"
         description={
           pendingTemplate
-            ? `Votre mise en page et votre thème actuels seront remplacés par "${pendingTemplate.label}".`
+            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${pendingTemplate.label}" en brouillon. Prévisualisez d'abord, puis publiez.`
             : ''
         }
-        confirmLabel="Remplacer"
+        confirmLabel="Appliquer"
         tone="default"
         onConfirm={() => {
           if (pendingTemplate) onApply(pendingTemplate)

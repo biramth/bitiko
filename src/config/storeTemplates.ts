@@ -1,5 +1,6 @@
 import { createSectionId } from './defaultLayout'
-import type { LayoutSection, StoreTemplate, ThemeConfig } from '@/types/builder'
+import { buildDefaultSystemTemplate } from './defaultTemplates'
+import type { LayoutSection, StoreTemplate, StoreTemplateLayout, ThemeConfig } from '@/types/builder'
 
 function header(overrides: Partial<Extract<LayoutSection, { type: 'header' }>['config']> = {}): LayoutSection {
   return {
@@ -76,6 +77,25 @@ function text(overrides: Partial<Extract<LayoutSection, { type: 'text' }>['confi
   }
 }
 
+/** The four commerce pages all get the same sensible default body sections
+ *  (catalogue grid with filters, product card, cart, checkout form); the home
+ *  layout is what makes each template visually distinctive. */
+function systemLayout(catalogueHeading: string): Pick<StoreTemplateLayout, 'catalogue' | 'product' | 'cart' | 'checkout'> {
+  return {
+    catalogue: [
+      {
+        id: createSectionId('products'),
+        type: 'products',
+        visible: true,
+        config: { heading: catalogueHeading, sort: 'recent', limit: 48, enableFilters: true },
+      },
+    ],
+    product: buildDefaultSystemTemplate('product'),
+    cart: buildDefaultSystemTemplate('cart'),
+    checkout: buildDefaultSystemTemplate('checkout'),
+  }
+}
+
 const baseTheme = (overrides: Partial<ThemeConfig>): ThemeConfig => ({
   secondaryColor: '#f7e6d0',
   textColor: '#17152e',
@@ -102,23 +122,26 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#111111', '#ff3b30'],
     themeColor: '#ff3b30',
     themeConfig: baseTheme({ secondaryColor: '#e5e5e5', textColor: '#0a0a0a', font: 'sora', textScale: 'lg', radius: 'none', contentWidth: 'wide' }),
-    sections: [
-      header(),
-      hero({
-        eyebrow: 'Édition performance',
-        heading: 'Entraînez-vous sans limites',
-        subheading: 'Des pièces techniques pensées pour bouger avec vous, sur et en dehors du terrain.',
-      }),
-      featuredProducts({ heading: 'Sélection athlètes' }),
-      categories({ heading: 'Shop par sport' }),
-      promo({
-        heading: 'Nouvelle saison, fraîchement arrivée',
-        body: 'Stocks limités sur les dernières sorties.',
-        buttonLabel: 'Voir la collection',
-      }),
-      products({ heading: 'Tous les articles', limit: 16 }),
-      footer(),
-    ],
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Édition performance',
+          heading: 'Entraînez-vous sans limites',
+          subheading: 'Des pièces techniques pensées pour bouger avec vous, sur et en dehors du terrain.',
+        }),
+        featuredProducts({ heading: 'Sélection athlètes' }),
+        categories({ heading: 'Shop par sport' }),
+        promo({
+          heading: 'Nouvelle saison, fraîchement arrivée',
+          body: 'Stocks limités sur les dernières sorties.',
+          buttonLabel: 'Voir la collection',
+        }),
+        products({ heading: 'Tous les articles', limit: 16 }),
+        footer(),
+      ],
+      ...systemLayout('Tous les articles'),
+    },
   },
   {
     key: 'studio',
@@ -127,22 +150,25 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#ffffff', '#1d1d1f'],
     themeColor: '#111111',
     themeConfig: baseTheme({ secondaryColor: '#f5f5f7', textColor: '#1d1d1f', buttonColor: '#111111', font: 'inter', textScale: 'lg', radius: 'lg', contentWidth: 'narrow' }),
-    sections: [
-      header({ sticky: true }),
-      hero({
-        eyebrow: 'Nouveau',
-        heading: 'Pensé dans les moindres détails',
-        subheading: 'Des produits simples à utiliser, conçus pour durer.',
-      }),
-      featuredProducts({ heading: 'À la une' }),
-      text({
-        heading: "Un design qui s'efface devant l'usage",
-        body: 'Chaque produit est choisi pour sa qualité et sa simplicité — rien de superflu.',
-        align: 'center',
-      }),
-      products({ heading: 'Tous les produits' }),
-      footer({ showSocialLinks: false, showAddress: false }),
-    ],
+    layout: {
+      home: [
+        header({ sticky: true }),
+        hero({
+          eyebrow: 'Nouveau',
+          heading: 'Pensé dans les moindres détails',
+          subheading: 'Des produits simples à utiliser, conçus pour durer.',
+        }),
+        featuredProducts({ heading: 'À la une' }),
+        text({
+          heading: "Un design qui s'efface devant l'usage",
+          body: 'Chaque produit est choisi pour sa qualité et sa simplicité — rien de superflu.',
+          align: 'center',
+        }),
+        products({ heading: 'Tous les produits' }),
+        footer({ showSocialLinks: false, showAddress: false }),
+      ],
+      ...systemLayout('Tous les produits'),
+    },
   },
   {
     key: 'precision',
@@ -151,21 +177,24 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#1f2937', '#fbbf24'],
     themeColor: '#1f2937',
     themeConfig: baseTheme({ secondaryColor: '#fbbf24', textColor: '#111827', font: 'inter', radius: 'none', contentWidth: 'normal' }),
-    sections: [
-      header(),
-      hero({
-        eyebrow: 'Précision & fiabilité',
-        heading: 'Chaque détail compte',
-        subheading: 'Des produits testés, garantis, pensés pour durer dans le temps.',
-      }),
-      products({ heading: 'Catalogue complet' }),
-      featuredProducts({ heading: 'Les incontournables' }),
-      text({
-        heading: 'Garantie constructeur',
-        body: 'Tous nos produits sont vérifiés avant expédition et couverts par une garantie.',
-      }),
-      footer(),
-    ],
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Précision & fiabilité',
+          heading: 'Chaque détail compte',
+          subheading: 'Des produits testés, garantis, pensés pour durer dans le temps.',
+        }),
+        products({ heading: 'Catalogue complet' }),
+        featuredProducts({ heading: 'Les incontournables' }),
+        text({
+          heading: 'Garantie constructeur',
+          body: 'Tous nos produits sont vérifiés avant expédition et couverts par une garantie.',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Catalogue complet'),
+    },
   },
   {
     key: 'editorial',
@@ -174,27 +203,30 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#7f1d1d', '#fdfbf7'],
     themeColor: '#7f1d1d',
     themeConfig: baseTheme({ secondaryColor: '#e7e0d3', textColor: '#1c1917', backgroundColor: '#fdfbf7', font: 'sora', textScale: 'lg', radius: 'none', contentWidth: 'wide' }),
-    sections: [
-      header(),
-      hero({
-        eyebrow: 'Collection capsule',
-        heading: "L'élégance dans chaque détail",
-        subheading: 'Pièces sélectionnées, en série limitée.',
-      }),
-      featuredProducts({ heading: 'En couverture' }),
-      text({
-        heading: 'Notre histoire',
-        body: "Une sélection pensée à la main, pièce par pièce, pour celles et ceux qui veulent porter autre chose que l'ordinaire.",
-      }),
-      categories({ heading: 'Explorer' }),
-      promo({
-        heading: 'Pièces en édition limitée',
-        body: 'Stock très restreint — ne repartez pas les mains vides.',
-        buttonLabel: 'Découvrir',
-      }),
-      products({ heading: 'Toute la collection' }),
-      footer(),
-    ],
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Collection capsule',
+          heading: "L'élégance dans chaque détail",
+          subheading: 'Pièces sélectionnées, en série limitée.',
+        }),
+        featuredProducts({ heading: 'En couverture' }),
+        text({
+          heading: 'Notre histoire',
+          body: "Une sélection pensée à la main, pièce par pièce, pour celles et ceux qui veulent porter autre chose que l'ordinaire.",
+        }),
+        categories({ heading: 'Explorer' }),
+        promo({
+          heading: 'Pièces en édition limitée',
+          body: 'Stock très restreint — ne repartez pas les mains vides.',
+          buttonLabel: 'Découvrir',
+        }),
+        products({ heading: 'Toute la collection' }),
+        footer(),
+      ],
+      ...systemLayout('Toute la collection'),
+    },
   },
   {
     key: 'marche',
@@ -203,23 +235,26 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#f97316', '#e11d48'],
     themeColor: '#e11d48',
     themeConfig: baseTheme({ secondaryColor: '#fde68a', textColor: '#1f2937', buttonColor: '#e11d48', font: 'inter', radius: 'full', contentWidth: 'wide' }),
-    sections: [
-      header(),
-      hero({
-        eyebrow: 'Bonnes affaires du jour',
-        heading: 'Tout ce qu\'il vous faut, au meilleur prix',
-        subheading: 'Commandez en un clic sur WhatsApp, recevez chez vous.',
-      }),
-      promo({
-        heading: 'Offre flash',
-        body: "Jusqu'à -30% sur une sélection, aujourd'hui seulement.",
-        buttonLabel: "J'en profite",
-      }),
-      categories({ heading: 'Toutes les catégories' }),
-      products({ heading: 'Meilleures ventes', limit: 16 }),
-      featuredProducts({ heading: 'Coups de cœur clients' }),
-      footer(),
-    ],
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Bonnes affaires du jour',
+          heading: 'Tout ce qu\'il vous faut, au meilleur prix',
+          subheading: 'Commandez en un clic sur WhatsApp, recevez chez vous.',
+        }),
+        promo({
+          heading: 'Offre flash',
+          body: "Jusqu'à -30% sur une sélection, aujourd'hui seulement.",
+          buttonLabel: "J'en profite",
+        }),
+        categories({ heading: 'Toutes les catégories' }),
+        products({ heading: 'Meilleures ventes', limit: 16 }),
+        featuredProducts({ heading: 'Coups de cœur clients' }),
+        footer(),
+      ],
+      ...systemLayout('Meilleures ventes'),
+    },
   },
   {
     key: 'classic',
@@ -228,20 +263,23 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#9c3814', '#fbe2d3'],
     themeColor: '#9c3814',
     themeConfig: baseTheme({ secondaryColor: '#fbe2d3', radius: 'md', contentWidth: 'normal' }),
-    sections: [
-      header(),
-      hero({
-        eyebrow: 'Depuis le quartier, pour tout le monde',
-        heading: 'Votre boutique de confiance',
-        subheading: 'Des produits choisis avec soin, un service qui répond vraiment.',
-      }),
-      categories({ heading: 'Nos rayons' }),
-      text({
-        heading: 'Pourquoi nous choisir',
-        body: 'Commande facile sur WhatsApp, paiement à la livraison, et un vendeur qui vous connaît par votre nom.',
-      }),
-      products({ heading: 'Nos produits' }),
-      footer(),
-    ],
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Depuis le quartier, pour tout le monde',
+          heading: 'Votre boutique de confiance',
+          subheading: 'Des produits choisis avec soin, un service qui répond vraiment.',
+        }),
+        categories({ heading: 'Nos rayons' }),
+        text({
+          heading: 'Pourquoi nous choisir',
+          body: 'Commande facile sur WhatsApp, paiement à la livraison, et un vendeur qui vous connaît par votre nom.',
+        }),
+        products({ heading: 'Nos produits' }),
+        footer(),
+      ],
+      ...systemLayout('Nos produits'),
+    },
   },
 ]

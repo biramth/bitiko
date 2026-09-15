@@ -82,15 +82,14 @@ export function shopUrl(slug: string): string {
 }
 
 /** Storefront URL for a given page path. With a ROOT_DOMAIN it's the
- * "<slug>.<ROOT_DOMAIN>" subdomain; otherwise it falls back to the
- * query-param preview so it works on any host without wildcard DNS. Custom
- * page paths travel as a separate `page` param so they never bleed into the
- * `boutique` slug. */
+ * "<slug>.<ROOT_DOMAIN>" subdomain; otherwise (local dev / preview) it's the
+ * real path with `?boutique=<slug>` appended — tenant resolution reads that
+ * query param regardless of pathname, so every route (catalogue, produit,
+ * panier, commande, pages/:slug) works identically to a real subdomain. */
 export function storefrontUrl(slug: string, pagePath = '/'): string {
   if (!ROOT_DOMAIN) {
     const query = new URLSearchParams({ boutique: slug })
-    if (pagePath && pagePath !== '/') query.set('page', pagePath.replace(/^\//, ''))
-    return `/?${query.toString()}`
+    return `${pagePath}?${query.toString()}`
   }
   const protocol = window.location.protocol
   return `${protocol}//${slug}.${ROOT_DOMAIN}${pagePath}`
