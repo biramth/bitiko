@@ -75,7 +75,10 @@ export function BuilderSidebar({
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [addMenuOpen])
 
-  const addableTypes = availableTypes ?? ADDABLE_SECTION_TYPES
+  const presentTypes = new Set(sections.map((s) => s.type))
+  const addableTypes = (availableTypes ?? ADDABLE_SECTION_TYPES).filter(
+    (type) => !(SECTION_REGISTRY[type].singleton && presentTypes.has(type)),
+  )
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
   for (const type of addableTypes) groupedAddable[SECTION_REGISTRY[type].category].push(type)
 

@@ -54,6 +54,9 @@ interface SectionDefinition {
   category: 'content' | 'commerce'
   /** Body sections can be added freely by the merchant; header/footer are fixed, one-per-shop. */
   pinned: boolean
+  /** At most one instance per page — adding a second (e.g. two "Fiche produit"
+   *  blocks) would just duplicate the same dynamic content, not add variety. */
+  singleton?: boolean
   createDefault: () => LayoutSection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Editor: React.ComponentType<SectionEditorProps<any>>
@@ -223,6 +226,7 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
     color: 'from-indigo-500 to-indigo-700',
     category: 'commerce',
     pinned: false,
+    singleton: true,
     createDefault: () => ({
       id: createSectionId('product'),
       type: 'product',
@@ -247,6 +251,7 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
     color: 'from-emerald-500 to-emerald-700',
     category: 'commerce',
     pinned: false,
+    singleton: true,
     createDefault: () => ({
       id: createSectionId('cart'),
       type: 'cart',
@@ -263,6 +268,7 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
     color: 'from-cyan-500 to-cyan-700',
     category: 'commerce',
     pinned: false,
+    singleton: true,
     createDefault: () => ({
       id: createSectionId('checkout'),
       type: 'checkout',

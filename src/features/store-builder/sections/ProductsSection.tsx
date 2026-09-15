@@ -165,7 +165,18 @@ export function ProductsEditor({ config, onChange }: SectionEditorProps<Products
       </div>
       <div>
         <label className={editorLabelClass}>Nombre de produits affichés</label>
-        <input type="number" min={1} max={48} value={config.limit} onChange={(e) => onChange({ ...config, limit: Math.max(1, Number(e.target.value) || 1) })} className={editorInputClass} />
+        <input
+          type="number"
+          min={1}
+          max={48}
+          value={config.limit}
+          disabled={config.enableFilters === true}
+          onChange={(e) => onChange({ ...config, limit: Math.max(1, Number(e.target.value) || 1) })}
+          className={`${editorInputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}
+        />
+        {config.enableFilters === true && (
+          <p className="mt-1 text-xs text-gray-400">Ignoré quand les outils de catalogue sont activés (pagination à la place).</p>
+        )}
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input
