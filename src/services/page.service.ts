@@ -30,6 +30,20 @@ export async function getPublishedPageBySlug(shopId: string, slug: string): Prom
   return data as StorePage | null
 }
 
+/** Like `getPublishedPageBySlug` but ignores publish state — used by the
+ *  builder's "Prévisualiser" preview tab, which must show an unpublished
+ *  page's draft rather than reporting it as not found. */
+export async function getPageBySlug(shopId: string, slug: string): Promise<StorePage | null> {
+  const { data, error } = await supabase
+    .from('pages')
+    .select('*')
+    .eq('shop_id', shopId)
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw error
+  return data as StorePage | null
+}
+
 export async function createPage(shopId: string, title: string, slug: string): Promise<StorePage> {
   const { data, error } = await supabase
     .from('pages')

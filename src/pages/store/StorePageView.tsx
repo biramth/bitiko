@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
-import { getPublishedPageBySlug } from '@/services/page.service'
+import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import type { StorePage } from '@/types/pages'
@@ -21,23 +21,33 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const [searchParams] = useSearchParams()
   const isDraftPreview = searchParams.get('preview') === 'draft'
 
-  const [page, setPage] = useState<StorePage | null>(null)
+  // Keyed by slug so "loading" can be derived during render (comparing the
+  // last-resolved slug against the current one) instead of toggled with a
+  // separate synchronous setState at the top of the effect.
+  const [pageResult, setPageResult] = useState<{ slug: string; page: StorePage | null } | null>(null)
   const [live, setLive] = useState<{ sections: LayoutSection[]; themeColor: string; themeConfig: ThemeConfig } | null>(null)
 
   useEffect(() => {
     if (!shop) return
     let cancelled = false
-    getPublishedPageBySlug(shop.id, slug)
+    // In preview mode the page may not be published yet — fetch regardless
+    // of publish state (RLS still only allows the owner to see their own
+    // unpublished pages); real visitors only ever see published ones.
+    const fetchPage = isDraftPreview ? getPageBySlug(shop.id, slug) : getPublishedPageBySlug(shop.id, slug)
+    fetchPage
       .then((p) => {
-        if (!cancelled) setPage(p)
+        if (!cancelled) setPageResult({ slug, page: p })
       })
       .catch(() => {
-        if (!cancelled) setPage(null)
+        if (!cancelled) setPageResult({ slug, page: null })
       })
     return () => {
       cancelled = true
     }
-  }, [shop, slug])
+  }, [shop, slug, isDraftPreview])
+
+  const pageLoading = pageResult?.slug !== slug
+  const page = pageLoading ? null : pageResult?.page ?? null
 
   useEffect(() => {
     if (!isDraftPreview) return
@@ -57,10 +67,14 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   })
 
   if (!shop) return null
+  if (pageLoading) return null
 
-  // In live preview the parent streams draft sections; otherwise the page
-  // must (a) exist and (b) be published to be visible.
-  const sections = isDraftPreview && live ? live.sections : page?.content ?? []
+  // In the embedded builder preview, the parent streams live draft sections.
+  // A standalone "Prévisualiser" tab has no parent to stream from, so it
+  // falls back to the page's saved draft — matching how the home page and
+  // system templates already behave (see useEffectiveConfig). Outside
+  // preview, the page must exist and be published to be visible.
+  const sections = isDraftPreview && live ? live.sections : isDraftPreview ? (page?.draft_content ?? page?.content ?? []) : (page?.content ?? [])
   if (!isDraftPreview && !page) return <NotFoundPage />
 
   const themeConfig = live?.themeConfig ?? shop.theme_config
