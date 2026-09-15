@@ -21,6 +21,9 @@ export interface BuilderTarget {
   initialSections: LayoutSection[]
   initialThemeColor: string
   initialThemeConfig: ThemeConfig
+  /** What's currently live for this context — lets "Annuler les
+   *  modifications" throw away the draft and go back to it in one action. */
+  publishedSnapshot: BuilderSnapshot
   /** Persist draft state (called on "Enregistrer"). */
   saveDraft: (snapshot: BuilderSnapshot) => Promise<unknown>
   /** Persist published state (called on "Publier"). */
@@ -200,6 +203,22 @@ export function useBuilderState(target: BuilderTarget) {
     },
   })
 
+  // Persists target.publishedSnapshot directly rather than routing through
+  // saveDraftMutation, which closes over the *current* sections/themeColor/
+  // themeConfig — calling it right after resetting the snapshot would still
+  // save the stale pre-reset values (React state updates aren't synchronous).
+  const discardMutation = useMutation({
+    mutationFn: () => target.saveDraft(target.publishedSnapshot),
+    onSuccess: () => {
+      setSnapshot(target.publishedSnapshot)
+      setPast([])
+      setFuture([])
+      setDirty(false)
+      setSelectedSectionId(null)
+      invalidate()
+    },
+  })
+
   return {
     sections,
     themeColor,
@@ -225,5 +244,6 @@ export function useBuilderState(target: BuilderTarget) {
     canRedo: future.length > 0,
     saveDraftMutation,
     publishMutation,
+    discardMutation,
   }
 }

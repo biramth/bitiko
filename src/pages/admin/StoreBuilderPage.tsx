@@ -8,6 +8,7 @@ import {
   Loader2,
   Lock,
   Redo2,
+  RotateCcw,
   Undo2,
   Wand2,
 } from 'lucide-react'
@@ -181,6 +182,11 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
     return {
       ...shared,
       initialSections: ensurePinnedSections(shop.builder_draft?.sections ?? shop.layout_sections),
+      publishedSnapshot: {
+        sections: ensurePinnedSections(shop.layout_sections),
+        themeColor: shop.theme_color,
+        themeConfig: shop.theme_config,
+      },
       templateSections: (tpl) => ensurePinnedSections(tpl.layout.home),
       saveDraft: (snap) =>
         updateShop(shop.id, {
@@ -201,6 +207,11 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         shop.builder_draft?.templates?.[context.key] ??
         shop.page_templates?.[context.key]?.published ??
         buildDefaultSystemTemplate(context.key),
+      publishedSnapshot: {
+        sections: shop.page_templates?.[context.key]?.published ?? buildDefaultSystemTemplate(context.key),
+        themeColor: shop.theme_color,
+        themeConfig: shop.theme_config,
+      },
       templateSections: (tpl) => tpl.layout[context.key],
       saveDraft: (snap) =>
         updateShop(shop.id, {
@@ -222,6 +233,11 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   return {
     ...shared,
     initialSections: (page.draft_content ?? page.content) as LayoutSection[],
+    publishedSnapshot: {
+      sections: (page.content ?? []) as LayoutSection[],
+      themeColor: shop.theme_color,
+      themeConfig: shop.theme_config,
+    },
     templateSections: (_tpl, initialSections) => initialSections,
     saveDraft: (snap) => updatePage(page.id, { draft_content: snap.sections as LayoutSection[] }),
     publish: async (snap) => {
@@ -310,6 +326,14 @@ function StoreBuilder({ shop }: { shop: Shop }) {
   const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
   const draftBadge = context.kind === 'page' && !context.page.is_published
   const publishesStore = context.kind !== 'page'
+  // Whether there's a persisted draft to discard even with no unsaved local
+  // edits (e.g. saved last session, came back without touching anything).
+  const hasStoredDraft =
+    context.kind === 'home'
+      ? shop.builder_draft?.sections != null
+      : context.kind === 'system'
+        ? shop.builder_draft?.templates?.[context.key] != null
+        : context.page.draft_content != null
 
   return (
     <>
@@ -322,6 +346,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
         previewTemplateKey={previewTemplateKey}
         availableTypes={availableTypes}
         draftBadge={draftBadge}
+        hasStoredDraft={hasStoredDraft}
         onContextChange={setActiveKey}
         onCreatePage={() => setCreateOpen(true)}
         onDeletePage={setPageToDelete}
@@ -357,6 +382,7 @@ function BuilderEditor({
   previewTemplateKey,
   availableTypes,
   draftBadge,
+  hasStoredDraft,
   onContextChange,
   onCreatePage,
   onDeletePage,
@@ -372,6 +398,7 @@ function BuilderEditor({
   previewTemplateKey?: SystemTemplateKey
   availableTypes?: SectionType[]
   draftBadge: boolean
+  hasStoredDraft: boolean
   onContextChange: (key: ActiveKey) => void
   onCreatePage: () => void
   onDeletePage: (page: StorePage) => void
@@ -382,6 +409,8 @@ function BuilderEditor({
 }) {
   const builder = useBuilderState(target)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+  const canDiscard = builder.dirty || hasStoredDraft
 
   /* Keyboard shortcuts */
   useEffect(() => {
@@ -409,6 +438,19 @@ function BuilderEditor({
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [builder])
+
+  /* Warn before closing/refreshing the tab with unsaved changes — React
+   * Router navigation isn't covered (would need a data router with a
+   * navigation blocker), only actual tab-close/refresh/URL changes. */
+  useEffect(() => {
+    if (!builder.dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [builder.dirty])
 
   const previewUrl = previewPath ? storefrontUrl(shop.slug, previewPath) : null
 
@@ -456,6 +498,16 @@ function BuilderEditor({
             </button>
           </div>
           <span className="mx-1 hidden text-xs text-gray-400 lg:block">Cliquez sur un bloc dans l'aperçu pour le modifier.</span>
+          <button
+            type="button"
+            onClick={() => setDiscardConfirmOpen(true)}
+            disabled={!canDiscard || builder.discardMutation.isPending}
+            title="Revenir à la version publiée"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {builder.discardMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} aria-hidden />}
+            Annuler les modifications
+          </button>
           <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending || !previewUrl} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
             <ExternalLink size={14} aria-hidden /> Prévisualiser
           </button>
@@ -542,6 +594,17 @@ function BuilderEditor({
         tone="default"
         onConfirm={() => builder.publishMutation.mutate(undefined, { onSuccess: () => setPublishConfirmOpen(false) })}
         onClose={() => setPublishConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        title="Annuler les modifications ?"
+        description="Cette page reviendra à ce qui est actuellement publié en ligne. Les modifications non publiées seront perdues — cette action est irréversible."
+        confirmLabel="Annuler les modifications"
+        pendingLabel="Annulation…"
+        pending={builder.discardMutation.isPending}
+        tone="danger"
+        onConfirm={() => builder.discardMutation.mutate(undefined, { onSuccess: () => setDiscardConfirmOpen(false) })}
+        onClose={() => setDiscardConfirmOpen(false)}
       />
     </div>
   )
