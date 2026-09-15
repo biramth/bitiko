@@ -64,6 +64,22 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
   return data
 }
 
+/** Best-effort welcome email right after onboarding — never blocks shop creation if it fails. */
+export async function sendWelcomeEmail(shopId: string): Promise<void> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) return
+    await fetch('/api/send-welcome-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ shopId }),
+    })
+  } catch {
+    // Non-critical — the merchant's shop already exists regardless.
+  }
+}
+
 export async function updateShop(shopId: string, updates: Partial<Shop>): Promise<Shop> {
   const { data, error } = await supabase
     .from('shops')

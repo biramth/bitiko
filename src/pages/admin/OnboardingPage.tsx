@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Globe, MessageCircle, Store, XCircle } from '
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { createShop, isSlugAvailable } from '@/services/shop.service'
+import { createShop, isSlugAvailable, sendWelcomeEmail } from '@/services/shop.service'
 import { seedDefaultDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { ensureProfile } from '@/services/profile.service'
 import { slugify } from '@/utils/format'
@@ -61,8 +61,9 @@ export function OnboardingPage() {
       await seedDefaultDeliverySecteurs(shop.id)
       return shop
     },
-    onSuccess: () => {
+    onSuccess: (shop) => {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
+      void sendWelcomeEmail(shop.id)
       navigate('/admin', { replace: true })
     },
     onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
