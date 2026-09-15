@@ -33,6 +33,16 @@ export async function uploadProductImage(
   return data
 }
 
+/** Re-applies sort_order from the given ordered list (drag-and-drop reorder). */
+export async function reorderProductImages(ordered: { id: string; sort_order: number }[]): Promise<void> {
+  const updates = ordered.map(({ id, sort_order }) =>
+    supabase.from('product_images').update({ sort_order }).eq('id', id),
+  )
+  const results = await Promise.all(updates)
+  const error = results.find((r) => r.error)?.error
+  if (error) throw error
+}
+
 export async function deleteProductImage(image: ProductImage): Promise<void> {
   const { error: storageError } = await supabase.storage
     .from(BUCKET)

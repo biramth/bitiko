@@ -16,7 +16,7 @@ import {
   deleteVariant,
   updateVariant,
 } from '@/services/productVariant.service'
-import { deleteProductImage, uploadProductImage } from '@/services/productImage.service'
+import { deleteProductImage, reorderProductImages, uploadProductImage } from '@/services/productImage.service'
 import { supabase } from '@/lib/supabaseClient'
 import { formatCurrency, slugify } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
@@ -323,6 +323,24 @@ function ProductForm({
     }
   }
 
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
+  const [imageDragOverId, setImageDragOverId] = useState<string | null>(null)
+
+  const handleReorderImages = async (draggedId: string, targetId: string) => {
+    const draggedIndex = images.findIndex((i) => i.id === draggedId)
+    const targetIndex = images.findIndex((i) => i.id === targetId)
+    if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) return
+    const next = [...images]
+    const [dragged] = next.splice(draggedIndex, 1)
+    next.splice(targetIndex, 0, dragged)
+    setImages(next)
+    try {
+      await reorderProductImages(next.map((image, i) => ({ id: image.id, sort_order: i })))
+    } catch {
+      setError("Impossible de réorganiser les photos.")
+    }
+  }
+
   const currency = shop?.currency ?? 'XOF'
   const previewPrice = Number(price) || 0
   const previewSlug = slugify(name.trim())
@@ -503,12 +521,38 @@ function ProductForm({
 
             <Card icon={ImagePlus} title="Photos" description="Les photos affichées sur votre boutique.">
               <div className="mt-1 flex flex-wrap gap-3">
-                {images.map((image) => (
+                {images.map((image, index) => (
                   <div
                     key={image.id}
-                    className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200"
+                    draggable
+                    onDragStart={() => setDraggedImageId(image.id)}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setImageDragOverId(image.id)
+                    }}
+                    onDragLeave={() => setImageDragOverId((id) => (id === image.id ? null : id))}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      if (draggedImageId && draggedImageId !== image.id) handleReorderImages(draggedImageId, image.id)
+                      setDraggedImageId(null)
+                      setImageDragOverId(null)
+                    }}
+                    onDragEnd={() => {
+                      setDraggedImageId(null)
+                      setImageDragOverId(null)
+                    }}
+                    className={`group relative h-24 w-24 cursor-grab overflow-hidden rounded-lg border transition-colors active:cursor-grabbing ${
+                      imageDragOverId === image.id && draggedImageId !== image.id
+                        ? 'border-dashed border-brand-400'
+                        : 'border-gray-200'
+                    } ${draggedImageId === image.id ? 'opacity-40' : ''}`}
                   >
                     <img src={image.public_url} alt="" className="h-full w-full object-cover" />
+                    {index === 0 && (
+                      <span className="absolute bottom-1 left-1 rounded bg-ink-900/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        Miniature
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleDeleteImage(image)}
@@ -556,8 +600,8 @@ function ProductForm({
                 />
               </div>
               <p className="text-xs text-gray-500">
-                La première photo est utilisée comme miniature dans le catalogue. Elles sont
-                enregistrées avec le produit.
+                Glissez-déposez pour réorganiser. La première photo est utilisée comme miniature
+                dans le catalogue.
               </p>
             </Card>
 
