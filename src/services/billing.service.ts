@@ -41,6 +41,21 @@ export async function createProCheckout(shopId: string): Promise<CreateCheckoutR
   return body as CreateCheckoutResponse
 }
 
+/** Manual bridge while Wave's Checkout API isn't available — see WAVE_PRO_PAYMENT_LINK. */
+export async function requestProUpgrade(shopId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+  if (!accessToken) throw new Error('Non authentifié.')
+
+  const res = await fetch('/api/request-pro-upgrade', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ shopId }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible d\'envoyer la demande.')
+}
+
 interface ConfirmPaymentResponse {
   status: 'succeeded' | 'pending' | 'failed'
 }

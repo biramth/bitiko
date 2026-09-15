@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
+import { Check, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { getShopSubscription, listPayments, createProCheckout, confirmPayment } from '@/services/billing.service'
-import { PLANS, effectivePlan, effectivePlanKey } from '@/config/plans'
+import { getShopSubscription, listPayments, requestProUpgrade, confirmPayment } from '@/services/billing.service'
+import { PLANS, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
 import { formatCurrency } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -74,11 +74,9 @@ function BillingForShop({ shopId }: { shopId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference])
 
-  const checkoutMutation = useMutation({
-    mutationFn: () => createProCheckout(shopId),
-    onSuccess: ({ waveLaunchUrl }) => {
-      window.location.href = waveLaunchUrl
-    },
+  const upgradeRequestMutation = useMutation({
+    mutationFn: () => requestProUpgrade(shopId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] }),
   })
 
   if (isLoading) return <Spinner />
@@ -86,6 +84,9 @@ function BillingForShop({ shopId }: { shopId: string }) {
   const planKey = effectivePlanKey(subscription)
   const plan = effectivePlan(subscription)
   const isPro = planKey === 'pro'
+  const pendingManualRequest = payments.find(
+    (p) => p.status === 'pending' && p.client_reference.startsWith('manual_'),
+  )
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -161,20 +162,42 @@ function BillingForShop({ shopId }: { shopId: string }) {
             <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">
               Plan actuel
             </p>
+          ) : pendingManualRequest ? (
+            <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700">
+              <Clock size={14} /> Paiement en cours de vérification
+            </div>
+          ) : upgradeRequestMutation.isSuccess ? (
+            <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">
+              <CheckCircle2 size={14} /> Demande envoyée
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => checkoutMutation.mutate()}
-              disabled={checkoutMutation.isPending}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {checkoutMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <CreditCard size={15} />}
-              Passer à Pro
-            </button>
+            <div className="mt-4 space-y-2">
+              <a
+                href={WAVE_PRO_PAYMENT_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                <CreditCard size={15} />
+                Payer {formatCurrency(PLANS.pro.priceXof, 'XOF')} avec Wave
+              </a>
+              <button
+                type="button"
+                onClick={() => upgradeRequestMutation.mutate()}
+                disabled={upgradeRequestMutation.isPending}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              >
+                {upgradeRequestMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+                J'ai payé, activer mon compte
+              </button>
+              <p className="text-center text-xs text-gray-400">
+                Paiement vérifié manuellement le temps que l'intégration automatique soit prête — activation sous peu.
+              </p>
+            </div>
           )}
-          {checkoutMutation.isError && (
+          {upgradeRequestMutation.isError && (
             <p className="mt-2 text-xs text-red-600">
-              {checkoutMutation.error instanceof Error ? checkoutMutation.error.message : 'Erreur.'}
+              {upgradeRequestMutation.error instanceof Error ? upgradeRequestMutation.error.message : 'Erreur.'}
             </p>
           )}
         </div>

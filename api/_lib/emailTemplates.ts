@@ -121,6 +121,30 @@ function shell({
 </div>`
 }
 
+/** Internal ops notification — not brand-facing, so a plain layout is enough. */
+export function proUpgradeRequestEmailHtml({
+  shopName,
+  shopSlug,
+  whatsappNumber,
+  ownerEmail,
+  amount,
+}: {
+  shopName: string
+  shopSlug: string
+  whatsappNumber: string
+  ownerEmail: string
+  amount: number
+}): string {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#17152e;line-height:1.6;">
+    <p><strong>${shopName}</strong> (${shopSlug}.bitiko.shop) dit avoir payé ${amount} F CFA via le lien Wave pour passer en Pro.</p>
+    <ul>
+      <li>Numéro WhatsApp du commerçant : ${whatsappNumber}</li>
+      <li>Email du compte : ${ownerEmail}</li>
+    </ul>
+    <p>Vérifie l'onglet Transactions de l'app Wave Business (expéditeur/montant), puis active le Pro pour cette boutique.</p>
+  </div>`
+}
+
 export function welcomeEmailHtml({
   origin,
   shopName,

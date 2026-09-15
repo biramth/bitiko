@@ -54,3 +54,13 @@ export function effectivePlan(subscription: ShopSubscription | null | undefined)
 export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
   return plan.maxActiveProducts === null || currentActiveCount < plan.maxActiveProducts
 }
+
+/**
+ * Wave's Checkout API needs a merchant business account with API access
+ * enabled — until that's granted, this static payment link (from the Wave
+ * Business mobile app's "Send Payment Link") is the real, working fallback.
+ * It has no reference field or return redirect, so a paid upgrade is
+ * confirmed manually (see api/request-pro-upgrade.ts) rather than
+ * automatically like a real Checkout session would be.
+ */
+export const WAVE_PRO_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.pro.priceXof}`
