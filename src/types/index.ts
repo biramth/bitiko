@@ -11,6 +11,7 @@ export type Shop = Database['public']['Tables']['shops']['Row']
 export type Category = Database['public']['Tables']['categories']['Row']
 export type Product = Database['public']['Tables']['products']['Row']
 export type ProductImage = Database['public']['Tables']['product_images']['Row']
+export type ProductVariant = Database['public']['Tables']['product_variants']['Row']
 export type DeliverySecteur = Database['public']['Tables']['delivery_secteurs']['Row']
 export type DeliveryVille = Database['public']['Tables']['delivery_villes']['Row']
 export { type StorePage } from './pages'
@@ -24,10 +25,13 @@ export type Profile = Database['public']['Tables']['profiles']['Row']
 export interface ProductWithRelations extends Product {
   category: Category | null
   images: ProductImage[]
+  variants: ProductVariant[]
 }
 
 export interface CartItem {
   productId: string
+  variantId?: string
+  variantName?: string
   name: string
   slug: string
   price: number

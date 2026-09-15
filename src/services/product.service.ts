@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabaseClient'
 import { PRODUCTS_PAGE_SIZE, ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
-import type { Product, ProductWithRelations } from '@/types'
+import type { Product, ProductVariant, ProductWithRelations } from '@/types'
 
 export interface ProductFilters {
   shopId: string
@@ -22,10 +22,12 @@ export async function listActiveProducts(filters: ProductFilters): Promise<Produ
 
   let query = supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)', { count: 'exact' })
+    .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)', {
+      count: 'exact',
+    })
     .eq('shop_id', filters.shopId)
     .eq('active', true)
-    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
 
   if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
   if (filters.search) query = query.ilike('name', `%${filters.search}%`)
@@ -51,11 +53,12 @@ export async function getActiveProductsByIds(shopId: string, ids: string[]): Pro
   if (ids.length === 0) return []
   const { data, error } = await supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)')
+    .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)')
     .eq('shop_id', shopId)
     .eq('active', true)
     .in('id', ids)
     .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
   if (error) throw error
   const byId = new Map((data ?? []).map((p) => [p.id, p as ProductWithRelations]))
   return ids.map((id) => byId.get(id)).filter((p): p is ProductWithRelations => !!p)
@@ -67,11 +70,12 @@ export async function getProductBySlug(
 ): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)')
+    .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)')
     .eq('shop_id', shopId)
     .eq('slug', slug)
     .eq('active', true)
     .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
     .maybeSingle()
   if (error) throw error
   return data as ProductWithRelations | null
@@ -94,9 +98,12 @@ export async function listShopProducts(
 
   let query = supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)', { count: 'exact' })
+    .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)', {
+      count: 'exact',
+    })
     .eq('shop_id', shopId)
     .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
     .order('created_at', { ascending: false })
 
   if (filters.search) query = query.ilike('name', `%${filters.search}%`)
@@ -185,14 +192,23 @@ export async function deleteProductCompletely(id: string): Promise<void> {
   await deleteProduct(id)
 }
 
+export interface ProductStockInfo {
+  id: string
+  price: number
+  stock: number
+  active: boolean
+  variants: Pick<ProductVariant, 'id' | 'price' | 'stock' | 'active'>[]
+}
+
 export async function listProductsByIds(
   ids: string[],
-): Promise<Pick<Product, 'id' | 'price' | 'stock' | 'active'>[]> {
+): Promise<ProductStockInfo[]> {
   if (ids.length === 0) return []
   const { data, error } = await supabase
     .from('products')
-    .select('id, price, stock, active')
+    .select('id, price, stock, active, variants:product_variants(id, price, stock, active)')
     .in('id', ids)
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
   if (error) throw error
-  return (data ?? []) as Pick<Product, 'id' | 'price' | 'stock' | 'active'>[]
+  return (data ?? []) as ProductStockInfo[]
 }

@@ -17,7 +17,13 @@ export interface CreateOrderResult {
   orderId: string
   orderNumber: string
   total: number
-  items: { productName: string; unitPrice: number; quantity: number; subtotal: number }[]
+  items: {
+    productName: string
+    variantName?: string | null
+    unitPrice: number
+    quantity: number
+    subtotal: number
+  }[]
 }
 
 interface CreateOrderRpcRow {
@@ -42,7 +48,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     p_customer_name: input.customerName,
     p_customer_phone: input.customerPhone,
     p_customer_address: input.customerAddress,
-    p_items: input.items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+    p_items: input.items.map((i) => ({
+      product_id: i.productId,
+      variant_id: i.variantId ?? null,
+      quantity: i.quantity,
+    })),
     p_delivery_fee: input.deliveryFee,
     p_delivery_zone_name: input.deliveryZoneName,
     p_payment_method: input.paymentMethod,
@@ -145,7 +155,13 @@ export async function updateOrderDeliveryFee(id: string, fee: number): Promise<O
 
 export function buildWhatsAppMessage(params: {
   orderNumber: string
-  items: { productName: string; unitPrice: number; quantity: number; subtotal: number }[]
+  items: {
+    productName: string
+    variantName?: string | null
+    unitPrice: number
+    quantity: number
+    subtotal: number
+  }[]
   deliveryFee?: number
   deliveryZoneName?: string
   paymentMethod?: PaymentMethod
@@ -159,9 +175,10 @@ export function buildWhatsAppMessage(params: {
     `Bonjour, je souhaite passer la commande #${params.orderNumber}.`,
     '',
     'Produits :',
-    ...params.items.map(
-      (i) => `- ${i.productName} x${i.quantity} — ${params.formatCurrency(i.subtotal)}`,
-    ),
+    ...params.items.map((i) => {
+      const label = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
+      return `- ${label} x${i.quantity} — ${params.formatCurrency(i.subtotal)}`
+    }),
   ]
   if (params.deliveryZoneName) {
     lines.push('', `Zone de livraison : ${params.deliveryZoneName}`)

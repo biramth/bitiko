@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, Check, Eye, ImagePlus, Loader2, Lock, Pencil, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
@@ -11,6 +11,11 @@ import {
   updateProduct,
   generateUniqueProductSlug,
 } from '@/services/product.service'
+import {
+  createVariant,
+  deleteVariant,
+  updateVariant,
+} from '@/services/productVariant.service'
 import { deleteProductImage, uploadProductImage } from '@/services/productImage.service'
 import { supabase } from '@/lib/supabaseClient'
 import { formatCurrency, slugify } from '@/utils/format'
@@ -22,9 +27,10 @@ import { PLANS } from '@/config/plans'
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)')
+    .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)')
     .eq('id', id)
     .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
     .maybeSingle()
   if (error) throw error
   return data as ProductWithRelations | null
@@ -32,6 +38,22 @@ async function getProductById(id: string): Promise<ProductWithRelations | null> 
 
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
+
+interface VariantDraft {
+  key: string
+  id?: string
+  name: string
+  sku: string
+  price: string
+  stock: string
+  active: boolean
+}
+
+let variantKeyCounter = 0
+function nextVariantKey() {
+  variantKeyCounter += 1
+  return `variant-${variantKeyCounter}`
+}
 
 function Card({
   icon: Icon,
@@ -174,6 +196,17 @@ function ProductForm({
   const [active, setActive] = useState(existingProduct?.active ?? true)
   const effectiveActive = active && !limitReached
   const [images, setImages] = useState<ProductImage[]>(existingProduct?.images ?? [])
+  const [variants, setVariants] = useState<VariantDraft[]>(() =>
+    (existingProduct?.variants ?? []).map((v) => ({
+      key: v.id,
+      id: v.id,
+      name: v.name,
+      sku: v.sku ?? '',
+      price: v.price !== null && v.price !== undefined ? String(v.price) : '',
+      stock: String(v.stock),
+      active: v.active,
+    })),
+  )
   const [error, setError] = useState<string | null>(null)
   const [pendingUploads, setPendingUploads] = useState<{ file: File; url: string }[]>([])
   const pendingUrlsRef = useRef<string[]>([])
@@ -207,6 +240,31 @@ function ProductForm({
       const product = isEditing
         ? await updateProduct(id as string, input)
         : await createProduct(input)
+
+      const previousIds = new Set((existingProduct?.variants ?? []).map((v) => v.id))
+      const keptIds = new Set(variants.map((v) => v.id).filter((vid): vid is string => !!vid))
+
+      for (const v of previousIds) {
+        if (!keptIds.has(v)) await deleteVariant(v)
+      }
+
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i]
+        const fields = {
+          name: v.name.trim(),
+          sku: v.sku.trim() || null,
+          price: v.price.trim() === '' ? null : Number(v.price),
+          stock: Number(v.stock) || 0,
+          active: v.active,
+          sort_order: i,
+        }
+        if (v.id) {
+          await updateVariant(v.id, fields)
+        } else {
+          await createVariant({ ...fields, product_id: product.id })
+        }
+      }
+
       if (pendingUploads.length > 0) {
         for (let i = 0; i < pendingUploads.length; i++) {
           const uploadedImage = await uploadProductImage(
@@ -225,6 +283,8 @@ function ProductForm({
       setPendingUploads([])
       queryClient.invalidateQueries({ queryKey: ['products', 'admin', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['products', 'active'] })
+      queryClient.invalidateQueries({ queryKey: ['product-edit', id] })
+      queryClient.invalidateQueries({ queryKey: ['product', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['active-product-count', shop?.id] })
       if (!isEditing) {
@@ -267,6 +327,7 @@ function ProductForm({
   const previewPrice = Number(price) || 0
   const previewSlug = slugify(name.trim())
   const previewImage = pendingUploads[0]?.url ?? images[0]?.public_url ?? null
+  const hasVariants = variants.length > 0
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -353,16 +414,20 @@ function ProductForm({
                       type="number"
                       min="0"
                       step="1"
-                      required
+                      required={!hasVariants}
+                      disabled={hasVariants}
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="0"
-                      className={`${inputClass} pr-20`}
+                      className={`${inputClass} pr-20 disabled:cursor-not-allowed disabled:bg-gray-50`}
                     />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
-                      {currency}
+                      {hasVariants ? '' : currency}
                     </span>
                   </div>
+                  {hasVariants && (
+                    <p className="mt-1 text-xs text-gray-500">Géré par variante</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
@@ -374,16 +439,20 @@ function ProductForm({
                       type="number"
                       min="0"
                       step="1"
-                      required
+                      required={!hasVariants}
+                      disabled={hasVariants}
                       value={stock}
                       onChange={(e) => setStock(e.target.value)}
                       placeholder="0"
-                      className={`${inputClass} pr-20`}
+                      className={`${inputClass} pr-20 disabled:cursor-not-allowed disabled:bg-gray-50`}
                     />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
-                      unités
+                      {hasVariants ? '' : 'unités'}
                     </span>
                   </div>
+                  {hasVariants && (
+                    <p className="mt-1 text-xs text-gray-500">Géré par variante</p>
+                  )}
                 </div>
               </div>
 
@@ -489,6 +558,145 @@ function ProductForm({
               <p className="text-xs text-gray-500">
                 La première photo est utilisée comme miniature dans le catalogue. Elles sont
                 enregistrées avec le produit.
+              </p>
+            </Card>
+
+            <Card
+              icon={Layers}
+              title="Variantes"
+              description="Tailles, couleurs, formats… avec leur propre stock et prix."
+            >
+              {variants.length > 0 && (
+                <ul className="space-y-3">
+                  {variants.map((variant) => (
+                    <li
+                      key={variant.key}
+                      className="rounded-lg border border-gray-200 p-3"
+                    >
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <input
+                            type="text"
+                            value={variant.name}
+                            onChange={(e) =>
+                              setVariants((prev) =>
+                                prev.map((v) =>
+                                  v.key === variant.key ? { ...v, name: e.target.value } : v,
+                                ),
+                              )
+                            }
+                            placeholder="Nom (ex. Taille M)"
+                            className={inputClass}
+                            aria-label={`Nom de la variante ${variants.indexOf(variant) + 1}`}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={variant.sku}
+                            onChange={(e) =>
+                              setVariants((prev) =>
+                                prev.map((v) =>
+                                  v.key === variant.key ? { ...v, sku: e.target.value } : v,
+                                ),
+                              )
+                            }
+                            placeholder="SKU (optionnel)"
+                            className={inputClass}
+                            aria-label={`SKU de la variante ${variants.indexOf(variant) + 1}`}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.price}
+                            onChange={(e) =>
+                              setVariants((prev) =>
+                                prev.map((v) =>
+                                  v.key === variant.key ? { ...v, price: e.target.value } : v,
+                                ),
+                              )
+                            }
+                            placeholder={`Prix (${currency}) — défaut: produit`}
+                            className={inputClass}
+                            aria-label={`Prix de la variante ${variants.indexOf(variant) + 1}`}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.stock}
+                            onChange={(e) =>
+                              setVariants((prev) =>
+                                prev.map((v) =>
+                                  v.key === variant.key ? { ...v, stock: e.target.value } : v,
+                                ),
+                              )
+                            }
+                            placeholder="Stock"
+                            className={inputClass}
+                            aria-label={`Stock de la variante ${variants.indexOf(variant) + 1}`}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVariants((prev) =>
+                              prev.map((v) =>
+                                v.key === variant.key ? { ...v, active: !v.active } : v,
+                              ),
+                            )
+                          }
+                          className={`text-sm font-medium ${
+                            variant.active ? 'text-emerald-600' : 'text-gray-400'
+                          }`}
+                        >
+                          {variant.active ? 'Actif' : 'Inactif'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVariants((prev) => prev.filter((v) => v.key !== variant.key))
+                          }
+                          aria-label={`Supprimer la variante ${variant.name || ''}`}
+                          className="text-sm text-red-600 hover:underline"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  setVariants((prev) => [
+                    ...prev,
+                    {
+                      key: nextVariantKey(),
+                      name: '',
+                      sku: '',
+                      price: '',
+                      stock: '0',
+                      active: true,
+                    },
+                  ])
+                }
+                className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600"
+              >
+                <Plus size={16} />
+                Ajouter une variante
+              </button>
+              <p className="text-xs text-gray-500">
+                Avec des variantes, le prix et le stock du produit sont gérés par chaque variante
+                (le prix peut rester vide : hérité du produit).
               </p>
             </Card>
           </div>

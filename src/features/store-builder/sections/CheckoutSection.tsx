@@ -133,7 +133,9 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
           <ul className="space-y-1.5 text-sm text-ink-700/80">
             {orderResult.items.map((item, index) => (
               <li key={index} className="flex justify-between">
-                <span>{item.productName} × {item.quantity}</span>
+                <span>
+                  {item.variantName ? `${item.productName} (${item.variantName})` : item.productName} × {item.quantity}
+                </span>
                 <span>{formatCurrency(item.subtotal, currency)}</span>
               </li>
             ))}
@@ -189,8 +191,10 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
       <div className="mt-6 border-y border-ink-900/10 py-5">
         <ul className="space-y-1.5 text-sm text-ink-700/80">
           {items.map((item) => (
-            <li key={item.productId} className="flex justify-between">
-              <span>{item.name} × {item.quantity}</span>
+            <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex justify-between">
+              <span>
+                {item.variantName ? `${item.name} (${item.variantName})` : item.name} × {item.quantity}
+              </span>
               <span>{formatCurrency(item.price * item.quantity, currency)}</span>
             </li>
           ))}

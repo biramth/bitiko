@@ -10,8 +10,8 @@ interface CartContextValue {
   itemCount: number
   subtotal: number
   addItem: (item: CartItem) => void
-  updateQuantity: (productId: string, quantity: number) => void
-  removeItem: (productId: string) => void
+  updateQuantity: (productId: string, variantId: string | undefined, quantity: number) => void
+  removeItem: (productId: string, variantId: string | undefined) => void
   clear: () => void
 }
 
@@ -30,6 +30,10 @@ function readCart(shopId: string | undefined): CartItem[] {
   } catch {
     return []
   }
+}
+
+function sameLine(a: CartItem, b: Pick<CartItem, 'productId' | 'variantId'>) {
+  return a.productId === b.productId && (a.variantId ?? null) === (b.variantId ?? null)
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -55,37 +59,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (item: CartItem) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId)
+      const existing = prev.find((i) => sameLine(i, item))
       if (existing) {
         const nextQuantity = Math.min(existing.quantity + item.quantity, existing.stock)
         return prev.map((i) =>
-          i.productId === item.productId ? { ...i, quantity: nextQuantity } : i,
+          sameLine(i, item) ? { ...i, quantity: nextQuantity } : i,
         )
       }
       return [...prev, { ...item, quantity: Math.min(item.quantity, item.stock) }]
     })
   }
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, variantId: string | undefined, quantity: number) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.productId === productId
+        sameLine(i, { productId, variantId })
           ? { ...i, quantity: Math.max(1, Math.min(quantity, i.stock)) }
           : i,
       ),
     )
   }
 
-  const removeItem = (productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId))
+  const removeItem = (productId: string, variantId: string | undefined) => {
+    setItems((prev) => prev.filter((i) => !sameLine(i, { productId, variantId })))
   }
 
   const clear = () => setItems([])
 
   // Keep prices/stocks in the cart in sync with the database: a merchant can
   // change a price or run out of stock while a customer still has items in
-  // their cart. Stale items (deactivated or deleted products) are removed,
-  // and quantities above the available stock are clamped.
+  // their cart. Stale items (deactivated or deleted products/variants) are
+  // removed, and quantities above the available stock are clamped. When a
+  // line points to a variant, the variant's price/stock win over the parent.
   const productIds = useMemo(() => [...new Set(items.map((i) => i.productId))], [items])
   const syncKey = productIds.slice().sort().join(',')
 
@@ -102,17 +107,49 @@ export function CartProvider({ children }: { children: ReactNode }) {
       let changed = false
       const next = prev
         .map((item) => {
-          const current = synced.find((p) => p.id === item.productId && p.active)
-          if (!current || current.stock <= 0) {
+          const current = synced.find(
+            (p) =>
+              p.id === item.productId &&
+              p.active &&
+              (!item.variantId ||
+                p.variants.some((v) => v.id === item.variantId && v.active)),
+          )
+          if (!current) {
             changed = true
             return null
           }
+
           let updated = item
-          if (current.price !== item.price) {
-            changed = true
-            updated = { ...updated, price: current.price }
+          let stock = current.stock
+
+          if (item.variantId) {
+            const variant = current.variants.find((v) => v.id === item.variantId)
+            if (!variant || variant.stock <= 0) {
+              changed = true
+              return null
+            }
+            stock = variant.stock
+            const price = variant.price ?? current.price
+            if (price !== item.price) {
+              changed = true
+              updated = { ...updated, price }
+            }
+          } else {
+            if (current.stock <= 0) {
+              changed = true
+              return null
+            }
+            if (current.price !== item.price) {
+              changed = true
+              updated = { ...updated, price: current.price }
+            }
           }
-          const quantity = Math.min(item.quantity, current.stock)
+
+          if (stock !== updated.stock) {
+            changed = true
+            updated = { ...updated, stock }
+          }
+          const quantity = Math.min(item.quantity, stock)
           if (quantity !== updated.quantity) {
             changed = true
             updated = { ...updated, quantity }

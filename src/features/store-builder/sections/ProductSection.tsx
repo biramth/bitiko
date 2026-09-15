@@ -17,7 +17,11 @@ function ProductDetails({
   currency,
   lowStockThreshold,
 }: {
-  product: Product & { category?: { name: string; slug: string } | null; images: { public_url: string; id: string }[] }
+  product: Product & {
+    category?: { name: string; slug: string } | null
+    images: { public_url: string; id: string }[]
+    variants?: { id: string; name: string; price: number | null; stock: number; active: boolean }[]
+  }
   config: ProductSectionConfig
   currency: string
   lowStockThreshold: number
@@ -27,17 +31,32 @@ function ProductDetails({
   const [activeImage, setActiveImage] = useState(0)
   const [added, setAdded] = useState(false)
   const images = product.images
-  const outOfStock = product.stock <= 0
+  const variants = (product.variants ?? []).filter((v) => v.active)
+  const hasVariants = variants.length > 0
+  const [selectedVariant, setSelectedVariant] = useState(0)
+  // Reset out-of-range selection (e.g. the product changed) during render
+  // rather than in an effect — avoids an extra render pass for something
+  // that's really just clamping a derived value.
+  if (selectedVariant !== 0 && (!hasVariants || selectedVariant >= variants.length)) {
+    setSelectedVariant(0)
+  }
+  const variant = hasVariants ? variants[selectedVariant] : null
+
+  const displayPrice = hasVariants && variant ? (variant.price ?? product.price) : product.price
+  const displayStock = hasVariants && variant ? variant.stock : product.stock
+  const outOfStock = displayStock <= 0
 
   const handleAddToCart = () => {
     addItem({
       productId: product.id,
+      variantId: variant?.id,
+      variantName: variant?.name,
       name: product.name,
       slug: product.slug,
-      price: product.price,
+      price: displayPrice,
       quantity,
       imageUrl: images[0]?.public_url ?? null,
-      stock: product.stock,
+      stock: displayStock,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -86,11 +105,38 @@ function ProductDetails({
           )}
           {config.showPrice && (
             <p className="mt-4 text-xl font-semibold text-ink-900">
-              {formatCurrency(product.price, currency)}
+              {formatCurrency(displayPrice, currency)}
             </p>
           )}
+          {hasVariants && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-ink-900">Choisissez une variante</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {variants.map((v, i) => {
+                  const isSelected = i === selectedVariant
+                  const soldOut = v.stock <= 0
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      disabled={soldOut}
+                      onClick={() => setSelectedVariant(i)}
+                      aria-pressed={isSelected}
+                      className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+                        isSelected
+                          ? 'border-ink-900 bg-ink-900 text-white'
+                          : 'border-ink-900/20 text-ink-900 hover:border-ink-900/50'
+                      } ${soldOut ? 'cursor-not-allowed opacity-40' : ''}`}
+                    >
+                      {v.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <div className="mt-2">
-            <StockBadge stock={product.stock} lowStockThreshold={lowStockThreshold} />
+            <StockBadge stock={displayStock} lowStockThreshold={lowStockThreshold} />
           </div>
           {config.showDescription && product.description && (
             <p className="mt-6 whitespace-pre-line leading-relaxed text-ink-700/70">{product.description}</p>
@@ -101,7 +147,7 @@ function ProductDetails({
               <div className="flex items-center gap-4">
                 <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={outOfStock} aria-label="Diminuer la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Minus size={16} /></button>
                 <span className="w-4 text-center text-sm font-semibold text-ink-900">{quantity}</span>
-                <button onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))} disabled={outOfStock || quantity >= product.stock} aria-label="Augmenter la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Plus size={16} /></button>
+                <button onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))} disabled={outOfStock || quantity >= displayStock} aria-label="Augmenter la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Plus size={16} /></button>
               </div>
             </div>
           )}

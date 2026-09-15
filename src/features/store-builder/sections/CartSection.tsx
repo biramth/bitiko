@@ -45,7 +45,7 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
 
       <ul className="mt-8 divide-y divide-ink-900/10 border-t border-ink-900/10">
         {items.map((item) => (
-          <li key={item.productId} className="flex gap-5 py-5">
+          <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex gap-5 py-5">
             <div className="h-24 w-24 shrink-0 overflow-hidden bg-sand-100">
               {item.imageUrl ? (
                 <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
@@ -58,12 +58,17 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
 
             <div className="flex flex-1 flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
-                <Link to={`/produits/${item.slug}`} className="text-sm font-medium text-[var(--shop-text)] hover:underline">
-                  {item.name}
-                </Link>
+                <div>
+                  <Link to={`/produits/${item.slug}`} className="text-sm font-medium text-[var(--shop-text)] hover:underline">
+                    {item.name}
+                  </Link>
+                  {item.variantName && (
+                    <p className="text-sm text-ink-700/50">{item.variantName}</p>
+                  )}
+                </div>
                 {!isDemo && (
                   <button
-                    onClick={() => removeItem(item.productId)}
+                    onClick={() => removeItem(item.productId, item.variantId)}
                     aria-label={`Supprimer ${item.name} du panier`}
                     className="text-ink-700/30 hover:text-red-600"
                   >
@@ -77,9 +82,9 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
                 <div className="flex items-center gap-4">
                   {!isDemo ? (
                     <>
-                      <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-ink-700 hover:text-ink-900"><Minus size={14} /></button>
+                      <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-ink-700 hover:text-ink-900"><Minus size={14} /></button>
                       <span className="w-4 text-center text-sm font-medium text-ink-900">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Plus size={14} /></button>
+                      <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Plus size={14} /></button>
                     </>
                   ) : (
                     <span className="text-sm text-ink-700/60">Qté : {item.quantity}</span>
