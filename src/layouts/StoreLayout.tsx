@@ -1,6 +1,6 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Globe, MapPin, MessageCircle, ShoppingCart, Store } from 'lucide-react'
+import { Globe, MapPin, Menu, MessageCircle, ShoppingCart, Store, X } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
@@ -67,17 +67,51 @@ function PreviewClickTarget({
   )
 }
 
+/** Resolves the header's nav links once so the desktop bar and the mobile
+ *  menu panel render from the exact same source instead of duplicating the
+ *  custom-menu-vs-catalogue/contact logic. */
+function resolveHeaderNavLinks(
+  header: HeaderSectionConfig,
+  shop: { whatsapp_number: string | null } | null | undefined,
+): { key: string; label: string; href: string; external: boolean }[] {
+  if ((header.menu?.length ?? 0) > 0) {
+    return header.menu!.map((link) => ({
+      key: link.href + link.label,
+      label: link.label,
+      href: link.href,
+      external: /^https?:\/\//.test(link.href),
+    }))
+  }
+  const links: { key: string; label: string; href: string; external: boolean }[] = []
+  if (header.showCatalogLink) links.push({ key: 'catalogue', label: 'Catalogue', href: '/catalogue', external: false })
+  if (header.showContactLink && shop?.whatsapp_number) {
+    links.push({ key: 'contact', label: 'Contact', href: whatsappHref(shop.whatsapp_number), external: true })
+  }
+  return links
+}
+
 export function StoreLayout() {
   const { itemCount } = useCart()
   const { shop } = useTenant()
   const { themeColor, themeConfig, headerSection, footerSection, isDraftPreview } = useEffectiveShopConfig(shop)
   const { planKey } = useShopPlan(shop?.id)
+  const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // Close the mobile menu on navigation — adjusted during render (React's
+  // documented pattern for resetting state when a prop/value changes)
+  // rather than in an effect, so it takes effect before the new page paints.
+  const [lastPathname, setLastPathname] = useState(location.pathname)
+  if (location.pathname !== lastPathname) {
+    setLastPathname(location.pathname)
+    setMobileMenuOpen(false)
+  }
   const shopName = shop?.name ?? 'Boutique'
   const header = (headerSection?.config as HeaderSectionConfig | undefined) ?? DEFAULT_HEADER
   const footer = (footerSection?.config as FooterSectionConfig | undefined) ?? DEFAULT_FOOTER
   const socialLinks = Object.entries(shop?.social_links ?? {}).filter(([, url]) => !!url)
   const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
+  const navLinks = resolveHeaderNavLinks(header, shop)
 
   return (
     <div
@@ -96,37 +130,43 @@ export function StoreLayout() {
             ) : null}
             <span className="truncate text-base sm:text-lg">{shopName}</span>
           </Link>
-          <nav className="flex shrink-0 items-center gap-5 sm:gap-7">
-            {(header.menu?.length ?? 0) > 0
-              ? header.menu!.map((link) => {
-                  const isExternal = /^https?:\/\//.test(link.href)
-                  const className = 'hidden text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 sm:block'
-                  if (isExternal) {
-                    return (
-                      <a key={link.href + link.label} href={link.href} target="_blank" rel="noreferrer" className={className}>
-                        {link.label}
-                      </a>
-                    )
-                  }
-                  return (
-                    <Link key={link.href + link.label} to={link.href} className={className}>
+          <div className="flex shrink-0 items-center gap-4 sm:gap-7">
+            {navLinks.length > 0 && (
+              <nav className="hidden items-center gap-5 sm:flex sm:gap-7">
+                {navLinks.map((link) =>
+                  link.external ? (
+                    <a
+                      key={link.key}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      key={link.key}
+                      to={link.href}
+                      className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60"
+                    >
                       {link.label}
                     </Link>
-                  )
-                })
-              : <>
-                {header.showCatalogLink && (
-                  <Link to="/catalogue" className="hidden text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 sm:block">
-                    Catalogue
-                  </Link>
+                  ),
                 )}
-                {header.showContactLink && shop?.whatsapp_number && (
-                  <a href={whatsappHref(shop.whatsapp_number)} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 md:flex">
-                    Contact
-                  </a>
-                )}
-              </>
-            }
+              </nav>
+            )}
+            {navLinks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((open) => !open)}
+                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                aria-expanded={mobileMenuOpen}
+                className="flex items-center text-[var(--shop-text)] sm:hidden"
+              >
+                {mobileMenuOpen ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
+              </button>
+            )}
             <Link
               to="/panier"
               className="relative flex items-center text-[var(--shop-text)] transition-opacity hover:opacity-60"
@@ -139,8 +179,35 @@ export function StoreLayout() {
                 </span>
               )}
             </Link>
-          </nav>
+          </div>
         </div>
+        {mobileMenuOpen && navLinks.length > 0 && (
+          <nav className="border-t border-ink-900/10 px-4 py-2 sm:hidden">
+            {navLinks.map((link) =>
+              link.external ? (
+                <a
+                  key={link.key}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.key}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-lg px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60"
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
+          </nav>
+        )}
       </header>
       </PreviewClickTarget>
 
