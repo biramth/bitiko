@@ -22,14 +22,16 @@ import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
 import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
 import { ensurePinnedSections } from '@/config/defaultLayout'
+import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { updateShop } from '@/services/shop.service'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
-import { shopUrl } from '@/lib/tenant'
+import { useActiveProducts } from '@/features/products/useProducts'
+import { storefrontUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
-import type { Shop } from '@/types'
-import type { LayoutSection } from '@/types/builder'
+import type { Shop, StorePage } from '@/types'
+import type { LayoutSection, SectionType, SystemTemplateKey } from '@/types/builder'
 
 export function StoreBuilderPage() {
   usePageSeo({ title: 'Personnaliser ma boutique — Bitiko', noindex: true })
@@ -64,6 +66,153 @@ function StoreBuilderLock() {
   )
 }
 
+/* ─────────────────────── Template contexts ─────────────────────── */
+
+const SYSTEM_TEMPLATES: { key: SystemTemplateKey; label: string }[] = [
+  { key: 'catalogue', label: 'Catalogue' },
+  { key: 'product', label: 'Fiche produit' },
+  { key: 'cart', label: 'Panier' },
+  { key: 'checkout', label: 'Commande' },
+]
+
+/** What's currently being edited: the home page, a system template (all pages
+ *  are templates, Shopify-style) or one of the merchant's custom pages. */
+type ActiveKey = 'home' | SystemTemplateKey | `page:${string}`
+
+type PreparedContext =
+  | { kind: 'home'; label: string }
+  | { kind: 'system'; key: SystemTemplateKey; label: string }
+  | { kind: 'page'; page: StorePage; label: string }
+
+const HOME_CONTEXT: PreparedContext = { kind: 'home', label: 'Accueil' }
+
+const SYSTEM_LABELS: Record<SystemTemplateKey, string> = { catalogue: 'Catalogue', product: 'Fiche produit', cart: 'Panier', checkout: 'Commande' }
+
+function resolveContext(key: ActiveKey, pages: StorePage[]): PreparedContext {
+  if (key === 'home') return HOME_CONTEXT
+  if (key === 'catalogue' || key === 'product' || key === 'cart' || key === 'checkout') {
+    return { kind: 'system', key, label: SYSTEM_LABELS[key] }
+  }
+  const page = pages.find((p) => p.id === key.slice('page:'.length))
+  return page ? { kind: 'page', page, label: page.title } : HOME_CONTEXT
+}
+
+/** Maps a storefront path (posted by the embedded preview) back to a builder
+ *  context so the editor follows the page being viewed. */
+function pathToKey(path: string, pages: StorePage[]): ActiveKey | null {
+  const clean = path.length > 1 ? path.replace(/\/+$/, '') : path
+  if (clean === '' || clean === '/') return 'home'
+  if (clean === '/catalogue') return 'catalogue'
+  if (clean === '/panier') return 'cart'
+  if (clean === '/commande') return 'checkout'
+  if (clean.startsWith('/produits/')) return 'product'
+  const match = clean.match(/^\/pages\/(.+)$/)
+  if (match) {
+    const page = pages.find((p) => p.slug === match[1])
+    if (page) return `page:${page.id}`
+  }
+  return null
+}
+
+/** Addable section types per system template (keeps the commerce toolbox
+ *  relevant on the page it belongs to). Home/pages keep everything. */
+const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
+  catalogue: ['products', 'text', 'categories'],
+  product: ['product', 'text', 'image'],
+  cart: ['cart', 'text'],
+  checkout: ['checkout', 'text'],
+}
+
+function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
+  if (context.kind === 'home') {
+    return {
+      initialSections: ensurePinnedSections(shop.builder_draft?.sections ?? shop.layout_sections),
+      initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
+      initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+      saveDraft: (snap) =>
+        updateShop(shop.id, {
+          builder_draft: { sections: snap.sections, themeColor: snap.themeColor, themeConfig: snap.themeConfig },
+        }),
+      publish: (snap) =>
+        updateShop(shop.id, {
+          layout_sections: snap.sections,
+          theme_color: snap.themeColor,
+          theme_config: snap.themeConfig,
+          builder_draft: null,
+        }),
+      invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
+    }
+  }
+
+  if (context.kind === 'system') {
+    const stored = shop.page_templates?.[context.key]
+    return {
+      initialSections: (stored?.draft ?? stored?.published) ?? buildDefaultSystemTemplate(context.key),
+      initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
+      initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+      saveDraft: (snap) =>
+        updateShop(shop.id, {
+          page_templates: {
+            ...(shop.page_templates ?? {}),
+            [context.key]: { ...(shop.page_templates?.[context.key] ?? {}), draft: { sections: snap.sections } },
+          },
+        }),
+      publish: (snap) => {
+        const rest = { ...(shop.page_templates?.[context.key] ?? {}) }
+        delete rest.draft
+        return updateShop(shop.id, {
+          theme_color: snap.themeColor,
+          theme_config: snap.themeConfig,
+          page_templates: {
+            ...(shop.page_templates ?? {}),
+            [context.key]: { ...rest, published: { sections: snap.sections } },
+          },
+        })
+      },
+      invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
+    }
+  }
+
+  // Custom page — content lives in `pages`, the theme is still shop-wide.
+  const page = context.page
+  return {
+    initialSections: (page.draft_content ?? page.content) as LayoutSection[],
+    initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
+    initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+    saveDraft: (snap) => updatePage(page.id, { draft_content: snap.sections as LayoutSection[] }),
+    publish: async (snap) => {
+      await updatePage(page.id, {
+        content: snap.sections as LayoutSection[],
+        draft_content: null,
+        is_published: true,
+      })
+      await updateShop(shop.id, { theme_color: snap.themeColor, theme_config: snap.themeConfig })
+    },
+    invalidateKeys: [
+      { queryKey: ['my-shop'] },
+      { queryKey: ['tenant-shop'] },
+      { queryKey: ['shop-pages', shop.id] },
+    ],
+  }
+}
+
+/** Preview URL (with preview=draft appended by the frame) per context.
+ *  Returns null when no real storefront page can represent it (product
+ *  template without any active product). */
+function contextPreviewPath(context: PreparedContext, productSlug: string | null): string | null {
+  switch (context.kind) {
+    case 'home':
+      return '/'
+    case 'system':
+      if (context.key === 'catalogue') return '/catalogue'
+      if (context.key === 'cart') return '/panier'
+      if (context.key === 'checkout') return '/commande'
+      return productSlug ? `/produits/${productSlug}` : null
+    case 'page':
+      return `/pages/${context.page.slug}`
+  }
+}
+
 /* ─────────────────────── Builder ─────────────────────────────── */
 
 function StoreBuilder({ shop }: { shop: Shop }) {
@@ -71,63 +220,111 @@ function StoreBuilder({ shop }: { shop: Shop }) {
     queryKey: ['shop-pages', shop.id],
     queryFn: () => listShopPages(shop.id),
   })
+  // Newest active product, used as the default product shown in the "Fiche
+  // produit" template preview when the merchant hasn't clicked one yet.
+  const { data: activeProducts } = useActiveProducts({ shopId: shop.id, sort: 'recent', page: 1 })
+  const firstProductSlug = useMemo(() => activeProducts?.products[0]?.slug ?? null, [activeProducts])
 
-  const [activePageId, setActivePageId] = useState<string | null>(null)
+  const [activeKey, setActiveKey] = useState<ActiveKey>('home')
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
+  const [navigatedProductSlug, setNavigatedProductSlug] = useState<string | null>(null)
 
-  const activePage = useMemo(
-    () => (activePageId ? pages.find((p) => p.id === activePageId) ?? null : null),
-    [pages, activePageId],
+  const context = resolveContext(activeKey, pages)
+  const productSlug = navigatedProductSlug ?? firstProductSlug
+
+  const handleContextChange = (value: string) => {
+    setActiveKey((value || 'home') as ActiveKey)
+  }
+
+  /** Preview navigated inside the iframe — follow it ("suivre la page"). */
+  const handleNavigate = (path: string) => {
+    const slugMatch = path.match(/^\/produits\/([^/]+)$/)
+    if (slugMatch) setNavigatedProductSlug(decodeURIComponent(slugMatch[1]))
+    const key = pathToKey(path, pages)
+    if (key && key !== activeKey) setActiveKey(key)
+  }
+
+  const handleCreatePage = async (title: string, slug: string) => {
+    const page = await createPage(shop.id, title, slug)
+    setCreateOpen(false)
+    setActiveKey(`page:${page.id}`)
+  }
+
+  const handleDeletePage = async () => {
+    if (context.kind !== 'page') return
+    await deletePage(context.page.id)
+    setDeleteOpen(false)
+    setActiveKey('home')
+  }
+
+  const target = useMemo<BuilderTarget>(
+    () => buildTarget(context, shop),
+    // context identity changes whenever activeKey/pages do (see resolveContext)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shop, context, pages],
   )
 
-  /* Build a fresh target each time the selected page changes — the `key` on
-   * StoreBuilder remounts useBuilderState so it re-initialises from the new
-   * target's initial snapshot. */
-  const target = useMemo<BuilderTarget>(() => {
-    if (!activePage) {
-      return {
-        initialSections: ensurePinnedSections(shop.builder_draft?.sections ?? shop.layout_sections),
-        initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
-        initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
-        saveDraft: (snap) =>
-          updateShop(shop.id, {
-            builder_draft: { sections: snap.sections, themeColor: snap.themeColor, themeConfig: snap.themeConfig },
-          }),
-        publish: (snap) =>
-          updateShop(shop.id, {
-            layout_sections: snap.sections,
-            theme_color: snap.themeColor,
-            theme_config: snap.themeConfig,
-            builder_draft: null,
-          }),
-        invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
-      }
-    }
-    return {
-      initialSections: (activePage.draft_content ?? activePage.content) as LayoutSection[],
-      initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
-      initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
-      saveDraft: (snap) => updatePage(activePage.id, { draft_content: snap.sections as LayoutSection[] }),
-      publish: async (snap) => {
-        await updatePage(activePage.id, {
-          content: snap.sections as LayoutSection[],
-          draft_content: null,
-          is_published: true,
-        })
-        await updateShop(shop.id, { theme_color: snap.themeColor, theme_config: snap.themeConfig })
-      },
-      invalidateKeys: [
-        { queryKey: ['my-shop'] },
-        { queryKey: ['tenant-shop'] },
-        { queryKey: ['shop-pages', shop.id] },
-      ],
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shop, activePage?.id])
+  const previewPath = contextPreviewPath(context, productSlug)
+  const previewTemplateKey = context.kind === 'system' ? context.key : undefined
+  const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
 
+  return (
+    <BuilderEditor
+      key={activeKey}
+      shop={shop}
+      target={target}
+      label={context.label}
+      kind={context.kind}
+      previewPath={previewPath}
+      previewTemplateKey={previewTemplateKey}
+      availableTypes={availableTypes}
+      onContextChange={handleContextChange}
+      onCreatePage={() => setCreateOpen(true)}
+      onDeletePage={() => setDeleteOpen(true)}
+      canDeletePage={context.kind === 'page'}
+      pages={pages}
+      activeKey={activeKey}
+      onNavigate={handleNavigate}
+    />
+  )
+}
+
+/* ─────────────────── Builder editor (per context) ────────────────── */
+
+function BuilderEditor({
+  shop,
+  target,
+  label,
+  kind,
+  previewPath,
+  previewTemplateKey,
+  availableTypes,
+  onContextChange,
+  onCreatePage,
+  onDeletePage,
+  canDeletePage,
+  pages,
+  activeKey,
+  onNavigate,
+}: {
+  shop: Shop
+  target: BuilderTarget
+  label: string
+  kind: PreparedContext['kind']
+  previewPath: string | null
+  previewTemplateKey?: SystemTemplateKey
+  availableTypes?: SectionType[]
+  onContextChange: (key: string) => void
+  onCreatePage: () => void
+  onDeletePage: () => void
+  canDeletePage: boolean
+  pages: StorePage[]
+  activeKey: ActiveKey
+  onNavigate: (path: string) => void
+}) {
   const builder = useBuilderState(target)
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
 
   /* Keyboard shortcuts */
   useEffect(() => {
@@ -156,26 +353,12 @@ function StoreBuilder({ shop }: { shop: Shop }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [builder])
 
-  /* Page preview path */
-  const previewPagePath = activePage ? `/pages/${activePage.slug}` : '/'
-  const previewUrl = shopUrl(shop.slug) + previewPagePath
+  const previewUrl = previewPath ? storefrontUrl(shop.slug, previewPath) : null
 
   const handlePreview = async () => {
+    if (!previewUrl) return
     await builder.saveDraftMutation.mutateAsync()
     window.open(`${previewUrl}${previewUrl.includes('?') ? '&' : '?'}preview=draft`, '_blank')
-  }
-
-  const handleCreatePage = async (title: string, slug: string) => {
-    const page = await createPage(shop.id, title, slug)
-    setCreateOpen(false)
-    setActivePageId(page.id)
-  }
-
-  const handleDeletePage = async () => {
-    if (!activePage) return
-    await deletePage(activePage.id)
-    setDeleteOpen(false)
-    setActivePageId(null)
   }
 
   return (
@@ -183,33 +366,44 @@ function StoreBuilder({ shop }: { shop: Shop }) {
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Page selector */}
+          {/* Template / page selector */}
           <div className="flex items-center gap-1.5">
             <select
-              value={activePageId ?? ''}
-              onChange={(e) => setActivePageId(e.target.value || null)}
+              value={activeKey}
+              onChange={(e) => onContextChange(e.target.value)}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-brand-400 focus:outline-none"
             >
-              <option value="">🏠 Accueil</option>
-              {pages.map((page) => (
-                <option key={page.id} value={page.id}>
-                  📄 {page.title}
-                </option>
-              ))}
+              <optgroup label="Templates">
+                <option value="home">🏠 Accueil</option>
+                {SYSTEM_TEMPLATES.map(({ key, label: tLabel }) => (
+                  <option key={key} value={key}>
+                    {key === 'catalogue' ? '📦' : key === 'product' ? '🧾' : key === 'cart' ? '🛒' : '💳'} {tLabel}
+                  </option>
+                ))}
+              </optgroup>
+              {pages.length > 0 && (
+                <optgroup label="Mes pages">
+                  {pages.map((page) => (
+                    <option key={page.id} value={`page:${page.id}`}>
+                      📄 {page.title}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
+              onClick={onCreatePage}
               title="Nouvelle page"
               aria-label="Créer une nouvelle page"
               className="rounded-lg border border-gray-200 px-2.5 py-2 text-gray-600 hover:bg-gray-50"
             >
               <Plus size={16} aria-hidden />
             </button>
-            {activePage && (
+            {canDeletePage && (
               <button
                 type="button"
-                onClick={() => setDeleteOpen(true)}
+                onClick={onDeletePage}
                 title="Supprimer cette page"
                 aria-label="Supprimer la page"
                 className="rounded-lg border border-gray-200 px-2.5 py-2 text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
@@ -222,11 +416,11 @@ function StoreBuilder({ shop }: { shop: Shop }) {
           <div>
             <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
               <Wand2 size={20} className="text-brand-600" aria-hidden />
-              {activePage ? activePage.title : 'Accueil'}
+              {label}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
               {builder.dirty ? 'Modifications non enregistrées.' : 'Tout est enregistré.'}
-              {activePage && !activePage.is_published && (
+              {kind === 'page' && (pages.find((p) => `page:${p.id}` === activeKey)?.is_published ?? true) === false && (
                 <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Brouillon</span>
               )}
             </p>
@@ -241,7 +435,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
             <Redo2 size={16} aria-hidden />
           </button>
           <span className="mx-1 hidden text-xs text-gray-400 sm:block">Cliquez sur un bloc dans l'aperçu pour le modifier.</span>
-          <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+          <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending || !previewUrl} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
             <ExternalLink size={14} aria-hidden /> Prévisualiser
           </button>
           <button type="button" onClick={() => builder.saveDraftMutation.mutate()} disabled={builder.saveDraftMutation.isPending} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
@@ -268,16 +462,29 @@ function StoreBuilder({ shop }: { shop: Shop }) {
           onDuplicate={builder.duplicateSection}
           onReorder={builder.reorderSection}
           onAdd={builder.addSection}
+          availableTypes={availableTypes}
         />
 
-        <BuilderPreviewFrame
-          slug={shop.slug}
-          pagePath={previewPagePath}
-          sections={builder.sections}
-          themeColor={builder.themeColor}
-          themeConfig={builder.themeConfig}
-          onSelectSection={builder.selectSection}
-        />
+        {previewPath && previewUrl ? (
+          <BuilderPreviewFrame
+            slug={shop.slug}
+            pagePath={previewPath}
+            templateKey={previewTemplateKey}
+            sections={builder.sections}
+            themeColor={builder.themeColor}
+            themeConfig={builder.themeConfig}
+            onSelectSection={builder.selectSection}
+            onNavigate={onNavigate}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-8 text-center">
+            <p className="text-sm font-medium text-gray-700">Aucun produit actif pour prévisualiser la fiche produit.</p>
+            <p className="text-xs text-gray-500">Ajoutez un produit : l'aperçu affichera la fiche produit.</p>
+            <Link to="/admin/produits" className="mt-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+              Gérer les produits
+            </Link>
+          </div>
+        )}
 
         <div className="overflow-y-auto border-l border-gray-200 bg-white p-4">
           {builder.activeTab === 'blocks' && (
@@ -310,18 +517,6 @@ function StoreBuilder({ shop }: { shop: Shop }) {
         tone="default"
         onConfirm={() => builder.publishMutation.mutate(undefined, { onSuccess: () => setPublishConfirmOpen(false) })}
         onClose={() => setPublishConfirmOpen(false)}
-      />
-      <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
-      <ConfirmDialog
-        open={deleteOpen}
-        title={`Supprimer « ${activePage?.title} » ?`}
-        description="Cette action est irréversible. La page et son contenu seront définitivement supprimés."
-        confirmLabel="Supprimer"
-        pendingLabel="Suppression…"
-        pending={false}
-        tone="danger"
-        onConfirm={handleDeletePage}
-        onClose={() => setDeleteOpen(false)}
       />
     </div>
   )
@@ -412,4 +607,8 @@ function CreatePageDialog({
       </div>
     </div>
   )
+}
+
+export function StoreBuilderDialogs() {
+  return null
 }

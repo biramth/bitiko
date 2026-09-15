@@ -14,6 +14,9 @@ export type SectionType =
   | 'featured_products'
   | 'promo'
   | 'footer'
+  | 'product'
+  | 'cart'
+  | 'checkout'
 
 /** An internal or external link in the header/footer menu. */
 export interface NavigationLink {
@@ -68,11 +71,38 @@ export interface ProductsSectionConfig {
   heading: string
   sort: 'recent' | 'price_asc' | 'price_desc'
   limit: number
+  /** When true, the block adds the catalogue toolbar (search, category,
+   *  sorting, count + pagination) above the grid. Used by the Catalogue
+   *  template; off for a simple grid elsewhere. */
+  enableFilters?: boolean
 }
 
 export interface FeaturedProductsSectionConfig {
   heading: string
   productIds: string[]
+}
+
+/** Dynamic "Fiche produit" block. Only meaningful on the product page, where
+ *  it renders the commerce card (photos, price, quantity, add-to-cart) for the
+ *  product being viewed via the route context. */
+export interface ProductSectionConfig {
+  heading: string
+  showGallery: boolean
+  showTitle: boolean
+  showPrice: boolean
+  showDescription: boolean
+  showQuantity: boolean
+  showAddToCart: boolean
+}
+
+/** Dynamic cart block: the live cart contents + totals, plus a checkout CTA. */
+export interface CartSectionConfig {
+  heading: string
+}
+
+/** Dynamic checkout block: the full order form. */
+export interface CheckoutSectionConfig {
+  heading: string
 }
 
 export interface PromoSectionConfig {
@@ -93,6 +123,9 @@ export type SectionConfigMap = {
   featured_products: FeaturedProductsSectionConfig
   promo: PromoSectionConfig
   footer: FooterSectionConfig
+  product: ProductSectionConfig
+  cart: CartSectionConfig
+  checkout: CheckoutSectionConfig
 }
 
 export type LayoutSection = {
@@ -120,6 +153,21 @@ export interface BuilderDraft {
   themeColor: string
   themeConfig: ThemeConfig
 }
+
+/** System storefront templates (catalogue, product, cart, checkout). Each has
+ *  its own independent body sections, mirroring Shopify's per-template editor.
+ *  Stored as a jsonb map on `shops.page_templates`; the home page keeps its
+ *  existing `layout_sections` / `builder_draft` columns. */
+export type SystemTemplateKey = 'catalogue' | 'product' | 'cart' | 'checkout'
+
+export interface SystemTemplateState {
+  draft?: LayoutSection[]
+  published?: LayoutSection[]
+}
+
+export type SystemTemplateMap = Partial<Record<SystemTemplateKey, SystemTemplateState>>
+
+export const SYSTEM_TEMPLATE_KEYS: SystemTemplateKey[] = ['catalogue', 'product', 'cart', 'checkout']
 
 export interface StoreTemplate {
   key: string

@@ -5,6 +5,9 @@ import {
   PanelBottom,
   PanelTop,
   ShoppingBag,
+  ShoppingCart,
+  PackageSearch,
+  CreditCard,
   Star,
   Tags,
   Type,
@@ -12,12 +15,15 @@ import {
 import { createSectionId } from '@/config/defaultLayout'
 import type {
   CategoriesSectionConfig,
+  CartSectionConfig,
+  CheckoutSectionConfig,
   FeaturedProductsSectionConfig,
   FooterSectionConfig,
   HeaderSectionConfig,
   HeroSectionConfig,
   ImageSectionConfig,
   LayoutSection,
+  ProductSectionConfig,
   PromoSectionConfig,
   ProductsSectionConfig,
   SectionType,
@@ -31,6 +37,9 @@ import { ImageEditor, ImageRenderer } from './sections/ImageSection'
 import { PromoEditor, PromoRenderer } from './sections/PromoSection'
 import { ProductsEditor, ProductsRenderer } from './sections/ProductsSection'
 import { TextEditor, TextRenderer } from './sections/TextSection'
+import { ProductEditor, ProductRenderer } from './sections/ProductSection'
+import { CartEditor, CartRenderer } from './sections/CartSection'
+import { CheckoutEditor, CheckoutRenderer } from './sections/CheckoutSection'
 import type { SectionEditorProps } from './sections/shared'
 
 interface SectionDefinition {
@@ -172,6 +181,53 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
       } satisfies FooterSectionConfig,
     }),
     Editor: FooterEditor,
+  },
+  product: {
+    label: 'Fiche produit',
+    icon: PackageSearch,
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('product'),
+      type: 'product',
+      visible: true,
+      config: {
+        heading: '',
+        showGallery: true,
+        showTitle: true,
+        showPrice: true,
+        showDescription: true,
+        showQuantity: true,
+        showAddToCart: true,
+      } satisfies ProductSectionConfig,
+    }),
+    Editor: ProductEditor,
+    Renderer: ProductRenderer,
+  },
+  cart: {
+    label: 'Panier',
+    icon: ShoppingCart,
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('cart'),
+      type: 'cart',
+      visible: true,
+      config: { heading: 'Mon panier' } satisfies CartSectionConfig,
+    }),
+    Editor: CartEditor,
+    Renderer: CartRenderer,
+  },
+  checkout: {
+    label: 'Commande',
+    icon: CreditCard,
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('checkout'),
+      type: 'checkout',
+      visible: true,
+      config: { heading: 'Finaliser la commande' } satisfies CheckoutSectionConfig,
+    }),
+    Editor: CheckoutEditor,
+    Renderer: CheckoutRenderer,
   },
 }
 

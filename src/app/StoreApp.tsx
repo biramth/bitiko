@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
@@ -19,6 +19,15 @@ const CheckoutPage = lazy(() =>
 const StorePageView = lazy(() =>
   import('@/pages/store/StorePageView').then((m) => ({ default: m.StorePageView })),
 )
+
+/** Root storefront route. On subdomains a custom page has a real path
+ * (/pages/:slug); in the query-param preview fallback the page comes via
+ * `?page=pages/<slug>`, so we branch here. */
+function StoreIndexRoute() {
+  const [searchParams] = useSearchParams()
+  const pagePath = searchParams.get('page')
+  return pagePath ? <StorePageView pageSlug={pagePath} /> : <HomePage />
+}
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -39,7 +48,7 @@ export function StoreApp() {
   return (
     <Routes>
       <Route element={<StoreLayout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<StoreIndexRoute />} />
         <Route path="catalogue" element={<CatalogPage />} />
         <Route path="produits/:slug" element={<ProductPage />} />
         <Route path="panier" element={<CartPage />} />

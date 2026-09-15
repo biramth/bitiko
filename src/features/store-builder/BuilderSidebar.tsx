@@ -21,6 +21,7 @@ export function BuilderSidebar({
   onDuplicate,
   onReorder,
   onAdd,
+  availableTypes,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -32,6 +33,9 @@ export function BuilderSidebar({
   onDuplicate: (id: string) => void
   onReorder: (draggedId: string, targetId: string) => void
   onAdd: (type: SectionType) => void
+  /** Restricts the "+ Ajouter un bloc" menu to a subset of section types.
+   *  Defaults to all addable types (used for the home page). */
+  availableTypes?: SectionType[]
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -149,7 +153,7 @@ export function BuilderSidebar({
             </button>
             {addMenuOpen && (
               <div className="absolute left-0 right-0 z-10 mt-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-                {ADDABLE_SECTION_TYPES.map((type) => {
+                {(availableTypes ?? ADDABLE_SECTION_TYPES).map((type) => {
                   const def = SECTION_REGISTRY[type]
                   const Icon = def.icon
                   return (

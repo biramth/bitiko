@@ -1,4 +1,4 @@
-import type { BuilderDraft, LayoutSection, ThemeConfig } from './builder.js'
+import type { BuilderDraft, LayoutSection, SystemTemplateMap, ThemeConfig } from './builder.js'
 
 export type Json =
   | string
@@ -252,6 +252,56 @@ export type Database = {
           },
         ]
       }
+      pages: {
+        Row: {
+          content: LayoutSection[]
+          created_at: string
+          draft_content: LayoutSection[] | null
+          id: string
+          is_published: boolean
+          seo_description: string | null
+          seo_title: string | null
+          shop_id: string
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: LayoutSection[]
+          created_at?: string
+          draft_content?: LayoutSection[] | null
+          id?: string
+          is_published?: boolean
+          seo_description?: string | null
+          seo_title?: string | null
+          shop_id: string
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: LayoutSection[]
+          created_at?: string
+          draft_content?: LayoutSection[] | null
+          id?: string
+          is_published?: boolean
+          seo_description?: string | null
+          seo_title?: string | null
+          shop_id?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -411,6 +461,7 @@ export type Database = {
           low_stock_threshold: number
           name: string
           owner_id: string
+          page_templates: SystemTemplateMap
           slug: string
           social_links: Record<string, string>
           theme_color: string
@@ -434,6 +485,7 @@ export type Database = {
           low_stock_threshold?: number
           name: string
           owner_id: string
+          page_templates?: SystemTemplateMap
           slug: string
           social_links?: Record<string, string>
           theme_color?: string
@@ -457,6 +509,7 @@ export type Database = {
           low_stock_threshold?: number
           name?: string
           owner_id?: string
+          page_templates?: SystemTemplateMap
           slug?: string
           social_links?: Record<string, string>
           theme_color?: string

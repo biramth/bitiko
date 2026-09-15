@@ -18,9 +18,16 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
  * localhost without deploying.
  */
 export function resolveTenant(hostname: string, search: string): TenantContext {
-  const devSlug = new URLSearchParams(search).get('boutique') ?? DEV_SHOP_SLUG
-  if (LOCAL_HOSTS.has(hostname) && devSlug) {
-    return { type: 'shop', slug: devSlug }
+  // `?boutique=<slug>` targets a specific store from any host. It's the
+  // builder live-preview mechanism (preview=draft) and the local-DNS-free
+  // way to reach a store on localhost or a root domain without wildcard
+  // subdomains. Trailing slashes are stripped ("/?boutique=foo/").
+  const boutiqueParam = new URLSearchParams(search).get('boutique')
+  if (boutiqueParam) {
+    return { type: 'shop', slug: boutiqueParam.replace(/\/+$/, '') }
+  }
+  if (LOCAL_HOSTS.has(hostname) && DEV_SHOP_SLUG) {
+    return { type: 'shop', slug: DEV_SHOP_SLUG.replace(/\/+$/, '') }
   }
 
   if (!ROOT_DOMAIN || LOCAL_HOSTS.has(hostname)) {
@@ -72,6 +79,21 @@ export function shopUrl(slug: string): string {
   if (!ROOT_DOMAIN) return `/?boutique=${slug}`
   const protocol = window.location.protocol
   return `${protocol}//${slug}.${ROOT_DOMAIN}`
+}
+
+/** Storefront URL for a given page path. With a ROOT_DOMAIN it's the
+ * "<slug>.<ROOT_DOMAIN>" subdomain; otherwise it falls back to the
+ * query-param preview so it works on any host without wildcard DNS. Custom
+ * page paths travel as a separate `page` param so they never bleed into the
+ * `boutique` slug. */
+export function storefrontUrl(slug: string, pagePath = '/'): string {
+  if (!ROOT_DOMAIN) {
+    const query = new URLSearchParams({ boutique: slug })
+    if (pagePath && pagePath !== '/') query.set('page', pagePath.replace(/^\//, ''))
+    return `/?${query.toString()}`
+  }
+  const protocol = window.location.protocol
+  return `${protocol}//${slug}.${ROOT_DOMAIN}${pagePath}`
 }
 
 /** Link back to the Bitiko marketing site from a shop's own storefront. */

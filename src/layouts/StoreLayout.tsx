@@ -1,11 +1,11 @@
-import { Suspense } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Suspense, useEffect } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Globe, MapPin, MessageCircle, ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
 import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
-import { PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
+import { PREVIEW_NAV, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
 import { Logo } from '@/components/ui/Logo'
@@ -22,6 +22,18 @@ const DEFAULT_FOOTER: FooterSectionConfig = {
   showSocialLinks: true,
   copyrightText: '',
   hideBitikoBranding: false,
+}
+
+/** While embedded in the builder, tells the parent which page the preview has
+ *  just navigated to, so the editor can switch to the matching template
+ *  ("suivre la page" behavior). */
+function PreviewNavPing({ enabled }: { enabled: boolean }) {
+  const location = useLocation()
+  useEffect(() => {
+    if (!enabled) return
+    window.parent?.postMessage({ type: PREVIEW_NAV, path: location.pathname }, '*')
+  }, [location.pathname, enabled])
+  return null
 }
 
 /** In builder preview mode, wraps header/footer with a click-to-select handler
@@ -73,6 +85,7 @@ export function StoreLayout() {
       className="flex min-h-screen flex-col bg-[var(--shop-bg)] text-[var(--shop-text)]"
       style={{ ...themeConfigToCssVars(themeColor, themeConfig), fontFamily: 'var(--shop-font-body)' } as React.CSSProperties}
     >
+      <PreviewNavPing enabled={isEmbeddedPreview} />
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={SECTION_REGISTRY.header.label}>
         <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
         <div className="mx-auto flex max-w-[var(--shop-content-width)] items-center justify-between gap-3 px-4 py-4 sm:px-6">

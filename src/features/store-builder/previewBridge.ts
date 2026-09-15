@@ -2,17 +2,20 @@
 // admin origin) and the actual storefront page it embeds (child, shop
 // origin/subdomain). Lets every keystroke in the editor reflect instantly in
 // the preview without writing the draft to the database on each change.
-import type { LayoutSection, ThemeConfig } from '@/types/builder'
+import type { LayoutSection, SystemTemplateKey, ThemeConfig } from '@/types/builder'
 
 export const PREVIEW_READY = 'bitiko-preview-ready'
 export const PREVIEW_UPDATE = 'bitiko-preview-update'
 export const PREVIEW_SELECT = 'bitiko-preview-select'
+export const PREVIEW_NAV = 'bitiko-preview-nav'
 
 export interface PreviewUpdateMessage {
   type: typeof PREVIEW_UPDATE
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  /** Which system template these sections belong to; absent for the home page. */
+  templateKey?: 'home' | SystemTemplateKey
 }
 
 export interface PreviewReadyMessage {
@@ -26,6 +29,14 @@ export interface PreviewSelectMessage {
   sectionId: string
 }
 
+/** Sent from the storefront preview iframe to the builder after an internal
+ * navigation (e.g. clicking a product card) so the editor can switch to the
+ * matching template ("suivre la page dans l'aperçu"). */
+export interface PreviewNavMessage {
+  type: typeof PREVIEW_NAV
+  path: string
+}
+
 export function isPreviewUpdateMessage(data: unknown): data is PreviewUpdateMessage {
   return !!data && typeof data === 'object' && (data as { type?: unknown }).type === PREVIEW_UPDATE
 }
@@ -36,4 +47,8 @@ export function isPreviewReadyMessage(data: unknown): data is PreviewReadyMessag
 
 export function isPreviewSelectMessage(data: unknown): data is PreviewSelectMessage {
   return !!data && typeof data === 'object' && (data as { type?: unknown }).type === PREVIEW_SELECT
+}
+
+export function isPreviewNavMessage(data: unknown): data is PreviewNavMessage {
+  return !!data && typeof data === 'object' && (data as { type?: unknown }).type === PREVIEW_NAV
 }

@@ -14,8 +14,9 @@ import type { LayoutSection, ThemeConfig } from '@/types/builder'
  * the home page. Inside the builder's live-preview iframe it switches to the
  * draft content streamed via postMessage, exactly like the home preview.
  */
-export function StorePageView() {
-  const { slug = '' } = useParams<{ slug: string }>()
+export function StorePageView({ pageSlug }: { pageSlug?: string }) {
+  const { slug: routeSlug = '' } = useParams<{ slug: string }>()
+  const slug = pageSlug ? pageSlug.replace(/^pages\//, '').replace(/\/+$/, '') : routeSlug
   const { shop } = useTenant()
   const [searchParams] = useSearchParams()
   const isDraftPreview = searchParams.get('preview') === 'draft'

@@ -2,9 +2,22 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DEFAULT_THEME_CONFIG } from '@/config/themeTokens'
 import { buildDefaultSections } from '@/config/defaultLayout'
+import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { isPreviewUpdateMessage, PREVIEW_READY, type PreviewUpdateMessage } from './previewBridge'
 import type { Shop } from '@/types'
-import type { LayoutSection } from '@/types/builder'
+import type { LayoutSection, SystemTemplateKey, ThemeConfig } from '@/types/builder'
+
+export type EffectiveTemplateKey = 'home' | SystemTemplateKey
+
+interface EffectiveConfig {
+  sections: LayoutSection[]
+  themeColor: string
+  themeConfig: ThemeConfig
+  headerSection: LayoutSection | undefined
+  footerSection: LayoutSection | undefined
+  bodySections: LayoutSection[]
+  isDraftPreview: boolean
+}
 
 /**
  * Resolves which theme/layout a shop should render with: the published
@@ -13,8 +26,15 @@ import type { LayoutSection } from '@/types/builder'
  * `previewBridge`, so every keystroke shows up instantly with no DB write.
  * Falls back to the shop's saved `builder_draft` for the "Preview" button
  * opened as a plain tab, where there is no parent window to sync with.
+ *
+ * `templateKey` picks a system template (catalogue, product, cart, checkout)
+ * resolved from `shops.page_templates`; 'home' (default) keeps using the
+ * legacy `layout_sections` / `builder_draft` columns.
  */
-export function useEffectiveShopConfig(shop: Shop | null | undefined) {
+export function useEffectiveConfig(
+  shop: Shop | null | undefined,
+  templateKey: EffectiveTemplateKey = 'home',
+): EffectiveConfig {
   const [searchParams] = useSearchParams()
   const isDraftPreview = searchParams.get('preview') === 'draft'
   const [liveUpdate, setLiveUpdate] = useState<PreviewUpdateMessage | null>(null)
@@ -29,15 +49,53 @@ export function useEffectiveShopConfig(shop: Shop | null | undefined) {
     return () => window.removeEventListener('message', handleMessage)
   }, [isDraftPreview])
 
-  const draft = liveUpdate ?? (isDraftPreview ? shop?.builder_draft : null)
+  const homeDraft = liveUpdate ?? (isDraftPreview ? shop?.builder_draft : null)
 
-  const sections: LayoutSection[] = draft?.sections ?? shop?.layout_sections ?? buildDefaultSections()
-  const themeColor: string = draft?.themeColor ?? shop?.theme_color ?? '#d9612e'
-  const themeConfig = draft?.themeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
+  // A live editor update carries the template it was sent for (`templateKey`
+  // field), so the same iframe preview honours the section set the merchant is
+  // currently editing while still streaming every keystroke instantly.
+  const templateUpdate =
+    liveUpdate != null && (liveUpdate.templateKey ?? 'home') === templateKey ? liveUpdate : null
+
+  let sections: LayoutSection[]
+  let themeColor: string
+  let themeConfig: ThemeConfig
+  let draftThemeColor: string | undefined
+  let draftThemeConfig: ThemeConfig | undefined
+
+  if (templateKey === 'home') {
+    themeColor = homeDraft?.themeColor ?? shop?.theme_color ?? '#d9612e'
+    themeConfig = homeDraft?.themeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
+    sections = homeDraft?.sections ?? shop?.layout_sections ?? buildDefaultSections()
+  } else {
+    const stored = shop?.page_templates?.[templateKey]
+    const draftSections: LayoutSection[] | undefined =
+      templateUpdate?.sections ?? stored?.draft
+    const published: LayoutSection[] | undefined = stored?.published
+    sections = draftSections ?? published ?? buildDefaultSystemTemplate(templateKey)
+    draftThemeColor = templateUpdate?.themeColor ?? homeDraft?.themeColor
+    draftThemeConfig = templateUpdate?.themeConfig ?? homeDraft?.themeConfig
+    themeColor = draftThemeColor ?? shop?.theme_color ?? '#d9612e'
+    themeConfig = draftThemeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
+  }
 
   const headerSection = sections.find((s) => s.type === 'header' && s.visible)
   const footerSection = sections.find((s) => s.type === 'footer' && s.visible)
   const bodySections = sections.filter((s) => s.type !== 'header' && s.type !== 'footer' && s.visible)
 
   return { sections, themeColor, themeConfig, headerSection, footerSection, bodySections, isDraftPreview }
+}
+
+/** Backwards-compatible alias used by the home storefront. */
+export function useEffectiveShopConfig(shop: Shop | null | undefined) {
+  return useEffectiveConfig(shop, 'home')
+}
+
+/** Sections a template should render with (incl. header/footer for the home
+ *  page which owns them). */
+export function useEffectiveTemplateConfig(
+  shop: Shop | null | undefined,
+  templateKey: SystemTemplateKey,
+) {
+  return useEffectiveConfig(shop, templateKey)
 }
