@@ -56,6 +56,9 @@ const StoreBuilderPage = lazy(() =>
 const BillingPage = lazy(() =>
   import('@/pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })),
 )
+const SuperAdminPage = lazy(() =>
+  import('@/pages/admin/SuperAdminPage').then((m) => ({ default: m.SuperAdminPage })),
+)
 
 const standalone = (page: React.ReactNode) => (
   <Suspense fallback={<Spinner />}>{page}</Suspense>
@@ -71,6 +74,9 @@ export function PlatformRoutes() {
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="super-admin" element={standalone(<SuperAdminPage />)} />
+      </Route>
       <Route path="admin">
         <Route path="login" element={standalone(<LoginPage />)} />
         <Route element={<ProtectedRoute />}>
