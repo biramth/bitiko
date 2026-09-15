@@ -7,9 +7,7 @@ import {
   FileText,
   Loader2,
   Lock,
-  Plus,
   Redo2,
-  Trash2,
   Undo2,
   Wand2,
 } from 'lucide-react'
@@ -18,6 +16,7 @@ import { useShopPlan } from '@/features/billing/useShopPlan'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
+import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
 import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
@@ -68,16 +67,9 @@ function StoreBuilderLock() {
 
 /* ─────────────────────── Template contexts ─────────────────────── */
 
-const SYSTEM_TEMPLATES: { key: SystemTemplateKey; label: string }[] = [
-  { key: 'catalogue', label: 'Catalogue' },
-  { key: 'product', label: 'Fiche produit' },
-  { key: 'cart', label: 'Panier' },
-  { key: 'checkout', label: 'Commande' },
-]
-
 /** What's currently being edited: the home page, a system template (all pages
  *  are templates, Shopify-style) or one of the merchant's custom pages. */
-type ActiveKey = 'home' | SystemTemplateKey | `page:${string}`
+export type ActiveKey = 'home' | SystemTemplateKey | `page:${string}`
 
 type PreparedContext =
   | { kind: 'home'; label: string }
@@ -279,15 +271,11 @@ function StoreBuilder({ shop }: { shop: Shop }) {
 
   const [activeKey, setActiveKey] = useState<ActiveKey>('home')
   const [createOpen, setCreateOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pageToDelete, setPageToDelete] = useState<StorePage | null>(null)
   const [navigatedProductSlug, setNavigatedProductSlug] = useState<string | null>(null)
 
   const context = resolveContext(activeKey, pages)
   const productSlug = navigatedProductSlug ?? firstProductSlug
-
-  const handleContextChange = (value: string) => {
-    setActiveKey((value || 'home') as ActiveKey)
-  }
 
   /** Preview navigated inside the iframe — follow it ("suivre la page"). */
   const handleNavigate = (path: string) => {
@@ -304,10 +292,10 @@ function StoreBuilder({ shop }: { shop: Shop }) {
   }
 
   const handleDeletePage = async () => {
-    if (context.kind !== 'page') return
-    await deletePage(context.page.id)
-    setDeleteOpen(false)
-    setActiveKey('home')
+    if (!pageToDelete) return
+    await deletePage(pageToDelete.id)
+    if (activeKey === `page:${pageToDelete.id}`) setActiveKey('home')
+    setPageToDelete(null)
   }
 
   const target = useMemo<BuilderTarget>(
@@ -334,10 +322,9 @@ function StoreBuilder({ shop }: { shop: Shop }) {
         previewTemplateKey={previewTemplateKey}
         availableTypes={availableTypes}
         draftBadge={draftBadge}
-        onContextChange={handleContextChange}
+        onContextChange={setActiveKey}
         onCreatePage={() => setCreateOpen(true)}
-        onDeletePage={() => setDeleteOpen(true)}
-        canDeletePage={context.kind === 'page'}
+        onDeletePage={setPageToDelete}
         onNavigate={handleNavigate}
         pages={pages}
         activeKey={activeKey}
@@ -346,15 +333,15 @@ function StoreBuilder({ shop }: { shop: Shop }) {
 
       <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
       <ConfirmDialog
-        open={deleteOpen}
-        title={`Supprimer « ${context.kind === 'page' ? context.page.title : ''} » ?`}
+        open={pageToDelete !== null}
+        title={`Supprimer « ${pageToDelete?.title ?? ''} » ?`}
         description="Cette action est irréversible. La page et son contenu seront définitivement supprimés."
         confirmLabel="Supprimer"
         pendingLabel="Suppression…"
         pending={false}
         tone="danger"
         onConfirm={handleDeletePage}
-        onClose={() => setDeleteOpen(false)}
+        onClose={() => setPageToDelete(null)}
       />
     </>
   )
@@ -373,7 +360,6 @@ function BuilderEditor({
   onContextChange,
   onCreatePage,
   onDeletePage,
-  canDeletePage,
   onNavigate,
   pages,
   activeKey,
@@ -386,10 +372,9 @@ function BuilderEditor({
   previewTemplateKey?: SystemTemplateKey
   availableTypes?: SectionType[]
   draftBadge: boolean
-  onContextChange: (key: string) => void
+  onContextChange: (key: ActiveKey) => void
   onCreatePage: () => void
-  onDeletePage: () => void
-  canDeletePage: boolean
+  onDeletePage: (page: StorePage) => void
   onNavigate: (path: string) => void
   pages: StorePage[]
   activeKey: ActiveKey
@@ -438,52 +423,13 @@ function BuilderEditor({
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Template / page selector — joined into one visual control */}
-          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <select
-              value={activeKey}
-              onChange={(e) => onContextChange(e.target.value)}
-              className="border-0 bg-transparent py-2 pl-3 pr-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-0"
-            >
-              <optgroup label="Templates">
-                <option value="home">🏠 Accueil</option>
-                {SYSTEM_TEMPLATES.map(({ key, label: tLabel }) => (
-                  <option key={key} value={key}>
-                    {key === 'catalogue' ? '📦' : key === 'product' ? '🧾' : key === 'cart' ? '🛒' : '💳'} {tLabel}
-                  </option>
-                ))}
-              </optgroup>
-              {pages.length > 0 && (
-                <optgroup label="Mes pages">
-                  {pages.map((page) => (
-                    <option key={page.id} value={`page:${page.id}`}>
-                      📄 {page.title}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            <button
-              type="button"
-              onClick={onCreatePage}
-              title="Nouvelle page"
-              aria-label="Créer une nouvelle page"
-              className="border-l border-gray-200 px-2.5 py-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-            >
-              <Plus size={16} aria-hidden />
-            </button>
-            {canDeletePage && (
-              <button
-                type="button"
-                onClick={onDeletePage}
-                title="Supprimer cette page"
-                aria-label="Supprimer la page"
-                className="border-l border-gray-200 px-2.5 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-              >
-                <Trash2 size={16} aria-hidden />
-              </button>
-            )}
-          </div>
+          <PageSwitcher
+            activeKey={activeKey}
+            pages={pages}
+            onSelect={onContextChange}
+            onCreatePage={onCreatePage}
+            onDeletePage={onDeletePage}
+          />
 
           <div>
             <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">

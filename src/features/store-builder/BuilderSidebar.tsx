@@ -7,7 +7,7 @@ import type { LayoutSection, SectionType } from '@/types/builder'
 const TABS: { key: BuilderTab; label: string; icon: typeof Palette }[] = [
   { key: 'blocks', label: 'Blocs', icon: GripVertical },
   { key: 'theme', label: 'Thème', icon: Palette },
-  { key: 'templates', label: 'Templates', icon: Sparkles },
+  { key: 'templates', label: 'Styles', icon: Sparkles },
 ]
 
 /** Small colored square with the section's icon — gives every block type a
