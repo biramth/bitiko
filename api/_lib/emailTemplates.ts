@@ -145,54 +145,6 @@ export function proUpgradeRequestEmailHtml({
   </div>`
 }
 
-export function newOrderEmailHtml({
-  origin,
-  shopName,
-  orderNumber,
-  orderUrl,
-  customerName,
-  customerPhone,
-  formattedTotal,
-  items,
-}: {
-  origin: string
-  shopName: string
-  orderNumber: string
-  orderUrl: string
-  customerName: string
-  customerPhone: string
-  formattedTotal: string
-  items: { productName: string; variantName: string | null; quantity: number }[]
-}): string {
-  const itemsList = items
-    .map(
-      (item) =>
-        `<tr><td style="padding:6px 0;font-size:13.5px;color:#17152e;">${item.quantity}× ${item.productName}${item.variantName ? ` — ${item.variantName}` : ''}</td></tr>`,
-    )
-    .join('')
-
-  const extra = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdf3e7;border-radius:12px;">
-    <tr><td style="padding:16px 18px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${itemsList}</table>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0dcc4;font-size:13.5px;color:#6b6690;">
-        Client : <strong style="color:#17152e;">${customerName}</strong> · ${customerPhone}
-      </div>
-    </td></tr>
-  </table>`
-
-  return shell({
-    origin,
-    preheader: `Nouvelle commande de ${formattedTotal} chez ${shopName}.`,
-    eyebrow: 'Nouvelle commande',
-    heading: `🛍️ Commande #${orderNumber}`,
-    body: `Tu as reçu une nouvelle commande de <strong>${formattedTotal}</strong> sur ${shopName}.`,
-    extra,
-    buttonLabel: 'Voir la commande',
-    buttonUrl: orderUrl,
-    footnote: 'Confirme la commande avec le client sur WhatsApp dès que possible.',
-  })
-}
-
 export function proActivatedEmailHtml({
   origin,
   shopName,
@@ -218,6 +170,29 @@ export function proActivatedEmailHtml({
     buttonLabel: 'Aller sur mon tableau de bord',
     buttonUrl: `${origin}/admin`,
     footnote: 'Une question sur ton abonnement ? Réponds directement à cet email.',
+  })
+}
+
+export function renewalReminderEmailHtml({
+  origin,
+  shopName,
+  periodEndLabel,
+  amountLabel,
+}: {
+  origin: string
+  shopName: string
+  periodEndLabel: string
+  amountLabel: string
+}): string {
+  return shell({
+    origin,
+    preheader: `L'abonnement Pro de ${shopName} expire le ${periodEndLabel}.`,
+    eyebrow: 'Renouvellement',
+    heading: 'Ton abonnement Pro expire bientôt',
+    body: `L'abonnement Pro de <strong>${shopName}</strong> arrive à échéance le <strong>${periodEndLabel}</strong>. Renouvelle-le pour ${amountLabel} afin de garder tes fonctionnalités Pro sans interruption.`,
+    buttonLabel: 'Renouveler mon abonnement',
+    buttonUrl: `${origin}/admin/facturation`,
+    footnote: "Sans renouvellement, ta boutique repasse automatiquement en plan gratuit à la date d'échéance — tes produits et données restent intacts.",
   })
 }
 
