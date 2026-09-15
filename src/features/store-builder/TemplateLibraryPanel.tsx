@@ -45,8 +45,9 @@ export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTem
     <div>
       <p className="mb-4 text-sm text-gray-500">
         Un style redessine toute votre boutique d'un coup : couleurs, typographie et mise en page de l'accueil, du
-        catalogue, de la fiche produit, du panier et de la commande. Il est appliqué en brouillon — prévisualisez,
-        puis publiez. Vos réglages précis restent modifiables ensuite dans l'onglet Thème.
+        catalogue, de la fiche produit, du panier et de la commande — vos pages personnalisées ne sont pas touchées.
+        Il est appliqué en brouillon — prévisualisez, puis publiez. Vos réglages précis restent modifiables ensuite
+        dans l'onglet Thème.
       </p>
       <div className="space-y-3">
         {STORE_TEMPLATES.map((template) => (

@@ -72,7 +72,12 @@ export function useBuilderState(target: BuilderTarget) {
   const addSection = (type: SectionType) => {
     const section = SECTION_REGISTRY[type].createDefault()
     const footerIndex = sections.findIndex((s) => s.type === 'footer')
-    const insertAt = footerIndex === -1 ? sections.length : footerIndex
+    const beforeFooter = footerIndex === -1 ? sections.length : footerIndex
+    // Land the new block right after whatever the merchant is currently
+    // looking at, instead of always at the very bottom of the page — they'd
+    // otherwise have to drag it all the way up from behind every other block.
+    const selectedIndex = selectedSectionId ? sections.findIndex((s) => s.id === selectedSectionId) : -1
+    const insertAt = selectedIndex === -1 ? beforeFooter : Math.min(selectedIndex + 1, beforeFooter)
     commit({
       ...snapshot,
       sections: [...sections.slice(0, insertAt), section, ...sections.slice(insertAt)],
@@ -81,10 +86,17 @@ export function useBuilderState(target: BuilderTarget) {
   }
 
   const removeSection = (id: string) => {
-    const t = sections.find((s) => s.id === id)
-    if (!t || SECTION_REGISTRY[t.type].pinned) return
-    commit({ ...snapshot, sections: sections.filter((s) => s.id !== id) })
-    if (selectedSectionId === id) setSelectedSectionId(null)
+    const target = sections.find((s) => s.id === id)
+    if (!target || SECTION_REGISTRY[target.type].pinned) return
+    const index = sections.indexOf(target)
+    const next = sections.filter((s) => s.id !== id)
+    commit({ ...snapshot, sections: next })
+    if (selectedSectionId === id) {
+      // Keep editing something rather than dropping back to the empty state —
+      // whatever slid into the deleted block's slot, or the one before it.
+      const fallback = next[index] ?? next[index - 1]
+      setSelectedSectionId(fallback?.id ?? null)
+    }
   }
 
   const duplicateSection = (id: string) => {
