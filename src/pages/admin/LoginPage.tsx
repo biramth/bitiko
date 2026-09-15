@@ -95,9 +95,14 @@ export function LoginPage() {
             </div>
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Mot de passe
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Mot de passe
+              </label>
+              <Link to="/mot-de-passe-oublie" className="text-xs font-medium text-brand-700 hover:text-brand-800">
+                Mot de passe oublié ?
+              </Link>
+            </div>
             <div className="relative mt-1">
               <Lock size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
               <input

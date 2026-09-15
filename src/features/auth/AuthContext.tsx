@@ -10,6 +10,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string) => Promise<{ error: string | null; hasSession: boolean }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
+  resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateFullName: (fullName: string) => Promise<{ error: string | null }>
   updateEmail: (email: string) => Promise<{ error: string | null }>
@@ -72,6 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
+  const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reinitialiser-mot-de-passe`,
+    })
+    return { error: error?.message ?? null }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
@@ -105,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signInWithGoogle,
         resendConfirmation,
+        resetPasswordForEmail,
         signOut,
         updateFullName,
         updateEmail,

@@ -14,6 +14,12 @@ const SignupPage = lazy(() =>
 const AuthCallbackPage = lazy(() =>
   import('@/pages/auth/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })),
 )
+const ForgotPasswordPage = lazy(() =>
+  import('@/pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })),
+)
+const ResetPasswordPage = lazy(() =>
+  import('@/pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+)
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -56,6 +62,8 @@ export function PlatformRoutes() {
     <Routes>
       <Route index element={standalone(<LandingPage />)} />
       <Route path="inscription" element={standalone(<SignupPage />)} />
+      <Route path="mot-de-passe-oublie" element={standalone(<ForgotPasswordPage />)} />
+      <Route path="reinitialiser-mot-de-passe" element={standalone(<ResetPasswordPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
       <Route path="admin">
         <Route path="login" element={standalone(<LoginPage />)} />
