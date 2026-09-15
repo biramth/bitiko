@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ImageOff, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { ImageOff, Package, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useCategories } from '@/features/categories/useCategories'
+import { useShopPlan } from '@/features/billing/useShopPlan'
 import { useShopProducts } from '@/features/products/useProducts'
 import { deleteProductCompletely, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
+import { PLANS } from '@/config/plans'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ProductImportDialog } from './ProductImportDialog'
 import type { ProductWithRelations } from '@/types'
 
 const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
@@ -25,6 +29,8 @@ const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
 export function ProductsPage() {
   usePageSeo({ title: 'Produits — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
+  const { data: categories = [] } = useCategories(shop?.id)
+  const { planKey } = useShopPlan(shop?.id)
   const queryClient = useQueryClient()
   const currency = shop?.currency ?? 'XOF'
   const lowStockThreshold = shop?.low_stock_threshold ?? 5
@@ -38,6 +44,7 @@ export function ProductsPage() {
   )
   const [page, setPage] = useState(1)
   const [deleteTarget, setDeleteTarget] = useState<ProductWithRelations | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const { data, isLoading, isError } = useShopProducts(
     shop?.id,
@@ -80,12 +87,21 @@ export function ProductsPage() {
         title="Produits"
         subtitle="Gérez vos produits, leur stock et leur visibilité."
         actions={
-          <Link
-            to="/admin/produits/nouveau"
-            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <Plus size={16} /> Nouveau produit
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <Upload size={16} /> Importer (CSV)
+            </button>
+            <Link
+              to="/admin/produits/nouveau"
+              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Plus size={16} /> Nouveau produit
+            </Link>
+          </div>
         }
       />
 
@@ -239,6 +255,17 @@ export function ProductsPage() {
         }}
         onClose={() => setDeleteTarget(null)}
       />
+
+      {shop && (
+        <ProductImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          shopId={shop.id}
+          categories={categories}
+          maxActiveProducts={PLANS[planKey].maxActiveProducts}
+          onImported={invalidate}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient'
 import { PRODUCTS_PAGE_SIZE, ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
+import { slugify } from '@/utils/format'
 import type { Product, ProductVariant, ProductWithRelations } from '@/types'
 
 export interface ProductFilters {
@@ -157,6 +158,57 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   const { data, error } = await supabase.from('products').insert(input).select().single()
   if (error) throw error
   return data
+}
+
+export interface BulkProductRow {
+  name: string
+  description: string | null
+  price: number
+  stock: number
+  categoryName: string | null
+}
+
+export interface BulkCreateResult {
+  created: number
+  inactive: number
+}
+
+/**
+ * Creates many products sequentially (not a single batch insert) so each
+ * one goes through the same slug-uniqueness and free-plan active-count
+ * logic as a single manual create — a large import must not silently
+ * bypass the plan's product limit.
+ */
+export async function bulkCreateProducts(
+  shopId: string,
+  rows: BulkProductRow[],
+  categories: { id: string; name: string }[],
+  maxActiveProducts: number | null,
+): Promise<BulkCreateResult> {
+  const categoryByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]))
+  let activeCount = await countActiveProducts(shopId)
+  let created = 0
+  let inactive = 0
+
+  for (const row of rows) {
+    const canActivate = maxActiveProducts === null || activeCount < maxActiveProducts
+    const slug = await generateUniqueProductSlug(shopId, slugify(row.name))
+    await createProduct({
+      shop_id: shopId,
+      category_id: row.categoryName ? (categoryByName.get(row.categoryName.trim().toLowerCase()) ?? null) : null,
+      name: row.name,
+      slug,
+      description: row.description,
+      price: row.price,
+      stock: row.stock,
+      active: canActivate,
+    })
+    created += 1
+    if (canActivate) activeCount += 1
+    else inactive += 1
+  }
+
+  return { created, inactive }
 }
 
 export async function updateProduct(
