@@ -83,6 +83,7 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
         deliveryFee,
         deliveryZoneName: selectedVille?.name,
         paymentMethod,
+        paymentInstructions: shop?.payment_instructions,
         total: result.total,
         customerName,
         customerPhone,
@@ -111,6 +112,7 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
       deliveryFee,
       deliveryZoneName: selectedVille?.name,
       paymentMethod,
+      paymentInstructions: shop.payment_instructions,
       total: orderResult.total,
       customerName,
       customerPhone,
@@ -151,6 +153,13 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
             <span>{formatCurrency(orderResult.total, currency)}</span>
           </div>
         </div>
+
+        {paymentMethod === 'mobile_money' && shop.payment_instructions?.trim() && (
+          <div className="mt-4 rounded-lg bg-sand-100 p-4 text-left text-sm text-ink-700">
+            <p className="font-semibold text-ink-900">Pour payer :</p>
+            <p className="mt-1 whitespace-pre-line">{shop.payment_instructions}</p>
+          </div>
+        )}
 
         {autoOpenFailed && (
           <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-8 flex items-center justify-center gap-2 bg-emerald-600 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90">

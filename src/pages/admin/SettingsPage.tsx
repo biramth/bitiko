@@ -433,6 +433,7 @@ function SettingsForm({
   const [name, setName] = useState(shop.name)
   const [description, setDescription] = useState(shop.description ?? '')
   const [whatsappNumber, setWhatsappNumber] = useState(shop.whatsapp_number)
+  const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
   const [currency, setCurrency] = useState(shop.currency)
   const [address, setAddress] = useState(shop.address ?? '')
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(shop.social_links ?? {})
@@ -556,6 +557,7 @@ function SettingsForm({
         name: name.trim(),
         description: description.trim() || null,
         whatsapp_number: whatsappNumber.trim(),
+        payment_instructions: paymentInstructions.trim() || null,
         currency: normalizeCurrency(currency),
         address: address.trim() || null,
         social_links: Object.fromEntries(
@@ -858,6 +860,23 @@ function SettingsForm({
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
                   C'est ce numéro qui recevra les commandes de vos clients sur WhatsApp.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="paymentInstructions" className="block text-sm font-medium text-gray-700">
+                  Comment vous payer en Mobile Money
+                </label>
+                <textarea
+                  id="paymentInstructions"
+                  rows={2}
+                  value={paymentInstructions}
+                  onChange={(e) => setPaymentInstructions(e.target.value)}
+                  placeholder="Ex. Wave : 77 123 45 67 — au nom de Fatou Diop"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Affiché à vos clients quand ils choisissent « Mobile money » comme moyen de paiement.
                 </p>
               </div>
 

@@ -165,6 +165,7 @@ export function buildWhatsAppMessage(params: {
   deliveryFee?: number
   deliveryZoneName?: string
   paymentMethod?: PaymentMethod
+  paymentInstructions?: string | null
   total: number
   customerName: string
   customerPhone: string
@@ -192,6 +193,9 @@ export function buildWhatsAppMessage(params: {
       ? 'Paiement : Mobile money (Wave / Orange Money) avant envoi.'
       : 'Paiement : Espèces à la livraison.',
   )
+  if (params.paymentMethod === 'mobile_money' && params.paymentInstructions?.trim()) {
+    lines.push(params.paymentInstructions.trim())
+  }
   lines.push(
     `Nom : ${params.customerName}`,
     `Téléphone : ${params.customerPhone}`,

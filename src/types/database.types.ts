@@ -519,6 +519,7 @@ export type Database = {
           name: string
           owner_id: string
           page_templates: SystemTemplateMap
+          payment_instructions: string | null
           slug: string
           social_links: Record<string, string>
           theme_color: string
@@ -543,6 +544,7 @@ export type Database = {
           name: string
           owner_id: string
           page_templates?: SystemTemplateMap
+          payment_instructions?: string | null
           slug: string
           social_links?: Record<string, string>
           theme_color?: string
@@ -567,6 +569,7 @@ export type Database = {
           name?: string
           owner_id?: string
           page_templates?: SystemTemplateMap
+          payment_instructions?: string | null
           slug?: string
           social_links?: Record<string, string>
           theme_color?: string
