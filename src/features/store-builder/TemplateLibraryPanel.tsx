@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { STORE_TEMPLATES } from '@/config/storeTemplates'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { StoreTemplate } from '@/types/builder'
 
 /** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch. */
@@ -36,6 +38,8 @@ function TemplateThumbnail({ template }: { template: StoreTemplate }) {
 }
 
 export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTemplate) => void }) {
+  const [pendingTemplate, setPendingTemplate] = useState<StoreTemplate | null>(null)
+
   return (
     <div>
       <p className="mb-4 text-sm text-gray-500">
@@ -47,11 +51,7 @@ export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTem
           <button
             key={template.key}
             type="button"
-            onClick={() => {
-              if (confirm(`Remplacer votre mise en page et votre thème actuels par "${template.label}" ?`)) {
-                onApply(template)
-              }
-            }}
+            onClick={() => setPendingTemplate(template)}
             className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50/40"
           >
             <TemplateThumbnail template={template} />
@@ -62,6 +62,23 @@ export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTem
           </button>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={pendingTemplate !== null}
+        title="Remplacer la mise en page actuelle ?"
+        description={
+          pendingTemplate
+            ? `Votre mise en page et votre thème actuels seront remplacés par "${pendingTemplate.label}".`
+            : ''
+        }
+        confirmLabel="Remplacer"
+        tone="default"
+        onConfirm={() => {
+          if (pendingTemplate) onApply(pendingTemplate)
+          setPendingTemplate(null)
+        }}
+        onClose={() => setPendingTemplate(null)}
+      />
     </div>
   )
 }

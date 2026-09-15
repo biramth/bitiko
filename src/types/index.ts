@@ -13,6 +13,7 @@ export type Product = Database['public']['Tables']['products']['Row']
 export type ProductImage = Database['public']['Tables']['product_images']['Row']
 export type DeliverySecteur = Database['public']['Tables']['delivery_secteurs']['Row']
 export type DeliveryVille = Database['public']['Tables']['delivery_villes']['Row']
+export { type StorePage } from './pages'
 // `status` is a plain `text` column with a check constraint, not a real
 // Postgres enum, so the generated Row type only knows it's a string —
 // narrowed here to the actual set of values the app ever writes/reads.

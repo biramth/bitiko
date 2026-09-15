@@ -17,7 +17,7 @@ export function buildDefaultSections(): LayoutSection[] {
       id: createSectionId('header'),
       type: 'header',
       visible: true,
-      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true },
+      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] },
     },
     {
       id: createSectionId('hero'),
@@ -47,7 +47,30 @@ export function buildDefaultSections(): LayoutSection[] {
         showWhatsapp: true,
         showSocialLinks: true,
         copyrightText: '',
+        hideBitikoBranding: false,
       },
     },
+  ]
+}
+
+/**
+ * Shops whose `layout_sections` predate the header/footer sections (or a
+ * legacy row seeded before this feature) can be missing one of the two
+ * pinned sections entirely, making it unreachable from the builder UI.
+ * Backfills whichever is missing so every shop can always edit both.
+ */
+export function ensurePinnedSections(sections: LayoutSection[]): LayoutSection[] {
+  const hasHeader = sections.some((s) => s.type === 'header')
+  const hasFooter = sections.some((s) => s.type === 'footer')
+  if (hasHeader && hasFooter) return sections
+
+  const defaults = buildDefaultSections()
+  const defaultHeader = defaults.find((s) => s.type === 'header')!
+  const defaultFooter = defaults.find((s) => s.type === 'footer')!
+
+  return [
+    ...(hasHeader ? [] : [defaultHeader]),
+    ...sections,
+    ...(hasFooter ? [] : [defaultFooter]),
   ]
 }

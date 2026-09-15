@@ -6,7 +6,7 @@ function header(overrides: Partial<Extract<LayoutSection, { type: 'header' }>['c
     id: createSectionId('header'),
     type: 'header',
     visible: true,
-    config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, ...overrides },
+    config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [], ...overrides },
   }
 }
 
@@ -21,6 +21,7 @@ function footer(overrides: Partial<Extract<LayoutSection, { type: 'footer' }>['c
       showWhatsapp: true,
       showSocialLinks: true,
       copyrightText: '',
+      hideBitikoBranding: false,
       ...overrides,
     },
   }

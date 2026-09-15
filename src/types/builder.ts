@@ -15,11 +15,20 @@ export type SectionType =
   | 'promo'
   | 'footer'
 
+/** An internal or external link in the header/footer menu. */
+export interface NavigationLink {
+  label: string
+  href: string
+}
+
 export interface HeaderSectionConfig {
   showLogo: boolean
   showCatalogLink: boolean
   showContactLink: boolean
   sticky: boolean
+  /** Custom navigation links rendered between the logo and right-side actions.
+   *  When non-empty, these replace the default Catalogue/Contact links. */
+  menu: NavigationLink[]
 }
 
 export interface FooterSectionConfig {
@@ -28,6 +37,8 @@ export interface FooterSectionConfig {
   showWhatsapp: boolean
   showSocialLinks: boolean
   copyrightText: string
+  /** Pro-only: lets the merchant remove "Propulsé par Bitiko" — ignored (always shown) on the free plan. */
+  hideBitikoBranding?: boolean
 }
 
 export interface HeroSectionConfig {

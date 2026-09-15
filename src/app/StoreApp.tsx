@@ -16,6 +16,9 @@ const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ defa
 const CheckoutPage = lazy(() =>
   import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })),
 )
+const StorePageView = lazy(() =>
+  import('@/pages/store/StorePageView').then((m) => ({ default: m.StorePageView })),
+)
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -41,6 +44,7 @@ export function StoreApp() {
         <Route path="produits/:slug" element={<ProductPage />} />
         <Route path="panier" element={<CartPage />} />
         <Route path="commande" element={<CheckoutPage />} />
+        <Route path="pages/:slug" element={<StorePageView />} />
       </Route>
       <Route
         path="*"

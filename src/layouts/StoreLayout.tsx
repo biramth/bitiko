@@ -4,6 +4,9 @@ import { Globe, MapPin, MessageCircle, ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
+import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
+import { PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
+import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
 import { Logo } from '@/components/ui/Logo'
 import { Spinner } from '@/components/ui/Spinner'
@@ -11,30 +14,67 @@ import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
 
-const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true }
+const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] }
 const DEFAULT_FOOTER: FooterSectionConfig = {
   showContact: true,
   showAddress: true,
   showWhatsapp: true,
   showSocialLinks: true,
   copyrightText: '',
+  hideBitikoBranding: false,
+}
+
+/** In builder preview mode, wraps header/footer with a click-to-select handler
+ * so the merchant can target them from the live preview, like body sections. */
+function PreviewClickTarget({
+  enabled,
+  sectionId,
+  label,
+  children,
+}: {
+  enabled: boolean
+  sectionId: string | undefined
+  label: string
+  children: React.ReactNode
+}) {
+  if (!enabled) return <>{children}</>
+  return (
+    <div
+      data-preview-section
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (sectionId) window.parent?.postMessage({ type: PREVIEW_SELECT, sectionId }, '*')
+      }}
+      className="preview-section group relative cursor-pointer"
+    >
+      {children}
+      <span className="pointer-events-none absolute left-2 top-2 z-20 rounded-md bg-brand-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+        {label}
+      </span>
+    </div>
+  )
 }
 
 export function StoreLayout() {
   const { itemCount } = useCart()
   const { shop } = useTenant()
-  const { themeColor, themeConfig, headerSection, footerSection } = useEffectiveShopConfig(shop)
+  const { themeColor, themeConfig, headerSection, footerSection, isDraftPreview } = useEffectiveShopConfig(shop)
+  const { planKey } = useShopPlan(shop?.id)
   const shopName = shop?.name ?? 'Boutique'
   const header = (headerSection?.config as HeaderSectionConfig | undefined) ?? DEFAULT_HEADER
   const footer = (footerSection?.config as FooterSectionConfig | undefined) ?? DEFAULT_FOOTER
   const socialLinks = Object.entries(shop?.social_links ?? {}).filter(([, url]) => !!url)
+  const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
+  const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
 
   return (
     <div
       className="flex min-h-screen flex-col bg-[var(--shop-bg)] text-[var(--shop-text)]"
       style={{ ...themeConfigToCssVars(themeColor, themeConfig), fontFamily: 'var(--shop-font-body)' } as React.CSSProperties}
     >
-      <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
+      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={SECTION_REGISTRY.header.label}>
+        <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
         <div className="mx-auto flex max-w-[var(--shop-content-width)] items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-[var(--shop-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
             {header.showLogo && shop?.logo_url ? (
@@ -45,24 +85,36 @@ export function StoreLayout() {
             <span className="truncate text-base sm:text-lg">{shopName}</span>
           </Link>
           <nav className="flex shrink-0 items-center gap-5 sm:gap-7">
-            {header.showCatalogLink && (
-              <Link
-                to="/catalogue"
-                className="hidden text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 sm:block"
-              >
-                Catalogue
-              </Link>
-            )}
-            {header.showContactLink && shop?.whatsapp_number && (
-              <a
-                href={whatsappHref(shop.whatsapp_number)}
-                target="_blank"
-                rel="noreferrer"
-                className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 md:flex"
-              >
-                Contact
-              </a>
-            )}
+            {(header.menu?.length ?? 0) > 0
+              ? header.menu!.map((link) => {
+                  const isExternal = /^https?:\/\//.test(link.href)
+                  const className = 'hidden text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 sm:block'
+                  if (isExternal) {
+                    return (
+                      <a key={link.href + link.label} href={link.href} target="_blank" rel="noreferrer" className={className}>
+                        {link.label}
+                      </a>
+                    )
+                  }
+                  return (
+                    <Link key={link.href + link.label} to={link.href} className={className}>
+                      {link.label}
+                    </Link>
+                  )
+                })
+              : <>
+                {header.showCatalogLink && (
+                  <Link to="/catalogue" className="hidden text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 sm:block">
+                    Catalogue
+                  </Link>
+                )}
+                {header.showContactLink && shop?.whatsapp_number && (
+                  <a href={whatsappHref(shop.whatsapp_number)} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60 md:flex">
+                    Contact
+                  </a>
+                )}
+              </>
+            }
             <Link
               to="/panier"
               className="relative flex items-center text-[var(--shop-text)] transition-opacity hover:opacity-60"
@@ -78,6 +130,7 @@ export function StoreLayout() {
           </nav>
         </div>
       </header>
+      </PreviewClickTarget>
 
       <main className="flex-1">
         <Suspense fallback={<Spinner />}>
@@ -85,7 +138,8 @@ export function StoreLayout() {
         </Suspense>
       </main>
 
-      <footer className="bg-ink-900 text-sand-50">
+      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={footerSection?.id} label={SECTION_REGISTRY.footer.label}>
+        <footer className="bg-ink-900 text-sand-50">
         <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2.5 text-lg font-bold text-white" style={{ fontFamily: 'var(--shop-font-heading)' }}>
@@ -148,15 +202,18 @@ export function StoreLayout() {
             <Link to="/catalogue" className="text-sm font-medium text-sand-50/80 hover:text-white md:self-end">
               Voir tout le catalogue →
             </Link>
-            <a href={platformUrl()} className="inline-flex items-center gap-1.5 text-xs text-sand-50/40 hover:text-sand-50/70">
-              Propulsé par <Logo size={14} withWordmark={false} /> <span className="font-semibold">Bitiko</span>
-            </a>
+            {showBitikoBranding && (
+              <a href={platformUrl()} className="inline-flex items-center gap-1.5 text-xs text-sand-50/40 hover:text-sand-50/70">
+                Propulsé par <Logo size={14} withWordmark={false} /> <span className="font-semibold">Bitiko</span>
+              </a>
+            )}
           </div>
         </div>
         <p className="border-t border-white/10 py-4 text-center text-xs text-sand-50/40">
           {footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}
         </p>
       </footer>
+      </PreviewClickTarget>
     </div>
   )
 }

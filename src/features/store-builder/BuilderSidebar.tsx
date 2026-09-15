@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Eye, EyeOff, GripVertical, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Copy, Eye, EyeOff, GripVertical, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { ADDABLE_SECTION_TYPES, SECTION_REGISTRY } from './sectionRegistry'
 import type { BuilderTab } from './useBuilderState'
 import type { LayoutSection, SectionType } from '@/types/builder'
@@ -18,6 +18,7 @@ export function BuilderSidebar({
   onSelect,
   onToggleVisible,
   onRemove,
+  onDuplicate,
   onReorder,
   onAdd,
 }: {
@@ -28,11 +29,19 @@ export function BuilderSidebar({
   onSelect: (id: string) => void
   onToggleVisible: (id: string) => void
   onRemove: (id: string) => void
+  onDuplicate: (id: string) => void
   onReorder: (draggedId: string, targetId: string) => void
   onAdd: (type: SectionType) => void
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  useEffect(() => {
+    if (!selectedSectionId || !listRef.current) return
+    const el = listRef.current.querySelector<HTMLElement>(`[data-section-id="${selectedSectionId}"]`)
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [selectedSectionId])
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -54,7 +63,7 @@ export function BuilderSidebar({
 
       {activeTab === 'blocks' && (
         <div className="flex-1 overflow-y-auto p-2">
-          <ul className="space-y-1">
+          <ul ref={listRef} className="space-y-1">
             {sections.map((section) => {
               const def = SECTION_REGISTRY[section.type]
               const Icon = def.icon
@@ -62,6 +71,7 @@ export function BuilderSidebar({
               return (
                 <li
                   key={section.id}
+                  data-section-id={section.id}
                   draggable={isDraggable}
                   onDragStart={() => setDraggedId(section.id)}
                   onDragOver={(e) => {
@@ -73,7 +83,7 @@ export function BuilderSidebar({
                     setDraggedId(null)
                   }}
                   onDragEnd={() => setDraggedId(null)}
-                  className={`group flex items-center gap-1.5 rounded-lg px-2 py-2 ${
+                  className={`group flex items-center gap-1.5 rounded-lg py-2 pl-2 pr-1 ${
                     selectedSectionId === section.id ? 'bg-brand-50' : 'hover:bg-gray-50'
                   } ${draggedId === section.id ? 'opacity-40' : ''}`}
                 >
@@ -85,31 +95,45 @@ export function BuilderSidebar({
                   <button
                     type="button"
                     onClick={() => onSelect(section.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                   >
                     <Icon size={15} className="shrink-0 text-gray-500" aria-hidden />
                     <span className={`truncate text-sm ${selectedSectionId === section.id ? 'font-medium text-brand-700' : 'text-gray-700'}`}>
                       {def.label}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onToggleVisible(section.id)}
-                    aria-label={section.visible ? 'Masquer' : 'Afficher'}
-                    className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-                  >
-                    {section.visible ? <Eye size={14} /> : <EyeOff size={14} />}
-                  </button>
-                  {!def.pinned && (
+                  <div className="flex shrink-0 items-center opacity-70 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
-                      onClick={() => onRemove(section.id)}
-                      aria-label="Supprimer"
-                      className="shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => onToggleVisible(section.id)}
+                      aria-label={section.visible ? 'Masquer' : 'Afficher'}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
                     >
-                      <Trash2 size={14} />
+                      {section.visible ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
-                  )}
+                    {!def.pinned && (
+                      <button
+                        type="button"
+                        onClick={() => onDuplicate(section.id)}
+                        aria-label="Dupliquer"
+                        title="Dupliquer ce bloc"
+                        className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                    {!def.pinned && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(section.id)}
+                        aria-label="Supprimer"
+                        title="Supprimer ce bloc (Suppr)"
+                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </li>
               )
             })}

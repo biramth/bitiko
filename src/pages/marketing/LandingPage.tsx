@@ -6,22 +6,56 @@ import {
   ChevronDown,
   Clock,
   CreditCard,
-  MapPin,
+  Gem,
+  MapPinned,
   Menu,
   MessageCircle,
+  MessageCircleMore,
+  Minus,
   Package,
+  Palette,
   Phone,
+  Plus,
   ShoppingBag,
   ShoppingCart,
   Smartphone,
+  Sparkles,
   Store,
-  TrendingUp,
+  UtensilsCrossed,
   Wallet,
+  Wand2,
   X,
   Zap,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { usePageSeo } from '@/hooks/usePageSeo'
+
+/** Consistent, premium icon treatment shared by every card grid on the page —
+ * a soft gradient tile instead of a flat tint, so icons read as designed
+ * artwork rather than default library glyphs dropped onto a colored square. */
+function IconTile({
+  icon: Icon,
+  tone = 'brand',
+  size = 'md',
+}: {
+  icon: typeof Store
+  tone?: 'brand' | 'dark' | 'gold'
+  size?: 'md' | 'lg'
+}) {
+  const tones = {
+    brand: 'from-brand-500 to-brand-700 text-white shadow-brand-900/15',
+    dark: 'from-ink-800 to-ink-950 text-white shadow-ink-900/20',
+    gold: 'from-gold-300 to-gold-500 text-ink-900 shadow-gold-900/10',
+  }
+  const sizes = size === 'lg' ? 'h-14 w-14 rounded-2xl' : 'h-11 w-11 rounded-xl'
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br shadow-lg ${sizes} ${tones[tone]}`}
+    >
+      <Icon size={size === 'lg' ? 24 : 19} strokeWidth={1.75} aria-hidden />
+    </span>
+  )
+}
 
 const features = [
   {
@@ -31,7 +65,7 @@ const features = [
       'Photos, prix, catégories, stock — tout est organisé, beau et accessible depuis n\'importe quel téléphone. Tes clients regardent, comparent et commandent la nuit.',
   },
   {
-    icon: MessageCircle,
+    icon: MessageCircleMore,
     title: 'Chaque commande arrive sur ton WhatsApp',
     description:
       'Pas besoin de downloader une appli. Le client commande en ligne, tu reçois un message formaté avec le nom, les produits, le total, la ville. Tu confirmes en 2 secondes.',
@@ -43,7 +77,7 @@ const features = [
       'La commande passe → le stock baisse automatiquement. Zéro risque de vendre deux fois le même article. Alerte quand le stock est bas.',
   },
   {
-    icon: MapPin,
+    icon: MapPinned,
     title: 'Livraison selon tes règles',
     description:
       'Crée tes secteurs (Dakar, Rufisque, Thiès…) avec tes tarifs. Le client choisit sa ville, le prix s\'applique. Livraison offerte au-dessus d\'un montant — c\'est toi qui décides.',
@@ -55,37 +89,37 @@ const features = [
       'Paiement à la livraison, Wave, Orange Money. Tu valides les détails directement sur WhatsApp, pas de plateforme de paiement compliquée à configurer.',
   },
   {
-    icon: TrendingUp,
-    title: 'Un dashboard qui te parle',
+    icon: Wand2,
+    title: 'Une boutique qui te ressemble',
     description:
-      'Commandes du jour, chiffre d\'affaires, produits en rupture, statuts — tu vois tout en un coup d\'œil. Aucune compétence technique requise.',
+      'Thème, bannière, mise en page — personnalise ta boutique en quelques clics avec l\'éditeur visuel. Aucune compétence technique requise.',
   },
 ]
 
 const solutions = [
   {
-    icon: '👗',
+    icon: Sparkles,
     title: 'Mode & textiles',
     description:
       'Robes, pagnes, chaussures — chaque produit a ses photos, son prix, sa taille. Le client ne te pose plus 10 fois les mêmes questions sur WhatsApp.',
     products: 'Robes • Pagnes • Bijoux • Chaussures',
   },
   {
-    icon: '🍽️',
+    icon: UtensilsCrossed,
     title: 'Restauration & livraison',
     description:
       'Le client choisit son quartier, sa ville, valide son menu. Tu reçois la commande formatée, tu prépares, tu livres. Simple.',
     products: 'Plats • Boissons • Menus • Packages',
   },
   {
-    icon: '💄',
+    icon: Gem,
     title: 'Beauté & cosmétiques',
     description:
       'Tes produits se vendent la nuit — toi tu dors. Le matin, tu lis tes commandes et tu organises les livraisons. Stock toujours à jour.',
     products: 'Crèmes • Maquillage • Soin • Parfums',
   },
   {
-    icon: '🎨',
+    icon: Palette,
     title: 'Artisanat & créations',
     description:
       'Chaque pièce est unique. Bitiko lui donne une vitrine à la hauteur — photos HD, description, stock. Paiement à la livraison pour les pièces de confiance.',
@@ -119,8 +153,8 @@ const comparisonRows = [
   { before: 'Tenir un carnet de commandes à la main', after: 'Chaque commande est enregistrée et numérotée automatiquement' },
   { before: 'Vendre du stock épuisé sans le savoir', after: 'Stock synchronisé en temps réel + alertes' },
   { before: 'Calculer les totaux et frais de livraison à la main', after: 'Total recalculé automatiquement — zéro erreur' },
-  { before: 'Perdre des commandes dans les DMs WhatsApp', after: 'Toutes les commandes triées par statut, claires etarchivées' },
-  { before: 'Demander « t\'es dans quel quartier ?" à chaque client', after: 'Le client choisit sa ville, le tarif s\'applique' },
+  { before: 'Perdre des commandes dans les DMs WhatsApp', after: 'Toutes les commandes triées par statut, claires et archivées' },
+  { before: 'Demander « t\'es dans quel quartier ? » à chaque client', after: 'Le client choisit sa ville, le tarif s\'applique' },
 ]
 
 const faq = [
@@ -170,14 +204,15 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-5 text-left"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
         <span className="font-heading text-sm font-semibold text-ink-900 sm:text-base">{question}</span>
-        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${open ? 'bg-brand-600' : 'bg-ink-100'}`}>
-          {open ? <X size={12} className="text-white" /> : <Check size={12} className="text-ink-700" />}
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${open ? 'rotate-180 bg-brand-600' : 'bg-ink-100'}`}>
+          {open ? <Minus size={13} className="text-white" /> : <Plus size={13} className="text-ink-700" />}
         </span>
       </button>
-      {open && <p className="pb-5 text-sm leading-relaxed text-ink-700/70">{answer}</p>}
+      {open && <p className="pb-5 pr-10 text-sm leading-relaxed text-ink-700/70">{answer}</p>}
     </div>
   )
 }
@@ -202,6 +237,7 @@ const produitLinks = [
 function Nav() {
   const [produitOpen, setProduitOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const produitRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -212,9 +248,22 @@ function Nav() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <header className="sticky top-0 z-50 border-b border-sand-200 bg-sand-50/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 lg:h-16 lg:px-6">
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4">
+      <div
+        className={`mx-auto flex h-16 items-center justify-between px-4 transition-all duration-300 lg:px-6 ${
+          scrolled
+            ? 'max-w-4xl rounded-full border border-sand-200 bg-white/95 shadow-lg shadow-ink-900/[0.06] backdrop-blur-md'
+            : 'max-w-6xl rounded-full border border-transparent bg-transparent'
+        }`}
+      >
         {/* Left: logo + desktop center links */}
         <div className="flex items-center gap-8">
           <Link to="/" className="shrink-0 transition-opacity hover:opacity-80">
@@ -352,6 +401,39 @@ function PhoneMockup() {
   )
 }
 
+/* ─────────────────── Hero curve backdrop ───────────────────── */
+
+/** Soft curved gradient arch behind the hero, in Bitiko's own warm palette —
+ * the "premium modern SaaS" signature the redesign was asked to match. */
+function HeroCurve() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-x-0 top-0 h-[380px] w-full sm:h-[460px] lg:h-[520px]"
+      viewBox="0 0 1440 520"
+      preserveAspectRatio="none"
+      fill="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="heroCurveGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F2B705" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#F2B705" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0,0 C 260,300 460,460 720,460 C 980,460 1180,300 1440,0 L1440,0 L1440,520 L0,520 Z"
+        fill="url(#heroCurveGold)"
+      />
+      <path
+        d="M0,0 C 260,300 460,460 720,460 C 980,460 1180,300 1440,0"
+        stroke="#D9612E"
+        strokeOpacity="0.4"
+        strokeWidth="2"
+      />
+    </svg>
+  )
+}
+
 /* ─────────────────── Landing Page ─────────────────────────── */
 
 export function LandingPage() {
@@ -367,7 +449,8 @@ export function LandingPage() {
 
       <main className="relative mx-auto w-full">
         {/* ── HERO ── */}
-        <section className="mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 lg:flex lg:items-center lg:gap-12 lg:pt-20">
+        <section className="relative mx-auto max-w-6xl overflow-hidden px-4 pb-10 pt-12 sm:overflow-visible sm:px-6 lg:flex lg:items-center lg:gap-12 lg:pt-20">
+          <HeroCurve />
           <div className="flex-1 text-center lg:text-left">
             <a href="#solutions" className="mx-auto mb-6 hidden w-fit items-center gap-1.5 rounded-3xl border border-sand-200 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-700 shadow-[inset_0_-2px_0_#E7E0D4] transition-colors hover:bg-sand-100 lg:inline-flex">
               <Zap size={13} className="text-brand-500" aria-hidden />
@@ -378,7 +461,7 @@ export function LandingPage() {
               Ton commerce mérite mieux qu'un fil WhatsApp.
             </h1>
             <p className="mx-auto mt-5 max-w-[540px] text-[15px] leading-relaxed text-[#605958] sm:text-base lg:mx-0">
-              Bitiko transforme ton téléphone en boutique en ligne professionnelle — avec un catalogue, un panier et des commandes qui arrivent directement sur WhatsApp. Pas de serveur à payer, pas de carte bancaire à configurer, pas de commission.
+              Bitiko transforme ton téléphone en vraie boutique en ligne : catalogue, panier, et chaque commande qui atterrit directement sur ton WhatsApp. Aucun code, aucune carte bancaire, aucune commission — juste plus de ventes.
             </p>
             <div className="mb-8 mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
               <Link to="/inscription" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
@@ -409,9 +492,9 @@ export function LandingPage() {
               { icon: Wallet, value: '0 F', label: 'Pour commencer' },
               { icon: Smartphone, value: '24h/24', label: 'Votre boutique vend' },
             ].map(({ icon: Icon, value, label }) => (
-              <div key={label} className="text-center">
-                <Icon size={20} className="mx-auto mb-2 text-brand-500" aria-hidden />
-                <p className="font-heading text-xl font-bold text-ink-900">{value}</p>
+              <div key={label} className="flex flex-col items-center text-center">
+                <IconTile icon={Icon} tone="gold" />
+                <p className="mt-3 font-heading text-xl font-bold text-ink-900">{value}</p>
                 <p className="text-xs text-ink-700/60">{label}</p>
               </div>
             ))}
@@ -438,7 +521,7 @@ export function LandingPage() {
                     'Calculer les totaux à la main — tu te trompes, le client se plaint',
                     'Vendre un article que tu n\'as plus en stock',
                     'Perdre des commandes dans la masse de messages',
-                    'Demander « tu es dans quel quartier ?" à chaque client',
+                    'Demander « tu es dans quel quartier ? » à chaque client',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3 text-sm font-medium text-ink-700/80">
                       <X size={15} className="mt-0.5 shrink-0 text-red-500" aria-hidden /> {t}
@@ -483,11 +566,12 @@ export function LandingPage() {
             </p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {features.map(({ icon: Icon, title, description }) => (
-                <div key={title} className="rounded-2xl border border-sand-200 bg-white p-6 transition-shadow hover:shadow-md">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100">
-                    <Icon size={20} className="text-brand-700" aria-hidden />
-                  </span>
-                  <h3 className="mt-4 font-heading text-sm font-semibold text-ink-900">{title}</h3>
+                <div
+                  key={title}
+                  className="group rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5"
+                >
+                  <IconTile icon={Icon} />
+                  <h3 className="mt-5 font-heading text-sm font-semibold text-ink-900">{title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
                 </div>
               ))}
@@ -556,10 +640,13 @@ export function LandingPage() {
               Que tu vendes des vêtements, des plats, des cosmétiques ou de l'artisanat — la structure est la même, le résultat aussi.
             </p>
             <div className="grid gap-6 sm:grid-cols-2">
-              {solutions.map(({ icon, title, description, products }) => (
-                <div key={title} className="rounded-2xl border border-sand-200 bg-white p-6 transition-shadow hover:shadow-md">
-                  <span className="text-2xl" role="img" aria-hidden>{icon}</span>
-                  <h3 className="mt-3 font-heading text-base font-semibold text-ink-900">{title}</h3>
+              {solutions.map(({ icon: Icon, title, description, products }) => (
+                <div
+                  key={title}
+                  className="group rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5"
+                >
+                  <IconTile icon={Icon} tone="dark" />
+                  <h3 className="mt-4 font-heading text-base font-semibold text-ink-900">{title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
                   <p className="mt-3 text-xs font-medium text-brand-600">{products}</p>
                 </div>

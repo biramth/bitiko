@@ -54,7 +54,7 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
       id: createSectionId('header'),
       type: 'header',
       visible: true,
-      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true } satisfies HeaderSectionConfig,
+      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] } satisfies HeaderSectionConfig,
     }),
     Editor: HeaderEditor,
   },

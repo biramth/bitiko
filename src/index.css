@@ -34,6 +34,53 @@
   --color-sand-50: #fffbf5;
   --color-sand-100: #fdf3e7;
   --color-sand-200: #f7e6d0;
+
+  /* Marketing-page motion: staggered entrances + slow ambient drift, used on
+     the landing page hero for a sense of depth (glow blobs, floating card). */
+  --animate-fade-up: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 8s ease-in-out infinite;
+  --animate-blob: blob 12s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(3%, -6%) scale(1.08);
+  }
+  66% {
+    transform: translate(-4%, 4%) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-"] {
+    animation: none !important;
+  }
 }
 
 :root {
@@ -67,4 +114,14 @@ select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
+}
+
+/* Store-builder live preview: outline the block under the cursor so the
+   merchant understands that clicking it will select it in the editor. */
+.preview-section {
+  position: relative;
+}
+
+.preview-section:hover {
+  box-shadow: inset 0 0 0 2px var(--color-brand-500, #d9612e);
 }

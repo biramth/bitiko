@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Monitor, Smartphone, Tablet } from 'lucide-react'
 import { shopUrl } from '@/lib/tenant'
-import { isPreviewReadyMessage, PREVIEW_UPDATE } from './previewBridge'
+import { isPreviewReadyMessage, isPreviewSelectMessage, PREVIEW_UPDATE } from './previewBridge'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
 type Breakpoint = 'desktop' | 'tablet' | 'mobile'
@@ -18,18 +18,22 @@ function withPreviewParam(url: string): string {
 
 export function BuilderPreviewFrame({
   slug,
+  pagePath = '/',
   sections,
   themeColor,
   themeConfig,
+  onSelectSection,
 }: {
   slug: string
+  pagePath?: string
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  onSelectSection: (id: string) => void
 }) {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('desktop')
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const src = withPreviewParam(shopUrl(slug))
+  const src = withPreviewParam(shopUrl(slug) + pagePath)
   const targetOrigin = typeof window !== 'undefined' ? new URL(src, window.location.origin).origin : '*'
 
   const sendUpdate = () => {
@@ -48,12 +52,14 @@ export function BuilderPreviewFrame({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin === targetOrigin && isPreviewReadyMessage(event.data)) sendUpdate()
+      if (event.origin !== targetOrigin) return
+      if (isPreviewReadyMessage(event.data)) sendUpdate()
+      else if (isPreviewSelectMessage(event.data)) onSelectSection(event.data.sectionId)
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetOrigin, sections, themeColor, themeConfig])
+  }, [targetOrigin, sections, themeColor, themeConfig, onSelectSection])
 
   return (
     <div className="flex h-full flex-col bg-gray-100">
