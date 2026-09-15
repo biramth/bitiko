@@ -6,6 +6,7 @@ import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import {
   createOrder,
+  notifyNewOrder,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   type CreateOrderResult,
@@ -76,7 +77,10 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
     },
     onSuccess: (result) => {
       setOrderResult(result)
-      if (!demo) clear()
+      if (!demo) {
+        clear()
+        notifyNewOrder(result.orderId)
+      }
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
         items: result.items,

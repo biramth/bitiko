@@ -1,4 +1,6 @@
 import { getSupabaseAdmin } from './supabaseAdmin.js'
+import { sendEmail } from './resendEmail.js'
+import { proActivatedEmailHtml } from './emailTemplates.js'
 import type { WaveCheckoutSession } from './wave.js'
 
 const SUBSCRIPTION_PERIOD_DAYS = 30
@@ -46,6 +48,25 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
         { onConflict: 'shop_id' },
       )
     if (upsertSubError) throw upsertSubError
+
+    try {
+      const { data: shop } = await admin.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()
+      const { data: ownerData } = shop ? await admin.auth.admin.getUserById(shop.owner_id) : { data: { user: null } }
+      const rootDomain = process.env.VITE_ROOT_DOMAIN
+      if (shop && ownerData.user?.email && rootDomain) {
+        await sendEmail({
+          to: ownerData.user.email,
+          subject: `Bienvenue dans Bitiko Pro — ${shop.name}`,
+          html: proActivatedEmailHtml({
+            origin: `https://${rootDomain}`,
+            shopName: shop.name,
+            periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+          }),
+        })
+      }
+    } catch (emailErr) {
+      console.error('settlePayment: confirmation email failed', emailErr)
+    }
 
     return 'succeeded'
   }

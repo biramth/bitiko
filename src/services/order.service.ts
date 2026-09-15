@@ -76,6 +76,17 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   }
 }
 
+/** Best-effort merchant notification — never blocks checkout if it fails. */
+export function notifyNewOrder(orderId: string): void {
+  fetch('/api/notify-new-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId }),
+  }).catch(() => {
+    // Non-critical — the order already exists regardless.
+  })
+}
+
 export async function listOrders(
   shopId: string,
   page = 1,

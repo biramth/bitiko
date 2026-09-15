@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getPlatformAdminFromAuthHeader, getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
+import { sendEmail } from '../_lib/resendEmail.js'
+import { proActivatedEmailHtml } from '../_lib/emailTemplates.js'
 
 const SUBSCRIPTION_PERIOD_DAYS = 30
 
@@ -54,6 +56,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { onConflict: 'shop_id' },
       )
     if (upsertSubError) throw upsertSubError
+
+    try {
+      const { data: shop } = await supabase.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()
+      const ownerId = shop?.owner_id
+      const { data: ownerData } = ownerId ? await supabase.auth.admin.getUserById(ownerId) : { data: { user: null } }
+      const rootDomain = process.env.VITE_ROOT_DOMAIN
+      const origin = rootDomain ? `https://${rootDomain}` : `${(req.headers['x-forwarded-proto'] as string) ?? 'https'}://${req.headers.host}`
+      if (shop && ownerData.user?.email) {
+        await sendEmail({
+          to: ownerData.user.email,
+          subject: `Bienvenue dans Bitiko Pro — ${shop.name}`,
+          html: proActivatedEmailHtml({
+            origin,
+            shopName: shop.name,
+            periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+          }),
+        })
+      }
+    } catch (emailErr) {
+      console.error('approve-payment: confirmation email failed', emailErr)
+    }
 
     res.status(200).json({ status: 'succeeded' })
   } catch (err) {
