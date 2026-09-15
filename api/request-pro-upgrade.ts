@@ -71,17 +71,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (insertError) throw insertError
     }
 
-    await sendEmail({
-      to: ADMIN_EMAIL,
-      subject: `Demande de passage Pro — ${shop.name}`,
-      html: proUpgradeRequestEmailHtml({
-        shopName: shop.name,
-        shopSlug: shop.slug,
-        whatsappNumber: shop.whatsapp_number,
-        ownerEmail: userData.user.email,
-        amount: PLANS.pro.priceXof,
-      }),
-    })
+    try {
+      await sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `Demande de passage Pro — ${shop.name}`,
+        html: proUpgradeRequestEmailHtml({
+          shopName: shop.name,
+          shopSlug: shop.slug,
+          whatsappNumber: shop.whatsapp_number,
+          ownerEmail: userData.user.email,
+          amount: PLANS.pro.priceXof,
+        }),
+      })
+    } catch (emailErr) {
+      // The pending payment row above is the part that actually matters — it's
+      // what the admin checks against Wave's transaction list either way. A
+      // failed notification email shouldn't block the merchant's request.
+      console.error('request-pro-upgrade: notification email failed', emailErr)
+    }
 
     res.status(200).json({ sent: true })
   } catch (err) {
