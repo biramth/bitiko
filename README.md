@@ -50,12 +50,13 @@ supabase/
 
 `profiles` (1 par utilisateur Supabase Auth) → `shops` (1 propriétaire, `slug` unique pour le sous-domaine, `custom_domain` optionnel) → `categories` / `products` → `product_images`, et `orders` → `order_items`. Tout est rattaché à `shop_id` — c'est ce qui rend le multi-tenant possible sans dupliquer le schéma par boutique. Détail complet dans [`supabase/migrations/`](supabase/migrations).
 
-Point important : `order_items` conserve `product_name` et `unit_price` au moment de la commande (snapshot), indépendamment du produit source — l'historique reste fiable même si un produit est renommé, repricé ou supprimé plus tard.
+Point important : `order_items` conserve `product_name` et `unit_price` au moment de la commande (snapshot), indépendamment du produit source — l'historique reste fiable même si un produit est renommé, repricé ou supprimé plus tard. Chaque commande conserve aussi la `delivery_fee` appliquée au checkout, et chaque boutique dispose de paramètres commerciaux (`delivery_fee`, `free_delivery_threshold`, `low_stock_threshold`) configurables depuis `/admin/parametres` — le seuil de stock faible pilote les alertes du dashboard et du catalogue.
 
 ## Sécurité
 
 - **RLS activé sur toutes les tables** ([`0002_rls.sql`](supabase/migrations/0002_rls.sql)) : les visiteurs anonymes ne peuvent lire que les boutiques/catégories/produits actifs/images publiques ; toute écriture (produits, catégories, paramètres boutique) est réservée au propriétaire de la boutique concernée (`auth.uid() = shops.owner_id`) — un commerçant ne peut jamais modifier les données d'une autre boutique.
-- **Aucune policy INSERT sur `orders`/`order_items`** pour `anon`/`authenticated` : la création de commande passe exclusivement par la fonction Postgres `create_order()` ([`0003_create_order_function.sql`](supabase/migrations/0003_create_order_function.sql)), en `SECURITY DEFINER`. Elle revalide le prix, le stock et le statut actif de chaque produit directement en base (jamais les valeurs envoyées par le navigateur), verrouille les lignes produits (`FOR UPDATE`) pour éviter les incohérences en cas de commandes simultanées, décrémente le stock et calcule le total avant de créer la commande.
+- **Aucune policy INSERT sur `orders`/`order_items`** pour `anon`/`authenticated` : la création de commande passe exclusivement par la fonction Postgres `create_order()` ([`0003_create_order_function.sql`](supabase/migrations/0003_create_order_function.sql)), en `SECURITY DEFINER`. Elle revalide le prix, le stock et le statut actif de chaque produit directement en base (jamais les valeurs envoyées par le navigateur), verrouille les lignes produits (`FOR UPDATE`) pour éviter les incohérences en cas de commandes simultanées, décrémente le stock, ajoute les frais de livraison re-validés et calcule le total avant de créer la commande.
+- **Changement de statut de commande** : uniquement via la fonction `set_order_status()` ([`0006_merchant_tools.sql`](supabase/migrations/0006_merchant_tools.sql)), en `SECURITY DEFINER`. Elle re-vérifie l'appartenance de la commande à la boutique connectée, impose le workflow (`pending → confirmed → paid → delivered`, `cancelled` possible tant que la commande n'est pas terminale) et **restaure le stock** des produits quand une commande est annulée.
 - **Storage** : buckets `product-images` et `shop-assets` publics en lecture, écriture/suppression réservées au propriétaire de la ressource concernée ([`0004_storage.sql`](supabase/migrations/0004_storage.sql)).
 - La clé `service_role` de Supabase n'est jamais utilisée côté frontend — seule la clé publique `anon` est présente dans les variables d'environnement du client.
 
@@ -91,6 +92,7 @@ Les clés Supabase se trouvent dans **Project Settings > API** du dashboard.
    - `0003_create_order_function.sql`
    - `0004_storage.sql`
    - `0005_multitenant.sql`
+   - `0006_merchant_tools.sql`
 3. (Optionnel) Régénérer les types TypeScript depuis le schéma réel :
    ```bash
    npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
@@ -142,4 +144,4 @@ Voir [`.env.example`](.env.example). Ne jamais commiter `.env` ou `.env.local` (
 
 ## Statuts de commande
 
-`pending` → `confirmed` → `paid` / `cancelled` / `delivered`, modifiables depuis le dashboard (`/admin/commandes/:id`).
+`pending` → `confirmed` → `paid` / `cancelled` / `delivered`, modifiables depuis le dashboard (`/admin/commandes/:id`). Le workflow est imposé côté serveur par `set_order_status()` : pas de saut vers `delivered` avant confirmation, aucune modification après un statut terminal, et le stock est restitué automatiquement à l'annulation.

@@ -1,0 +1,67 @@
+import { STORE_TEMPLATES } from '@/config/storeTemplates'
+import type { StoreTemplate } from '@/types/builder'
+
+/** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch. */
+function TemplateThumbnail({ template }: { template: StoreTemplate }) {
+  const [accent, secondary] = template.swatch
+  const hasCategories = template.sections.some((s) => s.type === 'categories')
+
+  return (
+    <div
+      className="h-16 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white"
+      style={{ fontFamily: template.themeConfig.font === 'inter' ? 'Inter, sans-serif' : undefined }}
+    >
+      <div className="flex h-2.5 items-center justify-between bg-white px-1.5">
+        <span className="h-1 w-3 rounded-full" style={{ backgroundColor: template.themeColor }} />
+        <span className="h-1 w-1 rounded-full bg-gray-300" />
+      </div>
+      <div className="h-5 w-full" style={{ background: `linear-gradient(135deg, ${accent}, ${secondary})` }} />
+      <div className="flex gap-1 p-1.5">
+        {hasCategories ? (
+          <>
+            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: template.themeColor }} />
+            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: secondary }} />
+            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: template.themeConfig.textColor, opacity: 0.15 }} />
+          </>
+        ) : (
+          <>
+            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
+            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
+            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTemplate) => void }) {
+  return (
+    <div>
+      <p className="mb-4 text-sm text-gray-500">
+        Chaque template est une boutique complète (mise en page, thème et exemples de textes) — un point de départ à
+        personnaliser ensuite bloc par bloc.
+      </p>
+      <div className="space-y-3">
+        {STORE_TEMPLATES.map((template) => (
+          <button
+            key={template.key}
+            type="button"
+            onClick={() => {
+              if (confirm(`Remplacer votre mise en page et votre thème actuels par "${template.label}" ?`)) {
+                onApply(template)
+              }
+            }}
+            className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50/40"
+          >
+            <TemplateThumbnail template={template} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
+              <span className="block text-xs text-gray-500">{template.description}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}

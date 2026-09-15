@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowRight, Mail, Lock } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
 import { usePageSeo } from '@/hooks/usePageSeo'
+
+const inputClass =
+  'w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
 export function LoginPage() {
   usePageSeo({ title: 'Connexion — Bitiko', noindex: true })
@@ -52,20 +56,23 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <Logo size={32} withWordmark={false} />
-          <h1 className="text-lg font-semibold text-gray-900">Espace boutique</h1>
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4">
+      <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-brand-100 opacity-50 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-gold-300 opacity-20 blur-3xl" aria-hidden />
+
+      <div className="relative w-full max-w-sm rounded-2xl border border-sand-200 bg-white p-8 shadow-xl shadow-ink-900/5">
+        <div className="mb-8 flex flex-col items-center gap-2 text-center">
+          <Logo size={40} withWordmark={false} />
+          <h1 className="font-heading text-xl font-bold text-ink-900">Espace boutique</h1>
           <p className="text-sm text-gray-500">Connectez-vous pour gérer votre boutique</p>
         </div>
 
         <GoogleSignInButton label="Se connecter avec Google" />
 
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-400">ou</span>
-          <div className="h-px flex-1 bg-gray-200" />
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-sand-200" />
+          <span className="text-xs font-medium text-gray-400">ou avec votre email</span>
+          <div className="h-px flex-1 bg-sand-200" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,30 +80,42 @@ export function LoginPage() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
-            />
+            <div className="relative mt-1">
+              <Mail size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+                className={inputClass}
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Mot de passe
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
-            />
+            <div className="relative mt-1">
+              <Lock size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className={inputClass}
+              />
+            </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+          )}
 
           {unconfirmed && (
             <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
@@ -118,15 +137,16 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
           >
             {loading ? 'Connexion…' : 'Se connecter'}
+            {!loading && <ArrowRight size={15} aria-hidden />}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-6 text-center text-sm text-gray-500">
           Pas encore de boutique ?{' '}
-          <Link to="/inscription" className="font-medium text-brand-700">
+          <Link to="/inscription" className="font-medium text-brand-700 hover:text-brand-800">
             Créer un compte
           </Link>
         </p>

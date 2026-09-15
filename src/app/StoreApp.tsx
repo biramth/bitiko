@@ -1,10 +1,21 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { StoreRoutes } from '@/routes/StoreRoutes'
+import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { Spinner } from '@/components/ui/Spinner'
 
+const HomePage = lazy(() => import('@/pages/store/HomePage').then((m) => ({ default: m.HomePage })))
+const CatalogPage = lazy(() =>
+  import('@/pages/store/CatalogPage').then((m) => ({ default: m.CatalogPage })),
+)
+const ProductPage = lazy(() =>
+  import('@/pages/store/ProductPage').then((m) => ({ default: m.ProductPage })),
+)
+const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ default: m.CartPage })))
+const CheckoutPage = lazy(() =>
+  import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })),
+)
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -24,7 +35,13 @@ export function StoreApp() {
 
   return (
     <Routes>
-      <StoreRoutes />
+      <Route element={<StoreLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="catalogue" element={<CatalogPage />} />
+        <Route path="produits/:slug" element={<ProductPage />} />
+        <Route path="panier" element={<CartPage />} />
+        <Route path="commande" element={<CheckoutPage />} />
+      </Route>
       <Route
         path="*"
         element={

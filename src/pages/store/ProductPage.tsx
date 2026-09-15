@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ImageOff, Minus, Plus } from 'lucide-react'
+import { Check, ImageOff, Minus, Plus } from 'lucide-react'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useProduct } from '@/features/products/useProducts'
 import { StockBadge } from '@/features/products/StockBadge'
@@ -33,8 +33,8 @@ export function ProductPage() {
   if (!product) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <p className="text-gray-700">Ce produit n'existe pas ou n'est plus disponible.</p>
-        <Link to="/catalogue" className="mt-4 inline-block text-sm font-medium text-brand-700">
+        <p className="text-ink-700">Ce produit n'existe pas ou n'est plus disponible.</p>
+        <Link to="/catalogue" className="mt-4 inline-block text-sm font-medium text-ink-900 underline underline-offset-2">
           Retour au catalogue
         </Link>
       </div>
@@ -59,24 +59,38 @@ export function ProductPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <div className="grid gap-8 md:grid-cols-2">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <nav className="mb-6 text-xs font-medium uppercase tracking-wide text-ink-700/40">
+        <Link to="/catalogue" className="hover:text-ink-900">
+          Catalogue
+        </Link>
+        {product.category && (
+          <>
+            <span className="mx-1.5">/</span>
+            <Link to={`/catalogue?categorie=${product.category.slug}`} className="hover:text-ink-900">
+              {product.category.name}
+            </Link>
+          </>
+        )}
+      </nav>
+
+      <div className="grid gap-10 md:grid-cols-2 md:gap-16">
         <div>
-          <div className="aspect-square overflow-hidden rounded-xl bg-gray-100">
+          <div className="aspect-[4/5] w-full overflow-hidden bg-sand-100">
             {images[activeImage] ? (
               <img
                 src={images[activeImage].public_url}
                 alt={product.name}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-gray-300">
+              <div className="flex h-full w-full items-center justify-center text-ink-200">
                 <ImageOff size={48} aria-hidden />
               </div>
             )}
           </div>
           {images.length > 1 && (
-            <div className="mt-3 flex gap-2" role="tablist" aria-label={`Photos de ${product.name}`}>
+            <div className="mt-4 flex gap-4" role="tablist" aria-label={`Photos de ${product.name}`}>
               {images.map((img, i) => (
                 <button
                   key={img.id}
@@ -84,8 +98,8 @@ export function ProductPage() {
                   aria-selected={i === activeImage}
                   aria-label={`Afficher la photo ${i + 1} sur ${images.length}`}
                   onClick={() => setActiveImage(i)}
-                  className={`h-16 w-16 overflow-hidden rounded-lg border-2 ${
-                    i === activeImage ? 'border-gray-900' : 'border-transparent'
+                  className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${
+                    i === activeImage ? 'border-ink-900' : 'border-transparent opacity-50 hover:opacity-100'
                   }`}
                 >
                   <img src={img.public_url} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -95,56 +109,61 @@ export function ProductPage() {
           )}
         </div>
 
-        <div>
+        <div className="md:pt-2">
           {product.category && (
-            <p className="text-sm font-medium text-gray-500">{product.category.name}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-700/40">{product.category.name}</p>
           )}
-          <h1 className="mt-1 text-2xl font-semibold text-gray-900">{product.name}</h1>
-          <p className="mt-3 text-xl font-semibold text-gray-900">
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">{product.name}</h1>
+          <p className="mt-4 text-xl font-semibold text-ink-900">
             {formatCurrency(product.price, currency)}
           </p>
-          <div className="mt-3">
-            <StockBadge stock={product.stock} />
+          <div className="mt-2">
+            <StockBadge stock={product.stock} lowStockThreshold={shop?.low_stock_threshold} />
           </div>
           {product.description && (
-            <p className="mt-4 whitespace-pre-line text-gray-600">{product.description}</p>
+            <p className="mt-6 whitespace-pre-line leading-relaxed text-ink-700/70">{product.description}</p>
           )}
 
-          <div className="mt-6 flex items-center gap-4">
-            <div className="flex items-center rounded-lg border border-gray-200">
+          <div className="mt-8 flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={outOfStock}
                 aria-label="Diminuer la quantité"
-                className="p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                className="text-ink-700 hover:text-ink-900 disabled:opacity-30"
               >
                 <Minus size={16} />
               </button>
-              <span className="w-10 text-center text-sm font-medium">{quantity}</span>
+              <span className="w-4 text-center text-sm font-semibold text-ink-900">{quantity}</span>
               <button
                 onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
                 disabled={outOfStock || quantity >= product.stock}
                 aria-label="Augmenter la quantité"
-                className="p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                className="text-ink-700 hover:text-ink-900 disabled:opacity-30"
               >
                 <Plus size={16} />
               </button>
             </div>
-
-            <button
-              onClick={handleAddToCart}
-              disabled={outOfStock}
-              className="flex-1 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              {outOfStock ? 'Rupture de stock' : added ? 'Ajouté ✓' : 'Ajouter au panier'}
-            </button>
           </div>
+
+          <button
+            onClick={handleAddToCart}
+            disabled={outOfStock}
+            className="mt-4 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
+          >
+            {outOfStock ? (
+              'Rupture de stock'
+            ) : added ? (
+              <>
+                <Check size={16} aria-hidden /> Ajouté
+              </>
+            ) : (
+              'Ajouter au panier'
+            )}
+          </button>
           <div aria-live="polite">
             {added && (
-              <Link
-                to="/panier"
-                className="mt-3 inline-block text-sm font-medium text-brand-700 hover:text-brand-800"
-              >
+              <Link to="/panier" className="mt-3 inline-block text-sm font-medium text-ink-900 underline underline-offset-2">
                 Voir le panier →
               </Link>
             )}

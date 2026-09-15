@@ -10,6 +10,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Category } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function CategoriesPage() {
   usePageSeo({ title: 'Catégories — Bitiko', noindex: true })
@@ -18,6 +20,7 @@ export function CategoriesPage() {
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<Category | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
 
   const { data: categories, isLoading, isError } = useQuery({
     queryKey: ['categories', shop?.id],
@@ -68,7 +71,10 @@ export function CategoriesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteCategory,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setDeleteTarget(null)
+    },
     onError: () => setFormError('Impossible de supprimer une catégorie qui contient encore des produits.'),
   })
 
@@ -77,7 +83,10 @@ export function CategoriesPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900">Catégories</h1>
+      <PageHeader
+        title="Catégories"
+        subtitle="Organisez vos produits par catégorie pour aider vos clients à naviguer."
+      />
 
       <form
         onSubmit={(e) => {
@@ -148,14 +157,15 @@ export function CategoriesPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => {
-                      setFormError(null)
-                      if (confirm(`Supprimer la catégorie "${category.name}" ?`)) {
-                        deleteMutation.mutate(category.id)
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(category)}
+                    disabled={(productCounts?.get(category.id) ?? 0) > 0}
+                    title={
+                      (productCounts?.get(category.id) ?? 0) > 0
+                        ? 'Supprimez d\'abord les produits de cette catégorie.'
+                        : undefined
+                    }
                     aria-label={`Supprimer ${category.name}`}
-                    className="text-gray-400 hover:text-red-600"
+                    className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-200"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -165,6 +175,23 @@ export function CategoriesPage() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Supprimer cette catégorie ?"
+        description={
+          deleteTarget
+            ? `Les produits de la catégorie « ${deleteTarget.name} » ne seront pas supprimés, mais resteront sans catégorie.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        pendingLabel="Suppression…"
+        pending={deleteMutation.isPending}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

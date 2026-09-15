@@ -75,17 +75,32 @@ export async function updateShop(shopId: string, updates: Partial<Shop>): Promis
   return data
 }
 
-const LOGO_BUCKET = 'shop-assets'
+const SHOP_ASSETS_BUCKET = 'shop-assets'
 
-export async function uploadShopLogo(shopId: string, file: File): Promise<string> {
+async function uploadShopAsset(shopId: string, file: File, baseName: string): Promise<string> {
   const ext = file.name.split('.').pop()
-  const path = `${shopId}/logo.${ext}`
+  const path = `${shopId}/${baseName}.${ext}`
 
   const { error: uploadError } = await supabase.storage
-    .from(LOGO_BUCKET)
+    .from(SHOP_ASSETS_BUCKET)
     .upload(path, file, { upsert: true, cacheControl: '3600' })
   if (uploadError) throw uploadError
 
-  const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path)
-  return data.publicUrl
+  // Cache-bust: upsert keeps the same URL, so browsers/CDN would otherwise
+  // keep serving the previous image after a merchant replaces it.
+  const { data } = supabase.storage.from(SHOP_ASSETS_BUCKET).getPublicUrl(path)
+  return `${data.publicUrl}?v=${Date.now()}`
+}
+
+export function uploadShopLogo(shopId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, file, 'logo')
+}
+
+export function uploadShopBanner(shopId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, file, 'banner')
+}
+
+/** Image for a builder block (image/promo sections) — one file per section id. */
+export function uploadShopSectionImage(shopId: string, sectionId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, file, `section-${sectionId}`)
 }

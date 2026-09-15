@@ -1,21 +1,56 @@
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { ImageOff, Package, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ImageOff, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopProducts } from '@/features/products/useProducts'
 import { deleteProductCompletely, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import type { ProductWithRelations } from '@/types'
+
+const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
+  { value: 'all', label: 'Tous' },
+  { value: 'low', label: 'Stock faible' },
+  { value: 'out', label: 'Rupture' },
+]
 
 export function ProductsPage() {
   usePageSeo({ title: 'Produits — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
-  const { data: products, isLoading, isError } = useShopProducts(shop?.id)
   const queryClient = useQueryClient()
   const currency = shop?.currency ?? 'XOF'
+  const lowStockThreshold = shop?.low_stock_threshold ?? 5
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const stockParam = searchParams.get('stock')
+  const [searchInput, setSearchInput] = useState('')
+  const search = useDebouncedValue(searchInput, 300)
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>(
+    stockParam === 'low' || stockParam === 'out' ? stockParam : 'all',
+  )
+  const [page, setPage] = useState(1)
+  const [deleteTarget, setDeleteTarget] = useState<ProductWithRelations | null>(null)
+
+  const { data, isLoading, isError } = useShopProducts(
+    shop?.id,
+    {
+      search: search || undefined,
+      stock: stockFilter === 'all' ? undefined : stockFilter,
+      page,
+    },
+    lowStockThreshold,
+  )
+
+  const products = data?.products ?? []
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / ADMIN_PRODUCTS_PAGE_SIZE)) : 1
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['products', 'admin', shop?.id] })
@@ -30,7 +65,10 @@ export function ProductsPage() {
 
   const remove = useMutation({
     mutationFn: deleteProductCompletely,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setDeleteTarget(null)
+    },
   })
 
   if (isLoading) return <Spinner />
@@ -38,18 +76,54 @@ export function ProductsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Produits</h1>
-        <Link
-          to="/admin/produits/nouveau"
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          <Plus size={16} /> Nouveau produit
-        </Link>
+      <PageHeader
+        title="Produits"
+        subtitle="Gérez vos produits, leur stock et leur visibilité."
+        actions={
+          <Link
+            to="/admin/produits/nouveau"
+            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            <Plus size={16} /> Nouveau produit
+          </Link>
+        }
+      />
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+          <input
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Rechercher un produit…"
+            aria-label="Rechercher un produit"
+            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none"
+          />
+        </div>
+        <div className="flex gap-2">
+          {STOCK_FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => {
+                setStockFilter(value)
+                setPage(1)
+                setSearchParams(value === 'all' ? {} : { stock: value }, { replace: true })
+              }}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                stockFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
-        {(products?.length ?? 0) === 0 ? (
+        {products.length === 0 ? (
           <EmptyState icon={Package} title="Aucun produit" description="Ajoutez votre premier produit." />
         ) : (
           <div className="overflow-x-auto">
@@ -64,8 +138,8 @@ export function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {products!.map((product) => (
-                  <tr key={product.id}>
+                {products.map((product) => (
+                  <tr key={product.id} className="transition-colors hover:bg-gray-50">
                     <td className="flex items-center gap-3 px-4 py-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                         {product.images[0] ? (
@@ -77,9 +151,26 @@ export function ProductsPage() {
                         )}
                       </div>
                       <span className="font-medium text-gray-900">{product.name}</span>
+                      {product.category && (
+                        <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline">
+                          {product.category.name}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">{formatCurrency(product.price, currency)}</td>
-                    <td className="px-4 py-3">{product.stock}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          product.stock <= 0
+                            ? 'bg-red-100 text-red-800'
+                            : product.stock <= lowStockThreshold
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {product.stock}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => toggleActive.mutate({ id: product.id, active: !product.active })}
@@ -100,9 +191,7 @@ export function ProductsPage() {
                           <Pencil size={16} />
                         </Link>
                         <button
-                          onClick={() => {
-                            if (confirm(`Supprimer "${product.name}" ?`)) remove.mutate(product.id)
-                          }}
+                          onClick={() => setDeleteTarget(product)}
                           aria-label={`Supprimer ${product.name}`}
                           className="text-gray-400 hover:text-red-600"
                         >
@@ -117,6 +206,39 @@ export function ProductsPage() {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className={`h-9 w-9 rounded-full text-sm font-medium ${
+                p === page ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Supprimer ce produit ?"
+        description={
+          deleteTarget
+            ? `« ${deleteTarget.name} » et ses photos seront définitivement supprimés de votre boutique.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        pendingLabel="Suppression…"
+        pending={remove.isPending}
+        onConfirm={() => {
+          if (deleteTarget) remove.mutate(deleteTarget.id)
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

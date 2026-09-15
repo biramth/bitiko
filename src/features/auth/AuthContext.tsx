@@ -11,6 +11,9 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  updateFullName: (fullName: string) => Promise<{ error: string | null }>
+  updateEmail: (email: string) => Promise<{ error: string | null }>
+  updatePassword: (password: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -73,6 +76,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const updateFullName = async (fullName: string) => {
+    const { data, error } = await supabase.auth.updateUser({ data: { full_name: fullName } })
+    if (!error && data.user) setSession((prev) => (prev ? { ...prev, user: data.user } : prev))
+    return { error: error?.message ?? null }
+  }
+
+  const updateEmail = async (email: string) => {
+    const { error } = await supabase.auth.updateUser(
+      { email },
+      { emailRedirectTo: authCallbackUrl() },
+    )
+    return { error: error?.message ?? null }
+  }
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    return { error: error?.message ?? null }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -84,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         resendConfirmation,
         signOut,
+        updateFullName,
+        updateEmail,
+        updatePassword,
       }}
     >
       {children}

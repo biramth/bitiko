@@ -1,12 +1,16 @@
 import { supabase } from '@/lib/supabaseClient'
 import { ORDERS_PAGE_SIZE } from '@/config/constants'
-import type { CartItem, Order, OrderStatus, OrderWithItems } from '@/types'
+import type { CartItem, Order, OrderStatus, OrderWithItems, PaymentMethod } from '@/types'
 
 export interface CreateOrderInput {
   shopId: string
   customerName: string
   customerPhone: string
+  customerAddress: string
   items: CartItem[]
+  deliveryFee: number
+  deliveryZoneName: string
+  paymentMethod: PaymentMethod
 }
 
 export interface CreateOrderResult {
@@ -37,7 +41,11 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     p_shop_id: input.shopId,
     p_customer_name: input.customerName,
     p_customer_phone: input.customerPhone,
+    p_customer_address: input.customerAddress,
     p_items: input.items.map((i) => ({ product_id: i.productId, quantity: i.quantity })),
+    p_delivery_fee: input.deliveryFee,
+    p_delivery_zone_name: input.deliveryZoneName,
+    p_payment_method: input.paymentMethod,
   })
 
   if (error) throw error
@@ -78,7 +86,7 @@ export async function listOrders(
     .range(from, to)
 
   if (error) throw error
-  return { orders: data ?? [], total: count ?? 0 }
+  return { orders: (data ?? []) as Order[], total: count ?? 0 }
 }
 
 export async function getOrderById(id: string): Promise<OrderWithItems | null> {
@@ -91,23 +99,60 @@ export async function getOrderById(id: string): Promise<OrderWithItems | null> {
   return data as OrderWithItems | null
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+export interface OrderStatusCounts {
+  counts: Record<OrderStatus, number>
+  total: number
+}
+
+export async function getOrderStatusCounts(shopId: string): Promise<OrderStatusCounts> {
   const { data, error } = await supabase
     .from('orders')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single()
+    .select('status')
+    .eq('shop_id', shopId)
   if (error) throw error
-  return data
+
+  const counts: Record<OrderStatus, number> = {
+    pending: 0,
+    confirmed: 0,
+    paid: 0,
+    cancelled: 0,
+    delivered: 0,
+  }
+  for (const row of data ?? []) {
+    counts[row.status as OrderStatus] += 1
+  }
+  return { counts, total: (data ?? []).length }
+}
+
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+  const { data, error } = await supabase.rpc('set_order_status', {
+    p_order_id: id,
+    p_status: status,
+  })
+  if (error) throw error
+  return data as Order
+}
+
+/** Adjusts an order's delivery fee after a phone confirmation (recomputes the total). */
+export async function updateOrderDeliveryFee(id: string, fee: number): Promise<Order> {
+  const { data, error } = await supabase.rpc('set_order_delivery_fee', {
+    p_order_id: id,
+    p_fee: fee,
+  })
+  if (error) throw error
+  return data as Order
 }
 
 export function buildWhatsAppMessage(params: {
   orderNumber: string
   items: { productName: string; unitPrice: number; quantity: number; subtotal: number }[]
+  deliveryFee?: number
+  deliveryZoneName?: string
+  paymentMethod?: PaymentMethod
   total: number
   customerName: string
   customerPhone: string
+  customerAddress: string
   formatCurrency: (amount: number) => string
 }): string {
   const lines = [
@@ -117,12 +162,25 @@ export function buildWhatsAppMessage(params: {
     ...params.items.map(
       (i) => `- ${i.productName} x${i.quantity} — ${params.formatCurrency(i.subtotal)}`,
     ),
-    '',
-    `Total : ${params.formatCurrency(params.total)}`,
+  ]
+  if (params.deliveryZoneName) {
+    lines.push('', `Zone de livraison : ${params.deliveryZoneName}`)
+  }
+  if (params.deliveryFee && params.deliveryFee > 0) {
+    lines.push(`Livraison : ${params.formatCurrency(params.deliveryFee)}`)
+  }
+  lines.push('', `Total : ${params.formatCurrency(params.total)}`)
+  lines.push(
+    params.paymentMethod === 'mobile_money'
+      ? 'Paiement : Mobile money (Wave / Orange Money) avant envoi.'
+      : 'Paiement : Espèces à la livraison.',
+  )
+  lines.push(
     `Nom : ${params.customerName}`,
     `Téléphone : ${params.customerPhone}`,
+    `Adresse : ${params.customerAddress}`,
     'Merci.',
-  ]
+  )
   return lines.join('\n')
 }
 

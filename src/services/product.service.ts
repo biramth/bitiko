@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
-import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
+import { PRODUCTS_PAGE_SIZE, ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { Product, ProductWithRelations } from '@/types'
 
 export interface ProductFilters {
@@ -25,7 +25,7 @@ export async function listActiveProducts(filters: ProductFilters): Promise<Produ
     .select('*, category:categories(*), images:product_images(*)', { count: 'exact' })
     .eq('shop_id', filters.shopId)
     .eq('active', true)
-    .order('sort_order', { referencedTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
 
   if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
   if (filters.search) query = query.ilike('name', `%${filters.search}%`)
@@ -46,6 +46,21 @@ export async function listActiveProducts(filters: ProductFilters): Promise<Produ
   return { products: (data ?? []) as ProductWithRelations[], total: count ?? 0 }
 }
 
+/** Active products by id, in the given order — used by the "produits mis en avant" builder block. */
+export async function getActiveProductsByIds(shopId: string, ids: string[]): Promise<ProductWithRelations[]> {
+  if (ids.length === 0) return []
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, category:categories(*), images:product_images(*)')
+    .eq('shop_id', shopId)
+    .eq('active', true)
+    .in('id', ids)
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+  if (error) throw error
+  const byId = new Map((data ?? []).map((p) => [p.id, p as ProductWithRelations]))
+  return ids.map((id) => byId.get(id)).filter((p): p is ProductWithRelations => !!p)
+}
+
 export async function getProductBySlug(
   shopId: string,
   slug: string,
@@ -56,21 +71,74 @@ export async function getProductBySlug(
     .eq('shop_id', shopId)
     .eq('slug', slug)
     .eq('active', true)
-    .order('sort_order', { referencedTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
     .maybeSingle()
   if (error) throw error
   return data as ProductWithRelations | null
 }
 
-export async function listShopProducts(shopId: string): Promise<ProductWithRelations[]> {
+export interface AdminProductFilters {
+  search?: string
+  stock?: 'low' | 'out'
+  page?: number
+}
+
+export async function listShopProducts(
+  shopId: string,
+  filters: AdminProductFilters = {},
+  lowStockThreshold = 5,
+): Promise<ProductListResult> {
+  const page = filters.page ?? 1
+  const from = (page - 1) * ADMIN_PRODUCTS_PAGE_SIZE
+  const to = from + ADMIN_PRODUCTS_PAGE_SIZE - 1
+
+  let query = supabase
+    .from('products')
+    .select('*, category:categories(*), images:product_images(*)', { count: 'exact' })
+    .eq('shop_id', shopId)
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (filters.search) query = query.ilike('name', `%${filters.search}%`)
+  if (filters.stock === 'out') query = query.eq('stock', 0)
+  if (filters.stock === 'low') query = query.gt('stock', 0).lte('stock', lowStockThreshold)
+
+  const { data, error, count } = await query.range(from, to)
+  if (error) throw error
+  return { products: (data ?? []) as ProductWithRelations[], total: count ?? 0 }
+}
+
+export async function generateUniqueProductSlug(
+  shopId: string,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
   const { data, error } = await supabase
     .from('products')
-    .select('*, category:categories(*), images:product_images(*)')
+    .select('id, slug')
     .eq('shop_id', shopId)
-    .order('sort_order', { referencedTable: 'product_images', ascending: true })
-    .order('created_at', { ascending: false })
+    .ilike('slug', `${base}%`)
   if (error) throw error
-  return (data ?? []) as ProductWithRelations[]
+
+  const taken = new Set(
+    (data ?? [])
+      .filter((p) => p.id !== excludeId)
+      .map((p) => p.slug),
+  )
+  if (!taken.has(base)) return base
+  let counter = 2
+  while (taken.has(`${base}-${counter}`)) counter += 1
+  return `${base}-${counter}`
+}
+
+export async function countActiveProducts(shopId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('shop_id', shopId)
+    .eq('active', true)
+  if (error) throw error
+  return count ?? 0
 }
 
 export type ProductInput = Pick<

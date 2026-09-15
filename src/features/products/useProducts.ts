@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  getActiveProductsByIds,
   getProductBySlug,
   listActiveProducts,
   listShopProducts,
+  type AdminProductFilters,
   type ProductFilters,
 } from '@/services/product.service'
 
@@ -22,10 +24,22 @@ export function useProduct(shopId: string | undefined, slug: string | undefined)
   })
 }
 
-export function useShopProducts(shopId: string | undefined) {
+export function useFeaturedProducts(shopId: string | undefined, productIds: string[]) {
   return useQuery({
-    queryKey: ['products', 'admin', shopId],
-    queryFn: () => listShopProducts(shopId as string),
+    queryKey: ['products', 'featured', shopId, productIds],
+    queryFn: () => getActiveProductsByIds(shopId as string, productIds),
+    enabled: !!shopId && productIds.length > 0,
+  })
+}
+
+export function useShopProducts(
+  shopId: string | undefined,
+  filters: AdminProductFilters = {},
+  lowStockThreshold?: number,
+) {
+  return useQuery({
+    queryKey: ['products', 'admin', shopId, filters, lowStockThreshold],
+    queryFn: () => listShopProducts(shopId as string, filters, lowStockThreshold ?? 5),
     enabled: !!shopId,
   })
 }

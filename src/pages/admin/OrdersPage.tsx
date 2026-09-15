@@ -1,24 +1,44 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { listOrders } from '@/services/order.service'
+import { getOrderStatusCounts, listOrders, updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
-import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, ORDERS_PAGE_SIZE } from '@/config/constants'
+import {
+  ORDER_STATUS_ACTION_LABELS,
+  ORDER_STATUS_COLORS,
+  ORDER_STATUS_LABELS,
+  ORDERS_PAGE_SIZE,
+  getLinearNext,
+} from '@/config/constants'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { OrderStatus } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const STATUS_FILTERS: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'paid', 'delivered', 'cancelled']
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cod: 'Espèces',
+  mobile_money: 'Mobile money',
+}
 
 export function OrdersPage() {
   usePageSeo({ title: 'Commandes — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
+  const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
+    statusParam === 'pending' || statusParam === 'confirmed' || statusParam === 'paid' ||
+    statusParam === 'delivered' || statusParam === 'cancelled'
+      ? statusParam
+      : 'all',
+  )
   const currency = shop?.currency ?? 'XOF'
 
   const { data, isLoading, isError } = useQuery({
@@ -28,28 +48,61 @@ export function OrdersPage() {
     enabled: !!shop?.id,
   })
 
+  const { data: counts } = useQuery({
+    queryKey: ['orders-counts', shop?.id],
+    queryFn: () => getOrderStatusCounts(shop!.id),
+    enabled: !!shop?.id,
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders', shop?.id] })
+      queryClient.invalidateQueries({ queryKey: ['orders-counts', shop?.id] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
+    },
+  })
+
   const orders = data?.orders ?? []
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ORDERS_PAGE_SIZE)) : 1
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900">Commandes</h1>
+      <PageHeader
+        title="Commandes"
+        subtitle="Suivez et traitez les commandes reçues via WhatsApp et la boutique."
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {STATUS_FILTERS.map((status) => (
-          <button
-            key={status}
-            onClick={() => {
-              setStatusFilter(status)
-              setPage(1)
-            }}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-              statusFilter === status ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {status === 'all' ? 'Toutes' : ORDER_STATUS_LABELS[status]}
-          </button>
-        ))}
+        {STATUS_FILTERS.map((status) => {
+          const count =
+            status === 'all' ? (counts?.total ?? 0) : (counts?.counts[status as OrderStatus] ?? 0)
+          const active = statusFilter === status
+          return (
+            <button
+              key={status}
+              onClick={() => {
+                setStatusFilter(status)
+                setPage(1)
+                setSearchParams(status === 'all' ? {} : { status }, { replace: true })
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ${
+                active ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {status === 'all' ? 'Toutes' : ORDER_STATUS_LABELS[status]}
+              {count > 0 && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    active ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -68,6 +121,7 @@ export function OrdersPage() {
                   <th className="px-4 py-3 font-medium">Client</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 text-right font-medium">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -92,6 +146,34 @@ export function OrdersPage() {
                       >
                         {ORDER_STATUS_LABELS[order.status]}
                       </span>
+                      <span
+                        className={`mt-1 block w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          order.payment_method === 'mobile_money'
+                            ? 'bg-violet-50 text-violet-700'
+                            : 'bg-sky-50 text-sky-700'
+                        }`}
+                      >
+                        {PAYMENT_LABELS[order.payment_method] ?? order.payment_method}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {(() => {
+                        const next = getLinearNext(order.status)
+                        return next ? (
+                          <button
+                            type="button"
+                            onClick={() => statusMutation.mutate({ id: order.id, status: next })}
+                            disabled={statusMutation.isPending}
+                            className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                          >
+                            {ORDER_STATUS_ACTION_LABELS[next]}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">
+                            {order.status === 'cancelled' ? 'Annulée' : 'Terminée'}
+                          </span>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}

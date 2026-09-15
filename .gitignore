@@ -30,3 +30,6 @@ dist-ssr
 
 # Supabase CLI link state
 supabase/.temp
+
+# Local MCP config
+.mcp.json

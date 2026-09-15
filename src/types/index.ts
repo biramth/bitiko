@@ -1,14 +1,24 @@
-import type { Database, OrderStatus, ProfileRole } from './database.types'
+import type { Database } from './database.types'
+
+// Plain check-constrained text columns, not real Postgres enums, so the
+// generated database.types.ts doesn't export these — declared here instead
+// so they survive a `supabase gen types` regeneration.
+export type OrderStatus = 'pending' | 'confirmed' | 'paid' | 'cancelled' | 'delivered'
+export type PaymentMethod = 'cod' | 'mobile_money'
+export type ProfileRole = 'owner' | 'admin'
 
 export type Shop = Database['public']['Tables']['shops']['Row']
 export type Category = Database['public']['Tables']['categories']['Row']
 export type Product = Database['public']['Tables']['products']['Row']
 export type ProductImage = Database['public']['Tables']['product_images']['Row']
-export type Order = Database['public']['Tables']['orders']['Row']
+export type DeliverySecteur = Database['public']['Tables']['delivery_secteurs']['Row']
+export type DeliveryVille = Database['public']['Tables']['delivery_villes']['Row']
+// `status` is a plain `text` column with a check constraint, not a real
+// Postgres enum, so the generated Row type only knows it's a string —
+// narrowed here to the actual set of values the app ever writes/reads.
+export type Order = Omit<Database['public']['Tables']['orders']['Row'], 'status'> & { status: OrderStatus }
 export type OrderItem = Database['public']['Tables']['order_items']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
-
-export type { OrderStatus, ProfileRole }
 
 export interface ProductWithRelations extends Product {
   category: Category | null
