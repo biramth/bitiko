@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getOrderStatusCounts, listOrders, updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import {
@@ -40,11 +41,13 @@ export function OrdersPage() {
       : 'all',
   )
   const currency = shop?.currency ?? 'XOF'
+  const [searchInput, setSearchInput] = useState('')
+  const search = useDebouncedValue(searchInput, 300)
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['orders', shop?.id, statusFilter, page],
+    queryKey: ['orders', shop?.id, statusFilter, page, search],
     queryFn: () =>
-      listOrders(shop!.id, page, statusFilter === 'all' ? undefined : statusFilter),
+      listOrders(shop!.id, page, statusFilter === 'all' ? undefined : statusFilter, search),
     enabled: !!shop?.id,
   })
 
@@ -73,8 +76,9 @@ export function OrdersPage() {
         subtitle="Suivez et traitez les commandes reçues via WhatsApp et la boutique."
       />
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {STATUS_FILTERS.map((status) => {
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((status) => {
           const count =
             status === 'all' ? (counts?.total ?? 0) : (counts?.counts[status as OrderStatus] ?? 0)
           const active = statusFilter === status
@@ -102,7 +106,23 @@ export function OrdersPage() {
               )}
             </button>
           )
-        })}
+          })}
+        </div>
+
+        <div className="relative sm:w-64">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Client, téléphone, n° commande…"
+            aria-label="Rechercher une commande"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          />
+        </div>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">

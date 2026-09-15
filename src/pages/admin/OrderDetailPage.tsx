@@ -3,7 +3,13 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Check, MapPin, MessageCircle, Pencil, X } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { getOrderById, updateOrderStatus, updateOrderDeliveryFee, buildWhatsAppUrl } from '@/services/order.service'
+import {
+  getOrderById,
+  updateOrderStatus,
+  updateOrderDeliveryFee,
+  updateOrderNotes,
+  buildWhatsAppUrl,
+} from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import {
   ORDER_STATUS_ACTION_LABELS,
@@ -79,6 +85,7 @@ export function OrderDetailPage() {
   const [editingFee, setEditingFee] = useState(false)
   const [feeDraft, setFeeDraft] = useState('')
   const [feeError, setFeeError] = useState<string | null>(null)
+  const [notesDraft, setNotesDraft] = useState<string | null>(null)
 
   const { data: order, isLoading, isError } = useQuery({
     queryKey: ['order', id],
@@ -107,6 +114,14 @@ export function OrderDetailPage() {
     onError: () => setFeeError('Impossible de modifier le frais de livraison.'),
   })
 
+  const notesMutation = useMutation({
+    mutationFn: (notes: string) => updateOrderNotes(id as string, notes),
+    onSuccess: () => {
+      setNotesDraft(null)
+      queryClient.invalidateQueries({ queryKey: ['order', id] })
+    },
+  })
+
   if (isLoading) return <Spinner />
   if (isError || !order) return <ErrorMessage message="Commande introuvable." />
 
@@ -117,6 +132,8 @@ export function OrderDetailPage() {
   const otherActions = allowedDestinations.filter((s) => s !== next && s !== 'cancelled')
   const isTerminal = order.status === 'delivered' || order.status === 'cancelled'
   const deliveryFee = Number(order.delivery_fee ?? 0)
+  const savedNotes = order.notes ?? ''
+  const notesValue = notesDraft ?? savedNotes
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -329,6 +346,26 @@ export function OrderDetailPage() {
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+        <h2 className="text-sm font-medium text-gray-500">Notes internes</h2>
+        <p className="text-xs text-gray-400">Visibles uniquement par vous, jamais par le client.</p>
+        <textarea
+          rows={3}
+          value={notesValue}
+          onChange={(e) => setNotesDraft(e.target.value)}
+          placeholder="Ex. À rappeler avant livraison…"
+          className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => notesMutation.mutate(notesValue)}
+          disabled={notesMutation.isPending || notesValue === savedNotes}
+          className="mt-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {notesMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
       </div>
 
       <ConfirmDialog

@@ -218,6 +218,7 @@ export type Database = {
           delivery_fee: number
           delivery_zone_name: string | null
           id: string
+          notes: string | null
           order_number: string
           payment_method: string
           shop_id: string
@@ -233,6 +234,7 @@ export type Database = {
           delivery_fee?: number
           delivery_zone_name?: string | null
           id?: string
+          notes?: string | null
           order_number: string
           payment_method?: string
           shop_id: string
@@ -248,6 +250,7 @@ export type Database = {
           delivery_fee?: number
           delivery_zone_name?: string | null
           id?: string
+          notes?: string | null
           order_number?: string
           payment_method?: string
           shop_id?: string

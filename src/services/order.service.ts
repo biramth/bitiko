@@ -80,6 +80,7 @@ export async function listOrders(
   shopId: string,
   page = 1,
   status?: OrderStatus,
+  search?: string,
 ): Promise<{ orders: Order[]; total: number }> {
   const from = (page - 1) * ORDERS_PAGE_SIZE
   const to = from + ORDERS_PAGE_SIZE - 1
@@ -90,6 +91,12 @@ export async function listOrders(
     .eq('shop_id', shopId)
 
   if (status) query = query.eq('status', status)
+  if (search?.trim()) {
+    const term = search.trim().replace(/[%,]/g, '')
+    query = query.or(
+      `customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%,order_number.ilike.%${term}%`,
+    )
+  }
 
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
@@ -139,6 +146,18 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     p_order_id: id,
     p_status: status,
   })
+  if (error) throw error
+  return data as Order
+}
+
+/** Internal note, never shown to the customer. */
+export async function updateOrderNotes(id: string, notes: string): Promise<Order> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ notes: notes.trim() || null })
+    .eq('id', id)
+    .select()
+    .single()
   if (error) throw error
   return data as Order
 }
