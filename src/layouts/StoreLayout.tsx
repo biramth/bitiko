@@ -288,9 +288,13 @@ export function StoreLayout() {
             )}
           </div>
         </div>
-        <p className="border-t border-white/10 py-4 text-center text-xs text-sand-50/40">
-          {footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}
-        </p>
+        <div className="flex flex-col items-center gap-2 border-t border-white/10 py-4 text-center text-xs text-sand-50/40 sm:flex-row sm:justify-between sm:px-4">
+          <p>{footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}</p>
+          <p className="flex items-center gap-3">
+            <a href={`${platformUrl()}/legal/cgu`} className="hover:text-sand-50/70">CGU</a>
+            <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-sand-50/70">Confidentialité</a>
+          </p>
+        </div>
       </footer>
       </PreviewClickTarget>
     </div>

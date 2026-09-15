@@ -15,6 +15,7 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
   const [resent, setResent] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   if (session) return <Navigate to="/admin" replace />
 
@@ -132,9 +133,29 @@ export function SignupPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
+          <label className="flex items-start gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              required
+              className="mt-0.5 accent-brand-600"
+            />
+            <span>
+              J'accepte les{' '}
+              <Link to="/legal/cgu" target="_blank" className="font-medium text-brand-700 hover:underline">
+                CGU
+              </Link>{' '}
+              et la{' '}
+              <Link to="/legal/confidentialite" target="_blank" className="font-medium text-brand-700 hover:underline">
+                politique de confidentialité
+              </Link>
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !acceptedTerms}
             className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {loading ? 'Création…' : 'Créer mon compte'}

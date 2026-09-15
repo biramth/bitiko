@@ -20,6 +20,10 @@ const ForgotPasswordPage = lazy(() =>
 const ResetPasswordPage = lazy(() =>
   import('@/pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 )
+const TermsPage = lazy(() => import('@/pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
+const PrivacyPage = lazy(() =>
+  import('@/pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })),
+)
 const NotFoundPage = lazy(() =>
   import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -64,6 +68,8 @@ export function PlatformRoutes() {
       <Route path="inscription" element={standalone(<SignupPage />)} />
       <Route path="mot-de-passe-oublie" element={standalone(<ForgotPasswordPage />)} />
       <Route path="reinitialiser-mot-de-passe" element={standalone(<ResetPasswordPage />)} />
+      <Route path="legal/cgu" element={standalone(<TermsPage />)} />
+      <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
       <Route path="admin">
         <Route path="login" element={standalone(<LoginPage />)} />
