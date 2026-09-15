@@ -82,7 +82,6 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
             key={section.id}
             data-preview-section
             onClick={(e) => {
-              e.preventDefault()
               e.stopPropagation()
               window.parent?.postMessage({ type: PREVIEW_SELECT, sectionId: section.id }, '*')
             }}

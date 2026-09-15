@@ -54,7 +54,6 @@ function PreviewClickTarget({
     <div
       data-preview-section
       onClick={(e) => {
-        e.preventDefault()
         e.stopPropagation()
         if (sectionId) window.parent?.postMessage({ type: PREVIEW_SELECT, sectionId }, '*')
       }}

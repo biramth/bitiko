@@ -172,7 +172,7 @@ export function ProductsEditor({ config, onChange }: SectionEditorProps<Products
           type="checkbox"
           checked={config.enableFilters === true}
           onChange={(e) => onChange({ ...config, enableFilters: e.target.checked })}
-          className="accent-[var(--shop-accent)]"
+          className="accent-brand-600"
         />
         Outils de catalogue (recherche, catégories, tri, pagination)
       </label>

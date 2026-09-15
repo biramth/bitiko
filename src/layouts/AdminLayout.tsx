@@ -34,6 +34,7 @@ const settingsSections = [
   { to: '/admin/parametres/appearance', label: 'Apparence' },
   { to: '/admin/parametres/contact', label: 'Contact & devise' },
   { to: '/admin/parametres/shipping', label: 'Livraison & stock' },
+  { to: '/admin/parametres/domaine', label: 'Domaine personnalisé' },
   { to: '/admin/parametres/compte', label: 'Mon compte' },
 ]
 

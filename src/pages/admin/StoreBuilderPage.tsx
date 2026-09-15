@@ -268,25 +268,40 @@ function StoreBuilder({ shop }: { shop: Shop }) {
   const previewPath = contextPreviewPath(context, productSlug)
   const previewTemplateKey = context.kind === 'system' ? context.key : undefined
   const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
+  const draftBadge = context.kind === 'page' && !context.page.is_published
 
   return (
-    <BuilderEditor
-      key={activeKey}
-      shop={shop}
-      target={target}
-      label={context.label}
-      kind={context.kind}
-      previewPath={previewPath}
-      previewTemplateKey={previewTemplateKey}
-      availableTypes={availableTypes}
-      onContextChange={handleContextChange}
-      onCreatePage={() => setCreateOpen(true)}
-      onDeletePage={() => setDeleteOpen(true)}
-      canDeletePage={context.kind === 'page'}
-      pages={pages}
-      activeKey={activeKey}
-      onNavigate={handleNavigate}
-    />
+    <>
+      <BuilderEditor
+        key={activeKey}
+        shop={shop}
+        target={target}
+        label={context.label}
+        previewPath={previewPath}
+        previewTemplateKey={previewTemplateKey}
+        availableTypes={availableTypes}
+        draftBadge={draftBadge}
+        onContextChange={handleContextChange}
+        onCreatePage={() => setCreateOpen(true)}
+        onDeletePage={() => setDeleteOpen(true)}
+        canDeletePage={context.kind === 'page'}
+        onNavigate={handleNavigate}
+        pages={pages}
+        activeKey={activeKey}
+      />
+      <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
+      <ConfirmDialog
+        open={deleteOpen}
+        title={`Supprimer « ${context.kind === 'page' ? context.page.title : ''} » ?`}
+        description="Cette action est irréversible. La page et son contenu seront définitivement supprimés."
+        confirmLabel="Supprimer"
+        pendingLabel="Suppression…"
+        pending={false}
+        tone="danger"
+        onConfirm={handleDeletePage}
+        onClose={() => setDeleteOpen(false)}
+      />
+    </>
   )
 }
 
@@ -296,32 +311,32 @@ function BuilderEditor({
   shop,
   target,
   label,
-  kind,
   previewPath,
   previewTemplateKey,
   availableTypes,
+  draftBadge,
   onContextChange,
   onCreatePage,
   onDeletePage,
   canDeletePage,
+  onNavigate,
   pages,
   activeKey,
-  onNavigate,
 }: {
   shop: Shop
   target: BuilderTarget
   label: string
-  kind: PreparedContext['kind']
   previewPath: string | null
   previewTemplateKey?: SystemTemplateKey
   availableTypes?: SectionType[]
+  draftBadge: boolean
   onContextChange: (key: string) => void
   onCreatePage: () => void
   onDeletePage: () => void
   canDeletePage: boolean
+  onNavigate: (path: string) => void
   pages: StorePage[]
   activeKey: ActiveKey
-  onNavigate: (path: string) => void
 }) {
   const builder = useBuilderState(target)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
@@ -420,7 +435,7 @@ function BuilderEditor({
             </h1>
             <p className="mt-1 text-sm text-gray-500">
               {builder.dirty ? 'Modifications non enregistrées.' : 'Tout est enregistré.'}
-              {kind === 'page' && (pages.find((p) => `page:${p.id}` === activeKey)?.is_published ?? true) === false && (
+              {draftBadge && (
                 <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Brouillon</span>
               )}
             </p>
@@ -607,8 +622,4 @@ function CreatePageDialog({
       </div>
     </div>
   )
-}
-
-export function StoreBuilderDialogs() {
-  return null
 }

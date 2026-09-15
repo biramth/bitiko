@@ -173,7 +173,7 @@ export function ProductEditor({ config, onChange }: SectionEditorProps<ProductSe
       </div>
       {(['showGallery', 'showTitle', 'showPrice', 'showDescription', 'showQuantity', 'showAddToCart'] as const).map((key) => (
         <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={!!config[key]} onChange={() => toggle(key)} className="accent-[var(--shop-accent)]" />
+          <input type="checkbox" checked={!!config[key]} onChange={() => toggle(key)} className="accent-brand-600" />
           {{ showGallery: 'Galerie photos', showTitle: 'Titre', showPrice: 'Prix', showDescription: 'Description', showQuantity: 'Quantité', showAddToCart: 'Ajouter au panier' }[key]}
         </label>
       ))}
