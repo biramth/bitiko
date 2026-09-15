@@ -50,7 +50,7 @@ export function resolveTenant(hostname: string, search: string): TenantContext {
   }
 
   if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
-    const slug = hostname.slice(0, -(`.${ROOT_DOMAIN}`.length + 1))
+    const slug = hostname.slice(0, -(`.${ROOT_DOMAIN}`.length))
     return { type: 'shop', slug }
   }
 
