@@ -8,6 +8,7 @@ import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
 import { PREVIEW_NAV, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
+import { useShopFavicon } from '@/hooks/usePageSeo'
 import { Logo } from '@/components/ui/Logo'
 import { Spinner } from '@/components/ui/Spinner'
 import { platformUrl } from '@/lib/tenant'
@@ -112,6 +113,8 @@ export function StoreLayout() {
   const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
   const navLinks = resolveHeaderNavLinks(header, shop)
+
+  useShopFavicon(shop?.logo_url)
 
   return (
     <div

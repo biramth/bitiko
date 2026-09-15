@@ -19,6 +19,30 @@ function setMetaTag(attr: 'name' | 'property', key: string, content: string) {
 }
 
 /**
+ * Swaps the tab favicon to a shop's own logo. Not part of usePageSeo's
+ * per-page effect since a favicon belongs to the whole shop, not a single
+ * page — call once from the storefront layout and restore the default
+ * (index.html's own <link rel="icon">, set once on module load) on unmount.
+ */
+const DEFAULT_FAVICON = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? null
+
+export function useShopFavicon(logoUrl: string | null | undefined) {
+  useEffect(() => {
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+    link.href = logoUrl || DEFAULT_FAVICON || ''
+
+    return () => {
+      if (link && DEFAULT_FAVICON) link.href = DEFAULT_FAVICON
+    }
+  }, [logoUrl])
+}
+
+/**
  * Sets the document title and description/OG meta tags for the current
  * page. Note: this only affects the client-rendered DOM — crawlers that
  * don't execute JS (most link-preview bots, e.g. WhatsApp/Facebook) will
