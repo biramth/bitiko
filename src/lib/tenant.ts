@@ -38,6 +38,17 @@ export function resolveTenant(hostname: string, search: string): TenantContext {
     return { type: 'platform' }
   }
 
+  // Vercel's own preview/production URLs (*.vercel.app) are the platform too
+  // — otherwise, before the real domain's DNS is live (or when just checking
+  // a deploy), the hostname falls through to the "customDomain" case below
+  // and looks like an unregistered merchant domain ("cette boutique n'existe
+  // pas") instead of the actual marketing site. `?boutique=<slug>` above
+  // still takes priority, so previewing a shop on a *.vercel.app URL keeps
+  // working exactly as before.
+  if (hostname.endsWith('.vercel.app')) {
+    return { type: 'platform' }
+  }
+
   if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
     const slug = hostname.slice(0, -(`.${ROOT_DOMAIN}`.length + 1))
     return { type: 'shop', slug }
