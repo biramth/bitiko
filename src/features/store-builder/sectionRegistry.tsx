@@ -44,7 +44,14 @@ import type { SectionEditorProps } from './sections/shared'
 
 interface SectionDefinition {
   label: string
+  /** One line explaining what the block is for — shown in the "add block" picker. */
+  description: string
   icon: typeof Type
+  /** Tailwind gradient classes for the block's icon badge — gives each type a
+   *  distinct identity at a glance instead of one flat gray icon for everything. */
+  color: string
+  /** Groups blocks in the "add block" picker (Shopify-style categories). */
+  category: 'content' | 'commerce'
   /** Body sections can be added freely by the merchant; header/footer are fixed, one-per-shop. */
   pinned: boolean
   createDefault: () => LayoutSection
@@ -57,7 +64,10 @@ interface SectionDefinition {
 export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   header: {
     label: 'Header',
+    description: 'Logo, navigation et panier — présent sur toutes les pages.',
     icon: PanelTop,
+    color: 'from-slate-500 to-slate-700',
+    category: 'content',
     pinned: true,
     createDefault: () => ({
       id: createSectionId('header'),
@@ -69,7 +79,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   hero: {
     label: 'Bannière / Hero',
+    description: 'Le grand titre d\'accroche en haut de page, avec votre bannière.',
     icon: LayoutTemplate,
+    color: 'from-brand-500 to-brand-700',
+    category: 'content',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('hero'),
@@ -82,7 +95,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   text: {
     label: 'Texte',
+    description: 'Un titre et un paragraphe libre — votre histoire, vos garanties…',
     icon: Type,
+    color: 'from-blue-500 to-blue-700',
+    category: 'content',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('text'),
@@ -95,7 +111,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   image: {
     label: 'Image',
+    description: 'Une image pleine largeur, avec légende et lien optionnels.',
     icon: ImageIcon,
+    color: 'from-purple-500 to-purple-700',
+    category: 'content',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('image'),
@@ -108,7 +127,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   categories: {
     label: 'Catégories',
+    description: 'Une grille de vos catégories, pour naviguer le catalogue.',
     icon: Tags,
+    color: 'from-teal-500 to-teal-700',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('categories'),
@@ -121,7 +143,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   products: {
     label: 'Produits',
+    description: 'La grille de produits — le cœur du catalogue.',
     icon: ShoppingBag,
+    color: 'from-gold-400 to-gold-600',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('products'),
@@ -134,7 +159,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   featured_products: {
     label: 'Produits mis en avant',
+    description: 'Une sélection choisie à la main — vos coups de cœur.',
     icon: Star,
+    color: 'from-rose-400 to-rose-600',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('featured_products'),
@@ -147,7 +175,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   promo: {
     label: 'Promotion',
+    description: 'Un bandeau d\'offre avec bouton d\'appel à l\'action.',
     icon: Megaphone,
+    color: 'from-red-500 to-red-700',
+    category: 'content',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('promo'),
@@ -166,7 +197,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   footer: {
     label: 'Footer',
+    description: 'Contact, réseaux sociaux et copyright — bas de chaque page.',
     icon: PanelBottom,
+    color: 'from-slate-500 to-slate-700',
+    category: 'content',
     pinned: true,
     createDefault: () => ({
       id: createSectionId('footer'),
@@ -184,7 +218,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   product: {
     label: 'Fiche produit',
+    description: 'Photos, prix et bouton d\'achat du produit consulté.',
     icon: PackageSearch,
+    color: 'from-indigo-500 to-indigo-700',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('product'),
@@ -205,7 +242,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   cart: {
     label: 'Panier',
+    description: 'Le contenu du panier et le total, avant la commande.',
     icon: ShoppingCart,
+    color: 'from-emerald-500 to-emerald-700',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('cart'),
@@ -218,7 +258,10 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
   },
   checkout: {
     label: 'Commande',
+    description: 'Le formulaire de livraison et de paiement final.',
     icon: CreditCard,
+    color: 'from-cyan-500 to-cyan-700',
+    category: 'commerce',
     pinned: false,
     createDefault: () => ({
       id: createSectionId('checkout'),

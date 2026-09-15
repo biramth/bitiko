@@ -438,12 +438,12 @@ function BuilderEditor({
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Template / page selector */}
-          <div className="flex items-center gap-1.5">
+          {/* Template / page selector — joined into one visual control */}
+          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
             <select
               value={activeKey}
               onChange={(e) => onContextChange(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 focus:border-brand-400 focus:outline-none"
+              className="border-0 bg-transparent py-2 pl-3 pr-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-0"
             >
               <optgroup label="Templates">
                 <option value="home">🏠 Accueil</option>
@@ -468,7 +468,7 @@ function BuilderEditor({
               onClick={onCreatePage}
               title="Nouvelle page"
               aria-label="Créer une nouvelle page"
-              className="rounded-lg border border-gray-200 px-2.5 py-2 text-gray-600 hover:bg-gray-50"
+              className="border-l border-gray-200 px-2.5 py-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
             >
               <Plus size={16} aria-hidden />
             </button>
@@ -478,7 +478,7 @@ function BuilderEditor({
                 onClick={onDeletePage}
                 title="Supprimer cette page"
                 aria-label="Supprimer la page"
-                className="rounded-lg border border-gray-200 px-2.5 py-2 text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                className="border-l border-gray-200 px-2.5 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
               >
                 <Trash2 size={16} aria-hidden />
               </button>
@@ -490,23 +490,26 @@ function BuilderEditor({
               <Wand2 size={20} className="text-brand-600" aria-hidden />
               {label}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {builder.dirty ? 'Modifications non enregistrées.' : 'Tout est enregistré.'}
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${builder.dirty ? 'bg-amber-400' : 'bg-emerald-500'}`} aria-hidden />
+              {builder.dirty ? 'Modifications non enregistrées' : 'Tout est enregistré'}
               {draftBadge && (
-                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Brouillon</span>
+                <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Brouillon</span>
               )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={builder.undo} disabled={!builder.canUndo} title="Annuler (Ctrl+Z)" aria-label="Annuler" className="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <Undo2 size={16} aria-hidden />
-          </button>
-          <button type="button" onClick={builder.redo} disabled={!builder.canRedo} title="Rétablir (Ctrl+Y)" aria-label="Rétablir" className="rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <Redo2 size={16} aria-hidden />
-          </button>
-          <span className="mx-1 hidden text-xs text-gray-400 sm:block">Cliquez sur un bloc dans l'aperçu pour le modifier.</span>
+          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200">
+            <button type="button" onClick={builder.undo} disabled={!builder.canUndo} title="Annuler (Ctrl+Z)" aria-label="Annuler" className="px-2.5 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Undo2 size={16} aria-hidden />
+            </button>
+            <button type="button" onClick={builder.redo} disabled={!builder.canRedo} title="Rétablir (Ctrl+Y)" aria-label="Rétablir" className="border-l border-gray-200 px-2.5 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Redo2 size={16} aria-hidden />
+            </button>
+          </div>
+          <span className="mx-1 hidden text-xs text-gray-400 lg:block">Cliquez sur un bloc dans l'aperçu pour le modifier.</span>
           <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending || !previewUrl} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
             <ExternalLink size={14} aria-hidden /> Prévisualiser
           </button>
@@ -514,7 +517,7 @@ function BuilderEditor({
             {builder.saveDraftMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : builder.saveDraftMutation.isSuccess && !builder.dirty ? <Check size={14} className="text-emerald-600" /> : null}
             Enregistrer
           </button>
-          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60">
             {builder.publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             Publier
           </button>
