@@ -471,7 +471,7 @@ function BuilderEditor({
       </div>
 
       {/* ── 3-column layout ─────────────────────────────────── */}
-      <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] overflow-hidden rounded-xl border border-gray-200">
+      <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
         <BuilderSidebar
           sections={builder.sections}
           selectedSectionId={builder.selectedSectionId}
@@ -507,12 +507,7 @@ function BuilderEditor({
           </div>
         )}
 
-        {/* self-start: don't stretch to match the preview column's real content
-            height (which can now be several screens tall) — that's what left a
-            near-empty panel with the "no block selected" message floating far
-            down the page. Size to its own content instead, capped so a long
-            panel (e.g. Thème) still scrolls locally rather than growing forever. */}
-        <div className="min-h-[20rem] max-h-[85vh] self-start overflow-y-auto border-l border-gray-200 bg-white p-4">
+        <div className="overflow-y-auto border-l border-gray-200 bg-white p-4">
           {builder.activeTab === 'blocks' && (
             <SectionEditorPanel
               section={builder.selectedSection}
