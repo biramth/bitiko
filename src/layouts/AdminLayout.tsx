@@ -121,7 +121,7 @@ export function AdminLayout() {
   )
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50">
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
           collapsed ? 'w-[4.5rem]' : 'w-64'
@@ -192,7 +192,7 @@ export function AdminLayout() {
         </button>
       </aside>
 
-      <div className="flex h-screen flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-screen flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-ink-900/10 bg-white px-4 py-3 md:hidden">
           <div className="flex items-center gap-2">
             <LogoMark size={22} />
@@ -237,7 +237,7 @@ export function AdminLayout() {
             <Settings size={15} aria-hidden /> Paramètres
           </NavLink>
         </nav>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <Suspense fallback={<Spinner />}>
             <Outlet />
           </Suspense>
