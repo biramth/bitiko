@@ -525,7 +525,7 @@ function BuilderEditor({
       </div>
 
       {/* ── 3-column layout ─────────────────────────────────── */}
-      <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_1fr_20rem] overflow-hidden rounded-xl border border-gray-200">
+      <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] overflow-hidden rounded-xl border border-gray-200">
         <BuilderSidebar
           sections={builder.sections}
           selectedSectionId={builder.selectedSectionId}
