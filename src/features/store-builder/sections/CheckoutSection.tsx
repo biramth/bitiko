@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { CheckCircle2, MapPin, MessageCircle, ShoppingBag } from 'lucide-react'
+import { CheckCircle2, MapPin, MessageCircle, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import {
@@ -294,6 +294,17 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
         >
           {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : 'Commander via WhatsApp'}
         </button>
+
+        <ul className="flex flex-col gap-2 text-xs text-ink-700/60">
+          <li className="flex items-center gap-2">
+            <ShieldCheck size={14} className="shrink-0 text-ink-700/40" aria-hidden />
+            Aucune carte bancaire requise — espèces ou Mobile Money, comme vous préférez.
+          </li>
+          <li className="flex items-center gap-2">
+            <MessageCircle size={14} className="shrink-0 text-ink-700/40" aria-hidden />
+            Le vendeur confirme votre commande sur WhatsApp juste après.
+          </li>
+        </ul>
       </form>
     </div>
   )

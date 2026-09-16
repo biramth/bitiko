@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { PartyPopper, ShoppingBag, Truck } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
@@ -9,6 +9,35 @@ import type { Shop } from '@/types'
 import type { CartSectionConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
+
+/** Progress toward the shop's free-delivery threshold — hidden when the shop
+ *  hasn't configured one, or once it's already reached (delivery fee is
+ *  already computed as 0 at that point, so this becomes a celebration). */
+function FreeDeliveryProgress({ shop, subtotal }: { shop: Shop; subtotal: number }) {
+  const threshold = shop.free_delivery_threshold != null ? Number(shop.free_delivery_threshold) : null
+  if (threshold == null || threshold <= 0) return null
+  const currency = shop.currency ?? 'XOF'
+  const unlocked = subtotal >= threshold
+  const percent = Math.min(100, Math.round((subtotal / threshold) * 100))
+
+  return (
+    <div className="mb-6 rounded-lg bg-sand-100 p-4">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-ink-900">
+        {unlocked ? (
+          <><PartyPopper size={15} className="shrink-0 text-emerald-600" aria-hidden /> Livraison gratuite débloquée !</>
+        ) : (
+          <><Truck size={15} className="shrink-0 text-ink-700/60" aria-hidden /> Plus que {formatCurrency(threshold - subtotal, currency)} pour la livraison gratuite</>
+        )}
+      </p>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-900/10">
+        <div
+          className={`h-full rounded-full transition-[width] duration-300 ${unlocked ? 'bg-emerald-600' : 'bg-[var(--shop-accent)]'}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export function CartRenderer({ shop, config }: { shop: Shop; config: CartSectionConfig }) {
   const { items: realItems, subtotal: realSubtotal, updateQuantity, removeItem } = useCart()
@@ -41,6 +70,12 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       {config.heading && (
         <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1>
+      )}
+
+      {!isDemo && (
+        <div className="mt-6">
+          <FreeDeliveryProgress shop={shop} subtotal={subtotal} />
+        </div>
       )}
 
       <ul className="mt-8 divide-y divide-ink-900/10 border-t border-ink-900/10">

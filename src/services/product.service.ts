@@ -65,6 +65,43 @@ export async function getActiveProductsByIds(shopId: string, ids: string[]): Pro
   return ids.map((id) => byId.get(id)).filter((p): p is ProductWithRelations => !!p)
 }
 
+/** Other active products worth cross-selling on a product page — same
+ *  category first, backfilled with recent products if the category is thin,
+ *  always excluding the product being viewed. */
+export async function listRelatedProducts(
+  shopId: string,
+  categoryId: string | null | undefined,
+  excludeProductId: string,
+  limit = 4,
+): Promise<ProductWithRelations[]> {
+  const baseQuery = () =>
+    supabase
+      .from('products')
+      .select('*, category:categories(*), images:product_images(*), variants:product_variants(*)')
+      .eq('shop_id', shopId)
+      .eq('active', true)
+      .neq('id', excludeProductId)
+      .order('sort_order', { foreignTable: 'product_images', ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+  if (categoryId) {
+    const { data, error } = await baseQuery().eq('category_id', categoryId)
+    if (error) throw error
+    const sameCategory = (data ?? []) as ProductWithRelations[]
+    if (sameCategory.length >= limit) return sameCategory
+
+    const { data: backfillData, error: backfillError } = await baseQuery().neq('category_id', categoryId)
+    if (backfillError) throw backfillError
+    const backfill = (backfillData ?? []) as ProductWithRelations[]
+    return [...sameCategory, ...backfill].slice(0, limit)
+  }
+
+  const { data, error } = await baseQuery()
+  if (error) throw error
+  return (data ?? []) as ProductWithRelations[]
+}
+
 export async function getProductBySlug(
   shopId: string,
   slug: string,
