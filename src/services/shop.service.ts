@@ -4,17 +4,7 @@ import type { Shop, TenantContext } from '@/types'
 export async function getShopByTenant(tenant: TenantContext): Promise<Shop | null> {
   if (tenant.type !== 'shop') return null
 
-  if (tenant.slug !== undefined) {
-    const { data, error } = await supabase.from('shops').select('*').ilike('slug', tenant.slug).maybeSingle()
-    if (error) throw error
-    return data
-  }
-
-  const { data, error } = await supabase
-    .from('shops')
-    .select('*')
-    .ilike('custom_domain', tenant.customDomain)
-    .maybeSingle()
+  const { data, error } = await supabase.from('shops').select('*').ilike('slug', tenant.slug).maybeSingle()
   if (error) throw error
   return data
 }

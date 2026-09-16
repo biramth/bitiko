@@ -46,5 +46,4 @@ export interface OrderWithItems extends Order {
 
 export type TenantContext =
   | { type: 'platform' }
-  | { type: 'shop'; slug: string; customDomain?: undefined }
-  | { type: 'shop'; slug?: undefined; customDomain: string }
+  | { type: 'shop'; slug: string }

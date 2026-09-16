@@ -6,11 +6,9 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Globe,
   Image,
   ImagePlus,
   Loader2,
-  Lock,
   MapPin,
   MessageCircle,
   Package,
@@ -25,7 +23,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { useShopPlan } from '@/features/billing/useShopPlan'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import {
   createDeliverySecteur,
@@ -48,14 +45,13 @@ const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'domaine' | 'compte'
+type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'compte'
 
 const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'general', label: 'Général', icon: Store },
   { key: 'appearance', label: 'Apparence', icon: ImagePlus },
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
-  { key: 'domaine', label: 'Domaine personnalisé', icon: Globe },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -264,142 +260,6 @@ function AccountSection() {
           </div>
         </form>
       </Card>
-    </div>
-  )
-}
-
-function DomainLock() {
-  return (
-    <div className="mt-6 flex flex-col items-center gap-4 rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-        <Lock size={24} aria-hidden />
-      </span>
-      <h2 className="font-heading text-lg font-bold text-gray-900">Domaine personnalisé réservé au plan Pro</h2>
-      <p className="max-w-sm text-sm text-gray-500">
-        Passez à Pro pour connecter votre propre nom de domaine (ex. boutique.votremarque.com) à votre boutique
-        Bitiko, à la place du sous-domaine gratuit.
-      </p>
-      <Link
-        to="/admin/facturation"
-        className="mt-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-      >
-        Passer à Pro
-      </Link>
-    </div>
-  )
-}
-
-const DOMAIN_PATTERN = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i
-
-function DomainSection({ shop }: { shop: NonNullable<ReturnType<typeof useMyShop>['data']> }) {
-  const { plan, isLoading: planLoading } = useShopPlan(shop.id)
-  const queryClient = useQueryClient()
-
-  const [domain, setDomain] = useState(shop.custom_domain ?? '')
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
-
-  const saveMutation = useMutation({
-    mutationFn: (value: string | null) => updateShop(shop.id, { custom_domain: value }),
-    onSuccess: () => {
-      setStatus('saved')
-      queryClient.invalidateQueries({ queryKey: ['my-shop'] })
-      setTimeout(() => setStatus('idle'), 2500)
-    },
-    onError: (err: unknown) => {
-      setStatus('error')
-      const code = (err as { code?: string } | null)?.code
-      setError(
-        code === '23505'
-          ? 'Ce domaine est déjà utilisé par une autre boutique.'
-          : "Impossible d'enregistrer ce domaine.",
-      )
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    const trimmed = domain.trim().toLowerCase()
-    if (trimmed && !DOMAIN_PATTERN.test(trimmed)) {
-      setError('Domaine invalide. Exemple : boutique.votremarque.com')
-      setStatus('error')
-      return
-    }
-    setStatus('saving')
-    saveMutation.mutate(trimmed || null)
-  }
-
-  if (planLoading) return <Spinner />
-  if (!plan.customDomainAllowed) return <DomainLock />
-
-  return (
-    <div className="mt-6 space-y-6">
-      <Card
-        icon={Globe}
-        title="Domaine personnalisé"
-        description="Connectez votre propre nom de domaine à votre boutique."
-      >
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label htmlFor="customDomain" className="block text-sm font-medium text-gray-700">
-              Domaine
-            </label>
-            <input
-              id="customDomain"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="boutique.votremarque.com"
-              className={inputClass}
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Laissez vide pour revenir au sous-domaine gratuit ({shop.slug}.bitiko.shop).
-            </p>
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {status === 'saved' && (
-            <p className="flex items-center gap-1.5 text-sm text-emerald-600">
-              <Check size={14} /> Enregistré
-            </p>
-          )}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={status === 'saving'}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
-            >
-              {status === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
-          </div>
-        </form>
-      </Card>
-
-      {shop.custom_domain && (
-        <Card
-          icon={Globe}
-          title="Configuration DNS"
-          description="Ajoutez cet enregistrement chez votre registrar pour pointer ce domaine vers Bitiko."
-        >
-          <div className="grid grid-cols-3 gap-3 rounded-lg bg-gray-50 p-4 font-mono text-xs text-gray-700">
-            <div>
-              <p className="text-[10px] uppercase text-gray-400">Type</p>
-              CNAME
-            </div>
-            <div>
-              <p className="text-[10px] uppercase text-gray-400">Nom</p>
-              {shop.custom_domain.split('.').length > 2 ? shop.custom_domain.split('.')[0] : '@'}
-            </div>
-            <div>
-              <p className="text-[10px] uppercase text-gray-400">Valeur</p>
-              cname.vercel-dns.com
-            </div>
-          </div>
-          <p className="text-xs text-gray-500">
-            La propagation DNS peut prendre jusqu'à 24-48h. L'activation finale (certificat sécurisé inclus) est
-            confirmée par l'équipe Bitiko une fois le DNS détecté.
-          </p>
-        </Card>
-      )}
     </div>
   )
 }
@@ -672,8 +532,6 @@ function SettingsForm({
 
       {section === 'compte' ? (
         <AccountSection />
-      ) : section === 'domaine' ? (
-        <DomainSection shop={shop} />
       ) : (
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="space-y-6">

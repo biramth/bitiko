@@ -11,7 +11,6 @@ export interface Plan {
   maxActiveProducts: number | null
   storeBuilderAccess: boolean
   removableBranding: boolean
-  customDomainAllowed: boolean
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -22,7 +21,6 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveProducts: 8,
     storeBuilderAccess: false,
     removableBranding: false,
-    customDomainAllowed: false,
   },
   pro: {
     key: 'pro',
@@ -31,7 +29,6 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveProducts: null,
     storeBuilderAccess: true,
     removableBranding: true,
-    customDomainAllowed: true,
   },
 }
 

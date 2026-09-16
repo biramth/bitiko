@@ -9,9 +9,9 @@ export const DISPLAY_ROOT_DOMAIN = ROOT_DOMAIN ?? 'bitiko.shop'
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 
 /**
- * Every shop gets a free "<slug>.<ROOT_DOMAIN>" subdomain; a shop can later
- * attach its own custom_domain instead. The platform's own root domain (and
- * bare "www") serves the marketing site + signup + merchant dashboard.
+ * Every shop lives on its free "<slug>.<ROOT_DOMAIN>" subdomain. The
+ * platform's own root domain (and bare "www") serves the marketing site +
+ * signup + merchant dashboard.
  *
  * Locally there's no real DNS, so a `?boutique=<slug>` query param or the
  * VITE_DEV_SHOP_SLUG env var lets you preview a specific storefront on
@@ -40,11 +40,10 @@ export function resolveTenant(hostname: string, search: string): TenantContext {
 
   // Vercel's own preview/production URLs (*.vercel.app) are the platform too
   // — otherwise, before the real domain's DNS is live (or when just checking
-  // a deploy), the hostname falls through to the "customDomain" case below
-  // and looks like an unregistered merchant domain ("cette boutique n'existe
-  // pas") instead of the actual marketing site. `?boutique=<slug>` above
-  // still takes priority, so previewing a shop on a *.vercel.app URL keeps
-  // working exactly as before.
+  // a deploy), the hostname would look like an unregistered merchant domain
+  // ("cette boutique n'existe pas") instead of the actual marketing site.
+  // `?boutique=<slug>` above still takes priority, so previewing a shop on a
+  // *.vercel.app URL keeps working exactly as before.
   if (hostname.endsWith('.vercel.app')) {
     return { type: 'platform' }
   }
@@ -54,8 +53,10 @@ export function resolveTenant(hostname: string, search: string): TenantContext {
     return { type: 'shop', slug }
   }
 
-  // Any other hostname is a candidate custom domain a merchant connected.
-  return { type: 'shop', customDomain: hostname }
+  // Any other hostname isn't a merchant subdomain (custom domains were
+  // removed) — resolve it as a shop slug for the usual "boutique introuvable"
+  // page rather than surfacing the marketing site on a random host.
+  return { type: 'shop', slug: hostname }
 }
 
 export function getCurrentTenant(): TenantContext {

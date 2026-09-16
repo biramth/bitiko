@@ -217,7 +217,7 @@ const faq = [
   {
     question: 'Est-ce que Bitiko est vraiment gratuit ?',
     answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison — le tout sans payer. Si tu veux plus de produits, le store builder, ton propre domaine et supprimer le logo Bitiko, le plan Pro à 10 000 F/mois est fait pour ça.',
+      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison — le tout sans payer. Si tu veux plus de produits, le store builder et supprimer le logo Bitiko, le plan Pro à 10 000 F/mois est fait pour ça.',
   },
   {
     question: 'Comment les clients paient-ils ?',
@@ -235,9 +235,9 @@ const faq = [
       'Tu définis tes secteurs (par exemple Dakar, Rufisque, Thiès) et le tarif par secteur. À l\'intérieur de chaque secteur, tu listes les villes. Au checkout, le client choisit sa ville et le tarif s\'applique automatiquement. Tu peux aussi activer la livraison gratuite au-delà d\'un certain montant.',
   },
   {
-    question: 'Est-ce que je peux utiliser mon propre domaine ?',
+    question: 'Qui peut voir ma boutique ?',
     answer:
-      'Oui — avec le plan Pro. Par exemple « vetements-fatou.com » pointe vers ta boutique Bitiko. Le sous-domaine gratuit (fatou.bitiko.com) est disponible dès le plan gratuit.',
+      'Avec le plan gratuit, ta boutique est publique sur son sous-domaine bitiko.shop et tu retires la marque Bitiko avec le plan Pro.',
   },
   {
     question: 'Mes données sont-elles sécurisées ?',
@@ -1012,7 +1012,6 @@ export function LandingPage() {
                       'Produits illimités',
                       'Store builder — personnalise ta page',
                       'Supprime le logo Bitiko',
-                      'Domaine personnalisé',
                       '5 utilisateurs',
                       'Support prioritaire',
                     ].map((f, i) => (

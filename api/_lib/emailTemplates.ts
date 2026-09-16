@@ -157,7 +157,7 @@ export function proActivatedEmailHtml({
   const perks = [
     badge(0, 'Produits illimités', 'Fini la limite de 8 produits actifs.'),
     badge(1, 'Éditeur visuel complet', 'Tous les templates et blocs de personnalisation débloqués.'),
-    badge(2, 'Sans "Propulsé par Bitiko"', 'Et domaine personnalisé si tu en as un.'),
+    badge(2, 'Sans "Propulsé par Bitiko"', 'Ta boutique passe sur ton nom, pas sur le nôtre.'),
   ].join('')
 
   return shell({

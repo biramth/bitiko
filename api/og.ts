@@ -113,15 +113,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey)
   const isSubdomain = !!ROOT_DOMAIN && host.endsWith(`.${ROOT_DOMAIN}`)
-  const shopSlug = isSubdomain ? host.slice(0, -(ROOT_DOMAIN!.length + 1)) : null
 
-  const { data: shop } = await (shopSlug
-    ? supabase.from('shops').select('id, name, description, currency, logo_url, banner_url').ilike('slug', shopSlug).maybeSingle()
-    : supabase
-        .from('shops')
-        .select('id, name, description, currency, logo_url, banner_url')
-        .ilike('custom_domain', host)
-        .maybeSingle())
+  if (!isSubdomain) {
+    fallback()
+    return
+  }
+  const shopSlug = host.slice(0, -(ROOT_DOMAIN!.length + 1))
+
+  const { data: shop } = await supabase
+    .from('shops')
+    .select('id, name, description, currency, logo_url, banner_url')
+    .ilike('slug', shopSlug)
+    .maybeSingle()
 
   if (!shop) {
     fallback()

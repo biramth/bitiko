@@ -7,7 +7,7 @@ interface PageSeoOptions {
   /** For pages that must never be indexed (404s, admin, cart, checkout). */
   noindex?: boolean
   /** Absolute canonical URL. Defaults to the current origin + pathname, so
-   * each shop subdomain / custom domain keeps its own canonical. */
+   * each shop subdomain keeps its own canonical. */
   canonicalUrl?: string
 }
 

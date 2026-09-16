@@ -511,7 +511,6 @@ export type Database = {
           builder_draft: BuilderDraft | null
           created_at: string
           currency: string
-          custom_domain: string | null
           delivery_fee: number
           description: string | null
           free_delivery_threshold: number | null
@@ -536,7 +535,6 @@ export type Database = {
           builder_draft?: BuilderDraft | null
           created_at?: string
           currency?: string
-          custom_domain?: string | null
           delivery_fee?: number
           description?: string | null
           free_delivery_threshold?: number | null
@@ -561,7 +559,6 @@ export type Database = {
           builder_draft?: BuilderDraft | null
           created_at?: string
           currency?: string
-          custom_domain?: string | null
           delivery_fee?: number
           description?: string | null
           free_delivery_threshold?: number | null

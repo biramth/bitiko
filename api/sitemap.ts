@@ -57,34 +57,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
+      urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`))
+
       const isSubdomain = !!ROOT_DOMAIN && host.endsWith(`.${ROOT_DOMAIN}`)
       const slug = isSubdomain ? host.slice(0, -(ROOT_DOMAIN!.length + 1)) : null
 
-      const { data: shop } = await (slug
-        ? supabase.from('shops').select('id').ilike('slug', slug).maybeSingle()
-        : supabase.from('shops').select('id').ilike('custom_domain', host).maybeSingle())
+      if (slug) {
+        const { data: shop } = await supabase.from('shops').select('id').ilike('slug', slug).maybeSingle()
 
-      urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`))
+        if (shop) {
+          const [{ data: products }, { data: pages }] = await Promise.all([
+            supabase
+              .from('products')
+              .select('slug')
+              .eq('shop_id', shop.id)
+              .eq('active', true),
+            supabase
+              .from('pages')
+              .select('slug')
+              .eq('shop_id', shop.id)
+              .eq('is_published', true),
+          ])
 
-      if (shop) {
-        const [{ data: products }, { data: pages }] = await Promise.all([
-          supabase
-            .from('products')
-            .select('slug')
-            .eq('shop_id', shop.id)
-            .eq('active', true),
-          supabase
-            .from('pages')
-            .select('slug')
-            .eq('shop_id', shop.id)
-            .eq('is_published', true),
-        ])
-
-        for (const product of products ?? []) {
-          urls.push(urlEntry(`${origin}/produits/${product.slug}`))
-        }
-        for (const page of pages ?? []) {
-          urls.push(urlEntry(`${origin}/pages/${page.slug}`))
+          for (const product of products ?? []) {
+            urls.push(urlEntry(`${origin}/produits/${product.slug}`))
+          }
+          for (const page of pages ?? []) {
+            urls.push(urlEntry(`${origin}/pages/${page.slug}`))
+          }
         }
       }
     } else {

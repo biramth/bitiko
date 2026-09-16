@@ -156,7 +156,6 @@ function BillingForShop({ shopId }: { shopId: string }) {
             <PlanFeature>Produits illimités</PlanFeature>
             <PlanFeature>Éditeur visuel complet + tous les templates</PlanFeature>
             <PlanFeature>Retirer "Propulsé par Bitiko"</PlanFeature>
-            <PlanFeature>Domaine personnalisé</PlanFeature>
           </ul>
           {isPro ? (
             <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">

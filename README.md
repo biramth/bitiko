@@ -8,11 +8,11 @@ Plateforme façon Shopify pensée pour l'Afrique : n'importe quel commerçant pe
 
 ## Modèle multi-tenant
 
-Chaque boutique a un sous-domaine gratuit — `<slug>.<VITE_ROOT_DOMAIN>` — attribué à l'inscription, avec la possibilité de brancher un domaine personnalisé plus tard (colonne `custom_domain`, déjà en base ; l'automatisation de la vérification/SSL est une phase future). Le frontend résout la boutique à afficher à partir du **hostname de la requête** ([`src/lib/tenant.ts`](src/lib/tenant.ts)) :
+Chaque boutique vit sur son sous-domaine gratuit `<slug>.<VITE_ROOT_DOMAIN>`, attribué à l'inscription. Le frontend résout la boutique à afficher à partir du **hostname de la requête** ([`src/lib/tenant.ts`](src/lib/tenant.ts)) :
 
 - `tonapp.com` / `www.tonapp.com` (ou pas de `VITE_ROOT_DOMAIN` configuré) → site plateforme (landing, inscription, connexion, dashboard admin)
 - `<slug>.tonapp.com` → storefront de la boutique correspondante
-- tout autre hostname → traité comme un domaine personnalisé candidat (recherché dans `shops.custom_domain`)
+- tout autre hostname → résolu comme slug de boutique non enregistré (page « boutique introuvable »)
 
 **En local**, il n'y a pas de vrai DNS wildcard : utilise `?boutique=<slug>` dans l'URL (ex. `localhost:5173/?boutique=ma-boutique`) ou la variable `VITE_DEV_SHOP_SLUG` pour prévisualiser une boutique précise ; sans ça, `localhost` est traité comme la plateforme.
 
@@ -48,7 +48,7 @@ supabase/
 
 ## Schéma de base de données
 
-`profiles` (1 par utilisateur Supabase Auth) → `shops` (1 propriétaire, `slug` unique pour le sous-domaine, `custom_domain` optionnel) → `categories` / `products` → `product_images`, et `orders` → `order_items`. Tout est rattaché à `shop_id` — c'est ce qui rend le multi-tenant possible sans dupliquer le schéma par boutique. Détail complet dans [`supabase/migrations/`](supabase/migrations).
+`profiles` (1 par utilisateur Supabase Auth) → `shops` (1 propriétaire, `slug` unique pour le sous-domaine) → `categories` / `products` → `product_images`, et `orders` → `order_items`. Tout est rattaché à `shop_id` — c'est ce qui rend le multi-tenant possible sans dupliquer le schéma par boutique. Détail complet dans [`supabase/migrations/`](supabase/migrations).
 
 Point important : `order_items` conserve `product_name` et `unit_price` au moment de la commande (snapshot), indépendamment du produit source — l'historique reste fiable même si un produit est renommé, repricé ou supprimé plus tard. Chaque commande conserve aussi la `delivery_fee` appliquée au checkout, et chaque boutique dispose de paramètres commerciaux (`delivery_fee`, `free_delivery_threshold`, `low_stock_threshold`) configurables depuis `/admin/parametres` — le seuil de stock faible pilote les alertes du dashboard et du catalogue.
 
@@ -110,7 +110,7 @@ Si la confirmation d'email est activée sur ton projet Supabase (réglage par d�
 
 ### SEO
 
-- **Balises par page** : `usePageSeo` (`src/hooks/usePageSeo.ts`) met à jour `title`, `description`, `canonical` (calculé depuis l'hôte courant, donc un canonical propre par sous-domaine/domaine personnalisé) et Open Graph à chaque navigation ; les pages produit injectent en plus du JSON-LD Product (`src/hooks/useProductStructuredData.ts`).
+- **Balises par page** : `usePageSeo` (`src/hooks/usePageSeo.ts`) met à jour `title`, `description`, `canonical` (calculé depuis l'hôte courant, donc un canonical propre par sous-domaine) et Open Graph à chaque navigation ; les pages produit injectent en plus du JSON-LD Product (`src/hooks/useProductStructuredData.ts`).
 - **Aperçus de liens dynamiques** : les bots de prévisualisation (WhatsApp, Facebook, X/Twitter, Telegram, Slack, LinkedIn, Discord…) n'exécutent pas de JS. Un middleware edge Vercel (`middleware.ts`) intercepte leurs requêtes sur les vraies URL de storefront — `/`, `/catalogue`, `/produits/:slug`, `/pages/:slug` — et les renvoie vers `api/og.ts`, qui construit des tags Open Graph **dynamiques par boutique/produit/page** (nom, description, image logo/bannière, prix *en cliquant sur un produit*). Les visiteurs réels et Googlebot ne passent pas par là : ils reçoivent la SPA directement, sans latence ajoutée.
 - **robots.txt / sitemap.xml** : servis par des fonctions Vercel (`api/robots.ts`, `api/sitemap.ts`, réécritures dans `vercel.json`) pour s'adapter à l'hôte — sitemap de la plateforme sur le domaine racine (avec les pages légales), sitemap du catalogue (produits et pages custom actifs) sur chaque sous-domaine boutique. Les fonctions lisent les mêmes variables d'environnement que le frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN` : à renseigner aussi dans les Project Settings Vercel).
 
@@ -136,8 +136,6 @@ L'application refuse de démarrer sans `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_K
 5. Pour que les sous-domaines de boutique fonctionnent, ajouter un domaine wildcard (`*.tonapp.com`) dans Vercel Domains, en plus du domaine racine, et pointer le DNS wildcard chez ton registrar vers Vercel.
 
 **Backend (Supabase)** : déjà en production dès que le projet Supabase existe — pas de serveur à déployer séparément pour les fonctionnalités actuelles.
-
-**Domaine personnalisé par boutique (phase future)** : nécessite d'appeler l'API Domains de Vercel à chaque connexion de domaine par un commerçant (vérification DNS, provisioning du certificat SSL) — prévu comme une Vercel Serverless Function dédiée avec le token API Vercel en secret côté serveur, jamais dans le frontend.
 
 ## Variables d'environnement
 
