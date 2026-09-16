@@ -586,10 +586,10 @@ function SettingsForm({
         </p>
       </header>
 
-      {/* Sur desktop, ces sections se naviguent depuis le menu "Paramètres" de la
-          barre latérale ; cette rangée d'onglets ne sert que sur mobile, où la
-          barre latérale est masquée. */}
-      <nav className="mt-6 flex gap-1 overflow-x-auto pb-1 lg:hidden">
+      {/* AdminLayout's sidebar (with its own Paramètres submenu) only renders
+          at md+ (see `hidden ... md:flex` there) — this substitute needs the
+          same breakpoint, not lg, or both show at once between 768–1023px. */}
+      <nav className="mt-6 flex gap-1 overflow-x-auto pb-1 md:hidden">
         {SECTIONS.map(({ key, label, icon: Icon }) => (
           <Link
             key={key}
