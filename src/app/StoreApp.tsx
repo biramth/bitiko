@@ -1,24 +1,15 @@
-import { lazy, Suspense } from 'react'
 import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
-import { Spinner } from '@/components/ui/Spinner'
-
-const HomePage = lazy(() => import('@/pages/store/HomePage').then((m) => ({ default: m.HomePage })))
-const CatalogPage = lazy(() =>
-  import('@/pages/store/CatalogPage').then((m) => ({ default: m.CatalogPage })),
-)
-const ProductPage = lazy(() =>
-  import('@/pages/store/ProductPage').then((m) => ({ default: m.ProductPage })),
-)
-const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ default: m.CartPage })))
-const CheckoutPage = lazy(() =>
-  import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })),
-)
-const StorePageView = lazy(() =>
-  import('@/pages/store/StorePageView').then((m) => ({ default: m.StorePageView })),
-)
+import { StoreShell } from '@/components/ui/StoreShell'
+import { HomePage } from '@/pages/store/HomePage'
+import { CatalogPage } from '@/pages/store/CatalogPage'
+import { ProductPage } from '@/pages/store/ProductPage'
+import { CartPage } from '@/pages/store/CartPage'
+import { CheckoutPage } from '@/pages/store/CheckoutPage'
+import { StorePageView } from '@/pages/store/StorePageView'
+import { NotFoundPage } from '@/pages/NotFoundPage'
 
 /** Root storefront route. On subdomains a custom page has a real path
  * (/pages/:slug); in the query-param preview fallback the page comes via
@@ -28,19 +19,12 @@ function StoreIndexRoute() {
   const pagePath = searchParams.get('page')
   return pagePath ? <StorePageView pageSlug={pagePath} /> : <HomePage />
 }
-const NotFoundPage = lazy(() =>
-  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
-)
 
 export function StoreApp() {
   const { isLoading, notFound } = useTenant()
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner />
-      </div>
-    )
+    return <StoreShell />
   }
 
   if (notFound) return <ShopNotFoundPage />
@@ -55,14 +39,7 @@ export function StoreApp() {
         <Route path="commande" element={<CheckoutPage />} />
         <Route path="pages/:slug" element={<StorePageView />} />
       </Route>
-      <Route
-        path="*"
-        element={
-          <Suspense fallback={<Spinner />}>
-            <NotFoundPage />
-          </Suspense>
-        }
-      />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

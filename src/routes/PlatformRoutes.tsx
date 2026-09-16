@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Spinner } from '@/components/ui/Spinner'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { LandingPage } from '@/pages/marketing/LandingPage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireShop } from './RequireShop'
 
@@ -21,9 +22,6 @@ const ResetPasswordPage = lazy(() =>
 const TermsPage = lazy(() => import('@/pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() =>
   import('@/pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })),
-)
-const NotFoundPage = lazy(() =>
-  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 )
 const LoginPage = lazy(() => import('@/pages/admin/LoginPage').then((m) => ({ default: m.LoginPage })))
 const OnboardingPage = lazy(() =>
