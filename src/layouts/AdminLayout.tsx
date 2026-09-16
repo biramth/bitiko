@@ -1,14 +1,17 @@
 import { Suspense, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
+  Boxes,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   CreditCard,
   ExternalLink,
+  Gauge,
   LayoutDashboard,
   LogOut,
   Package,
+  Rocket,
   Settings,
   ShoppingBag,
   Store,
@@ -32,6 +35,12 @@ const navItems = [
 
 const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
 
+const navGroupIcons = {
+  Piloter: Gauge,
+  Catalogue: Boxes,
+  Développer: Rocket,
+} as const
+
 const settingsSections = [
   { to: '/admin/parametres/general', label: 'Général' },
   { to: '/admin/parametres/appearance', label: 'Apparence' },
@@ -48,6 +57,12 @@ export function AdminLayout() {
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
   const [settingsOpen, setSettingsOpen] = useState(onSettings)
+  const activeGroup = visibleNavItems.find((item) =>
+    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
+  )?.group
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const isGroupOpen = (group: string) => group === activeGroup || openGroups[group] !== false
+  const toggleGroup = (group: string) => setOpenGroups((prev) => ({ ...prev, [group]: !isGroupOpen(group) }))
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -141,15 +156,36 @@ export function AdminLayout() {
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {navGroups.map((group) => {
             const items = visibleNavItems.filter((item) => item.group === group)
+            const open = isGroupOpen(group)
+            const GroupIcon = navGroupIcons[group]
             return (
-              <div key={group} className="mb-3">
-                {!collapsed && <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">{group}</p>}
-                {items.map(({ to, label, icon: Icon, end }) => (
-                  <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
-                    <Icon size={18} aria-hidden />
-                    {!collapsed && label}
-                  </NavLink>
-                ))}
+              <div key={group} className="mb-1">
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group)}
+                    aria-expanded={open}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <GroupIcon size={18} aria-hidden />
+                    <span className="flex-1 text-left">{group}</span>
+                    <ChevronDown
+                      size={15}
+                      aria-hidden
+                      className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                )}
+                {(collapsed || open) && (
+                  <div className={collapsed ? 'flex flex-col gap-1' : 'ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3'}>
+                    {items.map(({ to, label, icon: Icon, end }) => (
+                      <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
+                        <Icon size={18} aria-hidden />
+                        {!collapsed && label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}

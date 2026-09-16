@@ -4,7 +4,7 @@ const ROOT_DOMAIN = import.meta.env.VITE_ROOT_DOMAIN as string | undefined
 const DEV_SHOP_SLUG = import.meta.env.VITE_DEV_SHOP_SLUG as string | undefined
 
 /** Root domain for display purposes (onboarding preview) even before one is configured. */
-export const DISPLAY_ROOT_DOMAIN = ROOT_DOMAIN ?? 'bitiko.shop'
+export const DISPLAY_ROOT_DOMAIN = ROOT_DOMAIN || 'bitiko.shop'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
 
