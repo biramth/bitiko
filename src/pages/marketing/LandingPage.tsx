@@ -217,7 +217,7 @@ const faq = [
   {
     question: 'Est-ce que Bitiko est vraiment gratuit ?',
     answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison — le tout sans payer. Si tu veux plus de produits, le store builder et supprimer le logo Bitiko, le plan Pro à 10 000 F/mois est fait pour ça.',
+      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
   },
   {
     question: 'Comment les clients paient-ils ?',
@@ -237,7 +237,7 @@ const faq = [
   {
     question: 'Qui peut voir ma boutique ?',
     answer:
-      'Avec le plan gratuit, ta boutique est publique sur son sous-domaine bitiko.shop et tu retires la marque Bitiko avec le plan Pro.',
+      'Avec tous les plans, ta boutique est publique sur son sous-domaine bitiko.shop. La personnalisation de base est disponible gratuitement ; les images de catégories sont disponibles avec Essentiel et Pro, et la marque Bitiko se retire avec Pro.',
   },
   {
     question: 'Mes données sont-elles sécurisées ?',
@@ -247,7 +247,7 @@ const faq = [
   {
     question: 'Est-ce que je paye une commission sur mes ventes ?',
     answer:
-      'Non. Zéro commission. Quoi que tu vendes, tu gardes 100% du prix. Le plan gratuit est vraiment gratuit, et le plan Pro est un forfait mensuel fixe — tu ne paies rien de plus sur tes revenus.',
+      'Non. Zéro commission. Quoi que tu vendes, tu gardes 100% du prix. Le plan gratuit est vraiment gratuit, puis Essentiel coûte 3 000 F/mois et Pro 10 000 F/mois — rien de plus sur tes revenus.',
   },
 ]
 
@@ -965,7 +965,7 @@ export function LandingPage() {
                 Zéro commission. Zéro frais cachés. Tu gardes 100% de tes revenus.
               </p>
             </Reveal>
-            <div className="grid gap-8 sm:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               {/* Découverte */}
               <Reveal>
                 <div className="rounded-[20px] border border-sand-200 bg-white p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
@@ -995,8 +995,23 @@ export function LandingPage() {
                   </Link>
                 </div>
               </Reveal>
+              {/* Essentiel */}
+              <Reveal delay={80}>
+                <div className="rounded-[20px] border border-brand-200 bg-brand-50/40 p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
+                  <p className="text-sm font-bold text-ink-900">Essentiel</p>
+                  <div className="mt-3 flex items-baseline justify-center gap-1"><span className="text-4xl font-bold text-ink-900">3 000 F</span><span className="text-sm text-ink-700/60">/mois</span></div>
+                  <p className="mt-2 text-center text-sm text-ink-700/60">Pour structurer sa boutique.</p>
+                  <div className="my-6 h-px w-full bg-brand-100" />
+                  <ul className="space-y-3">
+                    {['Tout le plan Découverte, plus :', 'Jusqu’à 50 produits actifs', 'Builder complet et pages personnalisées', 'Images de catégories et promotions', 'Analytics standard et import CSV'].map((f, i) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm"><Check size={15} className="mt-0.5 shrink-0 text-brand-500" aria-hidden /><span className={i === 0 ? 'font-semibold text-ink-900' : 'text-ink-700/80'}>{f}</span></li>
+                    ))}
+                  </ul>
+                  <Link to="/inscription" className="mt-8 block w-full rounded-[100px] bg-brand-600 py-3.5 text-center text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">Choisir Essentiel</Link>
+                </div>
+              </Reveal>
               {/* Pro */}
-              <Reveal delay={120}>
+              <Reveal delay={160}>
                 <div className="relative rounded-[20px] border border-brand-600 bg-brand-600 p-8 text-white shadow-[0_0_60px_rgba(194,72,28,0.15)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_70px_rgba(194,72,28,0.25)]">
                   <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900">Le plus populaire</span>
                   <p className="text-sm font-bold text-white">Pro</p>
@@ -1008,7 +1023,7 @@ export function LandingPage() {
                   <div className="my-6 h-px w-full bg-white/20" />
                   <ul className="space-y-3">
                     {[
-                      'Tout le plan Découverte, plus :',
+                      'Tout le plan Essentiel, plus :',
                       'Produits illimités',
                       'Store builder — personnalise ta page',
                       'Supprime le logo Bitiko',
@@ -1022,7 +1037,7 @@ export function LandingPage() {
                     ))}
                   </ul>
                   <Link to="/inscription" className="mt-8 block w-full rounded-[100px] bg-white py-3.5 text-center text-sm font-medium text-brand-700 shadow-md transition-colors hover:bg-brand-50">
-                    Passer en Pro
+                    Choisir Pro
                   </Link>
                 </div>
               </Reveal>

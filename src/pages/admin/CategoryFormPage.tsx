@@ -48,7 +48,7 @@ export function CategoryFormPage() {
   const toast = useToast()
   const { data: shop } = useMyShop()
   const { planKey, isLoading: planLoading } = useShopPlan(shop?.id)
-  const isPro = planKey === 'pro'
+  const isPro = planKey !== 'free'
   const availableColors = themeTileColors(shop)
   const formRef = useRef<HTMLFormElement>(null)
 

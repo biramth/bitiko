@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   PackageSearch,
   CreditCard,
+  HelpCircle,
   Star,
   Tags,
   Type,
@@ -28,6 +29,7 @@ import type {
   ProductsSectionConfig,
   SectionType,
   TextSectionConfig,
+  FaqSectionConfig,
 } from '@/types/builder'
 import { CategoriesEditor, CategoriesRenderer } from './sections/CategoriesSection'
 import { FeaturedProductsEditor, FeaturedProductsRenderer } from './sections/FeaturedProductsSection'
@@ -40,6 +42,7 @@ import { TextEditor, TextRenderer } from './sections/TextSection'
 import { ProductEditor, ProductRenderer } from './sections/ProductSection'
 import { CartEditor, CartRenderer } from './sections/CartSection'
 import { CheckoutEditor, CheckoutRenderer } from './sections/CheckoutSection'
+import { FaqEditor, FaqRenderer } from './sections/FaqSection'
 import type { SectionEditorProps } from './sections/shared'
 
 interface SectionDefinition {
@@ -197,6 +200,25 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
     }),
     Editor: PromoEditor,
     Renderer: PromoRenderer,
+  },
+  faq: {
+    label: 'Questions fréquentes',
+    description: 'Répondez aux questions qui rassurent avant la commande.',
+    icon: HelpCircle,
+    color: 'from-cyan-500 to-cyan-700',
+    category: 'content',
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('faq'),
+      type: 'faq',
+      visible: true,
+      config: {
+        heading: 'Questions fréquentes',
+        items: [{ question: 'Comment fonctionne la livraison ?', answer: '' }],
+      } satisfies FaqSectionConfig,
+    }),
+    Editor: FaqEditor,
+    Renderer: FaqRenderer,
   },
   footer: {
     label: 'Footer',

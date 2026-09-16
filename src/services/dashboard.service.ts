@@ -11,6 +11,8 @@ export interface DashboardStats {
   ordersToday: number
   revenueToday: number
   salesTotal: number
+  averageOrderValue: number
+  topProducts: { name: string; quantity: number; revenue: number }[]
   recentOrders: Order[]
 }
 
@@ -71,7 +73,7 @@ export async function getDashboardStats(
       .eq('shop_id', shopId)
       .gte('created_at', startOfToday.toISOString())
       .neq('status', 'cancelled'),
-    supabase.from('orders').select('total').eq('shop_id', shopId).neq('status', 'cancelled'),
+    supabase.from('orders').select('id, total').eq('shop_id', shopId).neq('status', 'cancelled'),
     supabase
       .from('orders')
       .select('*')
@@ -86,6 +88,20 @@ export async function getDashboardStats(
 
   const revenueTodayTotal = revenueToday.data.reduce((sum, o) => sum + Number(o.total), 0)
   const salesTotal = sales.data.reduce((sum, o) => sum + Number(o.total), 0)
+  const orderIds = sales.data.map((order) => order.id)
+  const { data: soldItems, error: soldItemsError } = orderIds.length
+    ? await supabase.from('order_items').select('product_name, quantity, subtotal').in('order_id', orderIds)
+    : { data: [], error: null }
+  if (soldItemsError) throw soldItemsError
+
+  const productsByName = new Map<string, { name: string; quantity: number; revenue: number }>()
+  for (const item of soldItems ?? []) {
+    const current = productsByName.get(item.product_name) ?? { name: item.product_name, quantity: 0, revenue: 0 }
+    current.quantity += Number(item.quantity)
+    current.revenue += Number(item.subtotal)
+    productsByName.set(item.product_name, current)
+  }
+  const topProducts = [...productsByName.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5)
 
   return {
     totalProducts,
@@ -97,6 +113,8 @@ export async function getDashboardStats(
     ordersToday: ordersToday.count ?? 0,
     revenueToday: revenueTodayTotal,
     salesTotal,
+    averageOrderValue: totalOrders > 0 ? salesTotal / (sales.data.length || 1) : 0,
+    topProducts,
     recentOrders: (recentOrders.data ?? []) as Order[],
   }
 }

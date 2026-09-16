@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient'
 import type { ShopSubscription, WavePayment } from '@/types/billing'
+import type { PlanKey } from '@/types/billing'
 
 export async function getShopSubscription(shopId: string): Promise<ShopSubscription | null> {
   const { data, error } = await supabase
@@ -27,6 +28,10 @@ interface CreateCheckoutResponse {
 
 /** Calls the Vercel function that talks to Wave — never the Wave API directly from the browser. */
 export async function createProCheckout(shopId: string): Promise<CreateCheckoutResponse> {
+  return createPlanCheckout(shopId, 'pro')
+}
+
+export async function createPlanCheckout(shopId: string, plan: Exclude<PlanKey, 'free'>): Promise<CreateCheckoutResponse> {
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
   if (!accessToken) throw new Error('Non authentifié.')
@@ -34,7 +39,7 @@ export async function createProCheckout(shopId: string): Promise<CreateCheckoutR
   const res = await fetch('/api/billing/create-checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ shopId, plan: 'pro' }),
+    body: JSON.stringify({ shopId, plan }),
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'Impossible de démarrer le paiement.')
@@ -43,6 +48,10 @@ export async function createProCheckout(shopId: string): Promise<CreateCheckoutR
 
 /** Manual bridge while Wave's Checkout API isn't available — see WAVE_PRO_PAYMENT_LINK. */
 export async function requestProUpgrade(shopId: string): Promise<void> {
+  return requestPlanUpgrade(shopId, 'pro')
+}
+
+export async function requestPlanUpgrade(shopId: string, plan: Exclude<PlanKey, 'free'>): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
   if (!accessToken) throw new Error('Non authentifié.')
@@ -50,7 +59,7 @@ export async function requestProUpgrade(shopId: string): Promise<void> {
   const res = await fetch('/api/request-pro-upgrade', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ shopId }),
+    body: JSON.stringify({ shopId, plan }),
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'Impossible d\'envoyer la demande.')

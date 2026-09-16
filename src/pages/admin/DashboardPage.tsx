@@ -177,8 +177,39 @@ export function DashboardPage() {
         <StatCard label="Chiffre d'affaires" value={formatCurrency(stats.salesTotal, currency)} to="/admin/commandes" />
         <StatCard label="Ventes aujourd'hui" value={String(stats.ordersToday)} to="/admin/commandes" />
         <StatCard label="CA aujourd'hui" value={formatCurrency(stats.revenueToday, currency)} />
+        <StatCard label="Panier moyen" value={formatCurrency(stats.averageOrderValue, currency)} to="/admin/commandes" />
         <StatCard label="Ruptures de stock" value={String(stats.outOfStockProducts)} to="/admin/produits?stock=out" />
         <StatCard label="Stock faible" value={String(stats.lowStockProducts)} to="/admin/produits?stock=low" />
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Produits les plus vendus</h2>
+            <Link to="/admin/produits" className="text-sm font-medium text-brand-700">Gérer les produits</Link>
+          </div>
+          {stats.topProducts.length === 0 ? (
+            <p className="mt-5 text-sm text-gray-500">Les meilleures ventes apparaîtront après votre première commande.</p>
+          ) : (
+            <ol className="mt-4 divide-y divide-gray-100">
+              {stats.topProducts.map((product, index) => (
+                <li key={product.name} className="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{index + 1}</span><span className="truncate text-gray-800">{product.name}</span></span>
+                  <span className="shrink-0 text-right"><strong className="block text-gray-900">{product.quantity} vendu{product.quantity > 1 ? 's' : ''}</strong><span className="text-xs text-gray-500">{formatCurrency(product.revenue, currency)}</span></span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Stock à surveiller</h2>
+            <Link to="/admin/produits?stock=low" className="text-sm font-medium text-brand-700">Voir le stock</Link>
+          </div>
+          <p className="mt-2 text-sm text-gray-500">{stats.outOfStockProducts} rupture{stats.outOfStockProducts > 1 ? 's' : ''} et {stats.lowStockProducts} produit{stats.lowStockProducts > 1 ? 's' : ''} sous le seuil défini.</p>
+          <Link to="/admin/produits?stock=low" className="mt-5 inline-flex rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">Ouvrir la liste du stock</Link>
+        </div>
       </div>
 
       <div className="mt-8">

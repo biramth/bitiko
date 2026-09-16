@@ -93,12 +93,12 @@ function InlineField({
   )
 }
 
-function PlanGauge({ active, max }: { active: number; max: number }) {
+function PlanGauge({ active, max, label }: { active: number; max: number; label: string }) {
   const pct = Math.min(100, Math.round((active / max) * 100))
   return (
     <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="text-gray-500">Plan gratuit — produits actifs</span>
+        <span className="text-gray-500">{label} — produits actifs</span>
         <span className="font-medium text-gray-900">
           {active}/{max}
         </span>
@@ -313,8 +313,8 @@ export function ProductsPage() {
         </div>
       )}
 
-      {planKey === 'free' && activeProductCount != null && PLANS.free.maxActiveProducts !== null && (
-        <PlanGauge active={activeProductCount} max={PLANS.free.maxActiveProducts} />
+      {activeProductCount != null && PLANS[planKey].maxActiveProducts !== null && (
+        <PlanGauge active={activeProductCount} max={PLANS[planKey].maxActiveProducts} label={PLANS[planKey].label} />
       )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">

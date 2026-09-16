@@ -378,7 +378,7 @@ export function CategoriesPage() {
   const navigate = useNavigate()
   const { data: shop } = useMyShop()
   const { planKey } = useShopPlan(shop?.id)
-  const isPro = planKey === 'pro'
+  const hasPaidPlan = planKey !== 'free'
   const availableColors = themeTileColors(shop)
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -454,8 +454,8 @@ export function CategoriesPage() {
         slug: slugify(data.name),
         emoji: data.emoji || null,
         description: data.description || null,
-        color: isPro ? data.color || null : data.color && availableColors.includes(data.color) ? data.color : null,
-        image_url: isPro ? data.imageUrl || null : null,
+        color: hasPaidPlan ? data.color || null : data.color && availableColors.includes(data.color) ? data.color : null,
+        image_url: hasPaidPlan ? data.imageUrl || null : null,
       }),
     onSuccess: () => {
       setEditTarget(null)
@@ -797,7 +797,7 @@ export function CategoriesPage() {
           updateDetailsMutation.mutate({ id: editTarget.id, ...data })
         }}
         isPending={updateDetailsMutation.isPending}
-        isPro={isPro}
+        isPro={hasPaidPlan}
         availableColors={availableColors}
         onLockedFeature={() => navigate('/admin/facturation')}
         onClose={() => setEditTarget(null)}

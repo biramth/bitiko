@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabaseAdmin.js'
 import { sendEmail } from './resendEmail.js'
 import { proActivatedEmailHtml } from './emailTemplates.js'
+import { PLANS } from '../../src/config/plans.js'
 import type { WaveCheckoutSession } from './wave.js'
 
 const SUBSCRIPTION_PERIOD_DAYS = 30
@@ -56,11 +57,12 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
       if (shop && ownerData.user?.email && rootDomain) {
         await sendEmail({
           to: ownerData.user.email,
-          subject: `Bienvenue dans Bitiko Pro — ${shop.name}`,
+          subject: `Bienvenue dans Bitiko ${PLANS[payment.plan as keyof typeof PLANS].label} — ${shop.name}`,
           html: proActivatedEmailHtml({
             origin: `https://${rootDomain}`,
             shopName: shop.name,
             periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            planLabel: PLANS[payment.plan as keyof typeof PLANS].label,
           }),
         })
       }

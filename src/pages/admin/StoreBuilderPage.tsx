@@ -44,7 +44,7 @@ export function StoreBuilderPage() {
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
 
-  return <StoreBuilder key={shop.id} shop={shop} />
+  return <StoreBuilder key={shop.id} shop={shop} plan={plan} />
 }
 
 function StoreBuilderLock() {
@@ -53,10 +53,10 @@ function StoreBuilderLock() {
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
         <Lock size={24} aria-hidden />
       </span>
-      <h1 className="font-heading text-xl font-bold text-gray-900">Éditeur visuel réservé au plan Pro</h1>
+      <h1 className="font-heading text-xl font-bold text-gray-900">Personnalisez votre boutique</h1>
       <p className="text-sm text-gray-500">
-        Passez à Pro pour personnaliser librement l'apparence de votre boutique : thème, bannière, sections et
-        bibliothèque de templates.
+        Cette fonctionnalité est incluse dans les offres payantes. Passez à Essentiel ou Pro pour débloquer les
+        outils avancés de personnalisation.
       </p>
       <Link
         to="/admin/facturation"
@@ -277,7 +277,7 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 /* ─────────────────────── Builder ─────────────────────────────── */
 
-function StoreBuilder({ shop }: { shop: Shop }) {
+function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useShopPlan>['plan'] }) {
   const toast = useToast()
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
@@ -305,6 +305,11 @@ function StoreBuilder({ shop }: { shop: Shop }) {
   }
 
   const handleCreatePage = async (title: string, slug: string) => {
+    if (plan.maxCustomPages !== null && pages.length >= plan.maxCustomPages) {
+      toast.error(`Votre plan ${plan.label} est limité à ${plan.maxCustomPages} page${plan.maxCustomPages > 1 ? 's' : ''} personnalisée${plan.maxCustomPages > 1 ? 's' : ''}.`)
+      setCreateOpen(false)
+      return
+    }
     const page = await createPage(shop.id, title, slug)
     setCreateOpen(false)
     setActiveKey(`page:${page.id}`)
@@ -359,6 +364,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
         pages={pages}
         activeKey={activeKey}
         publishesStore={publishesStore}
+        allowAdvancedBuilder={plan.advancedBuilder}
       />
 
       <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
@@ -395,6 +401,7 @@ function BuilderEditor({
   pages,
   activeKey,
   publishesStore,
+  allowAdvancedBuilder,
 }: {
   shop: Shop
   target: BuilderTarget
@@ -411,6 +418,7 @@ function BuilderEditor({
   pages: StorePage[]
   activeKey: ActiveKey
   publishesStore: boolean
+  allowAdvancedBuilder: boolean
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
@@ -547,6 +555,7 @@ function BuilderEditor({
           onReorder={builder.reorderSection}
           onAdd={builder.addSection}
           availableTypes={availableTypes}
+          allowTemplates={allowAdvancedBuilder}
         />
 
         {previewPath && previewUrl ? (

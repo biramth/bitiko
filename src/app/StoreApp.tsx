@@ -8,6 +8,7 @@ import { CatalogPage } from '@/pages/store/CatalogPage'
 import { ProductPage } from '@/pages/store/ProductPage'
 import { CartPage } from '@/pages/store/CartPage'
 import { CheckoutPage } from '@/pages/store/CheckoutPage'
+import { OrderConfirmationPage } from '@/pages/store/OrderConfirmationPage'
 import { StorePageView } from '@/pages/store/StorePageView'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
@@ -37,6 +38,7 @@ export function StoreApp() {
         <Route path="produits/:slug" element={<ProductPage />} />
         <Route path="panier" element={<CartPage />} />
         <Route path="commande" element={<CheckoutPage />} />
+        <Route path="commande/confirmation/:id" element={<OrderConfirmationPage />} />
         <Route path="pages/:slug" element={<StorePageView />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />

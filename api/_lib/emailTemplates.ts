@@ -128,20 +128,22 @@ export function proUpgradeRequestEmailHtml({
   whatsappNumber,
   ownerEmail,
   amount,
+  planLabel = 'Pro',
 }: {
   shopName: string
   shopSlug: string
   whatsappNumber: string
   ownerEmail: string
   amount: number
+  planLabel?: string
 }): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#17152e;line-height:1.6;">
-    <p><strong>${shopName}</strong> (${shopSlug}.bitiko.shop) dit avoir payé ${amount} F CFA via le lien Wave pour passer en Pro.</p>
+    <p><strong>${shopName}</strong> (${shopSlug}.bitiko.shop) dit avoir payé ${amount} F CFA via le lien Wave pour passer en ${planLabel}.</p>
     <ul>
       <li>Numéro WhatsApp du commerçant : ${whatsappNumber}</li>
       <li>Email du compte : ${ownerEmail}</li>
     </ul>
-    <p>Vérifie l'onglet Transactions de l'app Wave Business (expéditeur/montant), puis active le Pro pour cette boutique.</p>
+    <p>Vérifie l'onglet Transactions de l'app Wave Business (expéditeur/montant), puis active le plan ${planLabel} pour cette boutique.</p>
   </div>`
 }
 
@@ -149,10 +151,12 @@ export function proActivatedEmailHtml({
   origin,
   shopName,
   periodEndLabel,
+  planLabel = 'Pro',
 }: {
   origin: string
   shopName: string
   periodEndLabel: string
+  planLabel?: string
 }): string {
   const perks = [
     badge(0, 'Produits illimités', 'Fini la limite de 8 produits actifs.'),
@@ -162,10 +166,10 @@ export function proActivatedEmailHtml({
 
   return shell({
     origin,
-    preheader: `${shopName} est maintenant en Pro — actif jusqu'au ${periodEndLabel}.`,
+    preheader: `${shopName} est maintenant en ${planLabel} — actif jusqu'au ${periodEndLabel}.`,
     eyebrow: 'Abonnement activé',
-    heading: `🎉 Bienvenue dans Bitiko Pro !`,
-    body: `Ton paiement a été vérifié — <strong>${shopName}</strong> est maintenant en Pro, actif jusqu'au <strong>${periodEndLabel}</strong>.`,
+    heading: `🎉 Bienvenue dans Bitiko ${planLabel} !`,
+    body: `Ton paiement a été vérifié — <strong>${shopName}</strong> est maintenant en ${planLabel}, actif jusqu'au <strong>${periodEndLabel}</strong>.`,
     extra: perks,
     buttonLabel: 'Aller sur mon tableau de bord',
     buttonUrl: `${origin}/admin`,

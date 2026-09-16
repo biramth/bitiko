@@ -13,6 +13,7 @@ export type SectionType =
   | 'products'
   | 'featured_products'
   | 'promo'
+  | 'faq'
   | 'footer'
   | 'product'
   | 'cart'
@@ -113,6 +114,11 @@ export interface PromoSectionConfig {
   backgroundColor: string
 }
 
+export interface FaqSectionConfig {
+  heading: string
+  items: { question: string; answer: string }[]
+}
+
 export type SectionConfigMap = {
   header: HeaderSectionConfig
   hero: HeroSectionConfig
@@ -122,6 +128,7 @@ export type SectionConfigMap = {
   products: ProductsSectionConfig
   featured_products: FeaturedProductsSectionConfig
   promo: PromoSectionConfig
+  faq: FaqSectionConfig
   footer: FooterSectionConfig
   product: ProductSectionConfig
   cart: CartSectionConfig

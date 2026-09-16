@@ -10,7 +10,10 @@ export interface Plan {
   priceXof: number
   maxActiveProducts: number | null
   storeBuilderAccess: boolean
+  advancedBuilder: boolean
   removableBranding: boolean
+  analytics: 'basic' | 'standard' | 'advanced'
+  maxCustomPages: number | null
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -19,8 +22,22 @@ export const PLANS: Record<PlanKey, Plan> = {
     label: 'Découverte',
     priceXof: 0,
     maxActiveProducts: 8,
-    storeBuilderAccess: false,
+    storeBuilderAccess: true,
+    advancedBuilder: false,
     removableBranding: false,
+    analytics: 'basic',
+    maxCustomPages: 1,
+  },
+  essential: {
+    key: 'essential',
+    label: 'Essentiel',
+    priceXof: 3_000,
+    maxActiveProducts: 50,
+    storeBuilderAccess: true,
+    advancedBuilder: true,
+    removableBranding: false,
+    analytics: 'standard',
+    maxCustomPages: 5,
   },
   pro: {
     key: 'pro',
@@ -28,7 +45,10 @@ export const PLANS: Record<PlanKey, Plan> = {
     priceXof: 10_000,
     maxActiveProducts: null,
     storeBuilderAccess: true,
+    advancedBuilder: true,
     removableBranding: true,
+    analytics: 'advanced',
+    maxCustomPages: null,
   },
 }
 
@@ -41,7 +61,7 @@ export function effectivePlanKey(subscription: ShopSubscription | null | undefin
   if (!subscription) return 'free'
   if (subscription.plan === 'free') return 'free'
   if (!subscription.current_period_end) return 'free'
-  return new Date(subscription.current_period_end).getTime() > Date.now() ? 'pro' : 'free'
+  return new Date(subscription.current_period_end).getTime() > Date.now() ? subscription.plan : 'free'
 }
 
 export function effectivePlan(subscription: ShopSubscription | null | undefined): Plan {
@@ -61,3 +81,5 @@ export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
  * automatically like a real Checkout session would be.
  */
 export const WAVE_PRO_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.pro.priceXof}`
+
+export const WAVE_ESSENTIAL_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.essential.priceXof}`

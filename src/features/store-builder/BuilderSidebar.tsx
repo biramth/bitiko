@@ -39,6 +39,7 @@ export function BuilderSidebar({
   onReorder,
   onAdd,
   availableTypes,
+  allowTemplates = true,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -53,6 +54,7 @@ export function BuilderSidebar({
   /** Restricts the "+ Ajouter un bloc" menu to a subset of section types.
    *  Defaults to all addable types (used for the home page). */
   availableTypes?: SectionType[]
+  allowTemplates?: boolean
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -87,7 +89,7 @@ export function BuilderSidebar({
       {/* Segmented pill tab bar */}
       <div className="p-2">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
-          {TABS.map(({ key, label, icon: Icon }) => (
+          {TABS.filter(({ key }) => key !== 'templates' || allowTemplates).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"

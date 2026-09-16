@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { Category, ProductImage, ProductWithRelations, Shop } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PLANS } from '@/config/plans'
+import type { PlanKey } from '@/types/billing'
 
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
@@ -177,7 +178,7 @@ function ProductForm({
   shop: Shop | null
   categories: Category[]
   existingProduct: ProductWithRelations | null
-  planKey: 'free' | 'pro'
+  planKey: PlanKey
   activeProductCount: number
 }) {
   const navigate = useNavigate()

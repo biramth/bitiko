@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { assertShopOwner, getSupabaseAdmin, getUserIdFromAuthHeader } from '../_lib/supabaseAdmin.js'
 import { createWaveCheckoutSession } from '../_lib/wave.js'
-import { PLANS } from '../../src/config/plans.js'
+import { PLANS, type PlanKey } from '../../src/config/plans.js'
 
 /**
- * Starts a Wave checkout for a shop's Pro subscription. Only ever called
+ * Starts a Wave checkout for a shop's paid subscription. Only ever called
  * from the authenticated billing page — the actual plan/price come from our
  * own config, never from the request body, so a tampered request can't buy
  * a different amount than the real price.
@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const { shopId } = req.body ?? {}
+    const { shopId, plan: requestedPlan } = req.body ?? {}
     if (typeof shopId !== 'string' || !shopId) {
       res.status(400).json({ error: 'shopId manquant.' })
       return
@@ -34,7 +34,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const plan = PLANS.pro
+    if (requestedPlan !== 'essential' && requestedPlan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const planKey: Exclude<PlanKey, 'free'> = requestedPlan
+    const plan = PLANS[planKey]
     const clientReference = `sub_${shopId}_${Date.now()}`
     const host = (req.headers.host ?? '').toString()
     const proto = (req.headers['x-forwarded-proto'] as string) ?? 'https'

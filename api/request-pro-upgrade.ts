@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 import { sendEmail } from './_lib/resendEmail.js'
 import { proUpgradeRequestEmailHtml } from './_lib/emailTemplates.js'
-import { PLANS } from '../src/config/plans.js'
+import { PLANS, type PlanKey } from '../src/config/plans.js'
 
 const ADMIN_EMAIL = 'papebiramethiombanee@gmail.com'
 
@@ -34,11 +34,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const { shopId } = req.body ?? {}
+    const { shopId, plan: requestedPlan } = req.body ?? {}
     if (typeof shopId !== 'string' || !shopId) {
       res.status(400).json({ error: 'shopId manquant.' })
       return
     }
+
+    if (requestedPlan !== 'essential' && requestedPlan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const planKey: Exclude<PlanKey, 'free'> = requestedPlan
+    const plan = PLANS[planKey]
 
     const { data: shop, error: shopError } = await admin
       .from('shops')
@@ -62,8 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!existingPending) {
       const { error: insertError } = await admin.from('wave_payments').insert({
         shop_id: shopId,
-        plan: 'pro',
-        amount: PLANS.pro.priceXof,
+        plan: plan.key,
+        amount: plan.priceXof,
         currency: 'XOF',
         client_reference: `manual_${shopId}_${Date.now()}`,
         status: 'pending',
@@ -74,13 +81,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       await sendEmail({
         to: ADMIN_EMAIL,
-        subject: `Demande de passage Pro — ${shop.name}`,
+        subject: `Demande de passage ${plan.label} — ${shop.name}`,
         html: proUpgradeRequestEmailHtml({
           shopName: shop.name,
           shopSlug: shop.slug,
           whatsappNumber: shop.whatsapp_number,
           ownerEmail: userData.user.email,
-          amount: PLANS.pro.priceXof,
+          amount: plan.priceXof,
+          planLabel: plan.label,
         }),
       })
     } catch (emailErr) {

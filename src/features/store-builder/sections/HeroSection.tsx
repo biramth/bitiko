@@ -1,4 +1,6 @@
 import type { Shop } from '@/types'
+import { Link } from 'react-router-dom'
+import { ArrowRight, MessageCircle } from 'lucide-react'
 import type { HeroSectionConfig } from '@/types/builder'
 import { HEADING_SCALE } from '@/config/themeTokens'
 import type { ThemeConfig } from '@/types/builder'
@@ -15,22 +17,13 @@ export function HeroRenderer({
 }) {
   const heading = config.heading.trim() || shop.name
   const subheading = config.subheading.trim() || shop.description || ''
-  const showBanner = config.showBanner
+  const showBanner = config.showBanner && !!shop.banner_url
 
   return (
     <div>
       {showBanner && (
         <div className="aspect-[3/1] w-full overflow-hidden sm:aspect-[16/5]">
-          {shop.banner_url ? (
-            <img src={shop.banner_url} alt="" className="h-full w-full object-cover" />
-          ) : (
-            // No photo uploaded yet: a themed gradient keeps the page looking
-            // designed instead of leaving a blank gap above the title.
-            <div
-              className="h-full w-full"
-              style={{ background: 'linear-gradient(135deg, var(--shop-accent), var(--shop-secondary))' }}
-            />
-          )}
+          <img src={shop.banner_url!} alt="" className="h-full w-full object-cover" />
         </div>
       )}
       <section className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-8 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-10 sm:pt-16'}`}>
@@ -46,6 +39,22 @@ export function HeroRenderer({
         {subheading && (
           <p className="mt-4 max-w-lg text-base text-[var(--shop-text)]/60 sm:text-lg">{subheading}</p>
         )}
+        <div className="mt-7 flex flex-wrap items-center gap-3">
+          <Link to="/catalogue" className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90">
+            Découvrir la boutique
+            <ArrowRight size={16} aria-hidden />
+          </Link>
+          {shop.whatsapp_number && (
+            <a
+              href={`https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 border border-[var(--shop-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)]/50"
+            >
+              <MessageCircle size={16} aria-hidden /> Nous contacter
+            </a>
+          )}
+        </div>
       </section>
     </div>
   )

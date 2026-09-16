@@ -1,6 +1,6 @@
 import type { Database } from './database.types.js'
 
-export type PlanKey = 'free' | 'pro'
+export type PlanKey = 'free' | 'essential' | 'pro'
 export type SubscriptionStatus = 'active' | 'past_due'
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed'
 
@@ -12,6 +12,6 @@ export type ShopSubscription = Omit<
 > & { plan: PlanKey; status: SubscriptionStatus }
 
 export type WavePayment = Omit<Database['public']['Tables']['wave_payments']['Row'], 'plan' | 'status'> & {
-  plan: Extract<PlanKey, 'pro'>
+  plan: Exclude<PlanKey, 'free'>
   status: PaymentStatus
 }

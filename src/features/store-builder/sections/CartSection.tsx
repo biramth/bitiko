@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { Share2, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
@@ -8,16 +8,36 @@ import { buildDemoCart } from '../demoCart'
 import type { Shop } from '@/types'
 import type { CartSectionConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { useToast } from '@/components/ui/Toast'
+import { trackEvent } from '@/lib/analytics'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
 
 export function CartRenderer({ shop, config }: { shop: Shop; config: CartSectionConfig }) {
   const { items: realItems, subtotal: realSubtotal, updateQuantity, removeItem } = useCart()
+  const toast = useToast()
   const isEmbeddedPreview = useIsEmbeddedPreview()
   const demo = isEmbeddedPreview && realItems.length === 0 ? buildDemoCart(shop) : null
   const items = demo ?? realItems
   const subtotal = demo ? demo.reduce((sum, i) => sum + i.price * i.quantity, 0) : realSubtotal
   const currency = shop.currency ?? 'XOF'
   const isDemo = demo !== null
+
+  const handleShareCart = async () => {
+    const lines = items.map((item) => `- ${item.name} x${item.quantity} : ${formatCurrency(item.price * item.quantity, currency)}`)
+    const text = `Mon panier chez ${shop.name}\n${lines.join('\n')}\nTotal : ${formatCurrency(subtotal, currency)}\n\nJe souhaite confirmer cette sélection avec vous.`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Panier — ${shop.name}`, text })
+        trackEvent('share', { content_type: 'cart', item_count: items.length, value: subtotal, currency })
+      } else {
+        await navigator.clipboard.writeText(text)
+        trackEvent('share', { content_type: 'cart', item_count: items.length, value: subtotal, currency, method: 'copy_link' })
+        toast.success('Résumé du panier copié.')
+      }
+    } catch {
+      // The share sheet can be dismissed by the customer.
+    }
+  }
 
   if (!isDemo && items.length === 0) {
     return (
@@ -39,8 +59,11 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      {config.heading && (
-        <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1>
+      {(config.heading || !isDemo) && (
+        <div className="flex items-start justify-between gap-4">
+          {config.heading ? <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1> : <span />}
+          {!isDemo && <button type="button" onClick={handleShareCart} aria-label="Partager le panier" className="inline-flex shrink-0 items-center gap-2 border border-ink-900/15 px-3 py-2 text-xs font-semibold text-ink-900 hover:border-ink-900 hover:bg-sand-50"><Share2 size={15} aria-hidden /> Partager</button>}
+        </div>
       )}
 
       <ul className="mt-8 divide-y divide-ink-900/10 border-t border-ink-900/10">
@@ -100,7 +123,12 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
       </ul>
 
       <div className="mt-6 flex items-center justify-between border-t border-ink-900/10 pt-4">
-        <span className="text-base font-semibold text-[var(--shop-text)]">Total</span>
+        <div>
+          <span className="block text-base font-semibold text-[var(--shop-text)]">Total</span>
+          <Link to="/catalogue" className="mt-1 inline-block text-xs text-ink-700/60 underline underline-offset-2 hover:text-ink-900">
+            Continuer mes achats
+          </Link>
+        </div>
         <span className="text-lg font-bold text-[var(--shop-text)]">{formatCurrency(subtotal, currency)}</span>
       </div>
 

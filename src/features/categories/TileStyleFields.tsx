@@ -88,8 +88,8 @@ export function TileStyleFields({
             <button
               type="button"
               onClick={onLockedFeature}
-              aria-label="Personnaliser la couleur de fond (Pro)"
-              title="Disponible avec le plan Pro"
+              aria-label="Personnaliser la couleur de fond (offre payante)"
+              title="Disponible avec une offre payante"
               className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50"
             >
               <Crown size={12} className="text-amber-500" aria-hidden /> Couleur sur mesure
@@ -116,7 +116,7 @@ export function TileStyleFields({
         <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
           <ImageIcon size={14} aria-hidden /> Image de couverture
           {isPro && <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-            <Crown size={10} aria-hidden /> Pro
+            <Crown size={10} aria-hidden /> Essentiel+
           </span>}
         </label>
 
@@ -169,10 +169,10 @@ export function TileStyleFields({
           >
             <span className="flex items-center gap-2 text-sm text-gray-500">
               <Crown size={16} className="text-amber-500" aria-hidden />
-              Images de couverture disponibles avec le plan Pro.
+              Les images de couverture sont disponibles avec Essentiel ou Pro.
             </span>
             <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
-              Passer à Pro
+              Voir les offres
             </span>
           </button>
         )}

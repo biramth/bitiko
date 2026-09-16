@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ImageOff } from 'lucide-react'
+import { Check, ImageOff, Plus } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
 import { StockBadge } from './StockBadge'
+import { useCart } from '@/features/cart/CartContext'
+import { useToast } from '@/components/ui/Toast'
+import { trackEvent } from '@/lib/analytics'
 import type { ProductWithRelations } from '@/types'
 
 export function ProductCard({
@@ -15,10 +19,31 @@ export function ProductCard({
 }) {
   const cover = product.images[0]?.public_url
   const outOfStock = product.stock <= 0
+  const hasVariants = product.variants.length > 0
+  const { addItem } = useCart()
+  const toast = useToast()
+  const [added, setAdded] = useState(false)
+
+  const handleQuickAdd = () => {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      quantity: 1,
+      imageUrl: cover ?? null,
+      stock: product.stock,
+    })
+    trackEvent('add_to_cart', { product_id: product.id, product_name: product.name, value: product.price, currency })
+    setAdded(true)
+    toast.success(`« ${product.name} » ajouté au panier.`)
+    window.setTimeout(() => setAdded(false), 1800)
+  }
 
   return (
-    <Link to={`/produits/${product.slug}`} className="group block">
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-sand-100">
+    <article className="group relative">
+      <Link to={`/produits/${product.slug}`} className="block">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
         {cover ? (
           <img
             src={cover}
@@ -38,6 +63,7 @@ export function ProductCard({
           </span>
         )}
       </div>
+      </Link>
       <div className="mt-3 flex flex-col gap-0.5">
         {product.category && (
           <p className="text-[11px] font-medium uppercase tracking-wide text-ink-700/40">{product.category.name}</p>
@@ -48,6 +74,20 @@ export function ProductCard({
         <p className="text-sm font-semibold text-ink-900">{formatCurrency(product.price, currency)}</p>
         <StockBadge stock={product.stock} lowStockThreshold={lowStockThreshold} compact />
       </div>
-    </Link>
+      {!outOfStock && !hasVariants && (
+        <button
+          type="button"
+          onClick={handleQuickAdd}
+          className="mt-3 flex w-full items-center justify-center gap-1.5 border border-ink-900/15 py-2.5 text-xs font-semibold uppercase tracking-widest text-ink-900 transition-colors hover:border-ink-900 hover:bg-ink-900 hover:text-white"
+        >
+          {added ? <><Check size={14} aria-hidden /> Ajouté</> : <><Plus size={14} aria-hidden /> Ajouter</>}
+        </button>
+      )}
+      {!outOfStock && hasVariants && (
+        <Link to={`/produits/${product.slug}`} className="mt-3 block border border-ink-900/15 py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-ink-900 transition-colors hover:border-ink-900 hover:bg-ink-900 hover:text-white">
+          Choisir une option
+        </Link>
+      )}
+    </article>
   )
 }

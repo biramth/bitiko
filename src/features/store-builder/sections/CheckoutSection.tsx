@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { CheckCircle2, MapPin, MessageCircle, ShoppingBag } from 'lucide-react'
+import { MapPin, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import {
   createOrder,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
-  type CreateOrderResult,
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
@@ -18,11 +17,14 @@ import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import { buildDemoCart } from '../demoCart'
 import type { Shop } from '@/types'
 import type { CheckoutSectionConfig } from '@/types/builder'
+import type { OrderConfirmationState } from '@/pages/store/OrderConfirmationPage'
+import { trackEvent } from '@/lib/analytics'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: number; demo: boolean }) {
   const { shop } = useTenant()
   const { clear } = useCart()
+  const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
 
   const [customerName, setCustomerName] = useState('')
@@ -30,8 +32,6 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
   const [customerAddress, setCustomerAddress] = useState('')
   const [deliveryVilleId, setDeliveryVilleId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
-  const [orderResult, setOrderResult] = useState<CreateOrderResult | null>(null)
-  const [autoOpenFailed, setAutoOpenFailed] = useState(false)
   const whatsappWindowRef = useRef<Window | null>(null)
 
   const { data: secteurs = [] } = useQuery({
@@ -75,7 +75,7 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
       })
     },
     onSuccess: (result) => {
-      setOrderResult(result)
+      trackEvent('purchase', { transaction_id: result.orderId, value: result.total, currency, item_count: result.items.length })
       if (!demo) clear()
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
@@ -93,9 +93,22 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
       const whatsappUrl = buildWhatsAppUrl(shop!.whatsapp_number, message)
       if (whatsappWindowRef.current) {
         whatsappWindowRef.current.location.href = whatsappUrl
-      } else {
-        setAutoOpenFailed(true)
       }
+      navigate(`/commande/confirmation/${result.orderId}`, {
+        replace: true,
+        state: {
+          orderNumber: result.orderNumber,
+          total: result.total,
+          items: result.items,
+          deliveryFee,
+          currency,
+          paymentMethod,
+          paymentInstructions: shop!.payment_instructions,
+          whatsappUrl,
+          autoOpenFailed: !whatsappWindowRef.current,
+          customerName,
+        } satisfies OrderConfirmationState,
+      })
     },
     onError: () => {
       whatsappWindowRef.current?.close()
@@ -104,74 +117,6 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
   })
 
   if (!shop) return null
-
-  if (orderResult) {
-    const message = buildWhatsAppMessage({
-      orderNumber: orderResult.orderNumber,
-      items: orderResult.items,
-      deliveryFee,
-      deliveryZoneName: selectedVille?.name,
-      paymentMethod,
-      paymentInstructions: shop.payment_instructions,
-      total: orderResult.total,
-      customerName,
-      customerPhone,
-      customerAddress,
-      formatCurrency: (amount) => formatCurrency(amount, currency),
-    })
-    const whatsappUrl = buildWhatsAppUrl(shop.whatsapp_number, message)
-
-    return (
-      <div className="mx-auto max-w-lg px-4 py-10 text-center sm:px-6">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-          <CheckCircle2 size={32} className="text-emerald-600" aria-hidden />
-        </span>
-        <h1 className="mt-4 font-heading text-2xl font-bold text-ink-900">Commande créée !</h1>
-        <p className="mt-2 text-sm text-ink-700/70">
-          Commande <span className="font-semibold text-ink-900">{orderResult.orderNumber}</span> enregistrée. {autoOpenFailed ? '' : "WhatsApp s'ouvre dans un nouvel onglet…"}
-        </p>
-
-        <div className="mt-8 border-t border-ink-900/10 pt-6 text-left">
-          <ul className="space-y-1.5 text-sm text-ink-700/80">
-            {orderResult.items.map((item, index) => (
-              <li key={index} className="flex justify-between">
-                <span>
-                  {item.variantName ? `${item.productName} (${item.variantName})` : item.productName} × {item.quantity}
-                </span>
-                <span>{formatCurrency(item.subtotal, currency)}</span>
-              </li>
-            ))}
-          </ul>
-          {deliveryFee > 0 && (
-            <div className="mt-2 flex justify-between text-sm text-ink-700/80">
-              <span>Livraison</span>
-              <span>{formatCurrency(deliveryFee, currency)}</span>
-            </div>
-          )}
-          <div className="mt-3 flex justify-between border-t border-ink-900/10 pt-3 font-semibold text-ink-900">
-            <span>Total ({currency})</span>
-            <span>{formatCurrency(orderResult.total, currency)}</span>
-          </div>
-        </div>
-
-        {paymentMethod === 'mobile_money' && shop.payment_instructions?.trim() && (
-          <div className="mt-4 rounded-lg bg-sand-100 p-4 text-left text-sm text-ink-700">
-            <p className="font-semibold text-ink-900">Pour payer :</p>
-            <p className="mt-1 whitespace-pre-line">{shop.payment_instructions}</p>
-          </div>
-        )}
-
-        {autoOpenFailed && (
-          <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-8 flex items-center justify-center gap-2 bg-emerald-600 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90">
-            <MessageCircle size={18} aria-hidden /> Retour à WhatsApp
-          </a>
-        )}
-        <Link to="/" className="mt-3 inline-block text-sm font-medium text-ink-700/60 hover:text-ink-900">
-          Retour à la boutique
-        </Link>
-      </div>
-    )
-  }
 
   if (items.length === 0) {
     return (
@@ -189,6 +134,7 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    trackEvent('begin_checkout', { value: estimate, currency, item_count: items.length })
     whatsappWindowRef.current = window.open('', '_blank')
     mutation.mutate()
   }
@@ -196,6 +142,10 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
   return (
     <div className="mx-auto max-w-lg px-4 py-8 sm:px-6">
       <h1 className="font-heading text-2xl font-bold text-ink-900 sm:text-3xl">Finaliser la commande</h1>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-ink-700/65" aria-label="Garanties de commande">
+        <p className="border border-ink-900/10 px-3 py-2">Prix et stock vérifiés à la commande</p>
+        <p className="border border-ink-900/10 px-3 py-2">Paiement confirmé avec le vendeur sur WhatsApp</p>
+      </div>
 
       <div className="mt-6 border-y border-ink-900/10 py-5">
         <ul className="space-y-1.5 text-sm text-ink-700/80">
@@ -237,15 +187,15 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-ink-700">Nom complet</label>
-          <input id="customerName" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
+          <input id="customerName" name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
         </div>
         <div>
           <label htmlFor="customerPhone" className="block text-sm font-medium text-ink-700">Numéro de téléphone</label>
-          <input id="customerPhone" type="tel" required value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+221 XX XXX XX XX" className="mt-1 w-full border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
+          <input id="customerPhone" name="tel" type="tel" autoComplete="tel" inputMode="tel" required value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+221 XX XXX XX XX" className="mt-1 w-full border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
         </div>
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-ink-700">Adresse de livraison</label>
-          <textarea id="customerAddress" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
+          <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none" />
         </div>
 
         {groupes.length > 0 && (
@@ -271,15 +221,15 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
           <div className="mt-2 space-y-2">
             <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink-900">
               <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-[var(--shop-accent)]" />
-              Espèces à la livraison
+              Paiement à la livraison
             </label>
             <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink-900">
               <input type="radio" name="paymentMethod" value="mobile_money" checked={paymentMethod === 'mobile_money'} onChange={() => setPaymentMethod('mobile_money')} className="accent-[var(--shop-accent)]" />
-              Mobile money (Wave / Orange Money) avant envoi
+              Mobile money avec le vendeur
             </label>
           </div>
           <p className="mt-1 text-xs text-ink-700/50">
-            Vous confirmez les détails avec le vendeur sur WhatsApp avant la livraison.
+            Aucun paiement n'est effectué ici. Le vendeur vous confirme le montant et le moyen de paiement sur WhatsApp.
           </p>
         </div>
 
