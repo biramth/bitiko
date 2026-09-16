@@ -9,7 +9,18 @@ export interface RecentlyViewedEntry {
 }
 
 const STORAGE_KEY = 'bitiko:recently-viewed'
-const MAX_ITEMS = 8
+export const RECENTLY_VIEWED_MAX_ITEMS = 8
+
+/** Moves `current` to the front of `existing` (de-duped by id) and caps the
+ *  result — pulled out of the hook so the ordering/cap/de-dup rules are unit
+ *  testable without a DOM or a React renderer. */
+export function mergeRecentlyViewed(
+  current: RecentlyViewedEntry,
+  existing: RecentlyViewedEntry[],
+  max: number = RECENTLY_VIEWED_MAX_ITEMS,
+): RecentlyViewedEntry[] {
+  return [current, ...existing.filter((p) => p.id !== current.id)].slice(0, max)
+}
 
 function readStored(): RecentlyViewedEntry[] {
   try {
@@ -45,7 +56,7 @@ export function useRecentlyViewed(current: RecentlyViewedEntry | null): Recently
   // paint of each product page instead of one render behind.
   if (current && current.id !== trackedId) {
     setTrackedId(current.id)
-    const next = [current, ...items.filter((p) => p.id !== current.id)].slice(0, MAX_ITEMS)
+    const next = mergeRecentlyViewed(current, items)
     setItems(next)
     persist(next)
   }
