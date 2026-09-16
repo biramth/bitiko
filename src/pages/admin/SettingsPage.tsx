@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
+  BarChart3,
   Check,
   ChevronDown,
   ChevronRight,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useShopPlan } from '@/features/billing/useShopPlan'
 import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import {
@@ -322,8 +324,11 @@ function SettingsForm({
     shop.free_delivery_threshold != null ? String(Number(shop.free_delivery_threshold)) : '',
   )
   const [lowStockThreshold, setLowStockThreshold] = useState(String(Number(shop.low_stock_threshold ?? 5)))
+  const [gaMeasurementId, setGaMeasurementId] = useState(shop.ga_measurement_id ?? '')
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
+
+  const { plan } = useShopPlan(shop.id)
 
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -478,6 +483,7 @@ function SettingsForm({
         theme_color: themeColor,
         free_delivery_threshold: freeDeliveryThreshold.trim() ? Number(freeDeliveryThreshold) : null,
         low_stock_threshold: Number(lowStockThreshold) || 0,
+        ga_measurement_id: gaMeasurementId.trim() || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
@@ -514,6 +520,11 @@ function SettingsForm({
     if (!/^#[0-9a-fA-F]{6}$/.test(themeColor)) {
       setError('Couleur invalide.')
       navigate('/admin/parametres/appearance')
+      return
+    }
+    if (plan.analytics !== 'basic' && gaMeasurementId.trim() && !/^G-[A-Z0-9]+$/i.test(gaMeasurementId.trim())) {
+      setError('ID Google Analytics invalide. Format attendu : G-XXXXXXXXXX.')
+      navigate('/admin/parametres/general')
       return
     }
     saveMutation.mutate()
@@ -616,6 +627,42 @@ function SettingsForm({
                   className={inputClass}
                 />
               </div>
+            </Card>
+          )}
+
+          {section === 'general' && (
+            <Card
+              icon={BarChart3}
+              title="Google Analytics"
+              description="Suivez les visiteurs de votre boutique avec votre propre compte Google Analytics 4."
+            >
+              {plan.analytics === 'basic' ? (
+                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-gray-600">Disponible à partir de l'offre Essentiel.</p>
+                  <Link
+                    to="/admin/facturation"
+                    className="shrink-0 text-sm font-medium text-brand-700 hover:text-brand-800"
+                  >
+                    Voir les offres
+                  </Link>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="gaMeasurementId" className="block text-sm font-medium text-gray-700">
+                    ID de mesure GA4
+                  </label>
+                  <input
+                    id="gaMeasurementId"
+                    value={gaMeasurementId}
+                    onChange={(e) => setGaMeasurementId(e.target.value)}
+                    placeholder="G-XXXXXXXXXX"
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Trouvez-le dans Google Analytics sous Administration → Flux de données.
+                  </p>
+                </div>
+              )}
             </Card>
           )}
 

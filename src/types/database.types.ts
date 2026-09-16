@@ -541,6 +541,7 @@ export type Database = {
           delivery_fee: number
           description: string | null
           free_delivery_threshold: number | null
+          ga_measurement_id: string | null
           id: string
           layout_sections: LayoutSection[]
           logo_url: string | null
@@ -566,6 +567,7 @@ export type Database = {
           delivery_fee?: number
           description?: string | null
           free_delivery_threshold?: number | null
+          ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
           logo_url?: string | null
@@ -591,6 +593,7 @@ export type Database = {
           delivery_fee?: number
           description?: string | null
           free_delivery_threshold?: number | null
+          ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
           logo_url?: string | null
