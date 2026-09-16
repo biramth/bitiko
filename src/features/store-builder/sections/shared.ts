@@ -8,4 +8,8 @@ export interface SectionEditorProps<TConfig> {
   onChange: (config: TConfig) => void
   shopId: string
   sectionId: string
+  /** Whether the shop's current plan allows removing "Propulsé par Bitiko"
+   *  branding — only FooterEditor uses this, but it's threaded through all
+   *  editors like `shopId`/`sectionId` rather than special-cased. */
+  removableBranding: boolean
 }

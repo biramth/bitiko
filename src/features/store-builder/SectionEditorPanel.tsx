@@ -5,11 +5,13 @@ import type { LayoutSection } from '@/types/builder'
 export function SectionEditorPanel({
   section,
   shopId,
+  removableBranding,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange,
 }: {
   section: LayoutSection | null
   shopId: string
+  removableBranding: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (config: any) => void
 }) {
@@ -41,7 +43,7 @@ export function SectionEditorPanel({
         </span>
         <h3 className="font-heading text-base font-semibold text-gray-900">{def.label}</h3>
       </div>
-      <Editor config={section.config} onChange={onChange} shopId={shopId} sectionId={section.id} />
+      <Editor config={section.config} onChange={onChange} shopId={shopId} sectionId={section.id} removableBranding={removableBranding} />
     </div>
   )
 }

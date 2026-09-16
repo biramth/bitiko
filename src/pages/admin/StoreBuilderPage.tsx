@@ -44,7 +44,7 @@ export function StoreBuilderPage() {
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
 
-  return <StoreBuilder key={shop.id} shop={shop} />
+  return <StoreBuilder key={shop.id} shop={shop} removableBranding={plan.removableBranding} />
 }
 
 function StoreBuilderLock() {
@@ -277,7 +277,7 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 /* ─────────────────────── Builder ─────────────────────────────── */
 
-function StoreBuilder({ shop }: { shop: Shop }) {
+function StoreBuilder({ shop, removableBranding }: { shop: Shop; removableBranding: boolean }) {
   const toast = useToast()
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
@@ -345,6 +345,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
       <BuilderEditor
         key={activeKey}
         shop={shop}
+        removableBranding={removableBranding}
         target={target}
         label={context.label}
         previewPath={previewPath}
@@ -381,6 +382,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
 
 function BuilderEditor({
   shop,
+  removableBranding,
   target,
   label,
   previewPath,
@@ -397,6 +399,7 @@ function BuilderEditor({
   publishesStore,
 }: {
   shop: Shop
+  removableBranding: boolean
   target: BuilderTarget
   label: string
   previewPath: string | null
@@ -575,6 +578,7 @@ function BuilderEditor({
             <SectionEditorPanel
               section={builder.selectedSection}
               shopId={shop.id}
+              removableBranding={removableBranding}
               onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
             />
           )}
