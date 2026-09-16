@@ -30,7 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const urls: string[] = []
 
   if (isPlatformHost(host)) {
-    urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/inscription`))
+    urls.push(
+      urlEntry(`${origin}/`),
+      urlEntry(`${origin}/inscription`),
+      urlEntry(`${origin}/legal/cgu`),
+      urlEntry(`${origin}/legal/confidentialite`),
+    )
   } else {
     const supabaseUrl = process.env.VITE_SUPABASE_URL
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
@@ -47,14 +52,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`))
 
       if (shop) {
-        const { data: products } = await supabase
-          .from('products')
-          .select('slug')
-          .eq('shop_id', shop.id)
-          .eq('active', true)
+        const [{ data: products }, { data: pages }] = await Promise.all([
+          supabase
+            .from('products')
+            .select('slug')
+            .eq('shop_id', shop.id)
+            .eq('active', true),
+          supabase
+            .from('pages')
+            .select('slug')
+            .eq('shop_id', shop.id)
+            .eq('is_published', true),
+        ])
 
         for (const product of products ?? []) {
           urls.push(urlEntry(`${origin}/produits/${product.slug}`))
+        }
+        for (const page of pages ?? []) {
+          urls.push(urlEntry(`${origin}/pages/${page.slug}`))
         }
       }
     } else {

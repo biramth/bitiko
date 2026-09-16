@@ -6,6 +6,9 @@ interface PageSeoOptions {
   image?: string | null
   /** For pages that must never be indexed (404s, admin, cart, checkout). */
   noindex?: boolean
+  /** Absolute canonical URL. Defaults to the current origin + pathname, so
+   * each shop subdomain / custom domain keeps its own canonical. */
+  canonicalUrl?: string
 }
 
 function setMetaTag(attr: 'name' | 'property', key: string, content: string) {
@@ -16,6 +19,16 @@ function setMetaTag(attr: 'name' | 'property', key: string, content: string) {
     document.head.appendChild(el)
   }
   el.setAttribute('content', content)
+}
+
+function setCanonical(href: string) {
+  let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'canonical'
+    document.head.appendChild(link)
+  }
+  link.href = href
 }
 
 /**
@@ -49,10 +62,17 @@ export function useShopFavicon(logoUrl: string | null | undefined) {
  * still see the static tags from index.html. It does help the browser tab,
  * bookmarks, and search engines that do render JS (Googlebot).
  */
-export function usePageSeo({ title, description, image, noindex }: PageSeoOptions) {
+export function usePageSeo({ title, description, image, noindex, canonicalUrl }: PageSeoOptions) {
   useEffect(() => {
     const previousTitle = document.title
     document.title = title
+
+    const { origin, pathname } = window.location
+    const canonical = canonicalUrl || (origin + pathname)
+
+    setCanonical(canonical)
+    setMetaTag('property', 'og:url', canonical)
+    setMetaTag('property', 'og:site_name', 'Bitiko')
 
     if (description) {
       setMetaTag('name', 'description', description)
@@ -65,5 +85,5 @@ export function usePageSeo({ title, description, image, noindex }: PageSeoOption
     return () => {
       document.title = previousTitle
     }
-  }, [title, description, image, noindex])
+  }, [title, description, image, noindex, canonicalUrl])
 }
