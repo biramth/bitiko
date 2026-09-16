@@ -258,9 +258,9 @@ export function AdminLayout() {
 
       <div className="flex h-screen flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-ink-900/10 bg-white px-4 py-3 md:hidden">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <LogoMark size={22} />
-            <span className="font-heading font-bold text-ink-900">
+            <span className="truncate font-heading font-bold text-ink-900">
               {shop?.name ?? 'Bitiko'}
             </span>
           </div>
@@ -275,14 +275,17 @@ export function AdminLayout() {
             </button>
           </div>
         </header>
-        <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:hidden" aria-label="Navigation admin">
+        <nav
+          className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
+          aria-label="Navigation admin"
+        >
           {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
+                `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium ${
                   isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
                 }`
               }
@@ -293,7 +296,7 @@ export function AdminLayout() {
           <NavLink
             to="/admin/parametres"
             className={() =>
-              `flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
+              `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium ${
                 onSettings ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
               }`
             }

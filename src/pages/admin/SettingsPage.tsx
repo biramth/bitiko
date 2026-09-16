@@ -75,16 +75,16 @@ function Card({
 }) {
   return (
     <section className="rounded-xl border border-gray-200 bg-white">
-      <header className="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
+      <header className="flex items-start gap-3 border-b border-gray-100 px-4 py-3.5 sm:px-5 sm:py-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
           <Icon size={18} aria-hidden />
         </span>
-        <div>
+        <div className="min-w-0">
           <h2 className="font-heading font-semibold text-gray-900">{title}</h2>
           {description && <p className="text-sm text-gray-500">{description}</p>}
         </div>
       </header>
-      <div className="space-y-4 p-5">{children}</div>
+      <div className="space-y-4 p-4 sm:p-5">{children}</div>
     </section>
   )
 }
@@ -328,16 +328,16 @@ function AccountSection() {
       </Card>
 
       <section className="rounded-xl border border-red-200 bg-white">
-        <header className="flex items-start gap-3 border-b border-red-100 px-5 py-4">
+        <header className="flex items-start gap-3 border-b border-red-100 px-4 py-3.5 sm:px-5 sm:py-4">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
             <Trash2 size={18} aria-hidden />
           </span>
-          <div>
+          <div className="min-w-0">
             <h2 className="font-heading font-semibold text-gray-900">Supprimer mon compte</h2>
             <p className="text-sm text-gray-500">Action définitive, impossible à annuler.</p>
           </div>
         </header>
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-4 sm:p-5">
           <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
             <p className="text-sm font-medium text-red-700">Sont supprimés définitivement :</p>
             <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-red-700/80">
@@ -685,7 +685,7 @@ function SettingsForm({
       {/* AdminLayout's sidebar (with its own Paramètres submenu) only renders
           at md+ (see `hidden ... md:flex` there) — this substitute needs the
           same breakpoint, not lg, or both show at once between 768–1023px. */}
-      <nav className="mt-6 flex gap-1 overflow-x-auto pb-1 md:hidden">
+      <nav className="sticky top-0 z-10 -mx-4 mt-5 flex gap-1 overflow-x-auto border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 md:hidden">
         {SECTIONS.map(({ key, label, icon: Icon }) => (
           <Link
             key={key}
@@ -1104,41 +1104,44 @@ function SettingsForm({
                     if (editingZoneId === zone.id) {
                       return (
                         <div key={zone.id} className="rounded-lg border border-brand-200 bg-white p-3">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <input
                               type="text"
                               value={editZoneName}
                               onChange={(e) => setEditZoneName(e.target.value)}
                               placeholder="Nom du secteur"
-                              className="min-w-0 flex-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
+                              className="min-w-0 flex-1 rounded-md border border-gray-200 px-2.5 py-2 text-sm focus:border-brand-400 focus:outline-none sm:py-1.5"
                             />
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={editZoneFee}
-                                onChange={(e) => setEditZoneFee(e.target.value)}
-                                className="w-28 rounded-md border border-gray-200 px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
-                              />
-                              <span className="text-xs text-gray-400">{currency}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-1 items-center gap-1 sm:flex-none">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={editZoneFee}
+                                  onChange={(e) => setEditZoneFee(e.target.value)}
+                                  aria-label="Frais de livraison"
+                                  className="min-w-0 flex-1 rounded-md border border-gray-200 px-2.5 py-2 text-sm focus:border-brand-400 focus:outline-none sm:w-28 sm:flex-none sm:py-1.5"
+                                />
+                                <span className="shrink-0 text-xs text-gray-400">{currency}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => saveZoneMutation.mutate({ zone })}
+                                disabled={saveZoneMutation.isPending}
+                                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-md bg-brand-600 px-2.5 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60 sm:py-1.5"
+                              >
+                                <Check size={13} /> Enregistrer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingZoneId(null)}
+                                className="shrink-0 rounded-md border border-gray-200 p-2 text-gray-500 hover:bg-gray-50"
+                                aria-label="Annuler"
+                              >
+                                <X size={13} />
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => saveZoneMutation.mutate({ zone })}
-                              disabled={saveZoneMutation.isPending}
-                              className="inline-flex items-center gap-1 rounded-md bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-                            >
-                              <Check size={13} /> Enregistrer
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingZoneId(null)}
-                              className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
-                              aria-label="Annuler"
-                            >
-                              <X size={13} />
-                            </button>
                           </div>
                         </div>
                       )
@@ -1147,55 +1150,62 @@ function SettingsForm({
                     return (
                       <div key={zone.id} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                         {/* Secteur header */}
-                        <div className="flex flex-wrap items-center gap-2 p-2.5">
+                        <div className="flex items-center gap-2 p-2.5">
                           <button
                             type="button"
                             onClick={() => setExpandedSecteurId(isExpanded ? null : zone.id)}
-                            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                             aria-label={isExpanded ? 'Réduire' : 'Développer'}
                           >
-                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </button>
-                          <span className={`min-w-0 flex-1 text-sm ${zone.is_active ? 'font-medium text-gray-900' : 'text-gray-400 line-through'}`}>
-                            {zone.name}
-                          </span>
-                          <span className="text-xs text-gray-500">{zoneVilles.length} ville{zoneVilles.length > 1 ? 's' : ''}</span>
-                          <span className="text-sm text-gray-600">
-                            {Number(zone.fee) > 0 ? formatCurrency(Number(zone.fee), currency) : 'Gratuite'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => toggleZoneMutation.mutate({ zone })}
-                            disabled={toggleZoneMutation.isPending}
-                            title={zone.is_active ? 'Désactiver' : 'Activer'}
-                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                              zone.is_active
-                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                          >
-                            {zone.is_active ? 'Active' : 'Inactive'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingZoneId(zone.id)
-                              setEditZoneName(zone.name)
-                              setEditZoneFee(String(Number(zone.fee)))
-                            }}
-                            className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
-                            aria-label="Modifier le secteur"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setZoneToDelete(zone)}
-                            className="rounded-md border border-gray-200 p-1.5 text-red-500 hover:bg-red-50"
-                            aria-label="Supprimer le secteur"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`truncate text-sm ${zone.is_active ? 'font-medium text-gray-900' : 'text-gray-400 line-through'}`}>
+                                {zone.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleZoneMutation.mutate({ zone })}
+                                disabled={toggleZoneMutation.isPending}
+                                title={zone.is_active ? 'Désactiver' : 'Activer'}
+                                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                  zone.is_active
+                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                              >
+                                {zone.is_active ? 'Active' : 'Inactive'}
+                              </button>
+                            </div>
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                              <span>{zoneVilles.length} ville{zoneVilles.length > 1 ? 's' : ''}</span>
+                              <span aria-hidden>·</span>
+                              <span>{Number(zone.fee) > 0 ? formatCurrency(Number(zone.fee), currency) : 'Gratuite'}</span>
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingZoneId(zone.id)
+                                setEditZoneName(zone.name)
+                                setEditZoneFee(String(Number(zone.fee)))
+                              }}
+                              className="rounded-md border border-gray-200 p-2 text-gray-500 hover:bg-gray-50"
+                              aria-label="Modifier le secteur"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setZoneToDelete(zone)}
+                              className="rounded-md border border-gray-200 p-2 text-red-500 hover:bg-red-50"
+                              aria-label="Supprimer le secteur"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
 
                         {/* Villes panel */}
@@ -1253,7 +1263,7 @@ function SettingsForm({
                                       setEditingVilleId(ville.id)
                                       setEditVilleName(ville.name)
                                     }}
-                                    className="rounded-md border border-gray-200 p-1 text-gray-500 hover:bg-gray-50"
+                                     className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
                                     aria-label="Modifier la ville"
                                   >
                                     <Pencil size={12} />
@@ -1261,7 +1271,7 @@ function SettingsForm({
                                   <button
                                     type="button"
                                     onClick={() => setVilleToDelete({ id: ville.id, name: ville.name })}
-                                    className="rounded-md border border-gray-200 p-1 text-red-500 hover:bg-red-50"
+                                    className="rounded-md border border-gray-200 p-1.5 text-red-500 hover:bg-red-50"
                                     aria-label="Supprimer la ville"
                                   >
                                     <Trash2 size={12} />
@@ -1282,13 +1292,13 @@ function SettingsForm({
                                   }
                                 }}
                                 placeholder="Nouvelle ville…"
-                                className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:border-brand-400 focus:outline-none"
+                                className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
                               />
                               <button
                                 type="button"
                                 onClick={() => addVilleMutation.mutate({ secteurId: zone.id })}
                                 disabled={addVilleMutation.isPending || !newVilleName.trim()}
-                                className="inline-flex items-center gap-1 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-60"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-60"
                               >
                                 {addVilleMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
                                 Ajouter
@@ -1301,35 +1311,47 @@ function SettingsForm({
                   })}
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={newZoneName}
-                    onChange={(e) => setNewZoneName(e.target.value)}
-                    placeholder="ex. Rufisque"
-                    className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
-                  />
-                  <div className="flex items-center gap-1">
+                <div className="mt-3 border-t border-gray-200 pt-3">
+                  <p className="mb-2 text-xs font-semibold text-gray-600">Ajouter un secteur</p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newZoneFee}
-                      onChange={(e) => setNewZoneFee(e.target.value)}
-                      placeholder="0"
-                      className="w-28 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
+                      type="text"
+                      value={newZoneName}
+                      onChange={(e) => setNewZoneName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (newZoneName.trim()) addZoneMutation.mutate()
+                        }
+                      }}
+                      placeholder="Nom du secteur (ex. Rufisque)"
+                      className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2.5 py-2 text-sm focus:border-brand-400 focus:outline-none sm:py-1.5"
                     />
-                    <span className="text-xs text-gray-400">{currency}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-1 items-center gap-1 sm:flex-none">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newZoneFee}
+                          onChange={(e) => setNewZoneFee(e.target.value)}
+                          placeholder="0"
+                          aria-label="Frais de livraison"
+                          className="min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-2.5 py-2 text-sm focus:border-brand-400 focus:outline-none sm:w-28 sm:flex-none sm:py-1.5"
+                        />
+                        <span className="shrink-0 text-xs text-gray-400">{currency}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addZoneMutation.mutate()}
+                        disabled={addZoneMutation.isPending || !newZoneName.trim()}
+                        className="inline-flex shrink-0 items-center justify-center gap-1 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60 sm:py-1.5"
+                      >
+                        {addZoneMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                        Ajouter
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => addZoneMutation.mutate()}
-                    disabled={addZoneMutation.isPending || !newZoneName.trim()}
-                    className="inline-flex items-center gap-1 rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60"
-                  >
-                    {addZoneMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                    Ajouter
-                  </button>
                 </div>
               </div>
             </Card>

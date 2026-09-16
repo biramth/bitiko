@@ -168,11 +168,11 @@ export function OnboardingPage() {
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4 py-8 sm:py-12">
       <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-brand-100 opacity-50 blur-3xl" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-gold-300 opacity-20 blur-3xl" aria-hidden />
 
-      <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-8 shadow-xl shadow-ink-900/5 lg:p-10">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8 lg:p-10">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <Logo size={40} withWordmark={false} />
           <h1 className="font-heading text-xl font-bold text-ink-900">Créons ta boutique</h1>
@@ -589,13 +589,14 @@ export function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                aria-label="Retour"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 sm:px-4"
               >
-                <ArrowLeft size={15} aria-hidden /> Retour
+                <ArrowLeft size={15} aria-hidden /> <span className="hidden sm:inline">Retour</span>
               </button>
             )}
 
-            <div className="flex-1" />
+            {step < 5 && <div className="flex-1" />}
 
             {step < 5 ? (
               <button
@@ -605,7 +606,7 @@ export function OnboardingPage() {
                   setError(null)
                   setStep((s) => s + 1)
                 }}
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Suivant <ArrowRight size={15} aria-hidden />
               </button>
@@ -617,7 +618,7 @@ export function OnboardingPage() {
                   setError(null)
                   if (canSubmit && !mutation.isPending) mutation.mutate()
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {mutation.isPending ? 'Création…' : 'Confirmer et créer ma boutique'}
               </button>
