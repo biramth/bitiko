@@ -21,6 +21,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
@@ -102,13 +103,25 @@ export function OnboardingPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated')
-      await ensureProfile(user.id, 'owner', {
+      // A stale or storage-restricted session (common in in-app browsers like
+      // the Google app's on iOS) can leave `user` populated in React state
+      // while the client's actual access token is gone — requests then go
+      // out unauthenticated and fail with a cryptic RLS error. Confirming
+      // the session against the server first turns that into a clear
+      // "reconnect" message instead, and refreshes the token if it's just
+      // close to expiring.
+      const { data: freshUserData, error: freshUserError } = await supabase.auth.getUser()
+      if (freshUserError || !freshUserData.user) {
+        throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
+      }
+      const ownerId = freshUserData.user.id
+      await ensureProfile(ownerId, 'owner', {
         firstName,
         lastName,
         phone: personalPhone,
         address: personalAddress,
       })
-      let shop = await createShop({ ownerId: user.id, name: name.trim(), slug, whatsappNumber, templateId })
+      let shop = await createShop({ ownerId, name: name.trim(), slug, whatsappNumber, templateId })
       await seedDefaultDeliverySecteurs(shop.id)
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
@@ -552,11 +565,17 @@ export function OnboardingPage() {
                       />
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <span className="text-gray-500">Logo</span>
-                    <span className="truncate text-right font-medium text-ink-900">
-                      {logoFile ? logoFile.name : 'Sans logo'}
-                    </span>
+                    {logoPreviewUrl ? (
+                      <img
+                        src={logoPreviewUrl}
+                        alt="Logo sélectionné"
+                        className="h-8 w-8 shrink-0 rounded-md border border-sand-200 object-cover"
+                      />
+                    ) : (
+                      <span className="text-right font-medium text-ink-900">Sans logo</span>
+                    )}
                   </div>
                 </div>
               </div>
