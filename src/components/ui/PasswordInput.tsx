@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { Eye, EyeOff, type LucideIcon } from 'lucide-react'
 
 type PasswordInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> & {
@@ -6,7 +6,10 @@ type PasswordInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'typ
 }
 
 /** Password field with a show/hide toggle and optional leading icon. */
-export function PasswordInput({ className = '', leadingIcon: Icon, ...props }: PasswordInputProps) {
+export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(function PasswordInput(
+  { className = '', leadingIcon: Icon, ...props },
+  ref,
+) {
   const [visible, setVisible] = useState(false)
   return (
     <div className="relative w-full">
@@ -14,6 +17,7 @@ export function PasswordInput({ className = '', leadingIcon: Icon, ...props }: P
         <Icon size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
       )}
       <input
+        ref={ref}
         type={visible ? 'text' : 'password'}
         className={`${className} pr-10`}
         {...props}
@@ -30,4 +34,4 @@ export function PasswordInput({ className = '', leadingIcon: Icon, ...props }: P
       </button>
     </div>
   )
-}
+})
