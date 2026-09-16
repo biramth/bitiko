@@ -50,12 +50,6 @@ export async function deleteDeliverySecteur(id: string): Promise<void> {
   if (error) throw error
 }
 
-/** Idempotent — DB skips when the shop already has secteurs. */
-export async function seedDefaultDeliverySecteurs(shopId: string): Promise<void> {
-  const { error } = await supabase.rpc('seed_default_delivery_secteurs', { p_shop_id: shopId })
-  if (error) throw error
-}
-
 // ---------------------------------------------------------------------------
 // Villes
 // ---------------------------------------------------------------------------

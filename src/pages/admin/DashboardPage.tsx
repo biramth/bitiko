@@ -19,6 +19,7 @@ import {
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { getDashboardStats } from '@/services/dashboard.service'
+import { listDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
@@ -144,6 +145,15 @@ export function DashboardPage() {
     onError: () => toast.error('Impossible de mettre à jour la commande.'),
   })
 
+  const { data: secteurs = [] } = useQuery({
+    queryKey: ['delivery-secteurs', shop?.id],
+    queryFn: () => listDeliverySecteurs(shop!.id),
+    enabled: !!shop?.id,
+  })
+  // Delivery is configured once the merchant owns at least one active secteur
+  // (fees are per zone, so shop.delivery_fee is not what completes this step).
+  const hasDeliveryZones = secteurs.some((s) => s.is_active)
+
   const copyShopLink = async () => {
     if (!shop) return
     try {
@@ -207,8 +217,8 @@ export function DashboardPage() {
         <SetupChecklist
           items={[
             { done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' },
-            { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres' },
-            { done: Number(shop.delivery_fee) > 0, label: 'Définissez vos frais de livraison', to: '/admin/parametres' },
+            { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/contact' },
+            { done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' },
             { done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' },
           ]}
         />
@@ -226,7 +236,7 @@ export function DashboardPage() {
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
           <p className="text-sm text-gray-500">Aujourd'hui</p>
-          <div className={`mt-3 grid grid-cols-2 gap-4 ${plan.analytics !== 'basic' ? 'sm:grid-cols-3' : ''}`}>
+          <div className={`mt-3 grid grid-cols-2 gap-4 ${plan.analytics !== 'basic' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
             <div>
               <p className="text-xs text-gray-500">Ventes</p>
               <p className="mt-1 text-xl font-semibold text-gray-900">{stats.ordersToday}</p>
@@ -234,6 +244,11 @@ export function DashboardPage() {
             <div>
               <p className="text-xs text-gray-500">CA</p>
               <p className="mt-1 text-xl font-semibold text-gray-900">{formatCurrency(stats.revenueToday, currency)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Visites</p>
+              <p className="mt-1 text-xl font-semibold text-gray-900">{stats.visitsToday}</p>
+              <p className="mt-0.5 text-xs text-gray-400">{stats.visitors30d} visiteurs / 30 j</p>
             </div>
             {plan.analytics !== 'basic' && (
               <div>

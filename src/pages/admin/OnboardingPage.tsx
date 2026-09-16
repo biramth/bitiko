@@ -25,7 +25,6 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
-import { seedDefaultDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES } from '@/config/storeTemplates'
 import { slugify } from '@/utils/format'
@@ -122,7 +121,6 @@ export function OnboardingPage() {
         address: personalAddress,
       })
       let shop = await createShop({ ownerId, name: name.trim(), slug, whatsappNumber, templateId })
-      await seedDefaultDeliverySecteurs(shop.id)
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
         shop = await updateShop(shop.id, { logo_url: logoUrl })

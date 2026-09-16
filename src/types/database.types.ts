@@ -283,6 +283,44 @@ export type Database = {
           },
         ]
       }
+      page_views: {
+        Row: {
+          created_at: string
+          device: string | null
+          id: string
+          path: string
+          referrer: string | null
+          session_id: string
+          shop_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          path: string
+          referrer?: string | null
+          session_id: string
+          shop_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          path?: string
+          referrer?: string | null
+          session_id?: string
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pages: {
         Row: {
           content: LayoutSection[]
@@ -675,6 +713,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_platform_orders: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          order_number: string
+          shop_id: string
+          shop_name: string
+          shop_slug: string
+          status: string
+          total: number
+        }[]
+      }
+      get_platform_shops: {
+        Args: never
+        Returns: {
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          orders: number
+          plan: string
+          plan_status: string
+          products: number
+          revenue: number
+          slug: string
+          whatsapp_number: string
+        }[]
+      }
+      get_platform_stats: { Args: never; Returns: Json }
+      get_shop_visit_stats: {
+        Args: { p_shop_id: string }
+        Returns: {
+          visitors_30d: number
+          visits_30d: number
+          visits_today: number
+        }[]
+      }
+      is_platform_admin: { Args: never; Returns: boolean }
       create_order: {
         Args: {
           p_customer_address: string
@@ -695,14 +774,6 @@ export type Database = {
           total: number
           unit_price: number
         }[]
-      }
-      seed_default_delivery_secteurs: {
-        Args: { p_shop_id: string }
-        Returns: undefined
-      }
-      seed_default_delivery_zones: {
-        Args: { p_shop_id: string }
-        Returns: undefined
       }
       set_order_delivery_fee: {
         Args: { p_fee: number; p_order_id: string }

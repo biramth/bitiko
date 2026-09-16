@@ -10,6 +10,9 @@ export interface DashboardStats {
   pendingOrders: number
   ordersToday: number
   revenueToday: number
+  visitsToday: number
+  visits30d: number
+  visitors30d: number
   salesTotal: number
   averageOrderValue: number
   topProducts: { name: string; quantity: number; revenue: number }[]
@@ -55,6 +58,7 @@ export async function getDashboardStats(
     revenueToday,
     sales,
     recentOrders,
+    visits,
   ] = await Promise.all([
     countProducts(shopId),
     countProducts(shopId, { active: true }),
@@ -80,11 +84,14 @@ export async function getDashboardStats(
       .eq('shop_id', shopId)
       .order('created_at', { ascending: false })
       .limit(5),
+    supabase.rpc('get_shop_visit_stats', { p_shop_id: shopId }),
   ])
 
   if (revenueToday.error) throw revenueToday.error
   if (sales.error) throw sales.error
   if (recentOrders.error) throw recentOrders.error
+  // Visit stats are a nice-to-have; never fail the whole dashboard over them.
+  const visitStats = visits.error ? null : (visits.data?.[0] ?? null)
 
   const revenueTodayTotal = revenueToday.data.reduce((sum, o) => sum + Number(o.total), 0)
   const salesTotal = sales.data.reduce((sum, o) => sum + Number(o.total), 0)
@@ -112,6 +119,9 @@ export async function getDashboardStats(
     pendingOrders,
     ordersToday: ordersToday.count ?? 0,
     revenueToday: revenueTodayTotal,
+    visitsToday: Number(visitStats?.visits_today ?? 0),
+    visits30d: Number(visitStats?.visits_30d ?? 0),
+    visitors30d: Number(visitStats?.visitors_30d ?? 0),
     salesTotal,
     averageOrderValue: totalOrders > 0 ? salesTotal / (sales.data.length || 1) : 0,
     topProducts,
