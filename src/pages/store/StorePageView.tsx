@@ -88,8 +88,8 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
       <h1 className="sr-only">{page?.title}</h1>
       {sections.map((section) => {
         const def = registry[section.type]
-        const Renderer = def.Renderer
-        if (!Renderer || section.type === 'header' || section.type === 'footer') return null
+        const Renderer = def?.Renderer
+        if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>

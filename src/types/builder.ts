@@ -4,7 +4,8 @@
 // accent. Both are stored as jsonb on `shops` (published columns) and mirrored
 // inside `builder_draft` while a merchant is mid-edit.
 
-export type SectionType =
+/** Section types every template can use, regardless of vertical. */
+export type CoreSectionType =
   | 'header'
   | 'hero'
   | 'text'
@@ -17,6 +18,14 @@ export type SectionType =
   | 'product'
   | 'cart'
   | 'checkout'
+
+/** Section types a specific template contributes on top of the core set
+ *  (see `TEMPLATE_EXTRA_SECTIONS` in `features/store-builder/templateSections.ts`).
+ *  Grows as more templates gain their own sections — today just Lookbook,
+ *  offered by the Mode template. */
+export type TemplateSectionType = 'lookbook'
+
+export type SectionType = CoreSectionType | TemplateSectionType
 
 /** An internal or external link in the header/footer menu. */
 export interface NavigationLink {
@@ -127,6 +136,19 @@ export interface PromoSectionConfig {
   backgroundColor: string
 }
 
+export interface LookbookImage {
+  id: string
+  imageUrl: string | null
+  caption: string
+}
+
+/** Mode-only editorial photo grid — the pilot template-specific section
+ *  (see `TemplateSectionType`). */
+export interface LookbookSectionConfig {
+  heading: string
+  images: LookbookImage[]
+}
+
 export type SectionConfigMap = {
   header: HeaderSectionConfig
   hero: HeroSectionConfig
@@ -140,6 +162,7 @@ export type SectionConfigMap = {
   product: ProductSectionConfig
   cart: CartSectionConfig
   checkout: CheckoutSectionConfig
+  lookbook: LookbookSectionConfig
 }
 
 export type LayoutSection = {

@@ -78,6 +78,17 @@ function text(overrides: Partial<Extract<LayoutSection, { type: 'text' }>['confi
   }
 }
 
+/** Mode-only — see templateSections.ts. Renders nothing until the merchant
+ *  uploads photos, same as the Hero/Image blocks before an image exists. */
+function lookbook(overrides: Partial<Extract<LayoutSection, { type: 'lookbook' }>['config']> = {}): LayoutSection {
+  return {
+    id: createSectionId('lookbook'),
+    type: 'lookbook',
+    visible: true,
+    config: { heading: 'Lookbook', images: [], ...overrides },
+  }
+}
+
 /** The four commerce pages all get the same sensible default body sections
  *  (catalogue grid with filters, product card, cart, checkout form); the home
  *  layout is what makes each template visually distinctive. */
@@ -130,6 +141,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
           heading: "L'élégance dans chaque détail",
           subheading: 'Pièces sélectionnées, en série limitée.',
         }),
+        lookbook({ heading: 'Lookbook' }),
         featuredProducts({ heading: 'En couverture' }),
         categories({ heading: 'Explorer' }),
         promo({

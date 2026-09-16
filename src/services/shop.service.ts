@@ -133,7 +133,10 @@ export function uploadShopBanner(shopId: string, file: File): Promise<string> {
   return uploadShopAsset(shopId, file, 'banner')
 }
 
-/** Image for a builder block (image/promo sections) — one file per section id. */
-export function uploadShopSectionImage(shopId: string, sectionId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, file, `section-${sectionId}`)
+/** Image for a builder block (image/promo sections) — one file per section id,
+ *  or per `itemId` for a block holding several images (e.g. a Lookbook's
+ *  photo grid), so each slot gets its own storage path instead of
+ *  overwriting the same one. */
+export function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
+  return uploadShopAsset(shopId, file, itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
 }

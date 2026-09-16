@@ -36,6 +36,27 @@ export function SectionEditorPanel({
   }
 
   const def = getEffectiveRegistry(templateId)[section.type]
+
+  if (!def) {
+    // A section type the shop's current template no longer offers (e.g. it
+    // was added under a different template that has since been switched
+    // away from). Nothing to edit — the merchant can only remove it, from
+    // the sidebar's own controls.
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+          <MousePointerClick size={24} aria-hidden />
+        </span>
+        <div>
+          <p className="text-sm font-medium text-gray-700">Ce bloc n'est plus disponible</p>
+          <p className="mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-400">
+            Il appartient à un autre style. Vous pouvez le supprimer depuis la liste des blocs.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const Editor = def.Editor
   const Icon = def.icon
 

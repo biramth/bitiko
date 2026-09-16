@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Eye, EyeOff, GripVertical, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import type { BuilderTab } from './useBuilderState'
@@ -15,11 +15,11 @@ const TABS: { key: BuilderTab; label: string; icon: typeof Palette }[] = [
  *  distinct, recognizable identity instead of one flat gray icon for all. */
 function SectionIcon({ type, registry, size = 'sm' }: { type: SectionType; registry: SectionRegistry; size?: 'sm' | 'md' }) {
   const def = registry[type]
-  const Icon = def.icon
+  const Icon = def?.icon ?? HelpCircle
   const dims = size === 'md' ? 'h-9 w-9 rounded-lg' : 'h-7 w-7 rounded-md'
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-sm ${dims} ${def.color}`}
+      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-sm ${dims} ${def?.color ?? 'from-gray-400 to-gray-500'}`}
     >
       <Icon size={size === 'md' ? 17 : 14} aria-hidden />
     </span>
@@ -82,11 +82,12 @@ export function BuilderSidebar({
   }, [addMenuOpen])
 
   const presentTypes = new Set(sections.map((s) => s.type))
-  const addableTypes = (availableTypes ?? getAddableSectionTypes(registry)).filter(
-    (type) => !(registry[type].singleton && presentTypes.has(type)),
-  )
+  const addableTypes = (availableTypes ?? getAddableSectionTypes(registry)).filter((type) => {
+    const def = registry[type]
+    return !!def && !(def.singleton && presentTypes.has(type))
+  })
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
-  for (const type of addableTypes) groupedAddable[registry[type].category].push(type)
+  for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -114,7 +115,7 @@ export function BuilderSidebar({
           <ul ref={listRef} className="space-y-1">
             {sections.map((section) => {
               const def = registry[section.type]
-              const isDraggable = !def.pinned
+              const isDraggable = !def?.pinned
               const isSelected = selectedSectionId === section.id
               return (
                 <li
@@ -160,9 +161,9 @@ export function BuilderSidebar({
                     <SectionIcon type={section.type} registry={registry} />
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-sm ${isSelected ? 'font-semibold text-brand-700' : 'font-medium text-gray-700'}`}>
-                        {def.label}
+                        {def?.label ?? 'Bloc inconnu'}
                       </span>
-                      {def.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
+                      {def?.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
                     </span>
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -175,7 +176,7 @@ export function BuilderSidebar({
                     >
                       {section.visible ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
-                    {!def.pinned && (
+                    {!def?.pinned && (
                       <button
                         type="button"
                         onClick={() => onDuplicate(section.id)}
@@ -186,7 +187,7 @@ export function BuilderSidebar({
                         <Copy size={14} />
                       </button>
                     )}
-                    {!def.pinned && (
+                    {!def?.pinned && (
                       <button
                         type="button"
                         onClick={() => onRemove(section.id)}
@@ -221,6 +222,7 @@ export function BuilderSidebar({
                       </p>
                       {groupedAddable[cat].map((type) => {
                         const def = registry[type]
+                        if (!def) return null
                         return (
                           <button
                             key={type}

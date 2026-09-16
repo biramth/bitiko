@@ -78,7 +78,9 @@ export function useBuilderState(target: BuilderTarget) {
   }
 
   const addSection = (type: SectionType) => {
-    const section = registry[type].createDefault()
+    const def = registry[type]
+    if (!def) return
+    const section = def.createDefault()
     const footerIndex = sections.findIndex((s) => s.type === 'footer')
     const beforeFooter = footerIndex === -1 ? sections.length : footerIndex
     // Land the new block right after whatever the merchant is currently
@@ -95,7 +97,7 @@ export function useBuilderState(target: BuilderTarget) {
 
   const removeSection = (id: string) => {
     const target = sections.find((s) => s.id === id)
-    if (!target || registry[target.type].pinned) return
+    if (!target || registry[target.type]?.pinned) return
     const index = sections.indexOf(target)
     const next = sections.filter((s) => s.id !== id)
     commit({ ...snapshot, sections: next })
@@ -109,7 +111,7 @@ export function useBuilderState(target: BuilderTarget) {
 
   const duplicateSection = (id: string) => {
     const original = sections.find((s) => s.id === id)
-    if (!original || registry[original.type].pinned) return
+    if (!original || registry[original.type]?.pinned) return
     const copy: LayoutSection = { ...original, id: createSectionId(original.type) }
     const index = sections.indexOf(original)
     commit({
