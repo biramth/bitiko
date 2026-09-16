@@ -2,12 +2,10 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Spinner } from '@/components/ui/Spinner'
 import { AdminLayout } from '@/layouts/AdminLayout'
+import { LandingPage } from '@/pages/marketing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireShop } from './RequireShop'
 
-const LandingPage = lazy(() =>
-  import('@/pages/marketing/LandingPage').then((m) => ({ default: m.LandingPage })),
-)
 const SignupPage = lazy(() =>
   import('@/pages/auth/SignupPage').then((m) => ({ default: m.SignupPage })),
 )
