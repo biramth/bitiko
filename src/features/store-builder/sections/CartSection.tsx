@@ -72,7 +72,7 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
         <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1>
       )}
 
-      {!isDemo && (
+      {!isDemo && config.showFreeDeliveryProgress !== false && (
         <div className="mt-6">
           <FreeDeliveryProgress shop={shop} subtotal={subtotal} />
         </div>
@@ -163,13 +163,24 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
 
 export function CartEditor({ config, onChange }: SectionEditorProps<CartSectionConfig>) {
   return (
-    <div>
-      <label className={editorLabelClass}>Titre</label>
-      <input
-        value={config.heading}
-        onChange={(e) => onChange({ ...config, heading: e.target.value })}
-        className={editorInputClass}
-      />
+    <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Titre</label>
+        <input
+          value={config.heading}
+          onChange={(e) => onChange({ ...config, heading: e.target.value })}
+          className={editorInputClass}
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          checked={config.showFreeDeliveryProgress !== false}
+          onChange={() => onChange({ ...config, showFreeDeliveryProgress: config.showFreeDeliveryProgress === false })}
+          className="accent-brand-600"
+        />
+        Barre de progression vers la livraison gratuite
+      </label>
     </div>
   )
 }

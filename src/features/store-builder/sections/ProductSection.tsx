@@ -317,7 +317,7 @@ function ProductDetails({
               )}
             </div>
 
-            <TrustBadges />
+            {config.showTrustBadges !== false && <TrustBadges />}
           </div>
         </div>
       </div>
@@ -460,24 +460,51 @@ export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductS
         currency={currency}
         lowStockThreshold={shop.low_stock_threshold}
       />
-      <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} />
-      <RecentlyViewedRow shop={shop} product={product} />
+      {config.showRelatedProducts !== false && (
+        <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} />
+      )}
+      {config.showRecentlyViewed !== false && <RecentlyViewedRow shop={shop} product={product} />}
     </>
   )
 }
 
 export function ProductEditor({ config, onChange }: SectionEditorProps<ProductSectionConfig>) {
-  const toggle = (key: keyof ProductSectionConfig) => onChange({ ...config, [key]: !config[key] })
+  // `=== false` (not `!config[key]`) so a field absent from an older saved
+  // config — the three new optional toggles below — reads as "on" here too,
+  // matching the renderer's own backward-compatible default.
+  const toggle = (key: keyof ProductSectionConfig) => onChange({ ...config, [key]: config[key] === false })
+  const keys = [
+    'showGallery',
+    'showTitle',
+    'showPrice',
+    'showDescription',
+    'showQuantity',
+    'showAddToCart',
+    'showTrustBadges',
+    'showRelatedProducts',
+    'showRecentlyViewed',
+  ] as const
+  const labels: Record<(typeof keys)[number], string> = {
+    showGallery: 'Galerie photos',
+    showTitle: 'Titre',
+    showPrice: 'Prix',
+    showDescription: 'Description',
+    showQuantity: 'Quantité',
+    showAddToCart: 'Ajouter au panier',
+    showTrustBadges: 'Badges de réassurance (paiement, WhatsApp…)',
+    showRelatedProducts: 'Produits similaires ("Vous aimerez aussi")',
+    showRecentlyViewed: 'Produits vus récemment',
+  }
   return (
     <div className="space-y-4">
       <div>
         <label className={editorLabelClass}>Titre (superposé)</label>
         <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} className={editorInputClass} />
       </div>
-      {(['showGallery', 'showTitle', 'showPrice', 'showDescription', 'showQuantity', 'showAddToCart'] as const).map((key) => (
+      {keys.map((key) => (
         <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={!!config[key]} onChange={() => toggle(key)} className="accent-brand-600" />
-          {{ showGallery: 'Galerie photos', showTitle: 'Titre', showPrice: 'Prix', showDescription: 'Description', showQuantity: 'Quantité', showAddToCart: 'Ajouter au panier' }[key]}
+          <input type="checkbox" checked={config[key] !== false} onChange={() => toggle(key)} className="accent-brand-600" />
+          {labels[key]}
         </label>
       ))}
     </div>
