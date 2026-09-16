@@ -9,7 +9,8 @@ interface DialogProps {
   description?: string
   children?: React.ReactNode
   footer?: React.ReactNode
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
+  titleClassName?: string
 }
 
 export function Dialog({
@@ -20,6 +21,7 @@ export function Dialog({
   children,
   footer,
   size = 'sm',
+  titleClassName,
 }: DialogProps) {
   useEffect(() => {
     if (!open) return
@@ -37,6 +39,9 @@ export function Dialog({
 
   if (!open) return null
 
+  const panelSize =
+    size === 'sm' ? 'max-w-sm' : size === 'md' ? 'max-w-lg' : 'max-h-[85vh] max-w-2xl overflow-y-auto'
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -50,11 +55,7 @@ export function Dialog({
         onClick={onClose}
         className="absolute inset-0 cursor-default bg-ink-900/50 backdrop-blur-sm"
       />
-      <div
-        className={`relative w-full ${
-          size === 'sm' ? 'max-w-sm' : 'max-w-lg'
-        } rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl`}
-      >
+      <div className={`relative w-full ${panelSize} rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl`}>
         <button
           type="button"
           aria-label="Fermer"
@@ -63,7 +64,7 @@ export function Dialog({
         >
           <X size={16} />
         </button>
-        <h2 className="font-heading text-lg font-bold text-gray-900">{title}</h2>
+        <h2 className={`font-heading text-lg font-bold text-gray-900 ${titleClassName ?? ''}`}>{title}</h2>
         {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
         {children && <div className="mt-4">{children}</div>}
         {footer && <div className="mt-6">{footer}</div>}

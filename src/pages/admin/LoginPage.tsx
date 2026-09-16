@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Mail, Lock } from 'lucide-react'
+import { ArrowRight, Lock, Mail } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
 const inputClass =
@@ -94,29 +95,28 @@ export function LoginPage() {
               />
             </div>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Mot de passe
-              </label>
-              <Link to="/mot-de-passe-oublie" className="text-xs font-medium text-brand-700 hover:text-brand-800">
-                Mot de passe oublié ?
-              </Link>
+<div>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Mot de passe
+                </label>
+                <Link to="/mot-de-passe-oublie" className="text-xs font-medium text-brand-700 hover:text-brand-800">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+              <div className="relative mt-1">
+                <PasswordInput
+                  id="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={inputClass}
+                  leadingIcon={Lock}
+                />
+              </div>
             </div>
-            <div className="relative mt-1">
-              <Lock size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className={inputClass}
-              />
-            </div>
-          </div>
 
           {error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>

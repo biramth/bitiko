@@ -1,22 +1,23 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ImageOff, Package, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react'
+import { ImageOff, Package, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { useShopProducts } from '@/features/products/useProducts'
-import { deleteProductCompletely, updateProduct } from '@/services/product.service'
+import { countActiveProducts, deleteProductCompletely, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import { PLANS } from '@/config/plans'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
 import { ProductImportDialog } from './ProductImportDialog'
 import type { ProductWithRelations } from '@/types'
 
@@ -26,17 +27,116 @@ const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
   { value: 'out', label: 'Rupture' },
 ]
 
+function InlineField({
+  value,
+  display,
+  label,
+  min = 0,
+  onSave,
+}: {
+  value: number
+  display: React.ReactNode
+  label: string
+  min?: number
+  onSave: (next: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(value))
+
+  const commit = () => {
+    const next = Number(draft)
+    setEditing(false)
+    if (!Number.isNaN(next) && next >= min && next !== value) onSave(next)
+  }
+
+  if (!editing) {
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        title={label}
+        onClick={() => {
+          setDraft(String(value))
+          setEditing(true)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setDraft(String(value))
+            setEditing(true)
+          }
+        }}
+        className="cursor-text rounded-md transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
+      >
+        {display}
+      </span>
+    )
+  }
+
+  return (
+    <input
+      autoFocus
+      type="number"
+      min={min}
+      step="1"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
+        if (e.key === 'Escape') setEditing(false)
+      }}
+      className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-brand-400 focus:outline-none"
+      aria-label={label}
+    />
+  )
+}
+
+function PlanGauge({ active, max }: { active: number; max: number }) {
+  const pct = Math.min(100, Math.round((active / max) * 100))
+  return (
+    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-gray-500">Plan gratuit — produits actifs</span>
+        <span className="font-medium text-gray-900">
+          {active}/{max}
+        </span>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-brand-500'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {pct >= 80 && (
+        <p className="mt-2 text-xs text-gray-500">
+          {pct >= 100
+            ? 'Limite atteinte : les nouveaux produits seront enregistrés inactifs. '
+            : 'Vous approchez de la limite des produits actifs. '}
+          <Link to="/admin/facturation" className="font-medium text-brand-700 underline underline-offset-2">
+            Passer à Pro
+          </Link>
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function ProductsPage() {
   usePageSeo({ title: 'Produits — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { data: categories = [] } = useCategories(shop?.id)
   const { planKey } = useShopPlan(shop?.id)
   const queryClient = useQueryClient()
+  const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
   const lowStockThreshold = shop?.low_stock_threshold ?? 5
 
   const [searchParams, setSearchParams] = useSearchParams()
   const stockParam = searchParams.get('stock')
+  const categoryParam = searchParams.get('category')
+  const categoryFilter = categoryParam ?? ''
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput, 300)
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>(
@@ -51,10 +151,17 @@ export function ProductsPage() {
     {
       search: search || undefined,
       stock: stockFilter === 'all' ? undefined : stockFilter,
+      categoryId: categoryFilter || undefined,
       page,
     },
     lowStockThreshold,
   )
+
+  const { data: activeProductCount } = useQuery({
+    queryKey: ['active-product-count', shop?.id],
+    queryFn: () => countActiveProducts(shop?.id as string),
+    enabled: !!shop?.id,
+  })
 
   const products = data?.products ?? []
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ADMIN_PRODUCTS_PAGE_SIZE)) : 1
@@ -67,7 +174,11 @@ export function ProductsPage() {
 
   const toggleActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateProduct(id, { active }),
-    onSuccess: invalidate,
+    onSuccess: (_data, variables) => {
+      invalidate()
+      toast.success(variables.active ? 'Produit activé.' : 'Produit désactivé.')
+    },
+    onError: () => toast.error('Impossible de modifier le produit.'),
   })
 
   const remove = useMutation({
@@ -75,10 +186,22 @@ export function ProductsPage() {
     onSuccess: () => {
       invalidate()
       setDeleteTarget(null)
+      toast.success('Produit supprimé.')
     },
+    onError: () => toast.error('Impossible de supprimer le produit.'),
   })
 
-  if (isLoading) return <Spinner />
+  const quickUpdate = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { price?: number; stock?: number } }) =>
+      updateProduct(id, updates),
+    onSuccess: () => {
+      invalidate()
+      toast.success('Mise à jour enregistrée.')
+    },
+    onError: () => toast.error('Impossible de mettre à jour le produit.'),
+  })
+
+  if (isLoading) return <PageLoader />
   if (isError) return <ErrorMessage />
 
   return (
@@ -119,24 +242,80 @@ export function ProductsPage() {
             className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none"
           />
         </div>
-        <div className="flex gap-2">
-          {STOCK_FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => {
-                setStockFilter(value)
-                setPage(1)
-                setSearchParams(value === 'all' ? {} : { stock: value }, { replace: true })
-              }}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                stockFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              const next = e.target.value
+              setPage(1)
+              setSearchParams(
+                { ...(stockFilter === 'all' ? {} : { stock: stockFilter }), ...(next ? { category: next } : {}) },
+                { replace: true },
+              )
+            }}
+            aria-label="Filtrer par catégorie"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
+          >
+            <option value="">Toutes les catégories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.emoji ? `${c.emoji}  ` : ''}
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            {STOCK_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => {
+                  setStockFilter(value)
+                  setPage(1)
+                  setSearchParams(
+                    {
+                      ...(value === 'all' ? {} : { stock: value }),
+                      ...(categoryFilter ? { category: categoryFilter } : {}),
+                    },
+                    { replace: true },
+                  )
+                }}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                  stockFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {categoryFilter && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">
+            {categories.find((c) => c.id === categoryFilter)?.emoji && <span>{categories.find((c) => c.id === categoryFilter)?.emoji}</span>}
+            {categories.find((c) => c.id === categoryFilter)?.name ?? 'Catégorie'}
+            <button
+              type="button"
+              onClick={() => {
+                setPage(1)
+                setSearchParams(
+                  { ...(stockFilter === 'all' ? {} : { stock: stockFilter }) },
+                  { replace: true },
+                )
+              }}
+              aria-label="Retirer le filtre de catégorie"
+              className="text-brand-500 hover:text-brand-700"
+            >
+              <X size={14} />
+            </button>
+          </span>
+        </div>
+      )}
+
+      {planKey === 'free' && activeProductCount != null && PLANS.free.maxActiveProducts !== null && (
+        <PlanGauge active={activeProductCount} max={PLANS.free.maxActiveProducts} />
+      )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
         {products.length === 0 ? (
@@ -173,19 +352,34 @@ export function ProductsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{formatCurrency(product.price, currency)}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          product.stock <= 0
-                            ? 'bg-red-100 text-red-800'
-                            : product.stock <= lowStockThreshold
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {product.stock}
-                      </span>
+                      <InlineField
+                        value={product.price}
+                        label={`Modifier le prix de ${product.name}`}
+                        display={formatCurrency(product.price, currency)}
+                        onSave={(price) => quickUpdate.mutate({ id: product.id, updates: { price } })}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <InlineField
+                        value={product.stock}
+                        label={`Modifier le stock de ${product.name}`}
+                        min={0}
+                        display={
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              product.stock <= 0
+                                ? 'bg-red-100 text-red-800'
+                                : product.stock <= lowStockThreshold
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
+                        }
+                        onSave={(stock) => quickUpdate.mutate({ id: product.id, updates: { stock } })}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <button

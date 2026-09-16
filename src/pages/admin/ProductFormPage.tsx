@@ -17,9 +17,11 @@ import {
   updateVariant,
 } from '@/services/productVariant.service'
 import { deleteProductImage, reorderProductImages, uploadProductImage } from '@/services/productImage.service'
+import { createCategory } from '@/services/category.service'
 import { supabase } from '@/lib/supabaseClient'
 import { formatCurrency, slugify } from '@/utils/format'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
+import { useToast } from '@/components/ui/Toast'
 import type { Category, ProductImage, ProductWithRelations, Shop } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PLANS } from '@/config/plans'
@@ -148,7 +150,7 @@ export function ProductFormPage() {
     enabled: !!shop?.id,
   })
 
-  if (isEditing && isLoading) return <Spinner />
+  if (isEditing && isLoading) return <PageLoader />
 
   return (
     <ProductForm
@@ -180,7 +182,14 @@ function ProductForm({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [categoryError, setCategoryError] = useState<string | null>(null)
 
   const maxActiveProducts = PLANS[planKey].maxActiveProducts
   // Toggling this product on/off doesn't move the count of every OTHER product,
@@ -287,11 +296,15 @@ function ProductForm({
       queryClient.invalidateQueries({ queryKey: ['product', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['active-product-count', shop?.id] })
+      toast.success(isEditing ? 'Produit enregistré.' : 'Produit créé.')
       if (!isEditing) {
         navigate(`/admin/produits/${product.id}`, { replace: true })
       }
     },
-    onError: () => setError('Impossible d\'enregistrer le produit. Vérifiez les champs.'),
+    onError: (err) => {
+      setError('Impossible d\'enregistrer le produit. Vérifiez les champs.')
+      toast.error(err instanceof Error && err.message ? err.message : 'Impossible d\'enregistrer le produit.')
+    },
   })
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -323,6 +336,38 @@ function ProductForm({
     }
   }
 
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim()
+    if (!name || !shop) return
+    setCreatingCategory(true)
+    setCategoryError(null)
+    try {
+      const category = await createCategory({ shopId: shop.id, name, slug: slugify(name) })
+      queryClient.invalidateQueries({ queryKey: ['categories', shop.id] })
+      setCategoryId(category.id)
+      setNewCategoryName('')
+      setNewCategoryOpen(false)
+      toast.success(`Catégorie « ${category.name} » créée.`)
+    } catch {
+      setCategoryError("Impossible de créer la catégorie (nom déjà utilisé ?).")
+      toast.error("Impossible de créer la catégorie (nom déjà utilisé ?).")
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
+  // Ctrl/Cmd+S enregistre le produit sans quitter la page.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        formRef.current?.requestSubmit()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
   const [imageDragOverId, setImageDragOverId] = useState<string | null>(null)
 
@@ -343,6 +388,8 @@ function ProductForm({
 
   const currency = shop?.currency ?? 'XOF'
   const previewPrice = Number(price) || 0
+  const previewStock = Number(stock) || 0
+  const previewCategoryName = categories.find((c) => c.id === categoryId)?.name
   const previewSlug = slugify(name.trim())
   const previewImage = pendingUploads[0]?.url ?? images[0]?.public_url ?? null
   const hasVariants = variants.length > 0
@@ -357,6 +404,7 @@ function ProductForm({
       </Link>
 
       <form
+        ref={formRef}
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
@@ -475,9 +523,22 @@ function ProductForm({
               </div>
 
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                  Catégorie
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                    Catégorie
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCategoryOpen((open) => !open)
+                      setCategoryError(null)
+                    }}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-800"
+                  >
+                    <Plus size={13} aria-hidden />
+                    {newCategoryOpen ? 'Fermer' : 'Nouvelle catégorie'}
+                  </button>
+                </div>
                 <select
                   id="category"
                   value={categoryId}
@@ -491,6 +552,37 @@ function ProductForm({
                     </option>
                   ))}
                 </select>
+                {newCategoryOpen && (
+                  <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <label htmlFor="newCategoryName" className="block text-xs font-medium text-gray-600">
+                      Nom de la catégorie
+                    </label>
+                    <div className="mt-1 flex gap-2">
+                      <input
+                        id="newCategoryName"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void handleCreateCategory()
+                          }
+                        }}
+                        placeholder="ex. Accessoires"
+                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        disabled={!newCategoryName.trim() || creatingCategory}
+                        className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                      >
+                        {creatingCategory ? <Loader2 size={14} className="animate-spin" /> : 'Créer'}
+                      </button>
+                    </div>
+                    {categoryError && <p className="mt-2 text-xs text-red-600">{categoryError}</p>}
+                  </div>
+                )}
               </div>
 
               <Toggle
@@ -760,15 +852,38 @@ function ProductForm({
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="truncate font-heading font-semibold text-ink-900">
-                      {name.trim() || 'Nom du produit'}
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-brand-600">
-                      {formatCurrency(previewPrice, currency)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {Number(stock) || 0} en stock
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate font-heading font-semibold text-ink-900">
+                        {name.trim() || 'Nom du produit'}
+                      </p>
+                      {!effectiveActive && (
+                        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                          Inactif
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-brand-600">
+                        {formatCurrency(previewPrice, currency)}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          previewStock <= 0
+                            ? 'bg-red-100 text-red-800'
+                            : previewStock <= (shop?.low_stock_threshold ?? 5)
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {previewStock <= 0 ? 'Rupture' : `${previewStock} en stock`}
+                      </span>
+                    </div>
+                    {previewCategoryName && (
+                      <p className="mt-1 text-xs text-gray-500">{previewCategoryName}</p>
+                    )}
+                    {description.trim() && (
+                      <p className="mt-2 line-clamp-3 text-xs text-gray-600">{description.trim()}</p>
+                    )}
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-gray-500">

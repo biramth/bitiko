@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Check,
   ExternalLink,
-  FileText,
   Loader2,
   Lock,
   Redo2,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { BUILDER_INTERNAL } from '@/config/features'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
@@ -27,8 +27,10 @@ import { updateShop } from '@/services/shop.service'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { storefrontUrl } from '@/lib/tenant'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
+import { Dialog } from '@/components/ui/Dialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
 import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
@@ -38,9 +40,9 @@ export function StoreBuilderPage() {
   const { data: shop, isLoading } = useMyShop()
   const { plan, isLoading: planLoading } = useShopPlan(shop?.id)
 
-  if (isLoading || planLoading) return <Spinner />
+  if (isLoading || planLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
-  if (!plan.storeBuilderAccess) return <StoreBuilderLock />
+  if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
 
   return <StoreBuilder key={shop.id} shop={shop} />
 }
@@ -276,6 +278,7 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 /* ─────────────────────── Builder ─────────────────────────────── */
 
 function StoreBuilder({ shop }: { shop: Shop }) {
+  const toast = useToast()
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
     queryFn: () => listShopPages(shop.id),
@@ -305,6 +308,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
     const page = await createPage(shop.id, title, slug)
     setCreateOpen(false)
     setActiveKey(`page:${page.id}`)
+    toast.success('Page créée.')
   }
 
   const handleDeletePage = async () => {
@@ -312,6 +316,7 @@ function StoreBuilder({ shop }: { shop: Shop }) {
     await deletePage(pageToDelete.id)
     if (activeKey === `page:${pageToDelete.id}`) setActiveKey('home')
     setPageToDelete(null)
+    toast.success('Page supprimée.')
   }
 
   const target = useMemo<BuilderTarget>(
@@ -408,9 +413,15 @@ function BuilderEditor({
   publishesStore: boolean
 }) {
   const builder = useBuilderState(target)
+  const toast = useToast()
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
   const canDiscard = builder.dirty || hasStoredDraft
+
+  const handleRemoveSection = (id: string) => {
+    builder.removeSection(id)
+    toast.info('Section supprimée — Ctrl+Z pour annuler.')
+  }
 
   /* Keyboard shortcuts */
   useEffect(() => {
@@ -511,7 +522,7 @@ function BuilderEditor({
           <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending || !previewUrl} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
             <ExternalLink size={14} aria-hidden /> Prévisualiser
           </button>
-          <button type="button" onClick={() => builder.saveDraftMutation.mutate()} disabled={builder.saveDraftMutation.isPending} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+          <button type="button" onClick={() => builder.saveDraftMutation.mutate(undefined, { onSuccess: () => toast.success('Brouillon enregistré.') })} disabled={builder.saveDraftMutation.isPending} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
             {builder.saveDraftMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : builder.saveDraftMutation.isSuccess && !builder.dirty ? <Check size={14} className="text-emerald-600" /> : null}
             Enregistrer
           </button>
@@ -531,7 +542,7 @@ function BuilderEditor({
           onTabChange={builder.setActiveTab}
           onSelect={builder.selectSection}
           onToggleVisible={builder.toggleVisible}
-          onRemove={builder.removeSection}
+          onRemove={handleRemoveSection}
           onDuplicate={builder.duplicateSection}
           onReorder={builder.reorderSection}
           onAdd={builder.addSection}
@@ -592,7 +603,15 @@ function BuilderEditor({
         pendingLabel="Publication…"
         pending={builder.publishMutation.isPending}
         tone="default"
-        onConfirm={() => builder.publishMutation.mutate(undefined, { onSuccess: () => setPublishConfirmOpen(false) })}
+        onConfirm={() =>
+          builder.publishMutation.mutate(undefined, {
+            onSuccess: () => {
+              setPublishConfirmOpen(false)
+              toast.success(publishesStore ? 'Design publié. Il est en ligne.' : 'Page publiée.')
+            },
+            onError: () => toast.error('La publication a échoué. Réessayez.'),
+          })
+        }
         onClose={() => setPublishConfirmOpen(false)}
       />
       <ConfirmDialog
@@ -603,7 +622,15 @@ function BuilderEditor({
         pendingLabel="Annulation…"
         pending={builder.discardMutation.isPending}
         tone="danger"
-        onConfirm={() => builder.discardMutation.mutate(undefined, { onSuccess: () => setDiscardConfirmOpen(false) })}
+        onConfirm={() =>
+          builder.discardMutation.mutate(undefined, {
+            onSuccess: () => {
+              setDiscardConfirmOpen(false)
+              toast.info('Modifications annulées.')
+            },
+            onError: () => toast.error("Impossible d'annuler les modifications."),
+          })
+        }
         onClose={() => setDiscardConfirmOpen(false)}
       />
     </div>
@@ -649,36 +676,13 @@ function CreatePageDialog({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center gap-2">
-          <FileText size={18} className="text-brand-600" aria-hidden />
-          <h2 className="font-heading text-lg font-bold text-gray-900">Nouvelle page</h2>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Titre</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="À propos"
-              autoFocus
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">URL</label>
-            <div className="mt-1 flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-              <span className="text-xs text-gray-400">/pages/</span>
-              <input
-                value={derivedSlug}
-                readOnly
-                className="ml-0 w-full border-0 bg-transparent text-sm font-mono text-gray-900 focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Nouvelle page"
+      size="md"
+      footer={
+        <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Annuler
           </button>
@@ -692,7 +696,31 @@ function CreatePageDialog({
             Créer la page
           </button>
         </div>
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Titre</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="À propos"
+            autoFocus
+            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">URL</label>
+          <div className="mt-1 flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <span className="text-xs text-gray-400">/pages/</span>
+            <input
+              value={derivedSlug}
+              readOnly
+              className="ml-0 w-full border-0 bg-transparent text-sm font-mono text-gray-900 focus:outline-none"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </Dialog>
   )
 }

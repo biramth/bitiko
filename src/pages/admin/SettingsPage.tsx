@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import {
   createDeliverySecteur,
@@ -35,8 +36,11 @@ import {
   updateDeliveryVille,
 } from '@/services/deliverySecteur.service'
 import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } from '@/utils/format'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { PasswordInput } from '@/components/ui/PasswordInput'
+import { Lock } from 'lucide-react'
+import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { DeliverySecteur } from '@/types'
 
@@ -84,6 +88,7 @@ function Card({
 
 function AccountSection() {
   const { user, updateFullName, updateEmail, updatePassword } = useAuth()
+  const toast = useToast()
 
   const [fullName, setFullName] = useState((user?.user_metadata?.full_name as string | undefined) ?? '')
   const [nameStatus, setNameStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -101,8 +106,14 @@ function AccountSection() {
     e.preventDefault()
     setNameStatus('saving')
     const { error } = await updateFullName(fullName.trim())
-    setNameStatus(error ? 'error' : 'saved')
-    if (!error) setTimeout(() => setNameStatus('idle'), 2500)
+    if (error) {
+      setNameStatus('error')
+      toast.error("Impossible de modifier le nom.")
+    } else {
+      setNameStatus('saved')
+      setTimeout(() => setNameStatus('idle'), 2500)
+      toast.success('Nom enregistré.')
+    }
   }
 
   const handleSaveEmail = async (e: React.FormEvent) => {
@@ -114,22 +125,26 @@ function AccountSection() {
     if (error) {
       setEmailStatus('error')
       setEmailError(error)
+      toast.error(error || "Impossible de modifier l'e-mail.")
     } else {
       setEmailStatus('sent')
+      toast.info("Lien de confirmation envoyé à l'adresse indiquée.")
     }
   }
 
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setPasswordError(null)
-    if (newPassword.length < 6) {
-      setPasswordError('Le mot de passe doit contenir au moins 6 caractères.')
+    if (newPassword.length < 8) {
+      setPasswordError('Le mot de passe doit contenir au moins 8 caractères.')
       setPasswordStatus('error')
+      toast.error('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
     if (newPassword !== confirmPassword) {
       setPasswordError('Les deux mots de passe ne correspondent pas.')
       setPasswordStatus('error')
+      toast.error('Les deux mots de passe ne correspondent pas.')
       return
     }
     setPasswordStatus('saving')
@@ -137,11 +152,13 @@ function AccountSection() {
     if (error) {
       setPasswordStatus('error')
       setPasswordError(error)
+      toast.error(error || 'Impossible de modifier le mot de passe.')
     } else {
       setPasswordStatus('saved')
       setNewPassword('')
       setConfirmPassword('')
       setTimeout(() => setPasswordStatus('idle'), 2500)
+      toast.success('Mot de passe mis à jour.')
     }
   }
 
@@ -222,24 +239,24 @@ function AccountSection() {
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
                 Nouveau mot de passe
               </label>
-              <input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className={inputClass}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                leadingIcon={Lock}
               />
             </div>
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirmer
               </label>
-              <input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={inputClass}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                leadingIcon={Lock}
               />
             </div>
           </div>
@@ -269,7 +286,7 @@ export function SettingsPage() {
   const { data: shop, isLoading } = useMyShop()
   const { section: sectionParam } = useParams<{ section: string }>()
 
-  if (isLoading) return <Spinner />
+  if (isLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!SECTIONS.some((s) => s.key === sectionParam)) {
     return <Navigate to="/admin/parametres/general" replace />
@@ -286,6 +303,7 @@ function SettingsForm({
   section: SectionKey
 }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
@@ -344,8 +362,12 @@ function SettingsForm({
       setNewZoneFee('')
       setZoneError(null)
       invalidateZones()
+      toast.success('Zone de livraison ajoutée.')
     },
-    onError: () => setZoneError('Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.'),
+    onError: () => {
+      setZoneError('Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.')
+      toast.error('Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.')
+    },
   })
 
   const saveZoneMutation = useMutation({
@@ -355,14 +377,21 @@ function SettingsForm({
       setEditingZoneId(null)
       setZoneError(null)
       invalidateZones()
+      toast.success('Zone enregistrée.')
     },
-    onError: () => setZoneError('Impossible d\'enregistrer cette zone.'),
+    onError: () => {
+      setZoneError('Impossible d\'enregistrer cette zone.')
+      toast.error('Impossible d\'enregistrer cette zone.')
+    },
   })
 
   const toggleZoneMutation = useMutation({
     mutationFn: ({ zone }: { zone: DeliverySecteur }) => updateDeliverySecteur(zone.id, { is_active: !zone.is_active }),
     onSuccess: invalidateZones,
-    onError: () => setZoneError('Impossible de modifier cette zone.'),
+    onError: () => {
+      setZoneError('Impossible de modifier cette zone.')
+      toast.error('Impossible de modifier cette zone.')
+    },
   })
 
   const deleteZoneMutation = useMutation({
@@ -371,8 +400,12 @@ function SettingsForm({
       setZoneToDelete(null)
       invalidateZones()
       invalidateVilles()
+      toast.success('Zone supprimée.')
     },
-    onError: () => setZoneError('Impossible de supprimer cette zone.'),
+    onError: () => {
+      setZoneError('Impossible de supprimer cette zone.')
+      toast.error('Impossible de supprimer cette zone.')
+    },
   })
 
   const addVilleMutation = useMutation({
@@ -382,8 +415,12 @@ function SettingsForm({
       setNewVilleName('')
       setVilleError(null)
       invalidateVilles()
+      toast.success('Ville ajoutée.')
     },
-    onError: () => setVilleError('Impossible d\'ajouter cette ville. Vérifiez que le nom n\'existe pas déjà.'),
+    onError: () => {
+      setVilleError('Impossible d\'ajouter cette ville. Vérifiez que le nom n\'existe pas déjà.')
+      toast.error('Impossible d\'ajouter cette ville. Vérifiez que le nom n\'existe pas déjà.')
+    },
   })
 
   const saveVilleMutation = useMutation({
@@ -392,14 +429,21 @@ function SettingsForm({
       setEditingVilleId(null)
       setVilleError(null)
       invalidateVilles()
+      toast.success('Ville enregistrée.')
     },
-    onError: () => setVilleError('Impossible d\'enregistrer cette ville.'),
+    onError: () => {
+      setVilleError('Impossible d\'enregistrer cette ville.')
+      toast.error('Impossible d\'enregistrer cette ville.')
+    },
   })
 
   const toggleVilleMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => updateDeliveryVille(id, { is_active }),
     onSuccess: invalidateVilles,
-    onError: () => setVilleError('Impossible de modifier cette ville.'),
+    onError: () => {
+      setVilleError('Impossible de modifier cette ville.')
+      toast.error('Impossible de modifier cette ville.')
+    },
   })
 
   const deleteVilleMutation = useMutation({
@@ -407,8 +451,12 @@ function SettingsForm({
     onSuccess: () => {
       setVilleToDelete(null)
       invalidateVilles()
+      toast.success('Ville supprimée.')
     },
-    onError: () => setVilleError('Impossible de supprimer cette ville.'),
+    onError: () => {
+      setVilleError('Impossible de supprimer cette ville.')
+      toast.error('Impossible de supprimer cette ville.')
+    },
   })
 
   const saveMutation = useMutation({
@@ -437,8 +485,12 @@ function SettingsForm({
       setSaved(true)
       setError(null)
       setTimeout(() => setSaved(false), 2500)
+      toast.success('Paramètres enregistrés.')
     },
-    onError: () => setError('Impossible d\'enregistrer les paramètres. Réessayez.'),
+    onError: (err) => {
+      setError('Impossible d\'enregistrer les paramètres. Réessayez.')
+      toast.error(err instanceof Error ? err.message : 'Impossible d\'enregistrer les paramètres.')
+    },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -569,7 +621,31 @@ function SettingsForm({
 
           {section === 'appearance' && (
             <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleur affichés sur la boutique.">
-              <div className="flex items-center gap-4">
+              {(() => {
+                const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : undefined
+                if (!template) return null
+                return (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500">Thème choisi à la création</p>
+                      <p className="truncate text-sm font-semibold text-gray-900">{template.label}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span
+                        className="h-5 w-5 rounded-full border border-black/10"
+                        style={{ backgroundColor: template.swatch[0] }}
+                        aria-hidden
+                      />
+                      <span
+                        className="h-5 w-5 rounded-full border border-black/10"
+                        style={{ backgroundColor: template.swatch[1] }}
+                        aria-hidden
+                      />
+                    </div>
+                  </div>
+                )
+              })()}
+            <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-sand-50">
                   {logoUrl ? (
                     <img src={logoUrl} alt="Logo de la boutique" className="h-full w-full object-cover" />

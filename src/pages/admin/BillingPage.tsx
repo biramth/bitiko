@@ -6,7 +6,8 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getShopSubscription, listPayments, requestProUpgrade, confirmPayment } from '@/services/billing.service'
 import { PLANS, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
 import { formatCurrency } from '@/utils/format'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
+import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 
@@ -23,7 +24,7 @@ export function BillingPage() {
   usePageSeo({ title: 'Facturation — Bitiko', noindex: true })
   const { data: shop, isLoading: shopLoading } = useMyShop()
 
-  if (shopLoading) return <Spinner />
+  if (shopLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
 
   return <BillingForShop key={shop.id} shopId={shop.id} />
@@ -31,6 +32,7 @@ export function BillingPage() {
 
 function BillingForShop({ shopId }: { shopId: string }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
@@ -56,8 +58,10 @@ function BillingForShop({ shopId }: { shopId: string }) {
         if (result.status === 'succeeded') {
           queryClient.invalidateQueries({ queryKey: ['shop-subscription', shopId] })
           queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] })
+          toast.success('Paiement confirmé — votre plan Pro est activé.')
         } else if (result.status === 'failed') {
           setConfirmError("Le paiement n'a pas abouti. Vous pouvez réessayer.")
+          toast.error("Le paiement n'a pas abouti. Vous pouvez réessayer.")
         } else {
           setConfirmError('Paiement en cours de traitement — actualisez dans un instant.')
         }
@@ -76,10 +80,15 @@ function BillingForShop({ shopId }: { shopId: string }) {
 
   const upgradeRequestMutation = useMutation({
     mutationFn: () => requestProUpgrade(shopId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] })
+      toast.success('Demande envoyée. Votre upgrade sera activé après vérification.')
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Impossible d'envoyer la demande. Réessayez."),
   })
 
-  if (isLoading) return <Spinner />
+  if (isLoading) return <PageLoader />
 
   const planKey = effectivePlanKey(subscription)
   const plan = effectivePlan(subscription)
@@ -136,7 +145,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
           <p className="mt-1 text-2xl font-bold text-gray-900">Gratuit</p>
           <ul className="mt-4 space-y-2">
             <PlanFeature>Jusqu'à {PLANS.free.maxActiveProducts} produits actifs</PlanFeature>
-            <PlanFeature>Thème "Classic"</PlanFeature>
+            <PlanFeature>Thème de boutique au choix</PlanFeature>
             <PlanFeature>Sous-domaine bitiko.shop</PlanFeature>
           </ul>
           {!isPro && (
@@ -154,7 +163,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
           </p>
           <ul className="mt-4 space-y-2">
             <PlanFeature>Produits illimités</PlanFeature>
-            <PlanFeature>Éditeur visuel complet + tous les templates</PlanFeature>
+            <PlanFeature>Images de couverture pour les catégories</PlanFeature>
             <PlanFeature>Retirer "Propulsé par Bitiko"</PlanFeature>
           </ul>
           {isPro ? (

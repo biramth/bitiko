@@ -4,6 +4,8 @@ import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { PasswordInput } from '@/components/ui/PasswordInput'
+import { Lock } from 'lucide-react'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
 /**
@@ -55,8 +57,8 @@ export function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères.')
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
     if (password !== confirmPassword) {
@@ -100,30 +102,30 @@ export function ResetPasswordPage() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Nouveau mot de passe
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-200 py-2 pl-10 pr-3 text-sm focus:border-gray-400 focus:outline-none"
+              leadingIcon={Lock}
             />
           </div>
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
               Confirmer le mot de passe
             </label>
-            <input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-200 py-2 pl-10 pr-3 text-sm focus:border-gray-400 focus:outline-none"
+              leadingIcon={Lock}
             />
           </div>
 

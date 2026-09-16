@@ -19,9 +19,10 @@ import {
   ORDER_STATUS_TRANSITIONS,
   getLinearNext,
 } from '@/config/constants'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
 import type { OrderStatus } from '@/types'
 
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -80,6 +81,7 @@ export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
   const [cancelOpen, setCancelOpen] = useState(false)
   const [editingFee, setEditingFee] = useState(false)
@@ -95,11 +97,13 @@ export function OrderDetailPage() {
 
   const statusMutation = useMutation({
     mutationFn: (status: OrderStatus) => updateOrderStatus(id as string, status),
-    onSuccess: () => {
+    onSuccess: (_data, status) => {
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       queryClient.invalidateQueries({ queryKey: ['orders', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
+      toast.success(`Statut mis à jour : ${ORDER_STATUS_LABELS[status]}.`)
     },
+    onError: () => toast.error('Impossible de mettre à jour le statut de la commande.'),
   })
 
   const feeMutation = useMutation({
@@ -110,8 +114,12 @@ export function OrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['order', id] })
       queryClient.invalidateQueries({ queryKey: ['orders', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
+      toast.success('Frais de livraison mis à jour.')
     },
-    onError: () => setFeeError('Impossible de modifier le frais de livraison.'),
+    onError: () => {
+      setFeeError('Impossible de modifier le frais de livraison.')
+      toast.error('Impossible de modifier le frais de livraison.')
+    },
   })
 
   const notesMutation = useMutation({
@@ -119,10 +127,12 @@ export function OrderDetailPage() {
     onSuccess: () => {
       setNotesDraft(null)
       queryClient.invalidateQueries({ queryKey: ['order', id] })
+      toast.success('Notes enregistrées.')
     },
+    onError: () => toast.error('Impossible d\'enregistrer les notes.'),
   })
 
-  if (isLoading) return <Spinner />
+  if (isLoading) return <PageLoader />
   if (isError || !order) return <ErrorMessage message="Commande introuvable." />
 
   const allowedStatuses = (ORDER_STATUS_TRANSITIONS[order.status] ?? []) as OrderStatus[]

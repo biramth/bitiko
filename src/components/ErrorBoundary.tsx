@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { reportError } from '@/lib/analytics'
 
 interface Props {
   children: ReactNode
@@ -17,7 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown) {
-    console.error('Unhandled UI error:', error)
+    reportError(error, 'ErrorBoundary')
   }
 
   render() {
