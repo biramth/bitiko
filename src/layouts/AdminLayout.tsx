@@ -22,12 +22,12 @@ import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 
 const navItems = [
-  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
-  { to: '/admin/produits', label: 'Produits', icon: Package },
-  { to: '/admin/categories', label: 'Catégories', icon: Tags },
-  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true },
-  { to: '/admin/facturation', label: 'Facturation', icon: CreditCard },
+  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, group: 'Piloter' },
+  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, group: 'Piloter' },
+  { to: '/admin/produits', label: 'Produits', icon: Package, group: 'Catalogue' },
+  { to: '/admin/categories', label: 'Catégories', icon: Tags, group: 'Catalogue' },
+  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true, group: 'Développer' },
+  { to: '/admin/facturation', label: 'Facturation', icon: CreditCard, group: 'Développer' },
 ]
 
 const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
@@ -56,6 +56,8 @@ export function AdminLayout() {
     }
   })
 
+  const settingsExpanded = onSettings || settingsOpen
+
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev
@@ -78,6 +80,8 @@ export function AdminLayout() {
     `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
     }`
+
+  const navGroups = ['Piloter', 'Catalogue', 'Développer'] as const
 
   const shopIdentity = shop && (
     <div className={`mb-2 rounded-xl bg-white/5 ${collapsed ? 'p-2' : 'p-3'}`}>
@@ -135,17 +139,25 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
-              <Icon size={18} aria-hidden />
-              {!collapsed && label}
-            </NavLink>
-          ))}
+          {navGroups.map((group) => {
+            const items = visibleNavItems.filter((item) => item.group === group)
+            return (
+              <div key={group} className="mb-3">
+                {!collapsed && <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">{group}</p>}
+                {items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
+                    <Icon size={18} aria-hidden />
+                    {!collapsed && label}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
 
           <button
             type="button"
             onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
-            aria-expanded={settingsOpen}
+            aria-expanded={settingsExpanded}
             title={collapsed ? 'Paramètres' : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               collapsed ? 'justify-center' : ''
@@ -162,12 +174,12 @@ export function AdminLayout() {
                 <ChevronDown
                   size={15}
                   aria-hidden
-                  className={`transition-transform ${settingsOpen ? 'rotate-180' : ''}`}
+                  className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
                 />
               </>
             )}
           </button>
-          {!collapsed && settingsOpen && (
+          {!collapsed && settingsExpanded && (
             <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
               {settingsSections.map(({ to, label }) => (
                 <NavLink key={to} to={to} className={settingsSubLinkClass}>
@@ -213,7 +225,7 @@ export function AdminLayout() {
             </button>
           </div>
         </header>
-        <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:hidden" aria-label="Navigation admin">
           {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
