@@ -15,17 +15,32 @@ function isPlatformHost(host: string): boolean {
   return !ROOT_DOMAIN || host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`
 }
 
+function robotsBody(origin: string): string {
+  return ['User-agent: *', 'Allow: /', '', `Sitemap: ${origin}/sitemap.xml`, ''].join('\n')
+}
+
 /**
- * Per-host sitemap: the platform's own marketing pages on the root domain,
- * or a shop's live catalog (active products only, matching what RLS already
- * exposes to anon) on that shop's subdomain/custom domain. Regenerated on
- * every crawl (cached at the edge for an hour) since merchants add/remove
- * products constantly — a static sitemap would go stale immediately.
+ * One function that serves both /robots.txt and /sitemap.xml (matched via the
+ * rewrites in vercel.json), so both can stay dynamic per host. /robots.txt
+ * needs an absolute Sitemap URL on the REQUESTING host — every shop subdomain
+ * needs its own robots.txt pointing at its own sitemap, which a single static
+ * file under /public can't do across a wildcard domain. The sitemap is
+ * regenerated on every crawl (cached at the edge) since merchants add/remove
+ * products constantly.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const host = (req.headers.host ?? '').split(':')[0]
   const proto = (req.headers['x-forwarded-proto'] as string) ?? 'https'
   const origin = `${proto}://${host}`
+
+  const kind = req.query.kind === 'robots' ? 'robots' : 'sitemap'
+
+  if (kind === 'robots') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+    res.status(200).send(robotsBody(origin))
+    return
+  }
 
   const urls: string[] = []
 
