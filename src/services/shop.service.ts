@@ -56,6 +56,7 @@ function templateFields(templateId: string | undefined): Partial<Shop> {
   }
   return {
     template_id: template.key,
+    business_type: template.vertical,
     theme_color: template.themeColor,
     theme_config: template.themeConfig,
     layout_sections: ensurePinnedSections(template.layout.home),

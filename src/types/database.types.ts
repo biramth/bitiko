@@ -536,6 +536,7 @@ export type Database = {
           address: string | null
           banner_url: string | null
           builder_draft: BuilderDraft | null
+          business_type: string | null
           created_at: string
           currency: string
           delivery_fee: number
@@ -561,6 +562,7 @@ export type Database = {
           address?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
+          business_type?: string | null
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -586,6 +588,7 @@ export type Database = {
           address?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
+          business_type?: string | null
           created_at?: string
           currency?: string
           delivery_fee?: number

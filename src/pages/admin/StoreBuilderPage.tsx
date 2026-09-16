@@ -134,6 +134,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           cart: template.layout.cart,
           checkout: template.layout.checkout,
         },
+        templateId: template.key,
       },
     })
 }
@@ -167,6 +168,10 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
       cart: { published: systemPublished('cart') },
       checkout: { published: systemPublished('checkout') },
     },
+    // Only set when the draft came from applying a whole-store template
+    // (see storeApplyDraft) — a merchant tweaking colors/sections by hand
+    // isn't "switching template", so template_id is left untouched then.
+    ...(draft?.templateId ? { template_id: draft.templateId } : {}),
     builder_draft: null,
   })
 }
@@ -593,7 +598,7 @@ function BuilderEditor({
               onThemeConfigChange={builder.setThemeConfig}
             />
           )}
-          {builder.activeTab === 'templates' && <TemplateLibraryPanel onApply={builder.applyTemplate} />}
+          {builder.activeTab === 'templates' && <TemplateLibraryPanel shop={shop} onApply={builder.applyTemplate} />}
         </div>
       </div>
 

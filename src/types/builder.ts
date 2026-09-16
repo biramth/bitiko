@@ -172,6 +172,11 @@ export interface BuilderDraft {
   themeConfig: ThemeConfig
   /** Draft body sections of the system templates, keyed by template. */
   templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+  /** Set when this draft came from applying a whole-store template (the
+   *  "Styles" tab) and not yet superseded by another one — published
+   *  alongside the rest of the draft so `shops.template_id` stays in sync
+   *  with what's actually live instead of only reflecting onboarding. */
+  templateId?: string
 }
 
 /** System storefront pages (catalogue, product, cart, checkout). The published
@@ -201,6 +206,10 @@ export interface StoreTemplateLayout {
 
 export interface StoreTemplate {
   key: string
+  /** Business type this template is designed for (see `config/verticals.ts`).
+   *  A merchant only browses templates within their shop's current vertical
+   *  — switching vertical is a separate, explicit choice in Réglages. */
+  vertical: string
   label: string
   description: string
   swatch: [string, string]

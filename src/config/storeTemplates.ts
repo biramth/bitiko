@@ -1,5 +1,6 @@
 import { createSectionId } from './defaultLayout'
 import { buildDefaultSystemTemplate } from './defaultTemplates'
+import { VERTICALS, type Vertical } from './verticals'
 import type { LayoutSection, StoreTemplate, StoreTemplateLayout, ThemeConfig } from '@/types/builder'
 
 function header(overrides: Partial<Extract<LayoutSection, { type: 'header' }>['config']> = {}): LayoutSection {
@@ -115,6 +116,7 @@ const baseTheme = (overrides: Partial<ThemeConfig>): ThemeConfig => ({
 export const STORE_TEMPLATES: StoreTemplate[] = [
   {
     key: 'mode',
+    vertical: 'mode',
     label: 'Mode',
     description: 'Élégant et éditorial, ton magazine — l\'esprit maison de mode.',
     swatch: ['#7f1d1d', '#fdfbf7'],
@@ -143,6 +145,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
   },
   {
     key: 'epicerie',
+    vertical: 'epicerie',
     label: 'Épicerie',
     description: 'Chaleureux et gourmand, l\'esprit boutique alimentaire de quartier.',
     swatch: ['#15803d', '#fef3c7'],
@@ -175,6 +178,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
   },
   {
     key: 'beaute',
+    vertical: 'beaute',
     label: 'Beauté',
     description: 'Doux et raffiné, tons rosés — l\'esprit boutique de cosmétiques.',
     swatch: ['#be185d', '#fdf2f8'],
@@ -203,6 +207,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
   },
   {
     key: 'tech',
+    vertical: 'tech',
     label: 'High-Tech',
     description: 'Net et moderne, accents bleus — l\'esprit boutique électronique.',
     swatch: ['#1d4ed8', '#f3f4f6'],
@@ -240,3 +245,20 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
 export const STORE_TEMPLATE_BY_KEY: Record<string, StoreTemplate> = Object.fromEntries(
   STORE_TEMPLATES.map((template) => [template.key, template]),
 )
+
+/** Templates a merchant can browse for a given vertical (their shop's
+ *  `business_type`). `null`/unknown vertical returns every template — the
+ *  safe fallback for shops that predate the vertical field, so they never
+ *  see an empty template library. */
+export function templatesForVertical(vertical: string | null | undefined): StoreTemplate[] {
+  if (!vertical) return STORE_TEMPLATES
+  const matches = STORE_TEMPLATES.filter((template) => template.vertical === vertical)
+  return matches.length > 0 ? matches : STORE_TEMPLATES
+}
+
+/** Verticals with at least one template — the only ones ever shown to a
+ *  merchant (onboarding, Réglages). */
+export function availableVerticals(): Vertical[] {
+  const verticalsInUse = new Set(STORE_TEMPLATES.map((template) => template.vertical))
+  return VERTICALS.filter((vertical) => verticalsInUse.has(vertical.key))
+}
