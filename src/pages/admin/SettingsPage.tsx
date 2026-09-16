@@ -27,6 +27,7 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
+import { deleteAccount } from '@/services/account.service'
 import {
   createDeliverySecteur,
   createDeliveryVille,
@@ -89,8 +90,9 @@ function Card({
 }
 
 function AccountSection() {
-  const { user, updateFullName, updateEmail, updatePassword } = useAuth()
+  const { user, updateFullName, updateEmail, updatePassword, signOut } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   // Google-only accounts have no 'email' identity — they've never set a
   // password, so this card offers to add one rather than "change" it.
   const hasPassword = user?.identities?.some((i) => i.provider === 'email') ?? true
@@ -106,6 +108,40 @@ function AccountSection() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [passwordError, setPasswordError] = useState<string | null>(null)
+
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteEmail, setDeleteEmail] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const emailMatches = deleteEmail.trim().toLowerCase() === (user?.email ?? '').toLowerCase()
+
+  const openDeleteDialog = () => {
+    setDeleteEmail('')
+    setDeleteError(null)
+    setDeleteOpen(true)
+  }
+
+  const closeDeleteDialog = () => {
+    if (deleting) return
+    setDeleteOpen(false)
+    setDeleteEmail('')
+    setDeleteError(null)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!emailMatches || deleting) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteAccount()
+      await signOut()
+      toast.success('Votre compte a été supprimé.')
+      navigate('/')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Impossible de supprimer le compte.')
+      setDeleting(false)
+    }
+  }
 
   const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -290,6 +326,66 @@ function AccountSection() {
           </div>
         </form>
       </Card>
+
+      <section className="rounded-xl border border-red-200 bg-white">
+        <header className="flex items-start gap-3 border-b border-red-100 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+            <Trash2 size={18} aria-hidden />
+          </span>
+          <div>
+            <h2 className="font-heading font-semibold text-gray-900">Supprimer mon compte</h2>
+            <p className="text-sm text-gray-500">Action définitive, impossible à annuler.</p>
+          </div>
+        </header>
+        <div className="space-y-4 p-5">
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <p className="text-sm font-medium text-red-700">Sont supprimés définitivement :</p>
+            <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-red-700/80">
+              <li>Votre compte Bitiko et vos accès</li>
+              <li>Votre boutique et son adresse publique</li>
+              <li>Le catalogue, les catégories et toutes les images</li>
+              <li>Les commandes et leur historique</li>
+              <li>L'abonnement en cours — sans remboursement</li>
+            </ul>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={openDeleteDialog}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            >
+              <Trash2 size={15} aria-hidden /> Supprimer mon compte
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Supprimer définitivement votre compte ?"
+        description="Toutes vos données (boutique, catalogue, commandes, abonnement) seront effacées sans possibilité de récupération."
+        confirmLabel="Supprimer définitivement"
+        pendingLabel="Suppression…"
+        pending={deleting}
+        confirmDisabled={!emailMatches}
+        onConfirm={handleDeleteAccount}
+        onClose={closeDeleteDialog}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Pour confirmer, saisissez votre adresse e-mail <strong>{user?.email}</strong>.
+          </p>
+          <input
+            type="email"
+            autoComplete="off"
+            value={deleteEmail}
+            onChange={(e) => setDeleteEmail(e.target.value)}
+            placeholder={user?.email ?? ''}
+            className={inputClass}
+          />
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }

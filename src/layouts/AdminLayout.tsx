@@ -60,13 +60,23 @@ export function AdminLayout() {
   const { data: shop } = useMyShop()
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
-  const [settingsOpen, setSettingsOpen] = useState(onSettings)
   const activeGroup = visibleNavItems.find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
   )?.group
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
-  const isGroupOpen = (group: string) => group === activeGroup || openGroups[group] !== false
-  const toggleGroup = (group: string) => setOpenGroups((prev) => ({ ...prev, [group]: !isGroupOpen(group) }))
+  // Accordion, not independent toggles: only one section (a nav group or
+  // Paramètres) is ever open at a time, so the sidebar's expanded height is
+  // always bounded — opening every group used to make it taller than the
+  // viewport and force it to scroll internally.
+  const activeSection = onSettings ? 'Paramètres' : (activeGroup ?? null)
+  const [openSection, setOpenSection] = useState<string | null>(activeSection)
+  // Navigate into a group → open it (adjust during render rather than in an
+  // effect, so a manual collapse isn't re-opened on an unrelated re-render).
+  const [prevActiveSection, setPrevActiveSection] = useState(activeSection)
+  if (activeSection !== prevActiveSection) {
+    setPrevActiveSection(activeSection)
+    if (activeSection) setOpenSection(activeSection)
+  }
+  const toggleSection = (section: string) => setOpenSection((prev) => (prev === section ? null : section))
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -75,7 +85,7 @@ export function AdminLayout() {
     }
   })
 
-  const settingsExpanded = onSettings || settingsOpen
+  const settingsExpanded = openSection === 'Paramètres'
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -85,7 +95,6 @@ export function AdminLayout() {
       } catch {
         // localStorage unavailable (private browsing) — the toggle still works for this session.
       }
-      if (next) setSettingsOpen(false)
       return next
     })
   }
@@ -160,14 +169,14 @@ export function AdminLayout() {
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {navGroups.map((group) => {
             const items = visibleNavItems.filter((item) => item.group === group)
-            const open = isGroupOpen(group)
+            const open = collapsed || openSection === group
             const GroupIcon = navGroupIcons[group]
             return (
               <div key={group} className="mb-1">
                 {!collapsed && (
                   <button
                     type="button"
-                    onClick={() => toggleGroup(group)}
+                    onClick={() => toggleSection(group)}
                     aria-expanded={open}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
                   >
@@ -196,7 +205,7 @@ export function AdminLayout() {
 
           <button
             type="button"
-            onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
+            onClick={() => (collapsed ? undefined : toggleSection('Paramètres'))}
             aria-expanded={settingsExpanded}
             title={collapsed ? 'Paramètres' : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
