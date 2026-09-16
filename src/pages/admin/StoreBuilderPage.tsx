@@ -173,6 +173,7 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
 
 function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   const shared = {
+    templateId: shop.template_id,
     initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
     initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
     storeApplyDraft: storeApplyDraft(shop),
@@ -550,6 +551,7 @@ function BuilderEditor({
           onReorder={builder.reorderSection}
           onAdd={builder.addSection}
           availableTypes={availableTypes}
+          templateId={shop.template_id}
         />
 
         {previewPath && previewUrl ? (
@@ -578,6 +580,7 @@ function BuilderEditor({
             <SectionEditorPanel
               section={builder.selectedSection}
               shopId={shop.id}
+              templateId={shop.template_id}
               removableBranding={removableBranding}
               onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
             />

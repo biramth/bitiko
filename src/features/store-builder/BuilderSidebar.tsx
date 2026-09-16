@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Copy, Eye, EyeOff, GripVertical, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
-import { ADDABLE_SECTION_TYPES, SECTION_REGISTRY } from './sectionRegistry'
+import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
+import { getEffectiveRegistry } from './effectiveRegistry'
 import type { BuilderTab } from './useBuilderState'
 import type { LayoutSection, SectionType } from '@/types/builder'
 
@@ -12,8 +13,8 @@ const TABS: { key: BuilderTab; label: string; icon: typeof Palette }[] = [
 
 /** Small colored square with the section's icon — gives every block type a
  *  distinct, recognizable identity instead of one flat gray icon for all. */
-function SectionIcon({ type, size = 'sm' }: { type: SectionType; size?: 'sm' | 'md' }) {
-  const def = SECTION_REGISTRY[type]
+function SectionIcon({ type, registry, size = 'sm' }: { type: SectionType; registry: SectionRegistry; size?: 'sm' | 'md' }) {
+  const def = registry[type]
   const Icon = def.icon
   const dims = size === 'md' ? 'h-9 w-9 rounded-lg' : 'h-7 w-7 rounded-md'
   return (
@@ -39,6 +40,7 @@ export function BuilderSidebar({
   onReorder,
   onAdd,
   availableTypes,
+  templateId,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -53,7 +55,11 @@ export function BuilderSidebar({
   /** Restricts the "+ Ajouter un bloc" menu to a subset of section types.
    *  Defaults to all addable types (used for the home page). */
   availableTypes?: SectionType[]
+  /** The shop's current template — resolves which section types (core plus
+   *  whatever that template contributes) show up here. */
+  templateId?: string | null
 }) {
+  const registry = getEffectiveRegistry(templateId)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -76,11 +82,11 @@ export function BuilderSidebar({
   }, [addMenuOpen])
 
   const presentTypes = new Set(sections.map((s) => s.type))
-  const addableTypes = (availableTypes ?? ADDABLE_SECTION_TYPES).filter(
-    (type) => !(SECTION_REGISTRY[type].singleton && presentTypes.has(type)),
+  const addableTypes = (availableTypes ?? getAddableSectionTypes(registry)).filter(
+    (type) => !(registry[type].singleton && presentTypes.has(type)),
   )
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
-  for (const type of addableTypes) groupedAddable[SECTION_REGISTRY[type].category].push(type)
+  for (const type of addableTypes) groupedAddable[registry[type].category].push(type)
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -107,7 +113,7 @@ export function BuilderSidebar({
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           <ul ref={listRef} className="space-y-1">
             {sections.map((section) => {
-              const def = SECTION_REGISTRY[section.type]
+              const def = registry[section.type]
               const isDraggable = !def.pinned
               const isSelected = selectedSectionId === section.id
               return (
@@ -151,7 +157,7 @@ export function BuilderSidebar({
                     onClick={() => onSelect(section.id)}
                     className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                   >
-                    <SectionIcon type={section.type} />
+                    <SectionIcon type={section.type} registry={registry} />
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-sm ${isSelected ? 'font-semibold text-brand-700' : 'font-medium text-gray-700'}`}>
                         {def.label}
@@ -214,7 +220,7 @@ export function BuilderSidebar({
                         {CATEGORY_LABELS[cat]}
                       </p>
                       {groupedAddable[cat].map((type) => {
-                        const def = SECTION_REGISTRY[type]
+                        const def = registry[type]
                         return (
                           <button
                             key={type}
@@ -225,7 +231,7 @@ export function BuilderSidebar({
                             }}
                             className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-gray-50"
                           >
-                            <SectionIcon type={type} size="md" />
+                            <SectionIcon type={type} registry={registry} size="md" />
                             <span className="min-w-0 flex-1 pt-0.5">
                               <span className="block text-sm font-medium text-gray-900">{def.label}</span>
                               <span className="block text-xs leading-snug text-gray-500">{def.description}</span>

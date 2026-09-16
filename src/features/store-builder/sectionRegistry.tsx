@@ -42,7 +42,7 @@ import { CartEditor, CartRenderer } from './sections/CartSection'
 import { CheckoutEditor, CheckoutRenderer } from './sections/CheckoutSection'
 import type { SectionEditorProps } from './sections/shared'
 
-interface SectionDefinition {
+export interface SectionDefinition {
   label: string
   /** One line explaining what the block is for — shown in the "add block" picker. */
   description: string
@@ -64,7 +64,14 @@ interface SectionDefinition {
   Renderer?: React.ComponentType<any>
 }
 
-export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
+export type SectionRegistry = Record<SectionType, SectionDefinition>
+
+/** The section types every storefront can use regardless of template — the
+ *  registry a shop with no template (or a template contributing nothing
+ *  extra) resolves to. Templates layer their own section types on top of
+ *  this via `getEffectiveRegistry` (see effectiveRegistry.ts); this object
+ *  itself never varies by shop. */
+export const CORE_SECTION_REGISTRY: SectionRegistry = {
   header: {
     label: 'Header',
     description: 'Logo, navigation et panier — présent sur toutes les pages.',
@@ -284,6 +291,6 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
 }
 
 /** Types a merchant can add freely from the "+ Ajouter un bloc" menu (excludes pinned header/footer). */
-export const ADDABLE_SECTION_TYPES = (Object.keys(SECTION_REGISTRY) as SectionType[]).filter(
-  (type) => !SECTION_REGISTRY[type].pinned,
-)
+export function getAddableSectionTypes(registry: SectionRegistry): SectionType[] {
+  return (Object.keys(registry) as SectionType[]).filter((type) => !registry[type].pinned)
+}

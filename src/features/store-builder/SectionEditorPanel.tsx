@@ -1,16 +1,20 @@
 import { MousePointerClick } from 'lucide-react'
-import { SECTION_REGISTRY } from './sectionRegistry'
+import { getEffectiveRegistry } from './effectiveRegistry'
 import type { LayoutSection } from '@/types/builder'
 
 export function SectionEditorPanel({
   section,
   shopId,
+  templateId,
   removableBranding,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange,
 }: {
   section: LayoutSection | null
   shopId: string
+  /** The shop's current template — resolves which section types (core plus
+   *  whatever that template contributes) this panel knows how to edit. */
+  templateId?: string | null
   removableBranding: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (config: any) => void
@@ -31,7 +35,7 @@ export function SectionEditorPanel({
     )
   }
 
-  const def = SECTION_REGISTRY[section.type]
+  const def = getEffectiveRegistry(templateId)[section.type]
   const Editor = def.Editor
   const Icon = def.icon
 
