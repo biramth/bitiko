@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { MapPin, ShoppingBag } from 'lucide-react'
+import { MapPin, MessageCircle, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import {
@@ -21,7 +21,17 @@ import type { OrderConfirmationState } from '@/pages/store/OrderConfirmationPage
 import { trackEvent } from '@/lib/analytics'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
-function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: number; demo: boolean }) {
+function CheckoutFlow({
+  items,
+  subtotal,
+  demo,
+  showTrustBadges,
+}: {
+  items: CartItem[]
+  subtotal: number
+  demo: boolean
+  showTrustBadges: boolean
+}) {
   const { shop } = useTenant()
   const { clear } = useCart()
   const navigate = useNavigate()
@@ -244,6 +254,19 @@ function CheckoutFlow({ items, subtotal, demo }: { items: CartItem[]; subtotal: 
         >
           {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : 'Commander via WhatsApp'}
         </button>
+
+        {showTrustBadges && (
+          <ul className="flex flex-col gap-2 text-xs text-ink-700/60">
+            <li className="flex items-center gap-2">
+              <ShieldCheck size={14} className="shrink-0 text-ink-700/40" aria-hidden />
+              Aucune carte bancaire requise — espèces ou Mobile Money, comme vous préférez.
+            </li>
+            <li className="flex items-center gap-2">
+              <MessageCircle size={14} className="shrink-0 text-ink-700/40" aria-hidden />
+              Le vendeur confirme votre commande sur WhatsApp juste après.
+            </li>
+          </ul>
+        )}
       </form>
     </div>
   )
@@ -264,16 +287,27 @@ export function CheckoutRenderer({ shop, config }: { shop: Shop; config: Checkou
           <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1>
         </div>
       )}
-      <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} />
+      <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} showTrustBadges={config.showTrustBadges !== false} />
     </>
   )
 }
 
 export function CheckoutEditor({ config, onChange }: SectionEditorProps<CheckoutSectionConfig>) {
   return (
-    <div>
-      <label className={editorLabelClass}>Titre (superposé)</label>
-      <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} className={editorInputClass} />
+    <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Titre (superposé)</label>
+        <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} className={editorInputClass} />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          checked={config.showTrustBadges !== false}
+          onChange={() => onChange({ ...config, showTrustBadges: config.showTrustBadges === false })}
+          className="accent-brand-600"
+        />
+        Badges de réassurance (paiement, WhatsApp…)
+      </label>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Share2, ShoppingBag } from 'lucide-react'
+import { PartyPopper, Share2, ShoppingBag, Truck } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
@@ -11,6 +11,35 @@ import { editorInputClass, editorLabelClass, type SectionEditorProps } from './s
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
+
+/** Progress toward the shop's free-delivery threshold — hidden when the shop
+ *  hasn't configured one, or once it's already reached (delivery fee is
+ *  already computed as 0 at that point, so this becomes a celebration). */
+function FreeDeliveryProgress({ shop, subtotal }: { shop: Shop; subtotal: number }) {
+  const threshold = shop.free_delivery_threshold != null ? Number(shop.free_delivery_threshold) : null
+  if (threshold == null || threshold <= 0) return null
+  const currency = shop.currency ?? 'XOF'
+  const unlocked = subtotal >= threshold
+  const percent = Math.min(100, Math.round((subtotal / threshold) * 100))
+
+  return (
+    <div className="mb-6 rounded-lg bg-sand-100 p-4">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-ink-900">
+        {unlocked ? (
+          <><PartyPopper size={15} className="shrink-0 text-emerald-600" aria-hidden /> Livraison gratuite débloquée !</>
+        ) : (
+          <><Truck size={15} className="shrink-0 text-ink-700/60" aria-hidden /> Plus que {formatCurrency(threshold - subtotal, currency)} pour la livraison gratuite</>
+        )}
+      </p>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-900/10">
+        <div
+          className={`h-full rounded-full transition-[width] duration-300 ${unlocked ? 'bg-emerald-600' : 'bg-[var(--shop-accent)]'}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export function CartRenderer({ shop, config }: { shop: Shop; config: CartSectionConfig }) {
   const { items: realItems, subtotal: realSubtotal, updateQuantity, removeItem } = useCart()
@@ -63,6 +92,12 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
         <div className="flex items-start justify-between gap-4">
           {config.heading ? <h1 className="font-heading text-2xl font-bold text-[var(--shop-text)] sm:text-3xl">{config.heading}</h1> : <span />}
           {!isDemo && <button type="button" onClick={handleShareCart} aria-label="Partager le panier" className="inline-flex shrink-0 items-center gap-2 border border-ink-900/15 px-3 py-2 text-xs font-semibold text-ink-900 hover:border-ink-900 hover:bg-sand-50"><Share2 size={15} aria-hidden /> Partager</button>}
+        </div>
+      )}
+
+      {!isDemo && config.showFreeDeliveryProgress !== false && (
+        <div className="mt-6">
+          <FreeDeliveryProgress shop={shop} subtotal={subtotal} />
         </div>
       )}
 
@@ -156,13 +191,24 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
 
 export function CartEditor({ config, onChange }: SectionEditorProps<CartSectionConfig>) {
   return (
-    <div>
-      <label className={editorLabelClass}>Titre</label>
-      <input
-        value={config.heading}
-        onChange={(e) => onChange({ ...config, heading: e.target.value })}
-        className={editorInputClass}
-      />
+    <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Titre</label>
+        <input
+          value={config.heading}
+          onChange={(e) => onChange({ ...config, heading: e.target.value })}
+          className={editorInputClass}
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          checked={config.showFreeDeliveryProgress !== false}
+          onChange={() => onChange({ ...config, showFreeDeliveryProgress: config.showFreeDeliveryProgress === false })}
+          className="accent-brand-600"
+        />
+        Barre de progression vers la livraison gratuite
+      </label>
     </div>
   )
 }

@@ -1,4 +1,5 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Lock, Plus, Trash2 } from 'lucide-react'
 import type { FooterSectionConfig, HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
@@ -116,7 +117,7 @@ export function HeaderEditor({ config, onChange }: SectionEditorProps<HeaderSect
   )
 }
 
-export function FooterEditor({ config, onChange }: SectionEditorProps<FooterSectionConfig>) {
+export function FooterEditor({ config, onChange, removableBranding }: SectionEditorProps<FooterSectionConfig>) {
   return (
     <div className="space-y-3">
       <label className={checkboxRow}>
@@ -152,14 +153,26 @@ export function FooterEditor({ config, onChange }: SectionEditorProps<FooterSect
           className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
         />
       </div>
-      <label className={checkboxRow}>
-        <input
-          type="checkbox"
-          checked={config.hideBitikoBranding ?? false}
-          onChange={(e) => onChange({ ...config, hideBitikoBranding: e.target.checked })}
-        />
-        Masquer « Propulsé par Bitiko »
-      </label>
+      {removableBranding ? (
+        <label className={checkboxRow}>
+          <input
+            type="checkbox"
+            checked={config.hideBitikoBranding ?? false}
+            onChange={(e) => onChange({ ...config, hideBitikoBranding: e.target.checked })}
+          />
+          Masquer « Propulsé par Bitiko »
+        </label>
+      ) : (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+          <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
+            Masquer « Propulsé par Bitiko » est réservé au plan Pro.{' '}
+            <Link to="/admin/facturation" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+              Passer à Pro
+            </Link>
+          </span>
+        </div>
+      )}
       <p className="text-xs text-gray-500">
         Le footer s'affiche sur toutes les pages. Les réseaux sociaux se règlent dans Paramètres → Contact.
       </p>

@@ -350,6 +350,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
       <BuilderEditor
         key={activeKey}
         shop={shop}
+        removableBranding={plan.removableBranding}
         target={target}
         label={context.label}
         previewPath={previewPath}
@@ -387,6 +388,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
 
 function BuilderEditor({
   shop,
+  removableBranding,
   target,
   label,
   previewPath,
@@ -404,6 +406,7 @@ function BuilderEditor({
   allowAdvancedBuilder,
 }: {
   shop: Shop
+  removableBranding: boolean
   target: BuilderTarget
   label: string
   previewPath: string | null
@@ -584,6 +587,7 @@ function BuilderEditor({
             <SectionEditorPanel
               section={builder.selectedSection}
               shopId={shop.id}
+              removableBranding={removableBranding}
               onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
             />
           )}

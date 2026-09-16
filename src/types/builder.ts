@@ -94,16 +94,30 @@ export interface ProductSectionConfig {
   showDescription: boolean
   showQuantity: boolean
   showAddToCart: boolean
+  /** Reassurance row (paiement à la livraison, WhatsApp…) under the CTA.
+   *  Optional so shops saved before this field existed keep it on — see the
+   *  `!== false` checks in ProductSection.tsx. */
+  showTrustBadges?: boolean
+  /** "Vous aimerez aussi" cross-sell row, same category first. */
+  showRelatedProducts?: boolean
+  /** "Vu récemment" row, sourced from the visitor's own browsing history. */
+  showRecentlyViewed?: boolean
 }
 
 /** Dynamic cart block: the live cart contents + totals, plus a checkout CTA. */
 export interface CartSectionConfig {
   heading: string
+  /** Progress bar toward the shop's free-delivery threshold (no-op if the
+   *  shop hasn't set one). Optional for the same backward-compat reason as
+   *  the product section's new toggles. */
+  showFreeDeliveryProgress?: boolean
 }
 
 /** Dynamic checkout block: the full order form. */
 export interface CheckoutSectionConfig {
   heading: string
+  /** Reassurance row above the submit button. */
+  showTrustBadges?: boolean
 }
 
 export interface PromoSectionConfig {

@@ -34,6 +34,9 @@ export function buildDefaultSystemTemplate(key: SystemTemplateKey): LayoutSectio
             showDescription: true,
             showQuantity: true,
             showAddToCart: true,
+            showTrustBadges: true,
+            showRelatedProducts: true,
+            showRecentlyViewed: true,
           },
         },
       ]
@@ -43,7 +46,7 @@ export function buildDefaultSystemTemplate(key: SystemTemplateKey): LayoutSectio
           id: createSectionId('cart'),
           type: 'cart',
           visible: true,
-          config: { heading: 'Mon panier' },
+          config: { heading: 'Mon panier', showFreeDeliveryProgress: true },
         },
       ]
     case 'checkout':
@@ -52,7 +55,7 @@ export function buildDefaultSystemTemplate(key: SystemTemplateKey): LayoutSectio
           id: createSectionId('checkout'),
           type: 'checkout',
           visible: true,
-          config: { heading: 'Finaliser la commande' },
+          config: { heading: 'Finaliser la commande', showTrustBadges: true },
         },
       ]
   }

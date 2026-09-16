@@ -3,6 +3,7 @@ import {
   getActiveProductsByIds,
   getProductBySlug,
   listActiveProducts,
+  listRelatedProducts,
   listShopProducts,
   type AdminProductFilters,
   type ProductFilters,
@@ -21,6 +22,19 @@ export function useProduct(shopId: string | undefined, slug: string | undefined)
     queryKey: ['product', shopId, slug],
     queryFn: () => getProductBySlug(shopId as string, slug as string),
     enabled: !!shopId && !!slug,
+  })
+}
+
+export function useRelatedProducts(
+  shopId: string | undefined,
+  categoryId: string | null | undefined,
+  excludeProductId: string | undefined,
+  limit = 4,
+) {
+  return useQuery({
+    queryKey: ['products', 'related', shopId, categoryId, excludeProductId, limit],
+    queryFn: () => listRelatedProducts(shopId as string, categoryId, excludeProductId as string, limit),
+    enabled: !!shopId && !!excludeProductId,
   })
 }
 
