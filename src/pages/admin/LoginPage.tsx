@@ -5,8 +5,11 @@ import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { Turnstile } from '@/components/ui/Turnstile'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { trackEvent } from '@/lib/analytics'
+
+const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
@@ -31,6 +34,8 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [checkError, setCheckError] = useState<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileKey, setTurnstileKey] = useState(0)
 
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -65,13 +70,15 @@ export function LoginPage() {
       const res = await fetch('/api/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken }),
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error ?? 'Impossible de vérifier cet email.')
       setStep(body.exists ? 'login' : 'signup')
     } catch (err) {
       setCheckError(err instanceof Error ? err.message : 'Impossible de vérifier cet email.')
+      setTurnstileToken(null)
+      setTurnstileKey((k) => k + 1) // force the widget to remount — tokens are single-use
     } finally {
       setCheckingEmail(false)
     }
@@ -189,11 +196,13 @@ export function LoginPage() {
               </div>
             </div>
 
+            <Turnstile key={turnstileKey} onVerify={setTurnstileToken} />
+
             {checkError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{checkError}</p>}
 
             <button
               type="submit"
-              disabled={checkingEmail}
+              disabled={checkingEmail || (TURNSTILE_ENABLED && !turnstileToken)}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
             >
               {checkingEmail ? 'Vérification…' : 'Continuer'}
