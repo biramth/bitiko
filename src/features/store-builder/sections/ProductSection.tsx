@@ -5,6 +5,7 @@ import { useProduct } from '@/features/products/useProducts'
 import { StockBadge } from '@/features/products/StockBadge'
 import { useCart } from '@/features/cart/CartContext'
 import { Spinner } from '@/components/ui/Spinner'
+import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/format'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import type { Product, Shop } from '@/types'
@@ -27,6 +28,7 @@ function ProductDetails({
   lowStockThreshold: number
 }) {
   const { addItem } = useCart()
+  const toast = useToast()
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [added, setAdded] = useState(false)
@@ -59,6 +61,7 @@ function ProductDetails({
       stock: displayStock,
     })
     setAdded(true)
+    toast.success(`« ${product.name} » ajouté au panier.`)
     setTimeout(() => setAdded(false), 2000)
   }
 

@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { GoogleIcon } from '@/components/ui/GoogleIcon'
 import { useAuth } from './AuthContext'
+import { trackEvent } from '@/lib/analytics'
 
-export function GoogleSignInButton({ label = 'Continuer avec Google' }: { label?: string }) {
+export function GoogleSignInButton({
+  label = 'Continuer avec Google',
+  trackingEvent = 'sign_in',
+}: {
+  label?: string
+  trackingEvent?: string
+}) {
   const { signInWithGoogle } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -10,6 +17,7 @@ export function GoogleSignInButton({ label = 'Continuer avec Google' }: { label?
   const handleClick = async () => {
     setLoading(true)
     setError(null)
+    trackEvent(trackingEvent, { method: 'google' })
     const { error: signInError } = await signInWithGoogle()
     if (signInError) {
       setError(signInError)

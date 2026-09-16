@@ -86,13 +86,7 @@ Les clés Supabase se trouvent dans **Project Settings > API** du dashboard.
 ## Configuration Supabase
 
 1. Créer un nouveau projet sur https://supabase.com/dashboard.
-2. Dans **SQL Editor**, exécuter dans l'ordre les fichiers de `supabase/migrations/` :
-   - `0001_init.sql`
-   - `0002_rls.sql`
-   - `0003_create_order_function.sql`
-   - `0004_storage.sql`
-   - `0005_multitenant.sql`
-   - `0006_merchant_tools.sql`
+2. Dans **SQL Editor**, exécuter **tous** les fichiers de `supabase/migrations/` dans l'ordre numérique du préfixe (`0001` → `0020`, en incluant les deux `0010_*`). Le dossier fait foi — ne te fie pas à une liste figée ici, elle se périme à chaque nouvelle migration.
 3. (Optionnel) Régénérer les types TypeScript depuis le schéma réel :
    ```bash
    npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
@@ -112,7 +106,7 @@ Si la confirmation d'email est activée sur ton projet Supabase (réglage par d�
 
 - **Balises par page** : `usePageSeo` (`src/hooks/usePageSeo.ts`) met à jour `title`, `description`, `canonical` (calculé depuis l'hôte courant, donc un canonical propre par sous-domaine) et Open Graph à chaque navigation ; les pages produit injectent en plus du JSON-LD Product (`src/hooks/useProductStructuredData.ts`).
 - **Aperçus de liens dynamiques** : les bots de prévisualisation (WhatsApp, Facebook, X/Twitter, Telegram, Slack, LinkedIn, Discord…) n'exécutent pas de JS. Un middleware edge Vercel (`middleware.ts`) intercepte leurs requêtes sur les vraies URL de storefront — `/`, `/catalogue`, `/produits/:slug`, `/pages/:slug` — et les renvoie vers `api/og.ts`, qui construit des tags Open Graph **dynamiques par boutique/produit/page** (nom, description, image logo/bannière, prix *en cliquant sur un produit*). Les visiteurs réels et Googlebot ne passent pas par là : ils reçoivent la SPA directement, sans latence ajoutée.
-- **robots.txt / sitemap.xml** : servis par des fonctions Vercel (`api/robots.ts`, `api/sitemap.ts`, réécritures dans `vercel.json`) pour s'adapter à l'hôte — sitemap de la plateforme sur le domaine racine (avec les pages légales), sitemap du catalogue (produits et pages custom actifs) sur chaque sous-domaine boutique. Les fonctions lisent les mêmes variables d'environnement que le frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN` : à renseigner aussi dans les Project Settings Vercel).
+- **robots.txt / sitemap.xml** : servis par une seule fonction Vercel (`api/sitemap.ts`, réécritures `/robots.txt` et `/sitemap.xml` dans `vercel.json`) pour s'adapter à l'hôte — sitemap de la plateforme sur le domaine racine (avec les pages légales), sitemap du catalogue (produits et pages custom actifs) sur chaque sous-domaine boutique. Les fonctions lisent les mêmes variables d'environnement que le frontend (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN` : à renseigner aussi dans les Project Settings Vercel).
 
 ## Lancer en développement
 
@@ -131,7 +125,7 @@ L'application refuse de démarrer sans `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_K
 
 1. Pousser le dépôt sur GitHub.
 2. Importer le projet dans Vercel.
-3. Renseigner les variables d'environnement (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`) dans les Project Settings de Vercel.
+3. Renseigner les variables d'environnement (voir [Variables d'environnement](#variables-denvironnement)) dans les Project Settings de Vercel. Les variables `VITE_*` sont **inlinées au build** : après les avoir modifiées, il faut **redéployer** pour qu'elles prennent effet.
 4. Build command : `npm run build` — Output directory : `dist` (préréglage Vite, détecté automatiquement).
 5. Pour que les sous-domaines de boutique fonctionnent, ajouter un domaine wildcard (`*.tonapp.com`) dans Vercel Domains, en plus du domaine racine, et pointer le DNS wildcard chez ton registrar vers Vercel.
 
@@ -140,6 +134,38 @@ L'application refuse de démarrer sans `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_K
 ## Variables d'environnement
 
 Voir [`.env.example`](.env.example). Ne jamais commiter `.env` ou `.env.local` (déjà exclus via `.gitignore`).
+
+Deux familles de variables, à ne pas confondre :
+
+- **Client (`VITE_*`)** — exposées dans le bundle, lisibles par n'importe qui. Uniquement `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`, `VITE_DEV_SHOP_SLUG`, `VITE_GA_MEASUREMENT_ID`. À définir dans `.env` (local) **et** dans Vercel.
+- **Serveur (sans préfixe)** — jamais exposées au navigateur, lues uniquement par les fonctions `api/` : `SUPABASE_SERVICE_ROLE_KEY`, `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `CRON_SECRET`. À définir **uniquement dans Vercel** (jamais dans un fichier `.env` commité).
+
+> La clé `service_role` bypasse les RLS : ne la mettez jamais derrière un préfixe `VITE_` et ne la commitez jamais.
+
+### Nettoyage de la config Vercel
+
+Si le projet Vercel contient des variables inutilisées (`NEXT_PUBLIC_*`, `SUPABASE_URL`/`SUPABASE_ANON_KEY` au format publishable, doublons), elles restent sans effet sur cette app Vite mais brouillent la lecture. Un audit se fait avec :
+
+```bash
+vercel env ls            # liste les variables et les environnements ciblés
+vercel env rm SUPABASE_URL production   # supprime une variable obsolète (à répéter par environnement)
+```
+
+Vérifier aussi que `SUPABASE_SERVICE_ROLE_KEY` est bien déclarée pour **Preview** et **Production**, et, si `vercel dev` est utilisé en local, pour **Development**.
+
+## Limite de fonctions serverless
+
+Le plan Vercel Hobby plafonne à **12 fonctions serverless par déploiement**. Chaque fichier sous `api/` (hors `api/_lib/`, préfixe réservé aux modules partagés) et `middleware.ts` en consomme une. Le compte actuel est proche du plafond : **avant d'ajouter un handler `api/*.ts`, regrouper une logique existante** (via un paramètre `?action=` + réécriture dans `vercel.json`, comme `api/admin/payments.ts` ou `api/sitemap.ts`) plutôt que de créer un fichier de plus.
+
+## Tester les fonctions `api/` en local
+
+`npm run dev` ne sert **que** la SPA Vite : les routes `/api/*` répondent 404 et `middleware.ts` n'est pas exécuté. Pour tester les fonctions serverless (webhooks, cron, OG, sitemap, facturation) en local, utiliser le CLI Vercel :
+
+```bash
+vercel dev --listen 5173
+```
+
+Le CLI reste sur `5173` : c'est l'origine autorisée dans Supabase (**Authentication → URL Configuration**). Les variables serveur doivent alors être présentes dans l'environnement **Development** du projet Vercel (voir ci-dessus).
 
 ## Statuts de commande
 

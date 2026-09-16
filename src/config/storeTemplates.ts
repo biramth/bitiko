@@ -108,98 +108,15 @@ const baseTheme = (overrides: Partial<ThemeConfig>): ThemeConfig => ({
   ...overrides,
 })
 
-// Each template mimics the visual language of a well-known category of
-// e-commerce site (sportswear giants, premium tech, precision instruments,
-// luxury fashion, vibrant marketplaces) — not their logos or brand names,
-// just the layout/type/color instincts that make each genre recognizable at
-// a glance. Every section also carries copy written for that kind of shop,
-// so applying one feels like landing on a real, live store.
+/** The four commerce genre templates a shop can be created with. Named after
+ *  the vertical they mimic (fashion, grocery, beauty, electronics) — not a
+ *  specific brand. Each home layout carries copy written for that kind of
+ *  shop, so a freshly created store feels like a real, live boutique. */
 export const STORE_TEMPLATES: StoreTemplate[] = [
   {
-    key: 'sport',
-    label: 'Sport',
-    description: 'Grand format, typo massive, esprit grandes marques sportives (façon Nike).',
-    swatch: ['#111111', '#ff3b30'],
-    themeColor: '#ff3b30',
-    themeConfig: baseTheme({ secondaryColor: '#e5e5e5', textColor: '#0a0a0a', font: 'sora', textScale: 'lg', radius: 'none', contentWidth: 'wide' }),
-    layout: {
-      home: [
-        header(),
-        hero({
-          eyebrow: 'Édition performance',
-          heading: 'Entraînez-vous sans limites',
-          subheading: 'Des pièces techniques pensées pour bouger avec vous, sur et en dehors du terrain.',
-        }),
-        featuredProducts({ heading: 'Sélection athlètes' }),
-        categories({ heading: 'Shop par sport' }),
-        promo({
-          heading: 'Nouvelle saison, fraîchement arrivée',
-          body: 'Stocks limités sur les dernières sorties.',
-          buttonLabel: 'Voir la collection',
-        }),
-        products({ heading: 'Tous les articles', limit: 16 }),
-        footer(),
-      ],
-      ...systemLayout('Tous les articles'),
-    },
-  },
-  {
-    key: 'studio',
-    label: 'Studio',
-    description: 'Ultra épuré, immense respiration, un seul produit à la fois (façon Apple).',
-    swatch: ['#ffffff', '#1d1d1f'],
-    themeColor: '#111111',
-    themeConfig: baseTheme({ secondaryColor: '#f5f5f7', textColor: '#1d1d1f', buttonColor: '#111111', font: 'inter', textScale: 'lg', radius: 'lg', contentWidth: 'narrow' }),
-    layout: {
-      home: [
-        header({ sticky: true }),
-        hero({
-          eyebrow: 'Nouveau',
-          heading: 'Pensé dans les moindres détails',
-          subheading: 'Des produits simples à utiliser, conçus pour durer.',
-        }),
-        featuredProducts({ heading: 'À la une' }),
-        text({
-          heading: "Un design qui s'efface devant l'usage",
-          body: 'Chaque produit est choisi pour sa qualité et sa simplicité — rien de superflu.',
-          align: 'center',
-        }),
-        products({ heading: 'Tous les produits' }),
-        footer({ showSocialLinks: false, showAddress: false }),
-      ],
-      ...systemLayout('Tous les produits'),
-    },
-  },
-  {
-    key: 'precision',
-    label: 'Precision',
-    description: 'Grille technique, tons graphite et accent métal, esprit horloger/instruments (façon Casio).',
-    swatch: ['#1f2937', '#fbbf24'],
-    themeColor: '#1f2937',
-    themeConfig: baseTheme({ secondaryColor: '#fbbf24', textColor: '#111827', font: 'inter', radius: 'none', contentWidth: 'normal' }),
-    layout: {
-      home: [
-        header(),
-        hero({
-          eyebrow: 'Précision & fiabilité',
-          heading: 'Chaque détail compte',
-          subheading: 'Des produits testés, garantis, pensés pour durer dans le temps.',
-        }),
-        products({ heading: 'Catalogue complet' }),
-        featuredProducts({ heading: 'Les incontournables' }),
-        text({
-          heading: 'Garantie constructeur',
-          body: 'Tous nos produits sont vérifiés avant expédition et couverts par une garantie.',
-        }),
-        footer(),
-      ],
-      ...systemLayout('Catalogue complet'),
-    },
-  },
-  {
-    key: 'editorial',
-    label: 'Editorial',
-    description: 'Ton magazine, couleurs riches, mise en avant produit soignée (façon maison de mode).',
+    key: 'mode',
+    label: 'Mode',
+    description: 'Élégant et éditorial, ton magazine — l\'esprit maison de mode.',
     swatch: ['#7f1d1d', '#fdfbf7'],
     themeColor: '#7f1d1d',
     themeConfig: baseTheme({ secondaryColor: '#e7e0d3', textColor: '#1c1917', backgroundColor: '#fdfbf7', font: 'sora', textScale: 'lg', radius: 'none', contentWidth: 'wide' }),
@@ -212,10 +129,6 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
           subheading: 'Pièces sélectionnées, en série limitée.',
         }),
         featuredProducts({ heading: 'En couverture' }),
-        text({
-          heading: 'Notre histoire',
-          body: "Une sélection pensée à la main, pièce par pièce, pour celles et ceux qui veulent porter autre chose que l'ordinaire.",
-        }),
         categories({ heading: 'Explorer' }),
         promo({
           heading: 'Pièces en édition limitée',
@@ -229,57 +142,101 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     },
   },
   {
-    key: 'marche',
-    label: 'Marché',
-    description: 'Vif, coloré, orienté bonnes affaires — esprit grande place de marché en ligne.',
-    swatch: ['#f97316', '#e11d48'],
-    themeColor: '#e11d48',
-    themeConfig: baseTheme({ secondaryColor: '#fde68a', textColor: '#1f2937', buttonColor: '#e11d48', font: 'inter', radius: 'full', contentWidth: 'wide' }),
+    key: 'epicerie',
+    label: 'Épicerie',
+    description: 'Chaleureux et gourmand, l\'esprit boutique alimentaire de quartier.',
+    swatch: ['#15803d', '#fef3c7'],
+    themeColor: '#15803d',
+    themeConfig: baseTheme({ secondaryColor: '#fef3c7', textColor: '#1f2937', buttonColor: '#15803d', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'wide' }),
     layout: {
       home: [
         header(),
         hero({
-          eyebrow: 'Bonnes affaires du jour',
-          heading: 'Tout ce qu\'il vous faut, au meilleur prix',
-          subheading: 'Commandez en un clic sur WhatsApp, recevez chez vous.',
+          eyebrow: 'Produits frais et essentiels',
+          heading: 'Vos courses, livrées en un clic',
+          subheading: 'Commande facile sur WhatsApp, paiement à la livraison.',
         }),
         promo({
-          heading: 'Offre flash',
-          body: "Jusqu'à -30% sur une sélection, aujourd'hui seulement.",
+          heading: 'Promo de la semaine',
+          body: "Jusqu'à -20% sur une sélection de produits frais.",
           buttonLabel: "J'en profite",
         }),
-        categories({ heading: 'Toutes les catégories' }),
-        products({ heading: 'Meilleures ventes', limit: 16 }),
-        featuredProducts({ heading: 'Coups de cœur clients' }),
-        footer(),
-      ],
-      ...systemLayout('Meilleures ventes'),
-    },
-  },
-  {
-    key: 'classic',
-    label: 'Classic',
-    description: 'Chaleureux et complet — l\'esprit boutique de quartier, en ligne.',
-    swatch: ['#9c3814', '#fbe2d3'],
-    themeColor: '#9c3814',
-    themeConfig: baseTheme({ secondaryColor: '#fbe2d3', radius: 'md', contentWidth: 'normal' }),
-    layout: {
-      home: [
-        header(),
-        hero({
-          eyebrow: 'Depuis le quartier, pour tout le monde',
-          heading: 'Votre boutique de confiance',
-          subheading: 'Des produits choisis avec soin, un service qui répond vraiment.',
-        }),
         categories({ heading: 'Nos rayons' }),
+        products({ heading: 'Nos produits', limit: 16 }),
         text({
           heading: 'Pourquoi nous choisir',
-          body: 'Commande facile sur WhatsApp, paiement à la livraison, et un vendeur qui vous connaît par votre nom.',
+          body: 'Des produits frais, choisis le matin même, et un grand choix d\'essentiels au quotidien.',
+          align: 'center',
         }),
-        products({ heading: 'Nos produits' }),
         footer(),
       ],
       ...systemLayout('Nos produits'),
     },
   },
+  {
+    key: 'beaute',
+    label: 'Beauté',
+    description: 'Doux et raffiné, tons rosés — l\'esprit boutique de cosmétiques.',
+    swatch: ['#be185d', '#fdf2f8'],
+    themeColor: '#be185d',
+    themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Soins & cosmétiques',
+          heading: 'Révélez votre éclat naturel',
+          subheading: 'Une sélection beauté pensée pour toutes les peaux.',
+        }),
+        featuredProducts({ heading: 'Nos best-sellers' }),
+        text({
+          heading: 'Conseils d\'experte',
+          body: 'Chaque produit est choisi pour sa qualité et testé avant d\'être proposé à la vente.',
+          align: 'center',
+        }),
+        categories({ heading: 'Par catégorie' }),
+        products({ heading: 'Toute la routine' }),
+        footer(),
+      ],
+      ...systemLayout('Toute la routine'),
+    },
+  },
+  {
+    key: 'tech',
+    label: 'High-Tech',
+    description: 'Net et moderne, accents bleus — l\'esprit boutique électronique.',
+    swatch: ['#1d4ed8', '#f3f4f6'],
+    themeColor: '#2563eb',
+    themeConfig: baseTheme({ secondaryColor: '#eef2ff', textColor: '#0f172a', buttonColor: '#1d4ed8', font: 'inter', textScale: 'base', radius: 'none', contentWidth: 'wide' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Technologie & électro',
+          heading: 'La tech au juste prix',
+          subheading: 'Smartphones, accessoires et électroménager vérifiés, garantis.',
+        }),
+        products({ heading: 'Nouveautés', limit: 12 }),
+        categories({ heading: 'Par marque' }),
+        text({
+          heading: 'Garantie & SAV',
+          body: 'Tous nos produits sont testés avant expédition et couverts par une garantie constructeur.',
+          align: 'center',
+        }),
+        promo({
+          heading: 'Offres du moment',
+          body: 'Des réductions exclusives sur une sélection d\'articles.',
+          buttonLabel: 'Voir les offres',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Nouveautés'),
+    },
+  },
 ]
+
+/** Lookup by `template_id`. A shop stores its chosen genre's key here; the
+ *  palettes used for the free-plan category colors are read from it. */
+export const STORE_TEMPLATE_BY_KEY: Record<string, StoreTemplate> = Object.fromEntries(
+  STORE_TEMPLATES.map((template) => [template.key, template]),
+)

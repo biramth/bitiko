@@ -17,8 +17,8 @@ function gtag(...args: unknown[]) {
 }
 
 /**
- * Google Analytics 4 (gtag.js) for the storefront only. No-op unless
- * VITE_GA_MEASUREMENT_ID is set — never loads anything without it.
+ * Google Analytics 4 (gtag.js) for platform + storefront pages.
+ * No-op unless VITE_GA_MEASUREMENT_ID is set — never loads anything without it.
  */
 export function GoogleAnalytics() {
   const location = useLocation()

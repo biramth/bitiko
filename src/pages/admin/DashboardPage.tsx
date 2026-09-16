@@ -1,17 +1,18 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Copy, ExternalLink, PackagePlus, Tags } from 'lucide-react'
+import { Copy, ExternalLink, PackagePlus, Tags, Circle, CheckCircle2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getDashboardStats } from '@/services/dashboard.service'
 import { updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { ORDER_STATUS_ACTION_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, getLinearNext } from '@/config/constants'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useToast } from '@/components/ui/Toast'
 import type { OrderStatus } from '@/types'
 
 function StatCard({ label, value, to }: { label: string; value: string; to?: string }) {
@@ -30,10 +31,52 @@ function StatCard({ label, value, to }: { label: string; value: string; to?: str
   )
 }
 
+function SetupChecklist({
+  items,
+}: {
+  items: { done: boolean; label: ReactNode; hint?: string; to?: string }[]
+}) {
+  const remaining = items.filter((i) => !i.done).length
+  if (remaining === 0) return null
+
+  return (
+    <div className="mt-6 rounded-xl border border-brand-100 bg-brand-50 p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-gray-900">Finalisez votre boutique</h2>
+        <span className="text-xs font-medium text-brand-700">
+          {items.length - remaining}/{items.length} terminé
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2">
+            {item.done ? (
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" aria-hidden />
+            ) : (
+              <Circle size={16} className="mt-0.5 shrink-0 text-gray-300" aria-hidden />
+            )}
+            <span className={item.done ? 'text-gray-400 line-through' : 'text-gray-700'}>
+              {item.to && !item.done ? (
+                <Link to={item.to} className="font-medium text-brand-700 hover:text-brand-800">
+                  {item.label}
+                </Link>
+              ) : (
+                item.label
+              )}
+              {!item.done && item.hint ? <span className="text-gray-500"> — {item.hint}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export function DashboardPage() {
   usePageSeo({ title: 'Tableau de bord — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [copied, setCopied] = useState(false)
 
   const {
@@ -48,11 +91,13 @@ export function DashboardPage() {
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus(id, status),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['orders', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['order'] })
+      toast.success(`Commande ${ORDER_STATUS_LABELS[variables.status]}.`)
     },
+    onError: () => toast.error('Impossible de mettre à jour la commande.'),
   })
 
   const copyShopLink = async () => {
@@ -61,12 +106,13 @@ export function DashboardPage() {
       await navigator.clipboard.writeText(shopUrl(shop.slug))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      toast.success('Lien de la boutique copié.')
     } catch {
       window.location.href = shopUrl(shop.slug)
     }
   }
 
-  if (isLoading) return <Spinner />
+  if (isLoading) return <PageLoader />
   if (isError) return <ErrorMessage />
   if (!stats) return null
 
@@ -113,23 +159,15 @@ export function DashboardPage() {
         }
       />
 
-      {shop && stats.totalProducts === 0 && (
-        <div className="mt-6 rounded-xl border border-brand-100 bg-brand-50 p-5">
-          <h2 className="font-semibold text-gray-900">Prêt à lancer votre boutique ?</h2>
-          <ol className="mt-3 space-y-2 text-sm text-gray-700">
-            <li>
-              1. <Link to="/admin/produits/nouveau" className="font-medium text-brand-700 hover:text-brand-800">Ajoutez vos premiers produits</Link>{' '}
-              pour remplir le catalogue.
-            </li>
-            <li>
-              2. <Link to="/admin/parametres" className="font-medium text-brand-700 hover:text-brand-800">Configurez vos paramètres</Link>{' '}
-              (numéro WhatsApp, frais de livraison, alerte de stock).
-            </li>
-            <li>
-              3. Partagez le lien de votre boutique pour recevoir vos premières commandes.
-            </li>
-          </ol>
-        </div>
+      {shop && (
+        <SetupChecklist
+          items={[
+            { done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' },
+            { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres' },
+            { done: Number(shop.delivery_fee) > 0, label: 'Définissez vos frais de livraison', to: '/admin/parametres' },
+            { done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' },
+          ]}
+        />
       )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

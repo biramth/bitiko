@@ -10,7 +10,7 @@ import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
 import { useShopFavicon } from '@/hooks/usePageSeo'
 import { Logo } from '@/components/ui/Logo'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
@@ -215,7 +215,7 @@ export function StoreLayout() {
       </PreviewClickTarget>
 
       <main className="flex-1">
-        <Suspense fallback={<Spinner />}>
+        <Suspense fallback={<PageLoader />}>
           <Outlet />
         </Suspense>
       </main>

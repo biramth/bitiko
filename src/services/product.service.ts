@@ -85,6 +85,7 @@ export async function getProductBySlug(
 export interface AdminProductFilters {
   search?: string
   stock?: 'low' | 'out'
+  categoryId?: string
   page?: number
 }
 
@@ -108,6 +109,7 @@ export async function listShopProducts(
     .order('created_at', { ascending: false })
 
   if (filters.search) query = query.ilike('name', `%${filters.search}%`)
+  if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
   if (filters.stock === 'out') query = query.eq('stock', 0)
   if (filters.stock === 'low') query = query.gt('stock', 0).lte('stock', lowStockThreshold)
 

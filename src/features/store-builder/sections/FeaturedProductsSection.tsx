@@ -82,7 +82,7 @@ export function FeaturedProductsEditor({
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-sand-100">
                   {cover ? (
-                    <img src={cover} alt="" className="h-full w-full object-cover" />
+                    <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <ImageOff size={14} className="text-gray-300" />
                   )}

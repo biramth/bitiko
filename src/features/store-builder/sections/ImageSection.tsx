@@ -12,7 +12,7 @@ export function ImageRenderer({ config }: { config: ImageSectionConfig }) {
 
   const content = (
     <div className="aspect-[21/9] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
-      <img src={config.imageUrl} alt={config.caption} className="h-full w-full object-cover" />
+      <img src={config.imageUrl} alt={config.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
     </div>
   )
 

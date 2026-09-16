@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabaseClient'
+import { ensurePinnedSections } from '@/config/defaultLayout'
+import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import type { Shop, TenantContext } from '@/types'
+import type { SystemTemplateMap } from '@/types/builder'
 
 export async function getShopByTenant(tenant: TenantContext): Promise<Shop | null> {
   if (tenant.type !== 'shop') return null
@@ -36,6 +39,28 @@ export interface CreateShopInput {
   slug: string
   whatsappNumber: string
   currency?: string
+  /** Genre template key (mode, epicerie, beaute, tech) picked during onboarding. */
+  templateId?: string
+}
+
+/** Flattens a selected genre template into the shop record so the storefront
+ *  renders it (theme + home page + the four commerce pages) right away. */
+function templateFields(templateId: string | undefined): Partial<Shop> {
+  const template = templateId ? STORE_TEMPLATE_BY_KEY[templateId] : undefined
+  if (!template) return {}
+  const systemTemplates: SystemTemplateMap = {
+    catalogue: { published: template.layout.catalogue },
+    product: { published: template.layout.product },
+    cart: { published: template.layout.cart },
+    checkout: { published: template.layout.checkout },
+  }
+  return {
+    template_id: template.key,
+    theme_color: template.themeColor,
+    theme_config: template.themeConfig,
+    layout_sections: ensurePinnedSections(template.layout.home),
+    page_templates: systemTemplates,
+  }
 }
 
 export async function createShop(input: CreateShopInput): Promise<Shop> {
@@ -47,6 +72,7 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
       currency: input.currency ?? 'XOF',
+      ...templateFields(input.templateId),
     })
     .select()
     .single()

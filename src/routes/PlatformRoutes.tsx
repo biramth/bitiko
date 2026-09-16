@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 import { AdminLayout } from '@/layouts/AdminLayout'
+import { BUILDER_INTERNAL } from '@/config/features'
 import { LandingPage } from '@/pages/marketing/LandingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -39,6 +40,9 @@ const ProductFormPage = lazy(() =>
 const CategoriesPage = lazy(() =>
   import('@/pages/admin/CategoriesPage').then((m) => ({ default: m.CategoriesPage })),
 )
+const CategoryFormPage = lazy(() =>
+  import('@/pages/admin/CategoryFormPage').then((m) => ({ default: m.CategoryFormPage })),
+)
 const OrdersPage = lazy(() => import('@/pages/admin/OrdersPage').then((m) => ({ default: m.OrdersPage })))
 const OrderDetailPage = lazy(() =>
   import('@/pages/admin/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })),
@@ -57,7 +61,7 @@ const SuperAdminPage = lazy(() =>
 )
 
 const standalone = (page: React.ReactNode) => (
-  <Suspense fallback={<Spinner />}>{page}</Suspense>
+  <Suspense fallback={<PageLoader />}>{page}</Suspense>
 )
 
 export function PlatformRoutes() {
@@ -83,10 +87,13 @@ export function PlatformRoutes() {
               <Route path="produits" element={standalone(<ProductsPage />)} />
               <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
               <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+              <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
               <Route path="categories" element={standalone(<CategoriesPage />)} />
               <Route path="commandes" element={standalone(<OrdersPage />)} />
               <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
-              <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              {BUILDER_INTERNAL && (
+                <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              )}
               <Route path="facturation" element={standalone(<BillingPage />)} />
               <Route path="parametres">
                 <Route index element={<Navigate to="general" replace />} />

@@ -9,7 +9,7 @@ export function App() {
   return (
     <>
       <ScrollToTop />
-      {tenant.type !== 'platform' && <GoogleAnalytics />}
+      <GoogleAnalytics />
       {tenant.type === 'platform' ? <PlatformRoutes /> : <StoreApp />}
     </>
   )

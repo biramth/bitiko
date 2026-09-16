@@ -48,7 +48,7 @@ export function CartRenderer({ shop, config }: { shop: Shop; config: CartSection
           <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex gap-5 py-5">
             <div className="h-24 w-24 shrink-0 overflow-hidden bg-sand-100">
               {item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-ink-200">
                   <ImageOff size={24} aria-hidden />

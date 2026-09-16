@@ -38,23 +38,38 @@ export type Database = {
     Tables: {
       categories: {
         Row: {
+          color: string | null
           created_at: string
+          description: string | null
+          emoji: string | null
           id: string
+          image_url: string | null
           name: string
+          position: number
           shop_id: string
           slug: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
+          description?: string | null
+          emoji?: string | null
           id?: string
+          image_url?: string | null
           name: string
+          position?: number
           shop_id: string
           slug: string
         }
         Update: {
+          color?: string | null
           created_at?: string
+          description?: string | null
+          emoji?: string | null
           id?: string
+          image_url?: string | null
           name?: string
+          position?: number
           shop_id?: string
           slug?: string
         }
@@ -456,18 +471,30 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           created_at: string
+          first_name: string | null
           id: string
+          last_name: string | null
+          phone: string | null
           role: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
+          first_name?: string | null
           id: string
+          last_name?: string | null
+          phone?: string | null
           role?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
+          first_name?: string | null
           id?: string
+          last_name?: string | null
+          phone?: string | null
           role?: string
         }
         Relationships: []
@@ -524,6 +551,7 @@ export type Database = {
           payment_instructions: string | null
           slug: string
           social_links: Record<string, string>
+          template_id: string | null
           theme_color: string
           theme_config: ThemeConfig
           updated_at: string
@@ -548,6 +576,7 @@ export type Database = {
           payment_instructions?: string | null
           slug: string
           social_links?: Record<string, string>
+          template_id?: string | null
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string
@@ -572,6 +601,7 @@ export type Database = {
           payment_instructions?: string | null
           slug?: string
           social_links?: Record<string, string>
+          template_id?: string | null
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string

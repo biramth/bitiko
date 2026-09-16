@@ -17,17 +17,20 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { BUILDER_INTERNAL } from '@/config/features'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
-import { Spinner } from '@/components/ui/Spinner'
+import { PageLoader } from '@/components/ui/PageLoader'
 
 const navItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
   { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/categories', label: 'Catégories', icon: Tags },
   { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2 },
+  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true },
   { to: '/admin/facturation', label: 'Facturation', icon: CreditCard },
 ]
+
+const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
 
 const settingsSections = [
   { to: '/admin/parametres/general', label: 'Général' },
@@ -132,7 +135,7 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
               <Icon size={18} aria-hidden />
               {!collapsed && label}
@@ -211,7 +214,7 @@ export function AdminLayout() {
           </div>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:hidden">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -237,7 +240,7 @@ export function AdminLayout() {
           </NavLink>
         </nav>
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <Suspense fallback={<Spinner />}>
+          <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>
         </main>
