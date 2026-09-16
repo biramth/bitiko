@@ -91,6 +91,9 @@ function Card({
 function AccountSection() {
   const { user, updateFullName, updateEmail, updatePassword } = useAuth()
   const toast = useToast()
+  // Google-only accounts have no 'email' identity — they've never set a
+  // password, so this card offers to add one rather than "change" it.
+  const hasPassword = user?.identities?.some((i) => i.provider === 'email') ?? true
 
   const [fullName, setFullName] = useState((user?.user_metadata?.full_name as string | undefined) ?? '')
   const [nameStatus, setNameStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -234,7 +237,15 @@ function AccountSection() {
         </form>
       </Card>
 
-      <Card icon={Phone} title="Mot de passe" description="Choisissez un mot de passe d'au moins 6 caractères.">
+      <Card
+        icon={Lock}
+        title="Mot de passe"
+        description={
+          hasPassword
+            ? "Choisissez un mot de passe d'au moins 8 caractères."
+            : 'Tu es connecté avec Google — ajoute un mot de passe (8 caractères minimum) pour pouvoir aussi te connecter avec ton email.'
+        }
+      >
         <form onSubmit={handleSavePassword} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -274,7 +285,7 @@ function AccountSection() {
               disabled={passwordStatus === 'saving' || !newPassword || !confirmPassword}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
             >
-              {passwordStatus === 'saving' ? 'Enregistrement…' : 'Changer le mot de passe'}
+              {passwordStatus === 'saving' ? 'Enregistrement…' : hasPassword ? 'Changer le mot de passe' : 'Ajouter un mot de passe'}
             </button>
           </div>
         </form>

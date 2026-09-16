@@ -8,14 +8,18 @@ import {
   CreditCard,
   ExternalLink,
   Gauge,
+  ImagePlus,
   LayoutDashboard,
   LogOut,
   Package,
+  Phone,
   Rocket,
   Settings,
   ShoppingBag,
   Store,
   Tags,
+  Truck,
+  User,
   Wand2,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -42,11 +46,11 @@ const navGroupIcons = {
 } as const
 
 const settingsSections = [
-  { to: '/admin/parametres/general', label: 'Général' },
-  { to: '/admin/parametres/appearance', label: 'Apparence' },
-  { to: '/admin/parametres/contact', label: 'Contact & devise' },
-  { to: '/admin/parametres/shipping', label: 'Livraison & stock' },
-  { to: '/admin/parametres/compte', label: 'Mon compte' },
+  { to: '/admin/parametres/general', label: 'Général', icon: Store },
+  { to: '/admin/parametres/appearance', label: 'Apparence', icon: ImagePlus },
+  { to: '/admin/parametres/contact', label: 'Contact & devise', icon: Phone },
+  { to: '/admin/parametres/shipping', label: 'Livraison & stock', icon: Truck },
+  { to: '/admin/parametres/compte', label: 'Mon compte', icon: User },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
@@ -92,7 +96,7 @@ export function AdminLayout() {
     } ${isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`
 
   const settingsSubLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
     }`
 
@@ -217,8 +221,9 @@ export function AdminLayout() {
           </button>
           {!collapsed && settingsExpanded && (
             <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-              {settingsSections.map(({ to, label }) => (
+              {settingsSections.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} className={settingsSubLinkClass}>
+                  <Icon size={15} aria-hidden />
                   {label}
                 </NavLink>
               ))}
