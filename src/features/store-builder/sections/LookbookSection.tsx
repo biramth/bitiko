@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { ImageOff, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
 import { uploadShopSectionImage } from '@/services/shop.service'
 import { createSectionId } from '@/config/defaultLayout'
-import type { LookbookImage, LookbookSectionConfig } from '@/types/builder'
+import type { LookbookImage, LookbookSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -11,19 +12,22 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024
  *  proves the registry seam (see effectiveRegistry.ts / templateSections.ts):
  *  it's only ever wired into a Mode template's registry, so it never shows
  *  up in another vertical's "add block" menu or edits. */
-export function LookbookRenderer({ config }: { config: LookbookSectionConfig }) {
+export function LookbookRenderer({ config, themeConfig }: { config: LookbookSectionConfig; themeConfig: ThemeConfig }) {
   const images = config.images.filter((img) => img.imageUrl)
   if (images.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6">
       {config.heading.trim() && (
-        <h2 className="mb-6 font-heading text-lg font-bold text-[var(--shop-text)]">{config.heading}</h2>
+        <h2 className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h2>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {images.map((img, i) => (
           <figure key={img.id} className={i === 0 ? 'col-span-2 sm:col-span-1 sm:row-span-2' : ''}>
-            <div className={`w-full overflow-hidden bg-sand-100 ${i === 0 ? 'aspect-[4/5] sm:aspect-[3/4]' : 'aspect-square'}`}>
+            <div
+              className={`w-full overflow-hidden bg-sand-100 ${i === 0 ? 'aspect-[4/5] sm:aspect-[3/4]' : 'aspect-square'}`}
+              style={{ borderRadius: 'var(--shop-radius)' }}
+            >
               <img src={img.imageUrl!} alt={img.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </div>
             {img.caption.trim() && <figcaption className="mt-2 text-xs text-[var(--shop-text)]/60">{img.caption}</figcaption>}

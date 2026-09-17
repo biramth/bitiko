@@ -4,16 +4,17 @@ import { useFeaturedProducts, useShopProducts } from '@/features/products/usePro
 import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
-import type { FeaturedProductsSectionConfig } from '@/types/builder'
+import type { FeaturedProductsSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
-export function FeaturedProductsRenderer({ shop, config }: { shop: Shop; config: FeaturedProductsSectionConfig }) {
+export function FeaturedProductsRenderer({ shop, config, themeConfig }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig }) {
   const { data: products = [] } = useFeaturedProducts(shop.id, config.productIds)
   if (products.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
-      <h2 className="mb-6 font-heading text-lg font-bold text-[var(--shop-text)]">{config.heading || 'Sélection'}</h2>
+      <h2 className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading || 'Sélection'}</h2>
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />

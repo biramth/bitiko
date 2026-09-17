@@ -1,7 +1,8 @@
-import type { TextSectionConfig } from '@/types/builder'
+import type { TextSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
-export function TextRenderer({ config }: { config: TextSectionConfig }) {
+export function TextRenderer({ config, themeConfig }: { config: TextSectionConfig; themeConfig: ThemeConfig }) {
   if (!config.heading.trim() && !config.body.trim()) return null
   const align = config.align === 'center' ? 'text-center mx-auto' : 'text-left'
 
@@ -10,7 +11,7 @@ export function TextRenderer({ config }: { config: TextSectionConfig }) {
       <div className={`max-w-2xl ${align}`}>
         {config.heading.trim() && (
           <h2
-            className="font-bold text-[var(--shop-text)] text-2xl sm:text-3xl"
+            className={`font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
             style={{ fontFamily: 'var(--shop-font-heading)' }}
           >
             {config.heading}

@@ -1,17 +1,21 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import type { PromoSectionConfig } from '@/types/builder'
+import type { PromoSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 function isExternal(url: string) {
   return /^https?:\/\//i.test(url)
 }
 
-export function PromoRenderer({ config }: { config: PromoSectionConfig }) {
+export function PromoRenderer({ config, themeConfig }: { config: PromoSectionConfig; themeConfig: ThemeConfig }) {
   if (!config.heading.trim()) return null
 
   const button = config.buttonLabel.trim() && (
-    <span className="mt-5 inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-ink-900">
+    <span
+      className="mt-5 inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-accent)]"
+      style={{ borderRadius: 'var(--shop-radius)' }}
+    >
       {config.buttonLabel}
       <ArrowRight size={15} aria-hidden />
     </span>
@@ -23,7 +27,7 @@ export function PromoRenderer({ config }: { config: PromoSectionConfig }) {
         className="flex flex-col items-start px-6 py-10 text-white sm:px-10"
         style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', borderRadius: 'var(--shop-radius)' }}
       >
-        <h2 className="max-w-lg text-2xl font-bold sm:text-3xl" style={{ fontFamily: 'var(--shop-font-heading)' }}>
+        <h2 className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={{ fontFamily: 'var(--shop-font-heading)' }}>
           {config.heading}
         </h2>
         {config.body.trim() && <p className="mt-2 max-w-md text-white/80">{config.body}</p>}

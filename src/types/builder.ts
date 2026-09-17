@@ -52,6 +52,12 @@ export interface FooterSectionConfig {
   copyrightText: string
   /** Pro-only: lets the merchant remove "Propulsé par Bitiko" — ignored (always shown) on the free plan. */
   hideBitikoBranding?: boolean
+  /** The footer keeps its own dark background regardless of the shop's theme
+   *  background color, so the global button/text colors (calibrated for a
+   *  light background) aren't safe to reuse as-is here — these give the
+   *  merchant the same control, scoped to the footer's dark surface. */
+  buttonColor?: string
+  textColor?: string
 }
 
 export interface HeroSectionConfig {

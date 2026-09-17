@@ -229,10 +229,13 @@ export function StoreLayout() {
       </main>
 
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={footerSection?.id} label={CORE_SECTION_REGISTRY.footer.label}>
-        <footer className="bg-ink-900 text-sand-50">
+        <footer
+          className="bg-ink-900 text-[var(--footer-text)]"
+          style={{ '--footer-text': footer.textColor || '#fffbf5', '--footer-button': footer.buttonColor || 'var(--shop-button)' } as React.CSSProperties}
+        >
         <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
           <div>
-            <div className="flex items-center gap-2.5 text-lg font-bold text-white" style={{ fontFamily: 'var(--shop-font-heading)' }}>
+            <div className="flex items-center gap-2.5 text-lg font-bold" style={{ fontFamily: 'var(--shop-font-heading)' }}>
               {shop?.logo_url ? (
                 <img src={shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
               ) : (
@@ -241,7 +244,7 @@ export function StoreLayout() {
               {shopName}
             </div>
             {shop?.description && (
-              <p className="mt-3 max-w-xs text-sm text-sand-50/50">{shop.description}</p>
+              <p className="mt-3 max-w-xs text-sm text-[var(--footer-text)]/50">{shop.description}</p>
             )}
             {footer.showSocialLinks && socialLinks.length > 0 && (
               <div className="mt-4 flex gap-3">
@@ -252,7 +255,7 @@ export function StoreLayout() {
                     target="_blank"
                     rel="noreferrer"
                     aria-label={socialLabel(platform)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sand-50/70 hover:bg-white/20 hover:text-white"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-[var(--footer-text)]/70 hover:bg-white/20 hover:text-[var(--footer-text)]"
                   >
                     <SocialIcon platform={platform} size={15} />
                   </a>
@@ -263,11 +266,11 @@ export function StoreLayout() {
 
           {((footer.showAddress && shop?.address) || (footer.showWhatsapp && shop?.whatsapp_number)) && (
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-sand-50/50">Nous contacter</h3>
-              <ul className="mt-4 space-y-2.5 text-sm text-sand-50/80">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--footer-text)]/50">Nous contacter</h3>
+              <ul className="mt-4 space-y-2.5 text-sm text-[var(--footer-text)]/80">
                 {footer.showAddress && shop?.address && (
                   <li className="flex items-start gap-2">
-                    <MapPin size={15} className="mt-0.5 shrink-0 text-sand-50/40" aria-hidden />
+                    <MapPin size={15} className="mt-0.5 shrink-0 text-[var(--footer-text)]/40" aria-hidden />
                     {shop.address}
                   </li>
                 )}
@@ -277,9 +280,9 @@ export function StoreLayout() {
                       href={whatsappHref(shop.whatsapp_number)}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 hover:text-white"
+                      className="flex items-center gap-2 hover:text-[var(--footer-text)]"
                     >
-                      <MessageCircle size={15} className="shrink-0 text-sand-50/40" aria-hidden />
+                      <MessageCircle size={15} className="shrink-0 text-[var(--footer-text)]/40" aria-hidden />
                       Écrire sur WhatsApp
                     </a>
                   </li>
@@ -289,21 +292,25 @@ export function StoreLayout() {
           )}
 
           <div className="flex flex-col justify-between gap-6 md:items-end">
-            <Link to="/catalogue" className="text-sm font-medium text-sand-50/80 hover:text-white md:self-end">
+            <Link
+              to="/catalogue"
+              style={{ borderRadius: 'var(--shop-radius)' }}
+              className="inline-flex items-center gap-1.5 bg-[var(--footer-button)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 md:self-end"
+            >
               Voir tout le catalogue →
             </Link>
             {showBitikoBranding && (
-              <a href={platformUrl()} className="inline-flex items-center gap-1.5 text-xs text-sand-50/40 hover:text-sand-50/70">
+              <a href={platformUrl()} className="inline-flex items-center gap-1.5 text-xs text-[var(--footer-text)]/40 hover:text-[var(--footer-text)]/70">
                 Propulsé par <Logo size={14} withWordmark={false} /> <span className="font-semibold">Bitiko</span>
               </a>
             )}
           </div>
         </div>
-        <div className="flex flex-col items-center gap-2 border-t border-white/10 py-4 text-center text-xs text-sand-50/40 sm:flex-row sm:justify-between sm:px-4">
+        <div className="flex flex-col items-center gap-2 border-t border-white/10 py-4 text-center text-xs text-[var(--footer-text)]/40 sm:flex-row sm:justify-between sm:px-4">
           <p>{footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}</p>
           <p className="flex items-center gap-3">
-            <a href={`${platformUrl()}/legal/cgu`} className="hover:text-sand-50/70">CGU</a>
-            <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-sand-50/70">Confidentialité</a>
+            <a href={`${platformUrl()}/legal/cgu`} className="hover:text-[var(--footer-text)]/70">CGU</a>
+            <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-[var(--footer-text)]/70">Confidentialité</a>
           </p>
         </div>
       </footer>
