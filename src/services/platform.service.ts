@@ -64,22 +64,3 @@ export async function getPlatformShops(): Promise<PlatformShop[]> {
   if (error) throw new Error(error.message)
   return data ?? []
 }
-
-export interface PlatformOrder {
-  id: string
-  order_number: string
-  shop_id: string
-  shop_name: string
-  shop_slug: string
-  customer_name: string
-  customer_phone: string
-  total: number
-  status: string
-  created_at: string
-}
-
-export async function getPlatformOrders(limit = 25): Promise<PlatformOrder[]> {
-  const { data, error } = await supabase.rpc('get_platform_orders', { p_limit: limit })
-  if (error) throw new Error(error.message)
-  return data ?? []
-}
