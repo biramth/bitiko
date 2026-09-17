@@ -65,7 +65,7 @@ async function handlePending(req: VercelRequest, res: VercelResponse) {
 
 /**
  * Manual counterpart to settlePaymentFromWaveSession for the Wave manual-bridge
- * payments (see api/request-pro-upgrade.ts).
+ * payments (see api/account.ts).
  *
  * The plan to activate is chosen explicitly by the platform admin here, in the
  * request body — it is never read from the payment row. That row only carries

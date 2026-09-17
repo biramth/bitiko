@@ -17,7 +17,7 @@ function formatPrice(amount: number, currency: string | null | undefined): strin
 
 /**
  * Runs daily (see vercel.json's `crons`). There's no auto-renewal on this
- * manual Wave-payment bridge (api/request-pro-upgrade.ts) — a Pro shop
+ * manual Wave-payment bridge (api/account.ts) — a Pro shop
  * silently reverts to free the instant current_period_end passes (see
  * effectivePlanKey in src/config/plans.ts) unless someone pays again first.
  * This nudges merchants 2-3 days ahead. The window matches the daily cron
