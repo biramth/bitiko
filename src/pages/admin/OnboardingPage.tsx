@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -27,6 +27,7 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
+import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { slugify } from '@/utils/format'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -75,6 +76,11 @@ export function OnboardingPage() {
   }
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
+  // Best-effort brand-color suggestion from the logo — applied instead of
+  // the template's default color if found, but stays a plain shop.theme_color
+  // like any other, editable later in Réglages just the same.
+  const [logoSuggestedColor, setLogoSuggestedColor] = useState<string | null>(null)
+  const latestLogoFileRef = useRef<File | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleLogoFile = (file: File | null) => {
@@ -84,6 +90,15 @@ export function OnboardingPage() {
       return url
     })
     setLogoFile(file)
+    setLogoSuggestedColor(null)
+    latestLogoFileRef.current = file
+    if (file) {
+      void extractDominantColorFromFile(file).then((color) => {
+        // The merchant may have already removed/replaced the logo by the
+        // time this resolves — only apply it if this is still the same file.
+        if (latestLogoFileRef.current === file) setLogoSuggestedColor(color)
+      })
+    }
   }
 
   const debouncedSlug = useDebouncedValue(slug, 400)
@@ -132,7 +147,10 @@ export function OnboardingPage() {
       let shop = await createShop({ ownerId, name: name.trim(), slug, whatsappNumber, templateId })
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
-        shop = await updateShop(shop.id, { logo_url: logoUrl })
+        shop = await updateShop(shop.id, {
+          logo_url: logoUrl,
+          ...(logoSuggestedColor ? { theme_color: logoSuggestedColor } : {}),
+        })
       }
       return shop
     },
@@ -150,6 +168,7 @@ export function OnboardingPage() {
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
   const selectedVertical = VERTICAL_BY_KEY[businessType]
+  const effectiveThemeColor = logoSuggestedColor ?? selectedTemplate.themeColor
 
   const slugStatus: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error' = !slug
     ? 'idle'
@@ -519,7 +538,18 @@ export function OnboardingPage() {
                   {logoPreviewUrl && logoFile ? (
                     <>
                       <p className="truncate text-sm font-medium text-ink-900">{logoFile.name}</p>
-                      <p className="mt-0.5 text-xs text-gray-500">Image prête à être utilisée.</p>
+                      {logoSuggestedColor ? (
+                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                          <span
+                            className="inline-block h-3 w-3 shrink-0 rounded-full border border-black/10"
+                            style={{ backgroundColor: logoSuggestedColor }}
+                            aria-hidden
+                          />
+                          Couleur de la boutique mise à jour à partir de ton logo — modifiable plus tard.
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-gray-500">Image prête à être utilisée.</p>
+                      )}
                       <button
                         type="button"
                         className="mt-2 text-xs text-red-500 hover:underline"
@@ -612,11 +642,17 @@ export function OnboardingPage() {
                       <span>{selectedTemplate.label}</span>
                       <span
                         className="inline-block h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ backgroundColor: selectedTemplate.themeColor }}
+                        style={{ backgroundColor: effectiveThemeColor }}
                         aria-hidden
                       />
                     </span>
                   </div>
+                  {logoSuggestedColor && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500">Couleur</span>
+                      <span className="text-right text-xs text-gray-500">Suggérée à partir de ton logo</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-gray-500">Logo</span>
                     {logoPreviewUrl ? (
