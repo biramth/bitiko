@@ -155,8 +155,25 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
       </div>
       <div className="border-t border-gray-200 pt-3">
         <p className="mb-2 text-xs text-gray-400">
-          Le footer garde un fond sombre quel que soit le thème de la boutique — réglez ici la couleur de son bouton et de son texte.
+          Le footer garde ses propres couleurs, indépendantes du thème général de la boutique — réglez-les ici.
         </p>
+        <label className={editorLabelClass}>Couleur de fond</label>
+        <div className="mt-1 flex items-center gap-3">
+          <input
+            type="color"
+            value={config.backgroundColor || '#17152e'}
+            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
+            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
+          />
+          <input
+            value={config.backgroundColor ?? ''}
+            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
+            placeholder="Laisser vide = sombre (par défaut)"
+            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
+          />
+        </div>
+      </div>
+      <div>
         <label className={editorLabelClass}>Couleur du bouton</label>
         <div className="mt-1 flex items-center gap-3">
           <input
