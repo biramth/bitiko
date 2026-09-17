@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
 
 /** Consistent, premium icon treatment shared by every card grid on the page —
  * a soft gradient tile instead of a flat tint, so icons read as designed
@@ -616,6 +617,7 @@ export function LandingPage() {
     description:
       "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
   })
+  useFaqStructuredData(faq)
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 font-sans text-ink-800">
