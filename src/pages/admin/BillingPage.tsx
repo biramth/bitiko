@@ -132,10 +132,22 @@ export function BillingForShop({ shopId }: { shopId: string }) {
           const isCurrent = planKey === key
           const paymentLink = key === 'essential' ? WAVE_ESSENTIAL_PAYMENT_LINK : WAVE_PRO_PAYMENT_LINK
           const features = key === 'free'
-            ? [`Jusqu'à ${tier.maxActiveProducts} produits actifs`, 'Personnalisation de base du frontstore', 'Commandes via WhatsApp']
+            ? [
+                `Jusqu'à ${tier.maxActiveProducts} produits actifs`,
+                `Personnalisation de base (${tier.maxCustomSections} blocs de contenu)`,
+                'Commandes via WhatsApp',
+              ]
             : key === 'essential'
-              ? ['Jusqu’à 50 produits actifs', 'Builder complet et pages personnalisées', 'Analytics standard et import CSV']
-              : ['Produits illimités', 'Personnalisation avancée et pages illimitées', 'Analytics avancées et branding retiré']
+              ? [
+                  'Jusqu’à 50 produits actifs',
+                  `Builder complet (${tier.maxCustomSections} blocs de contenu) et pages personnalisées`,
+                  'Analytics standard et import CSV',
+                ]
+              : [
+                  'Produits illimités',
+                  'Personnalisation illimitée (blocs et pages) et styles avancés',
+                  'Analytics avancées et branding retiré',
+                ]
 
           return (
             <div key={key} className={`rounded-xl bg-white p-5 ${key === 'essential' ? 'border-2 border-brand-500 shadow-sm' : 'border border-gray-200'}`}>

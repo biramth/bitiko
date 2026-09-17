@@ -18,6 +18,7 @@ import type {
   CategoriesSectionConfig,
   CartSectionConfig,
   CheckoutSectionConfig,
+  CoreSectionType,
   FeaturedProductsSectionConfig,
   FooterSectionConfig,
   HeaderSectionConfig,
@@ -45,7 +46,7 @@ import { CheckoutEditor, CheckoutRenderer } from './sections/CheckoutSection'
 import { FaqEditor, FaqRenderer } from './sections/FaqSection'
 import type { SectionEditorProps } from './sections/shared'
 
-interface SectionDefinition {
+export interface SectionDefinition {
   label: string
   /** One line explaining what the block is for — shown in the "add block" picker. */
   description: string
@@ -67,7 +68,19 @@ interface SectionDefinition {
   Renderer?: React.ComponentType<any>
 }
 
-export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
+/** A shop's actual registry (core + whatever its template contributes) is
+ *  necessarily partial over the full `SectionType` union — most shops don't
+ *  have a Lookbook renderer, for instance. Every consumer below resolves a
+ *  definition with `registry[type]` and must handle it being absent (a
+ *  stored section can outlive a template switch that stopped offering it). */
+export type SectionRegistry = Partial<Record<SectionType, SectionDefinition>>
+
+/** The section types every storefront can use regardless of template — the
+ *  registry a shop with no template (or a template contributing nothing
+ *  extra) resolves to. Templates layer their own section types on top of
+ *  this via `getEffectiveRegistry` (see effectiveRegistry.ts); this object
+ *  itself never varies by shop. */
+export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> = {
   header: {
     label: 'Header',
     description: 'Logo, navigation et panier — présent sur toutes les pages.',
@@ -306,6 +319,6 @@ export const SECTION_REGISTRY: Record<SectionType, SectionDefinition> = {
 }
 
 /** Types a merchant can add freely from the "+ Ajouter un bloc" menu (excludes pinned header/footer). */
-export const ADDABLE_SECTION_TYPES = (Object.keys(SECTION_REGISTRY) as SectionType[]).filter(
-  (type) => !SECTION_REGISTRY[type].pinned,
-)
+export function getAddableSectionTypes(registry: SectionRegistry): SectionType[] {
+  return (Object.keys(registry) as SectionType[]).filter((type) => !registry[type]?.pinned)
+}

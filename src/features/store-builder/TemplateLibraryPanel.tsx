@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { STORE_TEMPLATES } from '@/config/storeTemplates'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Link } from 'react-router-dom'
+import { Eye } from 'lucide-react'
+import { templatesForVertical } from '@/config/storeTemplates'
+import { VERTICAL_BY_KEY } from '@/config/verticals'
+import type { Shop } from '@/types'
 import type { StoreTemplate } from '@/types/builder'
 
 /** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch.
@@ -38,50 +40,69 @@ function TemplateThumbnail({ template }: { template: StoreTemplate }) {
   )
 }
 
-export function TemplateLibraryPanel({ onApply }: { onApply: (template: StoreTemplate) => void }) {
-  const [pendingTemplate, setPendingTemplate] = useState<StoreTemplate | null>(null)
+export function TemplateLibraryPanel({
+  shop,
+  previewingKey,
+  onPreview,
+}: {
+  shop: Pick<Shop, 'business_type' | 'template_id'>
+  /** Key of the template currently shown in the live preview, if any. */
+  previewingKey: string | null
+  onPreview: (template: StoreTemplate) => void
+}) {
+  const templates = templatesForVertical(shop.business_type)
+  const vertical = shop.business_type ? VERTICAL_BY_KEY[shop.business_type] : undefined
 
   return (
     <div>
-      <p className="mb-4 text-sm text-gray-500">
+      <p className="mb-1 text-sm text-gray-500">
         Un style redessine toute votre boutique d'un coup : couleurs, typographie et mise en page de l'accueil, du
         catalogue, de la fiche produit, du panier et de la commande — vos pages personnalisées ne sont pas touchées.
-        Il est appliqué en brouillon — prévisualisez, puis publiez. Vos réglages précis restent modifiables ensuite
-        dans l'onglet Thème.
+        Cliquez sur un style pour le prévisualiser avec vos propres données dans l'aperçu, puis appliquez-le si vous
+        l'aimez. Vos réglages précis restent modifiables ensuite dans l'onglet Thème.
+      </p>
+      <p className="mb-4 text-xs text-gray-400">
+        {vertical ? `Styles pour votre activité « ${vertical.label} ».` : 'Tous les styles.'}{' '}
+        <Link to="/admin/parametres" className="font-medium text-brand-700 hover:text-brand-800">
+          Changer de type de commerce
+        </Link>{' '}
+        pour voir d'autres styles.
       </p>
       <div className="space-y-3">
-        {STORE_TEMPLATES.map((template) => (
-          <button
-            key={template.key}
-            type="button"
-            onClick={() => setPendingTemplate(template)}
-            className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50/40"
-          >
-            <TemplateThumbnail template={template} />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
-              <span className="block text-xs text-gray-500">{template.description}</span>
-            </span>
-          </button>
-        ))}
+        {templates.map((template) => {
+          const isCurrent = shop.template_id === template.key
+          const isPreviewing = previewingKey === template.key
+          return (
+            <button
+              key={template.key}
+              type="button"
+              onClick={() => onPreview(template)}
+              aria-pressed={isPreviewing}
+              className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left hover:border-brand-300 hover:bg-brand-50/40 ${
+                isPreviewing ? 'border-brand-500 ring-1 ring-brand-500' : isCurrent ? 'border-brand-300 bg-brand-50/40' : 'border-gray-200'
+              }`}
+            >
+              <TemplateThumbnail template={template} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
+                  {isCurrent && (
+                    <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                      Actuel
+                    </span>
+                  )}
+                  {isPreviewing && (
+                    <span className="flex items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                      <Eye size={10} aria-hidden /> Aperçu
+                    </span>
+                  )}
+                </span>
+                <span className="block text-xs text-gray-500">{template.description}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
-
-      <ConfirmDialog
-        open={pendingTemplate !== null}
-        title="Appliquer ce style à toute la boutique ?"
-        description={
-          pendingTemplate
-            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${pendingTemplate.label}" en brouillon. Prévisualisez d'abord, puis publiez.`
-            : ''
-        }
-        confirmLabel="Appliquer"
-        tone="default"
-        onConfirm={() => {
-          if (pendingTemplate) onApply(pendingTemplate)
-          setPendingTemplate(null)
-        }}
-        onClose={() => setPendingTemplate(null)}
-      />
     </div>
   )
 }

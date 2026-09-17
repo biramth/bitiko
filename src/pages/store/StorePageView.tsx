@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
+import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry'
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -81,13 +81,15 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
 
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
 
+  const registry = getEffectiveRegistry(shop.template_id)
+
   return (
     <div className="mx-auto py-6">
       <h1 className="sr-only">{page?.title}</h1>
       {sections.map((section) => {
-        const def = SECTION_REGISTRY[section.type]
-        const Renderer = def.Renderer
-        if (!Renderer || section.type === 'header' || section.type === 'footer') return null
+        const def = registry[section.type]
+        const Renderer = def?.Renderer
+        if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>

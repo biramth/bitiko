@@ -134,6 +134,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           cart: template.layout.cart,
           checkout: template.layout.checkout,
         },
+        templateId: template.key,
       },
     })
 }
@@ -167,6 +168,10 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
       cart: { published: systemPublished('cart') },
       checkout: { published: systemPublished('checkout') },
     },
+    // Only set when the draft came from applying a whole-store template
+    // (see storeApplyDraft) — a merchant tweaking colors/sections by hand
+    // isn't "switching template", so template_id is left untouched then.
+    ...(draft?.templateId ? { template_id: draft.templateId } : {}),
     builder_draft: null,
   })
 }
@@ -366,6 +371,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
         activeKey={activeKey}
         publishesStore={publishesStore}
         allowAdvancedBuilder={plan.advancedBuilder}
+        maxCustomSections={plan.maxCustomSections}
       />
 
       <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
@@ -404,6 +410,7 @@ function BuilderEditor({
   activeKey,
   publishesStore,
   allowAdvancedBuilder,
+  maxCustomSections,
 }: {
   shop: Shop
   removableBranding: boolean
@@ -422,12 +429,34 @@ function BuilderEditor({
   activeKey: ActiveKey
   publishesStore: boolean
   allowAdvancedBuilder: boolean
+  maxCustomSections: number | null
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+  const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
   const canDiscard = builder.dirty || hasStoredDraft
+
+  // Previewing a candidate style (Styles tab): shows it live in the same
+  // iframe, with the shop's real data, without writing anything — only
+  // "Appliquer ce style" below commits it as a draft. Scoped to the Styles
+  // tab — dropped the moment the merchant leaves it, adjusted during render
+  // (this codebase's pattern for resetting state when a prop/value changes)
+  // rather than in an effect, so "Blocs"/"Thème" never flash the previewed
+  // template before the reset commits.
+  const [previewTemplate, setPreviewTemplate] = useState<StoreTemplate | null>(null)
+  const [lastActiveTab, setLastActiveTab] = useState(builder.activeTab)
+  if (builder.activeTab !== lastActiveTab) {
+    setLastActiveTab(builder.activeTab)
+    if (previewTemplate) setPreviewTemplate(null)
+  }
+
+  const previewSections = previewTemplate
+    ? (target.templateSections?.(previewTemplate, builder.sections) ?? previewTemplate.layout.home)
+    : builder.sections
+  const previewThemeColor = previewTemplate ? previewTemplate.themeColor : builder.themeColor
+  const previewThemeConfig = previewTemplate ? previewTemplate.themeConfig : builder.themeConfig
 
   const handleRemoveSection = (id: string) => {
     builder.removeSection(id)
@@ -558,20 +587,49 @@ function BuilderEditor({
           onReorder={builder.reorderSection}
           onAdd={builder.addSection}
           availableTypes={availableTypes}
+          templateId={shop.template_id}
           allowTemplates={allowAdvancedBuilder}
+          maxCustomSections={maxCustomSections}
         />
 
         {previewPath && previewUrl ? (
-          <BuilderPreviewFrame
-            slug={shop.slug}
-            pagePath={previewPath}
-            templateKey={previewTemplateKey}
-            sections={builder.sections}
-            themeColor={builder.themeColor}
-            themeConfig={builder.themeConfig}
-            onSelectSection={builder.selectSection}
-            onNavigate={onNavigate}
-          />
+          <div className="flex min-w-0 flex-col">
+            {previewTemplate && (
+              <div className="flex items-center justify-between gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
+                <p className="text-sm font-medium text-brand-800">
+                  Aperçu avec vos données : <span className="font-semibold">{previewTemplate.label}</span>
+                </p>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTemplate(null)}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100"
+                  >
+                    Annuler l'aperçu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setApplyConfirmOpen(true)}
+                    className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    Appliquer ce style
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="min-h-0 flex-1">
+              <BuilderPreviewFrame
+                slug={shop.slug}
+                pagePath={previewPath}
+                templateKey={previewTemplateKey}
+                sections={previewSections}
+                themeColor={previewThemeColor}
+                themeConfig={previewThemeConfig}
+                onSelectSection={previewTemplate ? () => {} : builder.selectSection}
+                onNavigate={onNavigate}
+              />
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-8 text-center">
             <p className="text-sm font-medium text-gray-700">Aucun produit actif pour prévisualiser la fiche produit.</p>
@@ -587,6 +645,7 @@ function BuilderEditor({
             <SectionEditorPanel
               section={builder.selectedSection}
               shopId={shop.id}
+              templateId={shop.template_id}
               removableBranding={removableBranding}
               onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
             />
@@ -599,7 +658,9 @@ function BuilderEditor({
               onThemeConfigChange={builder.setThemeConfig}
             />
           )}
-          {builder.activeTab === 'templates' && <TemplateLibraryPanel onApply={builder.applyTemplate} />}
+          {builder.activeTab === 'templates' && (
+            <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
+          )}
         </div>
       </div>
 
@@ -609,7 +670,7 @@ function BuilderEditor({
         title={publishesStore ? "Publier le design de toute la boutique ?" : 'Publier cette page ?'}
         description={
           publishesStore
-            ? 'Le thème et la mise en page de l\u2019accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients.'
+            ? 'Le thème et la mise en page de l’accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients.'
             : 'Le contenu de cette page sera immédiatement visible par vos clients.'
         }
         confirmLabel="Publier"
@@ -646,6 +707,23 @@ function BuilderEditor({
         }
         onClose={() => setDiscardConfirmOpen(false)}
       />
+      <ConfirmDialog
+        open={applyConfirmOpen}
+        title="Appliquer ce style à toute la boutique ?"
+        description={
+          previewTemplate
+            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${previewTemplate.label}" en brouillon. Vos produits, catégories, commandes et informations restent inchangés — prévisualisez, puis publiez quand vous êtes prêt·e.`
+            : ''
+        }
+        confirmLabel="Appliquer"
+        tone="default"
+        onConfirm={() => {
+          if (previewTemplate) builder.applyTemplate(previewTemplate)
+          setApplyConfirmOpen(false)
+          setPreviewTemplate(null)
+        }}
+        onClose={() => setApplyConfirmOpen(false)}
+      />
     </div>
   )
 }
@@ -656,7 +734,7 @@ function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
 }

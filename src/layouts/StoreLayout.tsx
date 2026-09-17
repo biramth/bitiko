@@ -4,7 +4,7 @@ import { Globe, MapPin, Menu, MessageCircle, ShoppingCart, Store, X } from 'luci
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
-import { SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
+import { CORE_SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
 import { PREVIEW_NAV, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
@@ -122,7 +122,7 @@ export function StoreLayout() {
       style={{ ...themeConfigToCssVars(themeColor, themeConfig), fontFamily: 'var(--shop-font-body)' } as React.CSSProperties}
     >
       <PreviewNavPing enabled={isEmbeddedPreview} />
-      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={SECTION_REGISTRY.header.label}>
+      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={CORE_SECTION_REGISTRY.header.label}>
         <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
         <div className="mx-auto flex max-w-[var(--shop-content-width)] items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-[var(--shop-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
@@ -220,7 +220,7 @@ export function StoreLayout() {
         </Suspense>
       </main>
 
-      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={footerSection?.id} label={SECTION_REGISTRY.footer.label}>
+      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={footerSection?.id} label={CORE_SECTION_REGISTRY.footer.label}>
         <footer className="bg-ink-900 text-sand-50">
         <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
           <div>

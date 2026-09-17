@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Eye, EyeOff, GripVertical, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
-import { ADDABLE_SECTION_TYPES, SECTION_REGISTRY } from './sectionRegistry'
+import { Link } from 'react-router-dom'
+import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
+import { getEffectiveRegistry } from './effectiveRegistry'
 import type { BuilderTab } from './useBuilderState'
 import type { LayoutSection, SectionType } from '@/types/builder'
 
@@ -12,13 +14,13 @@ const TABS: { key: BuilderTab; label: string; icon: typeof Palette }[] = [
 
 /** Small colored square with the section's icon — gives every block type a
  *  distinct, recognizable identity instead of one flat gray icon for all. */
-function SectionIcon({ type, size = 'sm' }: { type: SectionType; size?: 'sm' | 'md' }) {
-  const def = SECTION_REGISTRY[type]
-  const Icon = def.icon
+function SectionIcon({ type, registry, size = 'sm' }: { type: SectionType; registry: SectionRegistry; size?: 'sm' | 'md' }) {
+  const def = registry[type]
+  const Icon = def?.icon ?? HelpCircle
   const dims = size === 'md' ? 'h-9 w-9 rounded-lg' : 'h-7 w-7 rounded-md'
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-sm ${dims} ${def.color}`}
+      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br text-white shadow-sm ${dims} ${def?.color ?? 'from-gray-400 to-gray-500'}`}
     >
       <Icon size={size === 'md' ? 17 : 14} aria-hidden />
     </span>
@@ -39,7 +41,9 @@ export function BuilderSidebar({
   onReorder,
   onAdd,
   availableTypes,
+  templateId,
   allowTemplates = true,
+  maxCustomSections,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -54,8 +58,18 @@ export function BuilderSidebar({
   /** Restricts the "+ Ajouter un bloc" menu to a subset of section types.
    *  Defaults to all addable types (used for the home page). */
   availableTypes?: SectionType[]
+  /** The shop's current template — resolves which section types (core plus
+   *  whatever that template contributes) show up here. */
+  templateId?: string | null
+  /** Whether the plan allows switching templates at all (see `Plan.advancedBuilder`).
+   *  Hides the "Styles" tab entirely rather than showing an empty/locked one. */
   allowTemplates?: boolean
+  /** Plan cap on freely-addable content blocks on this page (see
+   *  `Plan.maxCustomSections`) — catalog-display and commerce blocks are
+   *  never limited. `null`/absent = unlimited. */
+  maxCustomSections?: number | null
 }) {
+  const registry = getEffectiveRegistry(templateId)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -78,11 +92,21 @@ export function BuilderSidebar({
   }, [addMenuOpen])
 
   const presentTypes = new Set(sections.map((s) => s.type))
-  const addableTypes = (availableTypes ?? ADDABLE_SECTION_TYPES).filter(
-    (type) => !(SECTION_REGISTRY[type].singleton && presentTypes.has(type)),
-  )
+  const addableTypes = (availableTypes ?? getAddableSectionTypes(registry)).filter((type) => {
+    const def = registry[type]
+    return !!def && !(def.singleton && presentTypes.has(type))
+  })
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
-  for (const type of addableTypes) groupedAddable[SECTION_REGISTRY[type].category].push(type)
+  for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
+
+  // Content blocks (Bannière, Texte, Image, Promotion, FAQ…) are the
+  // "profondeur de personnalisation" the plan gates — catalog-display and
+  // commerce blocks (Catégories, Produits, Panier…) are never limited.
+  const customSectionCount = sections.filter((s) => {
+    const def = registry[s.type]
+    return !!def && def.category === 'content' && !def.pinned
+  }).length
+  const contentLimitReached = maxCustomSections != null && customSectionCount >= maxCustomSections
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -109,8 +133,8 @@ export function BuilderSidebar({
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           <ul ref={listRef} className="space-y-1">
             {sections.map((section) => {
-              const def = SECTION_REGISTRY[section.type]
-              const isDraggable = !def.pinned
+              const def = registry[section.type]
+              const isDraggable = !def?.pinned
               const isSelected = selectedSectionId === section.id
               return (
                 <li
@@ -153,12 +177,12 @@ export function BuilderSidebar({
                     onClick={() => onSelect(section.id)}
                     className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                   >
-                    <SectionIcon type={section.type} />
+                    <SectionIcon type={section.type} registry={registry} />
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-sm ${isSelected ? 'font-semibold text-brand-700' : 'font-medium text-gray-700'}`}>
-                        {def.label}
+                        {def?.label ?? 'Bloc inconnu'}
                       </span>
-                      {def.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
+                      {def?.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
                     </span>
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -171,7 +195,7 @@ export function BuilderSidebar({
                     >
                       {section.visible ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
-                    {!def.pinned && (
+                    {!def?.pinned && (
                       <button
                         type="button"
                         onClick={() => onDuplicate(section.id)}
@@ -182,7 +206,7 @@ export function BuilderSidebar({
                         <Copy size={14} />
                       </button>
                     )}
-                    {!def.pinned && (
+                    {!def?.pinned && (
                       <button
                         type="button"
                         onClick={() => onRemove(section.id)}
@@ -199,6 +223,12 @@ export function BuilderSidebar({
             })}
           </ul>
 
+          {maxCustomSections != null && (
+            <p className="mt-3 text-center text-[11px] text-gray-400">
+              {customSectionCount}/{maxCustomSections} blocs de contenu utilisés sur cette page
+            </p>
+          )}
+
           <div className="relative mt-3" ref={addMenuRef}>
             <button
               type="button"
@@ -212,26 +242,44 @@ export function BuilderSidebar({
                 {(['commerce', 'content'] as const).map((cat) =>
                   groupedAddable[cat].length === 0 ? null : (
                     <div key={cat} className="mb-1 last:mb-0">
-                      <p className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                        {CATEGORY_LABELS[cat]}
-                      </p>
+                      <div className="flex items-center justify-between gap-2 px-2 pb-1 pt-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                          {CATEGORY_LABELS[cat]}
+                        </p>
+                        {cat === 'content' && contentLimitReached && (
+                          <Link
+                            to="/admin/parametres/facturation"
+                            onClick={() => setAddMenuOpen(false)}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700"
+                          >
+                            <Lock size={10} aria-hidden /> Changer de plan
+                          </Link>
+                        )}
+                      </div>
                       {groupedAddable[cat].map((type) => {
-                        const def = SECTION_REGISTRY[type]
+                        const def = registry[type]
+                        if (!def) return null
+                        const locked = cat === 'content' && contentLimitReached
                         return (
                           <button
                             key={type}
                             type="button"
+                            disabled={locked}
+                            title={locked ? `Limite de blocs de contenu atteinte (${maxCustomSections}) — changez de plan pour plus.` : undefined}
                             onClick={() => {
                               onAdd(type)
                               setAddMenuOpen(false)
                             }}
-                            className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-gray-50"
+                            className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left ${
+                              locked ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'
+                            }`}
                           >
-                            <SectionIcon type={type} size="md" />
+                            <SectionIcon type={type} registry={registry} size="md" />
                             <span className="min-w-0 flex-1 pt-0.5">
                               <span className="block text-sm font-medium text-gray-900">{def.label}</span>
                               <span className="block text-xs leading-snug text-gray-500">{def.description}</span>
                             </span>
+                            {locked && <Lock size={13} className="mt-0.5 shrink-0 text-amber-500" aria-hidden />}
                           </button>
                         )
                       })}

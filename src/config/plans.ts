@@ -14,6 +14,18 @@ export interface Plan {
   removableBranding: boolean
   analytics: 'basic' | 'standard' | 'advanced'
   maxCustomPages: number | null
+  /**
+   * Cap on freely-addable content blocks (Bannière/Hero, Texte, Image,
+   * Promotion, FAQ, Lookbook…) per page — not the catalog-display blocks
+   * (Catégories, Produits) or the commerce singletons, which every plan can
+   * always use in full. Complements `maxCustomPages` (how many pages) and
+   * `advancedBuilder` (whether Styles/templates are browsable at all) as a
+   * third, Shopify-style lever on "profondeur de personnalisation" — every
+   * template stays available to every plan (see StoreBuilderLock,
+   * TemplateLibraryPanel); plans differ on how much a merchant can build on
+   * top of one. `null` = unlimited.
+   */
+  maxCustomSections: number | null
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -27,6 +39,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     removableBranding: false,
     analytics: 'basic',
     maxCustomPages: 1,
+    maxCustomSections: 3,
   },
   essential: {
     key: 'essential',
@@ -38,6 +51,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     removableBranding: false,
     analytics: 'standard',
     maxCustomPages: 5,
+    maxCustomSections: 10,
   },
   pro: {
     key: 'pro',
@@ -49,6 +63,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     removableBranding: true,
     analytics: 'advanced',
     maxCustomPages: null,
+    maxCustomSections: null,
   },
 }
 
@@ -70,6 +85,12 @@ export function effectivePlan(subscription: ShopSubscription | null | undefined)
 
 export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
   return plan.maxActiveProducts === null || currentActiveCount < plan.maxActiveProducts
+}
+
+/** Whether the plan allows one more freely-addable content block, given how
+ *  many the page being edited already has (see `Plan.maxCustomSections`). */
+export function canAddSection(plan: Plan, currentCustomSectionCount: number): boolean {
+  return plan.maxCustomSections === null || currentCustomSectionCount < plan.maxCustomSections
 }
 
 /**
