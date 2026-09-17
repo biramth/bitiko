@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import QRCode from 'qrcode'
 import { Check, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
 import { getShopSubscription, listPayments, requestPlanUpgrade, confirmPayment } from '@/services/billing.service'
 import { PLANS, WAVE_ESSENTIAL_PAYMENT_LINK, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
 import { formatCurrency } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
@@ -15,6 +17,74 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
       <Check size={16} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden />
       {children}
     </li>
+  )
+}
+
+/** Touch-primary devices (phones/tablets) can deep-link straight into the
+ *  Wave app from a plain link tap; a mouse-primary desktop can't, so it gets
+ *  a QR code to scan with the phone instead. `pointer: coarse` is the
+ *  standard signal for "this input is a finger, not a mouse" — more
+ *  reliable than a width breakpoint (a touch laptop is still mouse-primary;
+ *  a narrow desktop window shouldn't switch to the QR flow). */
+function useIsTouchPrimary() {
+  const [isTouch, setIsTouch] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia('(pointer: coarse)')
+    const handler = () => setIsTouch(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+  return isTouch
+}
+
+/** Desktop fallback for "Payer avec Wave": the payment link itself only
+ *  does anything useful on a phone with the Wave app installed, so this
+ *  renders it as a QR code (encoding the same link, amount included) to
+ *  scan instead of opening a dead page in a new tab. */
+function WaveQrDialog({
+  open,
+  onClose,
+  paymentLink,
+  planLabel,
+  amountLabel,
+}: {
+  open: boolean
+  onClose: () => void
+  paymentLink: string
+  planLabel: string
+  amountLabel: string
+}) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setQrDataUrl(null)
+    QRCode.toDataURL(paymentLink, { width: 288, margin: 1, color: { dark: '#17152e', light: '#ffffff' } })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null))
+  }, [open, paymentLink])
+
+  return (
+    <Dialog open={open} onClose={onClose} title={`Payer avec Wave — ${planLabel}`}>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <p className="text-sm text-gray-600">
+          Ouvre l'app Wave sur ton téléphone et scanne ce code pour payer{' '}
+          <strong className="text-gray-900">{amountLabel}</strong> et activer le plan {planLabel}.
+        </p>
+        <div className="flex h-64 w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
+          ) : (
+            <Loader2 size={28} className="animate-spin text-gray-300" aria-hidden />
+          )}
+        </div>
+        <p className="text-xs text-gray-400">
+          Une fois le paiement effectué, reviens ici et clique sur « J'ai payé, activer ».
+        </p>
+      </div>
+    </Dialog>
   )
 }
 
@@ -77,6 +147,9 @@ export function BillingForShop({ shopId }: { shopId: string }) {
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : "Impossible d'envoyer la demande. Réessayez."),
   })
+
+  const isTouchPrimary = useIsTouchPrimary()
+  const [qrDialogPlan, setQrDialogPlan] = useState<Exclude<PlanKey, 'free'> | null>(null)
 
   if (isLoading) return <PageLoader />
 
@@ -168,9 +241,15 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700"><Clock size={14} /> Paiement en vérification</div>
               ) : (
                 <div className="mt-5 space-y-2">
-                  <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
-                    <CreditCard size={15} /> Payer avec Wave
-                  </a>
+                  {isTouchPrimary ? (
+                    <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                      <CreditCard size={15} /> Payer avec Wave
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => setQrDialogPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                      <CreditCard size={15} /> Payer avec Wave
+                    </button>
+                  )}
                   <button type="button" onClick={() => upgradeRequestMutation.mutate(key)} disabled={upgradeRequestMutation.isPending} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
                     {upgradeRequestMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                     J'ai payé, activer
@@ -182,6 +261,14 @@ export function BillingForShop({ shopId }: { shopId: string }) {
           )
         })}
       </div>
+
+      <WaveQrDialog
+        open={qrDialogPlan !== null}
+        onClose={() => setQrDialogPlan(null)}
+        paymentLink={qrDialogPlan === 'essential' ? WAVE_ESSENTIAL_PAYMENT_LINK : WAVE_PRO_PAYMENT_LINK}
+        planLabel={qrDialogPlan ? PLANS[qrDialogPlan].label : ''}
+        amountLabel={qrDialogPlan ? formatCurrency(PLANS[qrDialogPlan].priceXof, 'XOF') : ''}
+      />
 
       {payments.length > 0 && (
         <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
