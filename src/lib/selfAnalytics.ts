@@ -52,6 +52,7 @@ function detectDevice(): 'mobile' | 'tablet' | 'desktop' {
  * the storefront, so every failure path simply returns.
  */
 export function trackPageView({ path, shopId }: { path: string; shopId: string | null }): void {
+  if (import.meta.env.DEV) return // local dev shares the same Supabase project as prod — never pollute real analytics
   if (window.parent !== window) return // embedded preview (store builder iframe)
   if (BOT_PATTERN.test(navigator.userAgent)) return
 
