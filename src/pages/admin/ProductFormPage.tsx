@@ -19,6 +19,7 @@ import {
 import { deleteProductImage, reorderProductImages, uploadProductImage } from '@/services/productImage.service'
 import { createCategory } from '@/services/category.service'
 import { supabase } from '@/lib/supabaseClient'
+import { storefrontUrl } from '@/lib/tenant'
 import { formatCurrency, slugify } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
@@ -392,6 +393,12 @@ function ProductForm({
   const previewStock = Number(stock) || 0
   const previewCategoryName = categories.find((c) => c.id === categoryId)?.name
   const previewSlug = slugify(name.trim())
+  // The button below opens the product as it exists live on the storefront
+  // right now, so it must use the persisted slug (existingProduct.slug) —
+  // not `previewSlug`, which tracks the currently-typed name and can point
+  // to a page that doesn't exist yet (a new, unsaved product) or no longer
+  // matches (an unsaved rename since the last save).
+  const liveSlug = existingProduct?.slug ?? null
   const previewImage = pendingUploads[0]?.url ?? images[0]?.public_url ?? null
   const hasVariants = variants.length > 0
 
@@ -425,9 +432,11 @@ function ProductForm({
             </p>
           </div>
           <a
-            href={previewSlug ? `/produits/${previewSlug}` : undefined}
+            href={shop && liveSlug ? storefrontUrl(shop.slug, `/produits/${liveSlug}`) : undefined}
+            target="_blank"
+            rel="noreferrer"
             className={`flex items-center gap-1.5 text-sm font-medium ${
-              previewSlug ? 'text-brand-700 hover:text-brand-800' : 'pointer-events-none text-gray-400'
+              shop && liveSlug ? 'text-brand-700 hover:text-brand-800' : 'pointer-events-none text-gray-400'
             }`}
           >
             <Eye size={15} aria-hidden /> Voir sur la boutique

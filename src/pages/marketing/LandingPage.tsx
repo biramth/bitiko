@@ -401,7 +401,7 @@ function Nav() {
           <Link to="/admin/login" className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-800 transition-opacity hover:opacity-70">
             Connexion
           </Link>
-          <Link to="/inscription" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
+          <Link to="/admin/login" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
             Créer ma boutique <ArrowRight size={15} aria-hidden />
           </Link>
         </div>
@@ -429,7 +429,7 @@ function Nav() {
           </div>
           <div className="mt-3 flex flex-col gap-2 border-t border-sand-100 pt-3">
             <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full border border-sand-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800">Connexion</Link>
-            <Link to="/inscription" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer ma boutique</Link>
+            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer ma boutique</Link>
           </div>
         </div>
       )}
@@ -646,7 +646,7 @@ export function LandingPage() {
               Bitiko transforme ton téléphone en vraie boutique en ligne : catalogue, panier, et chaque commande qui atterrit directement sur ton WhatsApp. Aucun code, aucune carte bancaire, aucune commission — juste plus de ventes.
             </p>
             <div className="mb-8 mt-8 flex animate-fade-up flex-col items-center gap-3 [animation-delay:300ms] sm:flex-row lg:justify-start">
-              <Link to="/inscription" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
+              <Link to="/admin/login" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
                 Créer ma boutique gratuitement
                 <ArrowRight size={16} aria-hidden />
               </Link>
@@ -990,7 +990,7 @@ export function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/inscription" className="mt-8 block w-full rounded-[100px] border border-brand-600 py-3.5 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50">
+                  <Link to="/admin/login" className="mt-8 block w-full rounded-[100px] border border-brand-600 py-3.5 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50">
                     Créer ma boutique
                   </Link>
                 </div>
@@ -1007,7 +1007,7 @@ export function LandingPage() {
                       <li key={f} className="flex items-start gap-2.5 text-sm"><Check size={15} className="mt-0.5 shrink-0 text-brand-500" aria-hidden /><span className={i === 0 ? 'font-semibold text-ink-900' : 'text-ink-700/80'}>{f}</span></li>
                     ))}
                   </ul>
-                  <Link to="/inscription" className="mt-8 block w-full rounded-[100px] bg-brand-600 py-3.5 text-center text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">Choisir Essentiel</Link>
+                  <Link to="/admin/login" className="mt-8 block w-full rounded-[100px] bg-brand-600 py-3.5 text-center text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">Choisir Essentiel</Link>
                 </div>
               </Reveal>
               {/* Pro */}
@@ -1036,7 +1036,7 @@ export function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/inscription" className="mt-8 block w-full rounded-[100px] bg-white py-3.5 text-center text-sm font-medium text-brand-700 shadow-md transition-colors hover:bg-brand-50">
+                  <Link to="/admin/login" className="mt-8 block w-full rounded-[100px] bg-white py-3.5 text-center text-sm font-medium text-brand-700 shadow-md transition-colors hover:bg-brand-50">
                     Choisir Pro
                   </Link>
                 </div>
@@ -1071,7 +1071,7 @@ export function LandingPage() {
               <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ink-700/70">
                 Crée ta boutique gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
               </p>
-              <Link to="/inscription" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
+              <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
                 Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />
               </Link>
               <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/50">
@@ -1104,7 +1104,7 @@ export function LandingPage() {
             <p className="mb-5 text-sm font-semibold text-ink-900">Bitiko</p>
             <ul className="flex flex-col gap-2.5">
               <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Connexion</Link></li>
-              <li><Link to="/inscription" className="text-ink-700/50 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
+              <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
               <li><a href="#tarifs" className="text-ink-700/50 transition-colors hover:text-ink-900">Tarifs</a></li>
               <li><a href="#faq" className="text-ink-700/50 transition-colors hover:text-ink-900">FAQ</a></li>
             </ul>
