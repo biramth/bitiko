@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createSectionId } from '@/config/defaultLayout'
-import { SECTION_REGISTRY } from './sectionRegistry'
+import { getEffectiveRegistry } from './effectiveRegistry'
 import type { LayoutSection, SectionType, StoreTemplate, ThemeConfig } from '@/types/builder'
 
 export type BuilderTab = 'blocks' | 'theme' | 'templates'
@@ -18,6 +18,10 @@ export interface BuilderSnapshot {
  *  custom page). The parent constructs one of these and the hook never knows
  *  whether it's persisting to `shops` or `pages`. */
 export interface BuilderTarget {
+  /** The shop's current template — resolves which section types (core plus
+   *  whatever that template contributes) this builder instance knows about.
+   *  Absent/null resolves to the core registry only. */
+  templateId?: string | null
   initialSections: LayoutSection[]
   initialThemeColor: string
   initialThemeConfig: ThemeConfig
@@ -43,6 +47,7 @@ const HISTORY_LIMIT = 50
 
 export function useBuilderState(target: BuilderTarget) {
   const queryClient = useQueryClient()
+  const registry = getEffectiveRegistry(target.templateId)
 
   const [snapshot, setSnapshot] = useState<BuilderSnapshot>(() => ({
     sections: target.initialSections,
@@ -73,7 +78,9 @@ export function useBuilderState(target: BuilderTarget) {
   }
 
   const addSection = (type: SectionType) => {
-    const section = SECTION_REGISTRY[type].createDefault()
+    const def = registry[type]
+    if (!def) return
+    const section = def.createDefault()
     const footerIndex = sections.findIndex((s) => s.type === 'footer')
     const beforeFooter = footerIndex === -1 ? sections.length : footerIndex
     // Land the new block right after whatever the merchant is currently
@@ -90,7 +97,7 @@ export function useBuilderState(target: BuilderTarget) {
 
   const removeSection = (id: string) => {
     const target = sections.find((s) => s.id === id)
-    if (!target || SECTION_REGISTRY[target.type].pinned) return
+    if (!target || registry[target.type]?.pinned) return
     const index = sections.indexOf(target)
     const next = sections.filter((s) => s.id !== id)
     commit({ ...snapshot, sections: next })
@@ -104,7 +111,7 @@ export function useBuilderState(target: BuilderTarget) {
 
   const duplicateSection = (id: string) => {
     const original = sections.find((s) => s.id === id)
-    if (!original || SECTION_REGISTRY[original.type].pinned) return
+    if (!original || registry[original.type]?.pinned) return
     const copy: LayoutSection = { ...original, id: createSectionId(original.type) }
     const index = sections.indexOf(original)
     commit({

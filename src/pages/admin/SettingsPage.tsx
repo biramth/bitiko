@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
+import { STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
 import { BillingForShop } from './BillingPage'
@@ -422,6 +422,7 @@ function SettingsForm({
 
   const [name, setName] = useState(shop.name)
   const [description, setDescription] = useState(shop.description ?? '')
+  const [businessType, setBusinessType] = useState(shop.business_type ?? '')
   const [whatsappNumber, setWhatsappNumber] = useState(shop.whatsapp_number)
   const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
   const [currency, setCurrency] = useState(shop.currency)
@@ -579,6 +580,7 @@ function SettingsForm({
       updateShop(shop.id, {
         name: name.trim(),
         description: description.trim() || null,
+        business_type: businessType || null,
         whatsapp_number: whatsappNumber.trim(),
         payment_instructions: paymentInstructions.trim() || null,
         currency: normalizeCurrency(currency),
@@ -739,6 +741,26 @@ function SettingsForm({
                   className={inputClass}
                 />
               </div>
+
+              <div>
+                <label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
+                  Type de commerce
+                </label>
+                <select
+                  id="businessType"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Non renseigné</option>
+                  {availableVerticals().map((vertical) => (
+                    <option key={vertical.key} value={vertical.key}>{vertical.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Détermine les styles proposés dans l'onglet « Personnaliser ma boutique » → Styles.
+                </p>
+              </div>
             </Card>
           )}
 
@@ -786,7 +808,7 @@ function SettingsForm({
                 return (
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500">Thème choisi à la création</p>
+                      <p className="text-xs font-medium text-gray-500">Style actuel</p>
                       <p className="truncate text-sm font-semibold text-gray-900">{template.label}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">

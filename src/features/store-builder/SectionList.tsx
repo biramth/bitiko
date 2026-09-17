@@ -1,5 +1,5 @@
 import { PREVIEW_SELECT } from './previewBridge'
-import { SECTION_REGISTRY } from './sectionRegistry'
+import { getEffectiveRegistry } from './effectiveRegistry'
 import type { Shop } from '@/types'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
@@ -17,10 +17,11 @@ export function SectionList({
   themeConfig: ThemeConfig
   isEmbeddedPreview: boolean
 }) {
+  const registry = getEffectiveRegistry(shop.template_id)
   return (
     <>
       {sections.map((section) => {
-        const def = SECTION_REGISTRY[section.type]
+        const def = registry[section.type]
         const Renderer = def?.Renderer
         if (!Renderer) return null
         const content = <Renderer shop={shop} config={section.config} themeConfig={themeConfig} />
