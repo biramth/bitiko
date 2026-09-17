@@ -26,7 +26,8 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { seedDefaultDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { ensureProfile } from '@/services/profile.service'
-import { STORE_TEMPLATES } from '@/config/storeTemplates'
+import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
+import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { slugify } from '@/utils/format'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
@@ -37,7 +38,7 @@ import { trackEvent } from '@/lib/analytics'
 const STEPS = [
   { number: 1, label: 'Tes infos' },
   { number: 2, label: 'Boutique' },
-  { number: 3, label: 'Thème' },
+  { number: 3, label: 'Commerce' },
   { number: 4, label: 'Logo' },
   { number: 5, label: 'Récap' },
 ] as const
@@ -63,7 +64,15 @@ export function OnboardingPage() {
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [templateId, setTemplateId] = useState(STORE_TEMPLATES[0].key)
+  const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
+  const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
+  const templatesForBusinessType = templatesForVertical(businessType)
+
+  const handleSelectVertical = (vertical: string) => {
+    setBusinessType(vertical)
+    const first = templatesForVertical(vertical)[0]
+    if (first) setTemplateId(first.key)
+  }
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -129,6 +138,7 @@ export function OnboardingPage() {
   if (existingShop) return <Navigate to="/admin" replace />
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
+  const selectedVertical = VERTICAL_BY_KEY[businessType]
 
   const slugStatus: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error' = !slug
     ? 'idle'
@@ -146,13 +156,15 @@ export function OnboardingPage() {
     !!slug &&
     whatsappNumber.trim().length > 0
 
+  const step3Valid = !!businessType && !!templateId
+
   const canGoNext =
     (step === 1 && step1Valid) ||
     (step === 2 && step2Valid) ||
-    (step === 3 && !!templateId) ||
+    (step === 3 && step3Valid) ||
     step === 4
 
-  const canSubmit = step1Valid && step2Valid && !!templateId
+  const canSubmit = step1Valid && step2Valid && step3Valid
 
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
 
@@ -394,43 +406,81 @@ export function OnboardingPage() {
           )}
 
           {step === 3 && (
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <Palette size={15} className="text-gray-400" aria-hidden /> Choisis le thème de ta boutique
-              </label>
-              <div className="mt-2 grid grid-cols-2 gap-2.5">
-                {STORE_TEMPLATES.map((template) => {
-                  const selected = templateId === template.key
-                  return (
-                    <button
-                      key={template.key}
-                      type="button"
-                      onClick={() => setTemplateId(template.key)}
-                      aria-pressed={selected}
-                      className={`rounded-xl border p-3 text-left transition-colors ${
-                        selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="h-5 w-5 rounded-full border border-black/10"
-                          style={{ backgroundColor: template.swatch[0] }}
-                          aria-hidden
-                        />
-                        <span
-                          className="h-5 w-5 rounded-full border border-black/10"
-                          style={{ backgroundColor: template.swatch[1] }}
-                          aria-hidden
-                        />
-                        <span className="ml-auto text-xs font-semibold text-brand-700">{selected ? '✓' : ''}</span>
-                      </span>
-                      <span className="mt-2 block text-sm font-semibold text-ink-900">{template.label}</span>
-                      <span className="mt-0.5 block text-xs leading-snug text-gray-500">{template.description}</span>
-                    </button>
-                  )
-                })}
+            <div className="space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Store size={15} className="text-gray-400" aria-hidden /> Quel type de commerce ?
+                </label>
+                <div className="mt-2 grid grid-cols-2 gap-2.5">
+                  {availableVerticals().map((vertical) => {
+                    const selected = businessType === vertical.key
+                    return (
+                      <button
+                        key={vertical.key}
+                        type="button"
+                        onClick={() => handleSelectVertical(vertical.key)}
+                        aria-pressed={selected}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="flex items-center justify-between">
+                          <span className="block text-sm font-semibold text-ink-900">{vertical.label}</span>
+                          {selected && <Check size={14} className="text-brand-700" aria-hidden />}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-snug text-gray-500">{vertical.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Détermine les styles proposés pour ta boutique. Modifiable plus tard dans Réglages.
+                </p>
               </div>
-              <p className="mt-2 text-xs text-gray-500">Les couleurs de ta boutique s'appliquent automatiquement.</p>
+
+              {templatesForBusinessType.length > 0 && (
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Palette size={15} className="text-gray-400" aria-hidden /> Choisis ton style
+                  </label>
+                  <div className="mt-2 grid grid-cols-2 gap-2.5">
+                    {templatesForBusinessType.map((template) => {
+                      const selected = templateId === template.key
+                      return (
+                        <button
+                          key={template.key}
+                          type="button"
+                          onClick={() => setTemplateId(template.key)}
+                          aria-pressed={selected}
+                          className={`rounded-xl border p-3 text-left transition-colors ${
+                            selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className="h-5 w-5 rounded-full border border-black/10"
+                              style={{ backgroundColor: template.swatch[0] }}
+                              aria-hidden
+                            />
+                            <span
+                              className="h-5 w-5 rounded-full border border-black/10"
+                              style={{ backgroundColor: template.swatch[1] }}
+                              aria-hidden
+                            />
+                            <span className="ml-auto text-xs font-semibold text-brand-700">{selected ? '✓' : ''}</span>
+                          </span>
+                          <span className="mt-2 block text-sm font-semibold text-ink-900">{template.label}</span>
+                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">{template.description}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Les couleurs de ta boutique s'appliquent automatiquement. Tu pourras explorer d'autres styles de
+                    ce type de commerce plus tard, dans « Personnaliser ma boutique ».
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -541,7 +591,11 @@ export function OnboardingPage() {
                     <span className="truncate text-right font-medium text-ink-900">{whatsappNumber}</span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Thème</span>
+                    <span className="text-gray-500">Type de commerce</span>
+                    <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Style</span>
                     <span className="flex items-center justify-end gap-1.5 font-medium text-ink-900">
                       <Palette size={14} className="text-gray-400" aria-hidden />
                       <span>{selectedTemplate.label}</span>

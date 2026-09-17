@@ -145,7 +145,8 @@ function BillingForShop({ shopId }: { shopId: string }) {
           <p className="mt-1 text-2xl font-bold text-gray-900">Gratuit</p>
           <ul className="mt-4 space-y-2">
             <PlanFeature>Jusqu'à {PLANS.free.maxActiveProducts} produits actifs</PlanFeature>
-            <PlanFeature>Thème de boutique au choix</PlanFeature>
+            <PlanFeature>Style de boutique adapté à votre activité</PlanFeature>
+            <PlanFeature>Personnalisation de base ({PLANS.free.maxCustomSections} blocs de contenu)</PlanFeature>
             <PlanFeature>Sous-domaine bitiko.shop</PlanFeature>
           </ul>
           {!isPro && (
@@ -163,6 +164,8 @@ function BillingForShop({ shopId }: { shopId: string }) {
           </p>
           <ul className="mt-4 space-y-2">
             <PlanFeature>Produits illimités</PlanFeature>
+            <PlanFeature>Éditeur visuel complet : styles, sections, thème</PlanFeature>
+            <PlanFeature>Personnalisation illimitée du storefront</PlanFeature>
             <PlanFeature>Images de couverture pour les catégories</PlanFeature>
             <PlanFeature>Retirer "Propulsé par Bitiko"</PlanFeature>
           </ul>
