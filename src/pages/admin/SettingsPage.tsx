@@ -39,6 +39,7 @@ import {
   updateDeliveryVille,
 } from '@/services/deliverySecteur.service'
 import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } from '@/utils/format'
+import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -662,8 +663,19 @@ function SettingsForm({
     setUploadingLogo(true)
     setError(null)
     try {
-      const url = await uploadShopLogo(shop.id, file)
+      const [url, suggestedColor] = await Promise.all([
+        uploadShopLogo(shop.id, file),
+        extractDominantColorFromFile(file),
+      ])
       setLogoUrl(url)
+      // Best-effort brand-color suggestion from the new logo — still just a
+      // starting point, the picker right below stays fully editable. Left
+      // untouched when the logo has no clear accent color (e.g. black &
+      // white), rather than forcing an arbitrary one.
+      if (suggestedColor) {
+        setThemeColor(suggestedColor)
+        toast.info('Couleur de la boutique mise à jour à partir de votre logo — modifiable ci-dessous.')
+      }
     } catch {
       setError("Échec de l'envoi du logo.")
     } finally {
@@ -905,7 +917,8 @@ function SettingsForm({
                   </p>
                 ) : (
                   <p className="mt-1.5 text-xs text-gray-500">
-                    Utilisée pour les boutons et accents sur votre boutique.
+                    Utilisée pour les boutons et accents sur votre boutique. Suggérée automatiquement à partir de
+                    votre logo — modifiez-la ici à tout moment.
                   </p>
                 )}
               </div>
