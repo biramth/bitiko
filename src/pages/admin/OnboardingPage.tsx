@@ -352,11 +352,11 @@ export function OnboardingPage() {
           </p>
         </div>
 
-        <div className="mb-8 flex items-center justify-center gap-2 sm:gap-4">
+        <div className="mb-3 flex items-center justify-center">
           {STEPS.map((s, i) => (
-            <div key={s.number} className="flex items-center gap-2">
+            <div key={s.number} className="flex items-center">
               <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                   step === s.number
                     ? 'bg-brand-600 text-white'
                     : step > s.number
@@ -366,13 +366,13 @@ export function OnboardingPage() {
               >
                 {step > s.number ? <Check size={14} className="text-white" /> : s.number}
               </div>
-              <span className={`hidden text-xs font-medium sm:block ${step === s.number ? 'text-ink-900' : 'text-gray-400'}`}>
-                {s.label}
-              </span>
-              {i < STEPS.length - 1 && <span className="mx-1 hidden h-px w-6 bg-gray-200 sm:block" />}
+              {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 shrink-0 bg-gray-200 sm:w-6" />}
             </div>
           ))}
         </div>
+        <p className="mb-8 text-center text-xs font-medium text-gray-400">
+          Étape {step} sur {STEPS.length} — <span className="text-ink-900">{STEPS[step - 1]?.label}</span>
+        </p>
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
