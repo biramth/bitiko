@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { BUILDER_INTERNAL } from '@/config/features'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
@@ -42,7 +41,7 @@ export function StoreBuilderPage() {
 
   if (isLoading || planLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
-  if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
+  if (!plan.storeBuilderAccess) return <StoreBuilderLock />
 
   return <StoreBuilder key={shop.id} shop={shop} plan={plan} />
 }

@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { AdminLayout } from '@/layouts/AdminLayout'
-import { BUILDER_INTERNAL } from '@/config/features'
 import { LandingPage } from '@/pages/marketing/LandingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -88,9 +87,7 @@ export function PlatformRoutes() {
               <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
               <Route path="commandes" element={standalone(<OrdersPage />)} />
               <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
-              {BUILDER_INTERNAL && (
-                <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
-              )}
+              <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
               {/* Facturation moved into Paramètres (one less top-level nav
                   group in production, where it was the only item under
                   "Développer"). Kept as a redirect — Wave's own success/error

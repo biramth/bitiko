@@ -22,22 +22,18 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { BUILDER_INTERNAL } from '@/config/features'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 
 // Flat list, not grouped — Catégories now lives as a tab of Produits and
 // Facturation moved under Paramètres (see settingsSections below), so there
-// are too few top-level items left to justify collapsible groups. Personnaliser
-// only exists for the internal/dev build (BUILDER_INTERNAL).
-const navItems = [
+// are too few top-level items left to justify collapsible groups.
+const visibleNavItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
   { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
   { to: '/admin/produits', label: 'Produits', icon: Package },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true },
+  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2 },
 ]
-
-const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
 
 const settingsSections = [
   { to: '/admin/parametres/general', label: 'Général', icon: Store },
