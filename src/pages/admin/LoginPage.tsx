@@ -8,6 +8,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Turnstile } from '@/components/ui/Turnstile'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { trackEvent } from '@/lib/analytics'
+import { PLATFORM_ADMIN_EMAILS } from '@/config/constants'
 
 const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 
@@ -52,6 +53,7 @@ export function LoginPage() {
   }, [step])
 
   if (session) {
+    if (PLATFORM_ADMIN_EMAILS.includes(session.user.email ?? '')) return <Navigate to="/super-admin" replace />
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/admin'
     return <Navigate to={from} replace />
   }
@@ -101,7 +103,7 @@ export function LoginPage() {
       }
       return
     }
-    navigate('/admin', { replace: true })
+    navigate(PLATFORM_ADMIN_EMAILS.includes(email) ? '/super-admin' : '/admin', { replace: true })
   }
 
   const handleSignupSubmit = async (e: React.FormEvent) => {

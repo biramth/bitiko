@@ -5,6 +5,14 @@ export const PRODUCTS_PAGE_SIZE = 12
 export const ADMIN_PRODUCTS_PAGE_SIZE = 20
 export const ORDERS_PAGE_SIZE = 20
 
+/**
+ * Mirrors `PLATFORM_ADMIN_EMAILS` in api/_lib/supabaseAdmin.ts. Client-side
+ * use is UX only (e.g. sending this account straight to /super-admin after
+ * login) — real authorization is enforced server-side (RPCs + api/admin/*),
+ * never rely on this list for anything security-sensitive.
+ */
+export const PLATFORM_ADMIN_EMAILS = ['papebiramethiombanee@gmail.com']
+
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: 'En attente',
   confirmed: 'Confirmée',
