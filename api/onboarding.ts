@@ -34,9 +34,10 @@ async function verifyTurnstile(token: string | null, ip: string): Promise<boolea
  * Powers the "email first" login/signup flow: tells the client whether to
  * reveal a password field (existing account) or a signup form (new email),
  * instead of the merchant having to guess which page to land on. Reads
- * auth.users via the email_has_account() SECURITY DEFINER function, which
+ * auth.users via the email_account_status() SECURITY DEFINER function, which
  * has no execute grant for anon/authenticated — only reachable here, with
- * the service_role key.
+ * the service_role key. The status also lets the UI send an unconfirmed
+ * account to a resend step (instead of a login form it can't get past).
  *
  * This endpoint is a genuine email-enumeration oracle by design (same
  * signal SignupPage's "Un compte existe déjà" already gave, just moved
@@ -72,9 +73,10 @@ async function handleCheckEmail(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const { data, error } = await admin.rpc('email_has_account', { p_email: normalizedEmail })
+  const { data, error } = await admin.rpc('email_account_status', { p_email: normalizedEmail })
   if (error) throw error
-  res.status(200).json({ exists: !!data })
+  const status = typeof data === 'string' ? data : 'none'
+  res.status(200).json({ status, exists: status !== 'none' })
 }
 
 /**

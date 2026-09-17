@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Globe, MapPin, Menu, MessageCircle, ShoppingCart, Store, X } from 'lucide-react'
+import { MapPin, Menu, MessageCircle, ShoppingCart, Store, X } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
@@ -11,6 +11,7 @@ import { themeConfigToCssVars } from '@/config/themeTokens'
 import { useShopFavicon } from '@/hooks/usePageSeo'
 import { Logo } from '@/components/ui/Logo'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
@@ -250,10 +251,10 @@ export function StoreLayout() {
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={platform}
+                    aria-label={socialLabel(platform)}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sand-50/70 hover:bg-white/20 hover:text-white"
                   >
-                    <Globe size={15} aria-hidden />
+                    <SocialIcon platform={platform} size={15} />
                   </a>
                 ))}
               </div>

@@ -7,7 +7,7 @@ interface AuthContextValue {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string) => Promise<{ error: string | null; hasSession: boolean }>
+  signUp: (email: string, password: string) => Promise<{ error: string | null; hasSession: boolean; alreadyExists: boolean }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
@@ -51,9 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { emailRedirectTo: authCallbackUrl() },
     })
-    if (error) return { error: error.message, hasSession: false }
+    if (error) return { error: error.message, hasSession: false, alreadyExists: false }
     if (data.session) setSession(data.session)
-    return { error: null, hasSession: !!data.session }
+    // With email confirmation on, an existing email (confirmed or not) comes
+    // back as an obfuscated user: no session, no email sent, and an empty
+    // identities array. Surface that so the page offers a resend instead of a
+    // dead-end "check your inbox" that will never receive anything.
+    const alreadyExists =
+      !data.session && !!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
+    return { error: null, hasSession: !!data.session, alreadyExists }
   }
 
   const signInWithGoogle = async () => {

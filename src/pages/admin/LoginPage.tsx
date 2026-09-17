@@ -15,7 +15,7 @@ const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 const inputClass =
   'w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type Step = 'email' | 'login' | 'signup' | 'checkEmail'
+type Step = 'email' | 'login' | 'signup' | 'checkEmail' | 'confirmEmail'
 
 /**
  * Unified "email first" entry point (à la Linear/Notion): the merchant
@@ -62,6 +62,7 @@ export function LoginPage() {
     setPassword('')
     setError(null)
     setUnconfirmed(false)
+    setResent(false)
     setCheckError(null)
   }
 
@@ -69,6 +70,7 @@ export function LoginPage() {
     e.preventDefault()
     setCheckingEmail(true)
     setCheckError(null)
+    setResent(false)
     try {
       const res = await fetch('/api/check-email', {
         method: 'POST',
@@ -77,7 +79,11 @@ export function LoginPage() {
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error ?? 'Impossible de vérifier cet email.')
-      setStep(body.exists ? 'login' : 'signup')
+      const status = typeof body.status === 'string' ? body.status : body.exists ? 'confirmed' : 'none'
+      // Unconfirmed accounts get the resend step: sending them to the login
+      // form would just loop on "email not confirmed" and make them redo the
+      // whole signup for an account whose row already exists.
+      setStep(status === 'unconfirmed' ? 'confirmEmail' : status === 'confirmed' ? 'login' : 'signup')
     } catch (err) {
       setCheckError(err instanceof Error ? err.message : 'Impossible de vérifier cet email.')
       setTurnstileToken(null)
@@ -120,6 +126,11 @@ export function LoginPage() {
           ? 'Un compte existe déjà avec cet email — connecte-toi plutôt.'
           : 'Impossible de créer le compte. Réessaie.',
       )
+      return
+    }
+    if (result.alreadyExists) {
+      setResent(false)
+      setStep('confirmEmail')
       return
     }
     trackEvent('sign_up', { method: 'email' })
@@ -334,6 +345,24 @@ export function LoginPage() {
             ) : (
               <button type="button" onClick={handleResend} className="mt-3 text-sm font-medium text-brand-700 underline hover:no-underline">
                 Renvoyer l'email
+              </button>
+            )}
+            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          </div>
+        )}
+
+        {step === 'confirmEmail' && (
+          <div className="text-center">
+            <h2 className="text-base font-semibold text-gray-900">Confirme ton email</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Un compte existe déjà pour <strong>{email}</strong>, mais son adresse n'est pas encore confirmée.
+              Confirme-la pour te connecter.
+            </p>
+            {resent ? (
+              <p className="mt-3 text-sm font-medium text-emerald-700">Email renvoyé — vérifie ta boîte de réception.</p>
+            ) : (
+              <button type="button" onClick={handleResend} className="mt-3 text-sm font-medium text-brand-700 underline hover:no-underline">
+                Renvoyer l'email de confirmation
               </button>
             )}
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
