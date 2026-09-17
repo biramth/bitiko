@@ -20,9 +20,11 @@ type Step = 'email' | 'login' | 'signup' | 'checkEmail'
  * Unified "email first" entry point (à la Linear/Notion): the merchant
  * types their email once, and the form reveals a password field (existing
  * account) or a signup form (new email) — instead of making them guess
- * between /admin/login and /inscription and hitting a dead end if they
- * picked wrong. The existence check (api/check-email.ts) never tells the
- * merchant *why* — it just decides which form to show next.
+ * between login and signup and hitting a dead end if they picked wrong.
+ * The old standalone signup page (/inscription) is gone; every entry point
+ * (marketing site, /admin/login direct link) leads here now. The existence
+ * check (api/check-email.ts) never tells the merchant *why* — it just
+ * decides which form to show next.
  */
 export function LoginPage() {
   usePageSeo({ title: 'Connexion — Bitiko', noindex: true })

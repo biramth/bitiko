@@ -46,8 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (isPlatformHost(host)) {
     urls.push(
+      // Note: /admin/login (which replaced /inscription) is noindex —
+      // see LoginPage.tsx's usePageSeo call — so it isn't listed here.
       urlEntry(`${origin}/`),
-      urlEntry(`${origin}/inscription`),
       urlEntry(`${origin}/legal/cgu`),
       urlEntry(`${origin}/legal/confidentialite`),
     )

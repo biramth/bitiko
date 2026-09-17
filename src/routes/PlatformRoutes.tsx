@@ -8,9 +8,6 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireShop } from './RequireShop'
 
-const SignupPage = lazy(() =>
-  import('@/pages/auth/SignupPage').then((m) => ({ default: m.SignupPage })),
-)
 const AuthCallbackPage = lazy(() =>
   import('@/pages/auth/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })),
 )
@@ -62,7 +59,10 @@ export function PlatformRoutes() {
   return (
     <Routes>
       <Route index element={standalone(<LandingPage />)} />
-      <Route path="inscription" element={standalone(<SignupPage />)} />
+      {/* /inscription is superseded by the unified email-first flow at
+          /admin/login (see LoginPage.tsx) — kept as a redirect so any
+          bookmarked or already-shared link still lands somewhere useful. */}
+      <Route path="inscription" element={<Navigate to="/admin/login" replace />} />
       <Route path="mot-de-passe-oublie" element={standalone(<ForgotPasswordPage />)} />
       <Route path="reinitialiser-mot-de-passe" element={standalone(<ResetPasswordPage />)} />
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
