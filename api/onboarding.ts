@@ -1,0 +1,178 @@
+import { createHash, randomInt } from 'node:crypto'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { getSupabaseAdmin, getUserIdFromAuthHeader } from './_lib/supabaseAdmin.js'
+import { sendWhatsAppOtp } from './_lib/whatsappCloudApi.js'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^\+?[0-9][0-9\s-]{6,}$/
+
+/**
+ * Verifies a Cloudflare Turnstile token server-side. Skipped entirely (returns
+ * true) when TURNSTILE_SECRET_KEY isn't set, so the endpoint behaves the same
+ * with or without Turnstile configured — the Postgres rate limit below is the
+ * actual security control either way, this is extra bot-friction on top.
+ */
+async function verifyTurnstile(token: string | null, ip: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+  if (!secret) return true
+  if (!token) return false
+
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: ip }),
+    })
+    const body = (await res.json()) as { success: boolean }
+    return body.success === true
+  } catch (err) {
+    console.error('turnstile verification failed', err)
+    return false
+  }
+}
+
+/**
+ * Powers the "email first" login/signup flow: tells the client whether to
+ * reveal a password field (existing account) or a signup form (new email),
+ * instead of the merchant having to guess which page to land on. Reads
+ * auth.users via the email_has_account() SECURITY DEFINER function, which
+ * has no execute grant for anon/authenticated — only reachable here, with
+ * the service_role key.
+ *
+ * This endpoint is a genuine email-enumeration oracle by design (same
+ * signal SignupPage's "Un compte existe déjà" already gave, just moved
+ * earlier in the flow) — check_email_rate_limit() caps it at 5 checks/hour
+ * per email and 30/hour per IP, persisted in Postgres so it survives cold
+ * starts and can't be reset by hitting a fresh serverless instance. Turnstile
+ * adds bot-friction on top of that, once configured.
+ */
+async function handleCheckEmail(req: VercelRequest, res: VercelResponse) {
+  const { email, turnstileToken } = req.body ?? {}
+  if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+    res.status(400).json({ error: 'Email invalide.' })
+    return
+  }
+  const normalizedEmail = email.trim().toLowerCase()
+  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown'
+
+  const turnstileOk = await verifyTurnstile(typeof turnstileToken === 'string' ? turnstileToken : null, ip)
+  if (!turnstileOk) {
+    res.status(403).json({ error: 'Vérification anti-robot échouée, réessaie.' })
+    return
+  }
+
+  const admin = getSupabaseAdmin()
+
+  const { data: allowed, error: rateLimitError } = await admin.rpc('check_email_rate_limit', {
+    p_email: normalizedEmail,
+    p_ip: ip,
+  })
+  if (rateLimitError) throw rateLimitError
+  if (!allowed) {
+    res.status(429).json({ error: 'Trop de tentatives, réessaie plus tard.' })
+    return
+  }
+
+  const { data, error } = await admin.rpc('email_has_account', { p_email: normalizedEmail })
+  if (error) throw error
+  res.status(200).json({ exists: !!data })
+}
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/[^0-9]/g, '')
+}
+
+function hashCode(code: string): string {
+  return createHash('sha256').update(code).digest('hex')
+}
+
+/**
+ * OTP verification of a merchant's shop WhatsApp number during onboarding
+ * (see whatsapp_verifications, table since 0020, functions since 0043).
+ * `action: 'send'` issues a fresh 6-digit code via the WhatsApp Cloud API;
+ * `action: 'check'` verifies it. Both are rate-limited atomically in
+ * Postgres (whatsapp_otp_request/whatsapp_otp_verify) — this endpoint only
+ * generates the code and talks to Meta, never trusts a client-supplied
+ * count.
+ */
+async function handleVerifyWhatsapp(req: VercelRequest, res: VercelResponse) {
+  const userId = await getUserIdFromAuthHeader(req.headers.authorization)
+  if (!userId) {
+    res.status(401).json({ error: 'Non authentifié.' })
+    return
+  }
+
+  const { action, phone, code } = req.body ?? {}
+  if (typeof phone !== 'string' || !PHONE_RE.test(phone.trim())) {
+    res.status(400).json({ error: 'Numéro WhatsApp invalide.' })
+    return
+  }
+  const normalizedPhone = normalizePhone(phone)
+  const admin = getSupabaseAdmin()
+
+  if (action === 'send') {
+    const otp = randomInt(0, 1_000_000).toString().padStart(6, '0')
+    const { data: allowed, error } = await admin.rpc('whatsapp_otp_request', {
+      p_user_id: userId,
+      p_phone: normalizedPhone,
+      p_code_hash: hashCode(otp),
+    })
+    if (error) throw error
+    if (!allowed) {
+      res.status(429).json({ error: 'Trop de tentatives, réessaie plus tard.' })
+      return
+    }
+
+    await sendWhatsAppOtp(normalizedPhone, otp)
+    res.status(200).json({ sent: true })
+    return
+  }
+
+  if (action === 'check') {
+    if (typeof code !== 'string' || !/^[0-9]{6}$/.test(code)) {
+      res.status(400).json({ error: 'Code invalide.' })
+      return
+    }
+    const { data: verified, error } = await admin.rpc('whatsapp_otp_verify', {
+      p_user_id: userId,
+      p_phone: normalizedPhone,
+      p_code_hash: hashCode(code),
+    })
+    if (error) throw error
+    if (!verified) {
+      res.status(400).json({ error: 'Code incorrect ou expiré.' })
+      return
+    }
+    res.status(200).json({ verified: true })
+    return
+  }
+
+  res.status(400).json({ error: 'Action inconnue.' })
+}
+
+/**
+ * Two lightweight onboarding-time verification endpoints, merged into one
+ * Vercel serverless function — a Hobby-plan deployment caps out at a fixed
+ * number of functions, and this project was right at that limit. /api/
+ * check-email and /api/verify-whatsapp still exist as URLs (see the
+ * rewrites in vercel.json that route both here via ?flow=), so no client
+ * code changes; each flow's logic below is otherwise unchanged from when
+ * it lived in its own file.
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    if (req.query.flow === 'verify-whatsapp') {
+      await handleVerifyWhatsapp(req, res)
+    } else {
+      await handleCheckEmail(req, res)
+    }
+  } catch (err) {
+    console.error('onboarding endpoint failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
