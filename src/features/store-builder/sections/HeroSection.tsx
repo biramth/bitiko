@@ -40,7 +40,11 @@ export function HeroRenderer({
           <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--shop-text)]/60">{subheading}</p>
         )}
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Link to="/catalogue" className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90">
+          <Link
+            to="/catalogue"
+            style={{ borderRadius: 'var(--shop-radius)' }}
+            className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
             Découvrir la boutique
             <ArrowRight size={16} aria-hidden />
           </Link>
@@ -49,6 +53,7 @@ export function HeroRenderer({
               href={`https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}`}
               target="_blank"
               rel="noreferrer"
+              style={{ borderRadius: 'var(--shop-radius)' }}
               className="inline-flex items-center gap-2 border border-[var(--shop-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)]/50"
             >
               <MessageCircle size={16} aria-hidden /> Nous contacter

@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { ChevronDown, HelpCircle, Plus, Trash2 } from 'lucide-react'
-import type { FaqSectionConfig } from '@/types/builder'
+import type { FaqSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
-export function FaqRenderer({ config }: { config: FaqSectionConfig }) {
+export function FaqRenderer({ config, themeConfig }: { config: FaqSectionConfig; themeConfig: ThemeConfig }) {
   const items = config.items.filter((item) => item.question.trim() && item.answer.trim())
   if (items.length === 0) return null
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+    <section className="mx-auto max-w-[min(48rem,var(--shop-content-width))] px-4 py-10 sm:px-6 sm:py-14">
       {config.heading.trim() && (
-        <h2 className="font-heading text-xl font-bold text-[var(--shop-text)] sm:text-2xl">{config.heading}</h2>
+        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h2>
       )}
       <div className="mt-6 divide-y divide-ink-900/10 border-y border-ink-900/10">
         {items.map((item, index) => <FaqItem key={`${item.question}-${index}`} question={item.question} answer={item.answer} />)}

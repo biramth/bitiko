@@ -153,6 +153,43 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
         />
       </div>
+      <div className="border-t border-gray-200 pt-3">
+        <p className="mb-2 text-xs text-gray-400">
+          Le footer garde un fond sombre quel que soit le thème de la boutique — réglez ici la couleur de son bouton et de son texte.
+        </p>
+        <label className={editorLabelClass}>Couleur du bouton</label>
+        <div className="mt-1 flex items-center gap-3">
+          <input
+            type="color"
+            value={config.buttonColor || '#d9612e'}
+            onChange={(e) => onChange({ ...config, buttonColor: e.target.value })}
+            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
+          />
+          <input
+            value={config.buttonColor ?? ''}
+            onChange={(e) => onChange({ ...config, buttonColor: e.target.value })}
+            placeholder="Laisser vide = couleur des boutons du thème"
+            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
+          />
+        </div>
+      </div>
+      <div>
+        <label className={editorLabelClass}>Couleur du texte</label>
+        <div className="mt-1 flex items-center gap-3">
+          <input
+            type="color"
+            value={config.textColor || '#fffbf5'}
+            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
+            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
+          />
+          <input
+            value={config.textColor ?? ''}
+            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
+            placeholder="Laisser vide = blanc cassé (par défaut)"
+            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
+          />
+        </div>
+      </div>
       {removableBranding ? (
         <label className={checkboxRow}>
           <input

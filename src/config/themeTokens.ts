@@ -55,8 +55,13 @@ export const HEADING_SCALE: Record<ThemeConfig['textScale'], string> = {
   lg: 'text-3xl sm:text-5xl',
 }
 
+/** Shared heading scale for every non-hero section (Faq, Products, Categories,
+ *  Promo, Text, Lookbook, FeaturedProducts…), keyed to "Taille des textes" so
+ *  the setting has one real, visible, consistent effect across the storefront
+ *  instead of each section carrying its own fixed size. `base` matches the
+ *  size most of these sections already shipped with. */
 export const SECTION_HEADING_SCALE: Record<ThemeConfig['textScale'], string> = {
-  sm: 'text-base',
-  base: 'text-lg',
-  lg: 'text-xl',
+  sm: 'text-lg sm:text-xl',
+  base: 'text-xl sm:text-2xl',
+  lg: 'text-2xl sm:text-3xl',
 }

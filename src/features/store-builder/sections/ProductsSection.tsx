@@ -11,10 +11,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { ProductFilters } from '@/services/product.service'
 import type { Shop } from '@/types'
-import type { ProductsSectionConfig } from '@/types/builder'
+import type { ProductsSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
-export function ProductsRenderer({ shop, config }: { shop: Shop; config: ProductsSectionConfig }) {
+export function ProductsRenderer({ shop, config, themeConfig }: { shop: Shop; config: ProductsSectionConfig; themeConfig: ThemeConfig }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '')
   const search = useDebouncedValue(searchInput, 300)
@@ -72,7 +73,7 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
-        <h2 className="font-heading text-xl font-bold text-[var(--shop-text)] sm:text-2xl">{config.heading || 'Produits'}</h2>
+        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading || 'Produits'}</h2>
         {!fullToolbox && products.length > 0 && (
           <Link to="/catalogue" className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
             Tout voir
@@ -83,14 +84,14 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
       {fullToolbox && (
         <div className="mb-8 flex flex-col gap-4 border-b border-ink-900/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-xs">
-            <Search size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-700/40" aria-hidden />
+            <Search size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-[var(--shop-text)]/40" aria-hidden />
             <input
               type="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Rechercher un produit…"
               aria-label="Rechercher un produit"
-              className="w-full border-b border-ink-900/15 bg-transparent py-2 pl-6 pr-3 text-sm text-ink-900 placeholder:text-ink-700/40 focus:border-ink-900 focus:outline-none"
+              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 pl-6 pr-3 text-sm text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/40 focus:border-[var(--shop-text)] focus:outline-none"
             />
           </div>
 
@@ -112,7 +113,7 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
                 )
               }}
               aria-label="Filtrer par catégorie"
-              className="border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none"
+              className="border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
             >
               <option value="">Toutes les catégories</option>
               {categories?.map((c) => (
@@ -124,7 +125,7 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
               value={sort}
               onChange={(e) => setParam('tri', e.target.value)}
               aria-label="Trier les produits"
-              className="border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none"
+              className="border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
             >
               <option value="recent">Plus récents</option>
               <option value="price_asc">Prix croissant</option>
@@ -135,7 +136,7 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
       )}
 
       {!isLoading && !isError && fullToolbox && total > 0 && (
-        <p className="mb-4 text-sm text-ink-700/60">
+        <p className="mb-4 text-sm text-[var(--shop-text)]/60">
           {total} produit{total > 1 ? 's' : ''}
           {search ? ` pour « ${search} »` : ''}
         </p>
@@ -168,7 +169,8 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
                     next.set('page', String(p))
                     return next
                   }, { replace: true })}
-                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-sand-100'}`}
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-[var(--shop-button)] text-white' : 'text-[var(--shop-text)]/70 hover:bg-[var(--shop-text)]/10'}`}
                 >
                   {p}
                 </button>

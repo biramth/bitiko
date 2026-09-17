@@ -66,25 +66,30 @@ export function ProductCard({
       </Link>
       <div className="mt-3 flex flex-col gap-0.5">
         {product.category && (
-          <p className="text-[11px] font-medium uppercase tracking-wide text-ink-700/40">{product.category.name}</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--shop-text)]/40">{product.category.name}</p>
         )}
-        <h3 className="text-sm text-ink-900 group-hover:underline group-hover:decoration-ink-900/40 group-hover:underline-offset-2">
+        <h3 className="text-sm text-[var(--shop-text)] group-hover:underline group-hover:decoration-[var(--shop-text)]/40 group-hover:underline-offset-2">
           {product.name}
         </h3>
-        <p className="text-sm font-semibold text-ink-900">{formatCurrency(product.price, currency)}</p>
+        <p className="text-sm font-semibold text-[var(--shop-text)]">{formatCurrency(product.price, currency)}</p>
         <StockBadge stock={product.stock} lowStockThreshold={lowStockThreshold} compact />
       </div>
       {!outOfStock && !hasVariants && (
         <button
           type="button"
           onClick={handleQuickAdd}
-          className="mt-3 flex w-full items-center justify-center gap-1.5 border border-ink-900/15 py-2.5 text-xs font-semibold uppercase tracking-widest text-ink-900 transition-colors hover:border-ink-900 hover:bg-ink-900 hover:text-white"
+          style={{ borderRadius: 'var(--shop-radius)' }}
+          className="mt-3 flex w-full items-center justify-center gap-1.5 border border-[var(--shop-text)]/15 py-2.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-white"
         >
           {added ? <><Check size={14} aria-hidden /> Ajouté</> : <><Plus size={14} aria-hidden /> Ajouter</>}
         </button>
       )}
       {!outOfStock && hasVariants && (
-        <Link to={`/produits/${product.slug}`} className="mt-3 block border border-ink-900/15 py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-ink-900 transition-colors hover:border-ink-900 hover:bg-ink-900 hover:text-white">
+        <Link
+          to={`/produits/${product.slug}`}
+          style={{ borderRadius: 'var(--shop-radius)' }}
+          className="mt-3 block border border-[var(--shop-text)]/15 py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-white"
+        >
           Choisir une option
         </Link>
       )}

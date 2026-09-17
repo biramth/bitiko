@@ -26,7 +26,8 @@ import { formatCurrency } from '@/utils/format'
 import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBreadcrumbStructuredData'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import type { Product, ProductWithRelations, Shop } from '@/types'
-import type { ProductSectionConfig } from '@/types/builder'
+import type { ProductSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 type ProductImage = { public_url: string; id: string }
@@ -124,10 +125,10 @@ function TrustBadges() {
     { icon: MessageCircle, label: 'Confirmation sur WhatsApp' },
   ]
   return (
-    <ul className="mt-5 flex flex-col gap-2 border-t border-ink-900/10 pt-5 text-xs text-ink-700/70">
+    <ul className="mt-5 flex flex-col gap-2 border-t border-[var(--shop-text)]/10 pt-5 text-xs text-[var(--shop-text)]/70">
       {badges.map(({ icon: Icon, label }) => (
         <li key={label} className="flex items-center gap-2">
-          <Icon size={15} className="shrink-0 text-ink-700/50" aria-hidden />
+          <Icon size={15} className="shrink-0 text-[var(--shop-text)]/50" aria-hidden />
           {label}
         </li>
       ))}
@@ -141,6 +142,7 @@ function ProductDetails({
   currency,
   lowStockThreshold,
   whatsappNumber,
+  themeConfig,
 }: {
   product: Product & {
     category?: { name: string; slug: string } | null
@@ -151,6 +153,7 @@ function ProductDetails({
   currency: string
   lowStockThreshold: number
   whatsappNumber: string | null
+  themeConfig: ThemeConfig
 }) {
   const { addItem } = useCart()
   const toast = useToast()
@@ -253,13 +256,13 @@ function ProductDetails({
 
   return (
     <>
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <nav className="mb-6 text-xs font-medium uppercase tracking-wide text-ink-700/40">
-          <Link to="/catalogue" className="hover:text-ink-900">Catalogue</Link>
+      <div className="mx-auto max-w-[var(--shop-content-width)] px-4 py-8 sm:px-6">
+        <nav className="mb-6 text-xs font-medium uppercase tracking-wide text-[var(--shop-text)]/40">
+          <Link to="/catalogue" className="hover:text-[var(--shop-text)]">Catalogue</Link>
           {product.category && (
             <>
               <span className="mx-1.5">/</span>
-              <Link to={`/catalogue?categorie=${product.category.slug}`} className="hover:text-ink-900">{product.category.name}</Link>
+              <Link to={`/catalogue?categorie=${product.category.slug}`} className="hover:text-[var(--shop-text)]">{product.category.name}</Link>
             </>
           )}
         </nav>
@@ -272,12 +275,13 @@ function ProductDetails({
                 onClick={() => galleryImages.length > 0 && setLightboxOpen(true)}
                 aria-label={galleryImages.length > 0 ? `Agrandir la photo de ${product.name}` : undefined}
                 disabled={galleryImages.length === 0}
+                style={{ borderRadius: 'var(--shop-radius)' }}
                 className="group relative aspect-[4/5] w-full overflow-hidden bg-sand-100"
               >
                 {galleryImages[activeImage] ? (
                   <>
                     <img src={galleryImages[activeImage].public_url} alt={product.name} className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
-                    <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-ink-900 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
                   </>
@@ -300,7 +304,7 @@ function ProductDetails({
                           if (variantIdx >= 0) setSelectedVariant(variantIdx)
                         }
                       }}
-                      className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-ink-900' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                      className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-[var(--shop-button)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
                     >
                       <img src={img.public_url} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </button>
@@ -312,19 +316,19 @@ function ProductDetails({
 
           <div className="md:pt-2">
             {product.category && config.showTitle && (
-              <p className="text-xs font-semibold uppercase tracking-widest text-ink-700/40">{product.category.name}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/40">{product.category.name}</p>
             )}
             {config.showTitle && (
-              <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">{product.name}</h1>
+              <h1 className={`mt-2 font-heading font-bold tracking-tight text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{product.name}</h1>
             )}
             {config.showPrice && (
-              <p className="mt-4 text-xl font-semibold text-ink-900">
+              <p className="mt-4 text-xl font-semibold text-[var(--shop-text)]">
                 {formatCurrency(displayPrice, currency)}
               </p>
             )}
             {hasVariants && (
               <div className="mt-4">
-                <p className="text-sm font-medium text-ink-900">Choisissez une variante</p>
+                <p className="text-sm font-medium text-[var(--shop-text)]">Choisissez une variante</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {variants.map((v, i) => {
                     const isSelected = i === selectedVariant
@@ -336,10 +340,11 @@ function ProductDetails({
                         disabled={soldOut}
                         onClick={() => setSelectedVariant(i)}
                         aria-pressed={isSelected}
-                        className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+                        style={{ borderRadius: 'var(--shop-radius)' }}
+                        className={`border px-4 py-2 text-sm transition-colors ${
                           isSelected
-                            ? 'border-ink-900 bg-ink-900 text-white'
-                            : 'border-ink-900/20 text-ink-900 hover:border-ink-900/50'
+                            ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-white'
+                            : 'border-[var(--shop-text)]/20 text-[var(--shop-text)] hover:border-[var(--shop-text)]/50'
                         } ${soldOut ? 'cursor-not-allowed opacity-40' : ''}`}
                       >
                         <span className="block">{v.name}</span>
@@ -354,27 +359,37 @@ function ProductDetails({
               <StockBadge stock={displayStock} lowStockThreshold={lowStockThreshold} />
             </div>
             {config.showDescription && product.description && (
-              <p className="mt-6 whitespace-pre-line leading-relaxed text-ink-700/70">{product.description}</p>
+              <p className="mt-6 whitespace-pre-line leading-relaxed text-[var(--shop-text)]/70">{product.description}</p>
             )}
 
             {config.showQuantity && (
               <div className="mt-8 flex items-center gap-6">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={outOfStock} aria-label="Diminuer la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Minus size={16} /></button>
-                  <span className="w-4 text-center text-sm font-semibold text-ink-900">{quantity}</span>
-                  <button onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))} disabled={outOfStock || quantity >= displayStock} aria-label="Augmenter la quantité" className="text-ink-700 hover:text-ink-900 disabled:opacity-30"><Plus size={16} /></button>
+                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={outOfStock} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Minus size={16} /></button>
+                  <span className="w-4 text-center text-sm font-semibold text-[var(--shop-text)]">{quantity}</span>
+                  <button onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))} disabled={outOfStock || quantity >= displayStock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={16} /></button>
                 </div>
               </div>
             )}
 
             {config.showAddToCart && (
               <div ref={ctaSentinelRef}>
-                <button onClick={handleAddToCart} disabled={outOfStock} className="mt-4 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={outOfStock}
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                  className="mt-4 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
+                >
                   {outOfStock ? 'Rupture de stock' : added ? <><Check size={16} aria-hidden /> Ajouté</> : 'Ajouter au panier'}
                 </button>
               </div>
             )}
-            <button type="button" onClick={handleShare} className="mt-3 flex w-full items-center justify-center gap-2 border border-ink-900/15 px-6 py-3 text-sm font-semibold text-ink-900 transition-colors hover:border-ink-900 hover:bg-sand-50">
+            <button
+              type="button"
+              onClick={handleShare}
+              style={{ borderRadius: 'var(--shop-radius)' }}
+              className="mt-3 flex w-full items-center justify-center gap-2 border border-[var(--shop-text)]/15 px-6 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)] hover:bg-[var(--shop-text)]/5"
+            >
               <Share2 size={16} aria-hidden /> Partager ce produit
             </button>
             {whatsappNumber && (
@@ -382,6 +397,7 @@ function ProductDetails({
                 href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour, je voudrais en savoir plus sur « ${product.name} ».`)}`}
                 target="_blank"
                 rel="noreferrer"
+                style={{ borderRadius: 'var(--shop-radius)' }}
                 className="mt-3 flex w-full items-center justify-center gap-2 border border-emerald-600/30 px-6 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
                 <MessageCircle size={16} aria-hidden /> Poser une question sur WhatsApp
@@ -389,7 +405,7 @@ function ProductDetails({
             )}
             <div aria-live="polite">
               {added && (
-                <Link to="/panier" className="mt-3 inline-block text-sm font-medium text-ink-900 underline underline-offset-2">
+                <Link to="/panier" className="mt-3 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
                   Voir le panier →
                 </Link>
               )}
@@ -401,14 +417,15 @@ function ProductDetails({
       </div>
 
       {config.showAddToCart && !ctaVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink-900/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
           <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-ink-700/60">{product.name}</p>
-            <p className="text-sm font-bold text-ink-900">{formatCurrency(displayPrice, currency)}</p>
+            <p className="truncate text-xs font-medium text-[var(--shop-text)]/60">{product.name}</p>
+            <p className="text-sm font-bold text-[var(--shop-text)]">{formatCurrency(displayPrice, currency)}</p>
           </div>
           <button
             onClick={handleAddToCart}
             disabled={outOfStock}
+            style={{ borderRadius: 'var(--shop-radius)' }}
             className="shrink-0 bg-[var(--shop-button)] px-5 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
           >
             {outOfStock ? 'Rupture' : added ? 'Ajouté ✓' : 'Ajouter'}
@@ -435,17 +452,19 @@ function RelatedProducts({
   shop,
   categoryId,
   excludeProductId,
+  themeConfig,
 }: {
   shop: Shop
   categoryId: string | null
   excludeProductId: string
+  themeConfig: ThemeConfig
 }) {
   const { data: related } = useRelatedProducts(shop.id, categoryId, excludeProductId, 4)
   if (!related || related.length === 0) return null
 
   return (
-    <section className="mx-auto max-w-6xl border-t border-ink-900/10 px-4 py-10 sm:px-6">
-      <h2 className="font-heading text-lg font-bold text-[var(--shop-text)]">Vous aimerez aussi</h2>
+    <section className="mx-auto max-w-[var(--shop-content-width)] border-t border-[var(--shop-text)]/10 px-4 py-10 sm:px-6">
+      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Vous aimerez aussi</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {related.map((product) => (
           <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
@@ -457,7 +476,7 @@ function RelatedProducts({
 
 /** Client-only "vu récemment" row, backed by localStorage — never shows the
  *  product currently being viewed, and stays empty until there's history. */
-function RecentlyViewedRow({ shop, product }: { shop: Shop; product: ProductWithRelations }) {
+function RecentlyViewedRow({ shop, product, themeConfig }: { shop: Shop; product: ProductWithRelations; themeConfig: ThemeConfig }) {
   const currentEntry = useMemo<RecentlyViewedEntry>(
     () => ({
       id: product.id,
@@ -472,12 +491,12 @@ function RecentlyViewedRow({ shop, product }: { shop: Shop; product: ProductWith
   if (items.length === 0) return null
 
   return (
-    <section className="mx-auto max-w-6xl border-t border-ink-900/10 px-4 py-10 sm:px-6">
-      <h2 className="font-heading text-lg font-bold text-[var(--shop-text)]">Vu récemment</h2>
+    <section className="mx-auto max-w-[var(--shop-content-width)] border-t border-[var(--shop-text)]/10 px-4 py-10 sm:px-6">
+      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Vu récemment</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {items.map((item) => (
           <Link key={item.id} to={`/produits/${item.slug}`} className="group block">
-            <div className="aspect-[4/5] w-full overflow-hidden bg-sand-100">
+            <div className="aspect-[4/5] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
               {item.imageUrl ? (
                 <img
                   src={item.imageUrl}
@@ -490,10 +509,10 @@ function RecentlyViewedRow({ shop, product }: { shop: Shop; product: ProductWith
                 <div className="flex h-full w-full items-center justify-center text-ink-200"><ImageOff size={32} aria-hidden /></div>
               )}
             </div>
-            <p className="mt-3 truncate text-sm text-ink-900 group-hover:underline group-hover:decoration-ink-900/40 group-hover:underline-offset-2">
+            <p className="mt-3 truncate text-sm text-[var(--shop-text)] group-hover:underline group-hover:decoration-[var(--shop-text)]/40 group-hover:underline-offset-2">
               {item.name}
             </p>
-            <p className="text-sm font-semibold text-ink-900">{formatCurrency(item.price, shop.currency)}</p>
+            <p className="text-sm font-semibold text-[var(--shop-text)]">{formatCurrency(item.price, shop.currency)}</p>
           </Link>
         ))}
       </div>
@@ -501,7 +520,7 @@ function RecentlyViewedRow({ shop, product }: { shop: Shop; product: ProductWith
   )
 }
 
-export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductSectionConfig }) {
+export function ProductRenderer({ shop, config, themeConfig }: { shop: Shop; config: ProductSectionConfig; themeConfig: ThemeConfig }) {
   const { slug } = useParams<{ slug: string }>()
   const isEmbeddedPreview = useIsEmbeddedPreview()
   const { data: product, isLoading, isError } = useProduct(shop?.id, slug)
@@ -510,7 +529,7 @@ export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductS
   if (!slug) {
     if (isEmbeddedPreview) {
       return (
-        <div className="mx-auto max-w-2xl px-4 py-16 text-center text-ink-700/50">
+        <div className="mx-auto max-w-2xl px-4 py-16 text-center text-[var(--shop-text)]/50">
           Bloc « Fiche produit » — s'affiche sur la page produit.
         </div>
       )
@@ -522,8 +541,8 @@ export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductS
   if (isError || !product) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <p className="text-ink-700">Ce produit n'existe pas ou n'est plus disponible.</p>
-        <Link to="/catalogue" className="mt-4 inline-block text-sm font-medium text-ink-900 underline underline-offset-2">
+        <p className="text-[var(--shop-text)]/80">Ce produit n'existe pas ou n'est plus disponible.</p>
+        <Link to="/catalogue" className="mt-4 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
           Retour au catalogue
         </Link>
       </div>
@@ -538,11 +557,12 @@ export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductS
         currency={currency}
         lowStockThreshold={shop.low_stock_threshold}
         whatsappNumber={shop.whatsapp_number}
+        themeConfig={themeConfig}
       />
       {config.showRelatedProducts !== false && (
-        <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} />
+        <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} themeConfig={themeConfig} />
       )}
-      {config.showRecentlyViewed !== false && <RecentlyViewedRow shop={shop} product={product} />}
+      {config.showRecentlyViewed !== false && <RecentlyViewedRow shop={shop} product={product} themeConfig={themeConfig} />}
     </>
   )
 }

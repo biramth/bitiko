@@ -3,24 +3,25 @@ import { ArrowUpRight } from 'lucide-react'
 import { useCategories } from '@/features/categories/useCategories'
 import { readableTextColor } from '@/features/categories/categoryTile'
 import type { Shop } from '@/types'
-import type { CategoriesSectionConfig } from '@/types/builder'
+import type { CategoriesSectionConfig, ThemeConfig } from '@/types/builder'
+import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 const TILE_THEMES = [
-  'bg-ink-900 text-white',
+  'bg-[var(--shop-text)] text-white',
   'bg-[var(--shop-accent)] text-white',
   'bg-[var(--shop-secondary)] text-ink-900',
-  'bg-ink-800 text-white',
+  'bg-[var(--shop-button)] text-white',
 ]
 
-export function CategoriesRenderer({ shop, config }: { shop: Shop; config: CategoriesSectionConfig }) {
+export function CategoriesRenderer({ shop, config, themeConfig }: { shop: Shop; config: CategoriesSectionConfig; themeConfig: ThemeConfig }) {
   const { data: categories } = useCategories(shop.id)
   if (!categories || categories.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
       {config.heading.trim() && (
-        <h2 className="mb-4 font-heading text-lg font-bold text-[var(--shop-text)]">{config.heading}</h2>
+        <h2 className={`mb-4 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h2>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {categories.map((category, i) => {
