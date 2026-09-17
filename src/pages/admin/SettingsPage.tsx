@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
-  BarChart3,
   Check,
   ChevronDown,
   ChevronRight,
@@ -25,7 +24,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { useShopPlan } from '@/features/billing/useShopPlan'
 import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
@@ -100,8 +98,10 @@ function AccountSection() {
   // password, so this card offers to add one rather than "change" it.
   const hasPassword = user?.identities?.some((i) => i.provider === 'email') ?? true
 
-  const [fullName, setFullName] = useState((user?.user_metadata?.full_name as string | undefined) ?? '')
+  const initialFullName = (user?.user_metadata?.full_name as string | undefined) ?? ''
+  const [fullName, setFullName] = useState(initialFullName)
   const [nameStatus, setNameStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const nameDirty = fullName.trim() !== initialFullName.trim()
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [emailStatus, setEmailStatus] = useState<'idle' | 'saving' | 'sent' | 'error'>('idle')
@@ -233,7 +233,7 @@ function AccountSection() {
             </span>
             <button
               type="submit"
-              disabled={nameStatus === 'saving' || !fullName.trim()}
+              disabled={nameStatus === 'saving' || !fullName.trim() || !nameDirty}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
             >
               {nameStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
@@ -434,14 +434,32 @@ function SettingsForm({
     shop.free_delivery_threshold != null ? String(Number(shop.free_delivery_threshold)) : '',
   )
   const [lowStockThreshold, setLowStockThreshold] = useState(String(Number(shop.low_stock_threshold ?? 5)))
-  const [gaMeasurementId, setGaMeasurementId] = useState(shop.ga_measurement_id ?? '')
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
 
-  const { plan } = useShopPlan(shop.id)
-
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Tracks whether the form actually differs from what's saved, so
+  // "Enregistrer" stops looking clickable once there's nothing to save —
+  // it used to stay enabled at all times, inviting no-op saves.
+  const buildSnapshot = () =>
+    JSON.stringify({
+      name,
+      description,
+      whatsappNumber,
+      paymentInstructions,
+      currency,
+      address,
+      socialLinks,
+      logoUrl,
+      bannerUrl,
+      themeColor,
+      freeDeliveryThreshold,
+      lowStockThreshold,
+    })
+  const [savedSnapshot, setSavedSnapshot] = useState(buildSnapshot)
+  const isDirty = buildSnapshot() !== savedSnapshot
 
   const { data: zones = [] } = useQuery({
     queryKey: ['delivery-secteurs', shop.id],
@@ -593,11 +611,11 @@ function SettingsForm({
         theme_color: themeColor,
         free_delivery_threshold: freeDeliveryThreshold.trim() ? Number(freeDeliveryThreshold) : null,
         low_stock_threshold: Number(lowStockThreshold) || 0,
-        ga_measurement_id: gaMeasurementId.trim() || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       queryClient.invalidateQueries({ queryKey: ['tenant-shop'] })
+      setSavedSnapshot(buildSnapshot())
       setSaved(true)
       setError(null)
       setTimeout(() => setSaved(false), 2500)
@@ -630,11 +648,6 @@ function SettingsForm({
     if (!/^#[0-9a-fA-F]{6}$/.test(themeColor)) {
       setError('Couleur invalide.')
       navigate('/admin/parametres/appearance')
-      return
-    }
-    if (plan.analytics !== 'basic' && gaMeasurementId.trim() && !/^G-[A-Z0-9]+$/i.test(gaMeasurementId.trim())) {
-      setError('ID Google Analytics invalide. Format attendu : G-XXXXXXXXXX.')
-      navigate('/admin/parametres/general')
       return
     }
     saveMutation.mutate()
@@ -685,23 +698,10 @@ function SettingsForm({
         </p>
       </header>
 
-      {/* AdminLayout's sidebar (with its own Paramètres submenu) only renders
-          at md+ (see `hidden ... md:flex` there) — this substitute needs the
-          same breakpoint, not lg, or both show at once between 768–1023px. */}
-      <nav className="sticky top-0 z-10 -mx-4 mt-5 flex gap-1 overflow-x-auto border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 md:hidden">
-        {SECTIONS.map(({ key, label, icon: Icon }) => (
-          <Link
-            key={key}
-            to={`/admin/parametres/${key}`}
-            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              section === key ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Icon size={15} aria-hidden className="shrink-0" />
-            <span className="whitespace-nowrap">{label}</span>
-          </Link>
-        ))}
-      </nav>
+      {/* No mobile section-switcher here anymore — AdminLayout's hamburger
+          drawer already lists every Paramètres section on every screen size
+          below md, so a second copy of the same links on the page itself
+          was just the same navigation shown twice. */}
 
       {section === 'compte' ? (
         <AccountSection />
@@ -711,7 +711,7 @@ function SettingsForm({
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="space-y-6">
           {section === 'general' && (
-            <Card icon={Store} title="Général" description="Le nom et la description de votre boutique.">
+            <Card icon={Store} title="Général" description="Le nom, la description et le genre de votre boutique.">
               <div>
                 <label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
                   Nom de la boutique
@@ -739,54 +739,14 @@ function SettingsForm({
                   className={inputClass}
                 />
               </div>
-            </Card>
-          )}
 
-          {section === 'general' && (
-            <Card
-              icon={BarChart3}
-              title="Google Analytics"
-              description="Suivez les visiteurs de votre boutique avec votre propre compte Google Analytics 4."
-            >
-              {plan.analytics === 'basic' ? (
-                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-gray-600">Disponible à partir de l'offre Essentiel.</p>
-                  <Link
-                    to="/admin/parametres/facturation"
-                    className="shrink-0 text-sm font-medium text-brand-700 hover:text-brand-800"
-                  >
-                    Voir les offres
-                  </Link>
-                </div>
-              ) : (
-                <div>
-                  <label htmlFor="gaMeasurementId" className="block text-sm font-medium text-gray-700">
-                    ID de mesure GA4
-                  </label>
-                  <input
-                    id="gaMeasurementId"
-                    value={gaMeasurementId}
-                    onChange={(e) => setGaMeasurementId(e.target.value)}
-                    placeholder="G-XXXXXXXXXX"
-                    className={inputClass}
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Trouvez-le dans Google Analytics sous Administration → Flux de données.
-                  </p>
-                </div>
-              )}
-            </Card>
-          )}
-
-          {section === 'appearance' && (
-            <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleur affichés sur la boutique.">
               {(() => {
                 const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : undefined
                 if (!template) return null
                 return (
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500">Thème choisi à la création</p>
+                      <p className="text-xs font-medium text-gray-500">Genre de boutique choisi à la création</p>
                       <p className="truncate text-sm font-semibold text-gray-900">{template.label}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -804,6 +764,11 @@ function SettingsForm({
                   </div>
                 )
               })()}
+            </Card>
+          )}
+
+          {section === 'appearance' && (
+            <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleur affichés sur la boutique.">
             <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-sand-50">
                   {logoUrl ? (
@@ -1375,13 +1340,15 @@ function SettingsForm({
                   </span>
                 ) : error ? (
                   <span className="text-red-600">{error}</span>
+                ) : isDirty ? (
+                  <span className="text-gray-500">Modifications non enregistrées.</span>
                 ) : (
-                  <span className="text-gray-500">Les changements s'appliquent immédiatement.</span>
+                  <span className="text-gray-400">Aucune modification à enregistrer.</span>
                 )}
               </div>
               <button
                 type="submit"
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || !isDirty}
                 className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Enregistrer les modifications

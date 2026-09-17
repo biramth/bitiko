@@ -3,7 +3,6 @@ import { useTenant } from '@/features/tenant/TenantContext'
 import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { StoreShell } from '@/components/ui/StoreShell'
-import { ShopGoogleAnalytics } from '@/components/ShopGoogleAnalytics'
 import { HomePage } from '@/pages/store/HomePage'
 import { CatalogPage } from '@/pages/store/CatalogPage'
 import { ProductPage } from '@/pages/store/ProductPage'
@@ -23,7 +22,7 @@ function StoreIndexRoute() {
 }
 
 export function StoreApp() {
-  const { shop, isLoading, notFound } = useTenant()
+  const { isLoading, notFound } = useTenant()
 
   if (isLoading) {
     return <StoreShell />
@@ -32,20 +31,17 @@ export function StoreApp() {
   if (notFound) return <ShopNotFoundPage />
 
   return (
-    <>
-      {shop && <ShopGoogleAnalytics shopId={shop.id} measurementId={shop.ga_measurement_id} />}
-      <Routes>
-        <Route element={<StoreLayout />}>
-          <Route index element={<StoreIndexRoute />} />
-          <Route path="catalogue" element={<CatalogPage />} />
-          <Route path="produits/:slug" element={<ProductPage />} />
-          <Route path="panier" element={<CartPage />} />
-          <Route path="commande" element={<CheckoutPage />} />
-          <Route path="commande/confirmation/:id" element={<OrderConfirmationPage />} />
-          <Route path="pages/:slug" element={<StorePageView />} />
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route element={<StoreLayout />}>
+        <Route index element={<StoreIndexRoute />} />
+        <Route path="catalogue" element={<CatalogPage />} />
+        <Route path="produits/:slug" element={<ProductPage />} />
+        <Route path="panier" element={<CartPage />} />
+        <Route path="commande" element={<CheckoutPage />} />
+        <Route path="commande/confirmation/:id" element={<OrderConfirmationPage />} />
+        <Route path="pages/:slug" element={<StorePageView />} />
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   )
 }
