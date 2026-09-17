@@ -15,27 +15,20 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { listPendingPayments, approvePayment, rejectPayment } from '@/services/admin.service'
-import {
-  getPlatformOrders,
-  getPlatformShops,
-  getPlatformStats,
-  type PlatformVisitsByDay,
-} from '@/services/platform.service'
+import { getPlatformShops, getPlatformStats, type PlatformVisitsByDay } from '@/services/platform.service'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
-import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/config/constants'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
-type Tab = 'overview' | 'analytics' | 'shops' | 'orders' | 'payments'
+type Tab = 'overview' | 'analytics' | 'shops' | 'payments'
 
 const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard },
   { key: 'analytics', label: 'Analytiques', icon: BarChart3 },
   { key: 'shops', label: 'Boutiques', icon: Store },
-  { key: 'orders', label: 'Commandes', icon: ShoppingBag },
   { key: 'payments', label: 'Paiements', icon: CreditCard },
 ]
 
@@ -104,7 +97,6 @@ export function SuperAdminPage() {
         {tab === 'overview' && <OverviewTab stats={stats} />}
         {tab === 'analytics' && <AnalyticsTab stats={stats} />}
         {tab === 'shops' && <ShopsTab />}
-        {tab === 'orders' && <OrdersTab />}
         {tab === 'payments' && <PaymentsTab />}
       </div>
     </div>
@@ -344,51 +336,6 @@ function ShopsTab() {
                 {shop.plan_status === 'past_due' && <span className="ml-1.5 text-xs text-amber-600">paiement en retard</span>}
               </td>
               <td className="px-4 py-3 text-gray-600">{new Date(shop.created_at).toLocaleDateString('fr-FR')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function OrdersTab() {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['platform-orders'],
-    queryFn: () => getPlatformOrders(30),
-    retry: false,
-  })
-
-  if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-red-600">{error instanceof Error ? error.message : 'Erreur.'}</p>
-  if (!data || data.length === 0) return <EmptyState icon={ShoppingBag} title="Aucune commande" />
-
-  return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-gray-100 text-gray-500">
-          <tr>
-            <th className="px-4 py-3 font-medium">Commande</th>
-            <th className="px-4 py-3 font-medium">Boutique</th>
-            <th className="px-4 py-3 font-medium">Client</th>
-            <th className="px-4 py-3 font-medium">Total</th>
-            <th className="px-4 py-3 font-medium">Statut</th>
-            <th className="px-4 py-3 font-medium">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {data.map((order) => (
-            <tr key={order.id}>
-              <td className="px-4 py-3 font-medium text-gray-900">{order.order_number}</td>
-              <td className="px-4 py-3 text-gray-600">{order.shop_name}</td>
-              <td className="px-4 py-3 text-gray-600">{order.customer_name}</td>
-              <td className="px-4 py-3 text-gray-600">{formatCurrency(Number(order.total))}</td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${ORDER_STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                  {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-gray-600">{new Date(order.created_at).toLocaleString('fr-FR')}</td>
             </tr>
           ))}
         </tbody>
