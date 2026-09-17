@@ -40,8 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { data: subscriptions, error } = await admin
       .from('shop_subscriptions')
-      .select('shop_id, current_period_end, shop:shops(name, currency, owner_id)')
-      .eq('plan', 'pro')
+      .select('shop_id, plan, current_period_end, shop:shops(name, currency, owner_id)')
+      .in('plan', ['essential', 'pro'])
       .eq('status', 'active')
       .gte('current_period_end', windowStart)
       .lt('current_period_end', windowEnd)
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         await sendEmail({
           to: ownerData.user.email,
-          subject: `Ton abonnement Pro expire bientôt — ${shop.name}`,
+          subject: `Ton abonnement expire bientôt — ${shop.name}`,
           html: renewalReminderEmailHtml({
             origin,
             shopName: shop.name,
@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               month: 'long',
               year: 'numeric',
             }),
-            amountLabel: formatPrice(PLANS.pro.priceXof, shop.currency),
+            amountLabel: formatPrice(PLANS[sub.plan as keyof typeof PLANS].priceXof, shop.currency),
           }),
         })
         sent++

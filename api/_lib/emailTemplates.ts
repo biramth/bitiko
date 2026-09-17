@@ -5,6 +5,20 @@
 // don't render inline SVG; `alt` carries real text so the email still reads
 // fine with images blocked (the default in most clients until a user opts in).
 
+// Every value interpolated below that can trace back to merchant-controlled
+// input (shop name/slug, WhatsApp number, account email) must go through
+// this — these emails render in a real inbox, and an unescaped shop name is
+// an HTML-injection vector against whoever reads the email (notably the
+// platform admin's own inbox for proUpgradeRequestEmailHtml).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 interface BadgeColors {
   cardBg: string
   numberBg: string
@@ -128,20 +142,22 @@ export function proUpgradeRequestEmailHtml({
   whatsappNumber,
   ownerEmail,
   amount,
+  planLabel = 'Pro',
 }: {
   shopName: string
   shopSlug: string
   whatsappNumber: string
   ownerEmail: string
   amount: number
+  planLabel?: string
 }): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#17152e;line-height:1.6;">
-    <p><strong>${shopName}</strong> (${shopSlug}.bitiko.shop) dit avoir payé ${amount} F CFA via le lien Wave pour passer en Pro.</p>
+    <p><strong>${escapeHtml(shopName)}</strong> (${escapeHtml(shopSlug)}.bitiko.shop) dit avoir payé ${amount} F CFA via le lien Wave pour passer en ${escapeHtml(planLabel)}.</p>
     <ul>
-      <li>Numéro WhatsApp du commerçant : ${whatsappNumber}</li>
-      <li>Email du compte : ${ownerEmail}</li>
+      <li>Numéro WhatsApp du commerçant : ${escapeHtml(whatsappNumber)}</li>
+      <li>Email du compte : ${escapeHtml(ownerEmail)}</li>
     </ul>
-    <p>Vérifie l'onglet Transactions de l'app Wave Business (expéditeur/montant), puis active le Pro pour cette boutique.</p>
+    <p>Vérifie l'onglet Transactions de l'app Wave Business (expéditeur/montant), puis active le plan ${escapeHtml(planLabel)} pour cette boutique.</p>
   </div>`
 }
 
@@ -149,10 +165,12 @@ export function proActivatedEmailHtml({
   origin,
   shopName,
   periodEndLabel,
+  planLabel = 'Pro',
 }: {
   origin: string
   shopName: string
   periodEndLabel: string
+  planLabel?: string
 }): string {
   const perks = [
     badge(0, 'Produits illimités', 'Fini la limite de 8 produits actifs.'),
@@ -162,10 +180,10 @@ export function proActivatedEmailHtml({
 
   return shell({
     origin,
-    preheader: `${shopName} est maintenant en Pro — actif jusqu'au ${periodEndLabel}.`,
+    preheader: `${escapeHtml(shopName)} est maintenant en ${escapeHtml(planLabel)} — actif jusqu'au ${periodEndLabel}.`,
     eyebrow: 'Abonnement activé',
-    heading: `🎉 Bienvenue dans Bitiko Pro !`,
-    body: `Ton paiement a été vérifié — <strong>${shopName}</strong> est maintenant en Pro, actif jusqu'au <strong>${periodEndLabel}</strong>.`,
+    heading: `🎉 Bienvenue dans Bitiko ${planLabel} !`,
+    body: `Ton paiement a été vérifié — <strong>${escapeHtml(shopName)}</strong> est maintenant en ${escapeHtml(planLabel)}, actif jusqu'au <strong>${periodEndLabel}</strong>.`,
     extra: perks,
     buttonLabel: 'Aller sur mon tableau de bord',
     buttonUrl: `${origin}/admin`,
@@ -186,12 +204,12 @@ export function renewalReminderEmailHtml({
 }): string {
   return shell({
     origin,
-    preheader: `L'abonnement Pro de ${shopName} expire le ${periodEndLabel}.`,
+    preheader: `L'abonnement Pro de ${escapeHtml(shopName)} expire le ${periodEndLabel}.`,
     eyebrow: 'Renouvellement',
     heading: 'Ton abonnement Pro expire bientôt',
-    body: `L'abonnement Pro de <strong>${shopName}</strong> arrive à échéance le <strong>${periodEndLabel}</strong>. Renouvelle-le pour ${amountLabel} afin de garder tes fonctionnalités Pro sans interruption.`,
+    body: `L'abonnement Pro de <strong>${escapeHtml(shopName)}</strong> arrive à échéance le <strong>${periodEndLabel}</strong>. Renouvelle-le pour ${amountLabel} afin de garder tes fonctionnalités Pro sans interruption.`,
     buttonLabel: 'Renouveler mon abonnement',
-    buttonUrl: `${origin}/admin/facturation`,
+    buttonUrl: `${origin}/admin/parametres/facturation`,
     footnote: "Sans renouvellement, ta boutique repasse automatiquement en plan gratuit à la date d'échéance — tes produits et données restent intacts.",
   })
 }
@@ -216,11 +234,11 @@ export function welcomeEmailHtml({
 
   return shell({
     origin,
-    preheader: `${shopName} est prête — ajoute ton premier produit pour commencer à vendre.`,
+    preheader: `${escapeHtml(shopName)} est prête — ajoute ton premier produit pour commencer à vendre.`,
     eyebrow: 'Vendez sur WhatsApp',
-    heading: `🎉 ${shopName} est en ligne !`,
+    heading: `🎉 ${escapeHtml(shopName)} est en ligne !`,
     body: 'Ta boutique est prête à recevoir tes clients. Voici comment démarrer :',
-    urlChip: cleanShopUrl,
+    urlChip: escapeHtml(cleanShopUrl),
     extra: steps,
     buttonLabel: 'Ajouter mon premier produit',
     buttonUrl: addProductUrl,

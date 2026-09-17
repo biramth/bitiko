@@ -37,9 +37,6 @@ const ProductsPage = lazy(() =>
 const ProductFormPage = lazy(() =>
   import('@/pages/admin/ProductFormPage').then((m) => ({ default: m.ProductFormPage })),
 )
-const CategoriesPage = lazy(() =>
-  import('@/pages/admin/CategoriesPage').then((m) => ({ default: m.CategoriesPage })),
-)
 const CategoryFormPage = lazy(() =>
   import('@/pages/admin/CategoryFormPage').then((m) => ({ default: m.CategoryFormPage })),
 )
@@ -52,9 +49,6 @@ const SettingsPage = lazy(() =>
 )
 const StoreBuilderPage = lazy(() =>
   import('@/pages/admin/StoreBuilderPage').then((m) => ({ default: m.StoreBuilderPage })),
-)
-const BillingPage = lazy(() =>
-  import('@/pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })),
 )
 const SuperAdminPage = lazy(() =>
   import('@/pages/admin/SuperAdminPage').then((m) => ({ default: m.SuperAdminPage })),
@@ -87,14 +81,22 @@ export function PlatformRoutes() {
               <Route path="produits" element={standalone(<ProductsPage />)} />
               <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
               <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+              {/* Catégories lives as a tab of Produits now (?tab=categories) —
+                  the create-category form stays its own page, but the list
+                  itself no longer has a standalone route. */}
               <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
-              <Route path="categories" element={standalone(<CategoriesPage />)} />
+              <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
               <Route path="commandes" element={standalone(<OrdersPage />)} />
               <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
               {BUILDER_INTERNAL && (
                 <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
               )}
-              <Route path="facturation" element={standalone(<BillingPage />)} />
+              {/* Facturation moved into Paramètres (one less top-level nav
+                  group in production, where it was the only item under
+                  "Développer"). Kept as a redirect — Wave's own success/error
+                  URLs and every internal link were updated, but this catches
+                  anything external (an old bookmark, a cached email). */}
+              <Route path="facturation" element={<Navigate to="/admin/parametres/facturation" replace />} />
               <Route path="parametres">
                 <Route index element={<Navigate to="general" replace />} />
                 <Route path=":section" element={standalone(<SettingsPage />)} />

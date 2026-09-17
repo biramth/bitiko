@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
@@ -6,14 +6,19 @@ import {
   ChevronsRight,
   CreditCard,
   ExternalLink,
+  ImagePlus,
   LayoutDashboard,
   LogOut,
+  Menu,
   Package,
+  Phone,
   Settings,
   ShoppingBag,
   Store,
-  Tags,
+  Truck,
+  User,
   Wand2,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
@@ -21,23 +26,26 @@ import { BUILDER_INTERNAL } from '@/config/features'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 
+// Flat list, not grouped — Catégories now lives as a tab of Produits and
+// Facturation moved under Paramètres (see settingsSections below), so there
+// are too few top-level items left to justify collapsible groups. Personnaliser
+// only exists for the internal/dev build (BUILDER_INTERNAL).
 const navItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
-  { to: '/admin/produits', label: 'Produits', icon: Package },
-  { to: '/admin/categories', label: 'Catégories', icon: Tags },
   { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
+  { to: '/admin/produits', label: 'Produits', icon: Package },
   { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true },
-  { to: '/admin/facturation', label: 'Facturation', icon: CreditCard },
 ]
 
 const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
 
 const settingsSections = [
-  { to: '/admin/parametres/general', label: 'Général' },
-  { to: '/admin/parametres/appearance', label: 'Apparence' },
-  { to: '/admin/parametres/contact', label: 'Contact & devise' },
-  { to: '/admin/parametres/shipping', label: 'Livraison & stock' },
-  { to: '/admin/parametres/compte', label: 'Mon compte' },
+  { to: '/admin/parametres/general', label: 'Général', icon: Store },
+  { to: '/admin/parametres/appearance', label: 'Apparence', icon: ImagePlus },
+  { to: '/admin/parametres/contact', label: 'Contact & devise', icon: Phone },
+  { to: '/admin/parametres/shipping', label: 'Livraison & stock', icon: Truck },
+  { to: '/admin/parametres/facturation', label: 'Facturation', icon: CreditCard },
+  { to: '/admin/parametres/compte', label: 'Mon compte', icon: User },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
@@ -48,6 +56,14 @@ export function AdminLayout() {
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
   const [settingsOpen, setSettingsOpen] = useState(onSettings)
+  // Navigate into/out of Paramètres → follow it (adjust during render rather
+  // than in an effect, so a manual collapse isn't re-opened by an unrelated
+  // re-render, but the link itself always reflects where you actually are).
+  const [prevOnSettings, setPrevOnSettings] = useState(onSettings)
+  if (onSettings !== prevOnSettings) {
+    setPrevOnSettings(onSettings)
+    if (onSettings) setSettingsOpen(true)
+  }
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -55,6 +71,26 @@ export function AdminLayout() {
       return false
     }
   })
+
+  const settingsExpanded = settingsOpen
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileMenuOpen])
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -64,7 +100,6 @@ export function AdminLayout() {
       } catch {
         // localStorage unavailable (private browsing) — the toggle still works for this session.
       }
-      if (next) setSettingsOpen(false)
       return next
     })
   }
@@ -75,7 +110,7 @@ export function AdminLayout() {
     } ${isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`
 
   const settingsSubLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
     }`
 
@@ -145,7 +180,7 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
-            aria-expanded={settingsOpen}
+            aria-expanded={settingsExpanded}
             title={collapsed ? 'Paramètres' : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               collapsed ? 'justify-center' : ''
@@ -162,15 +197,16 @@ export function AdminLayout() {
                 <ChevronDown
                   size={15}
                   aria-hidden
-                  className={`transition-transform ${settingsOpen ? 'rotate-180' : ''}`}
+                  className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
                 />
               </>
             )}
           </button>
-          {!collapsed && settingsOpen && (
+          {!collapsed && settingsExpanded && (
             <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-              {settingsSections.map(({ to, label }) => (
+              {settingsSections.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} className={settingsSubLinkClass}>
+                  <Icon size={15} aria-hidden />
                   {label}
                 </NavLink>
               ))}
@@ -196,49 +232,142 @@ export function AdminLayout() {
 
       <div className="flex h-screen flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-ink-900/10 bg-white px-4 py-3 md:hidden">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Ouvrir le menu"
+              aria-expanded={mobileMenuOpen}
+              className="-ml-1.5 rounded-lg p-1.5 text-gray-600 hover:bg-gray-100"
+            >
+              <Menu size={22} aria-hidden />
+            </button>
             <LogoMark size={22} />
-            <span className="font-heading font-bold text-ink-900">
+            <span className="truncate font-heading font-bold text-ink-900">
               {shop?.name ?? 'Bitiko'}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            {shop && (
-              <Link to={shopUrl(shop.slug)} target="_blank" rel="noreferrer" aria-label="Voir la boutique">
-                <ExternalLink size={18} className="text-gray-500" />
-              </Link>
-            )}
-            <button onClick={() => signOut()} aria-label="Déconnexion">
-              <LogOut size={18} className="text-gray-500" />
-            </button>
-          </div>
+          {shop && (
+            <Link to={shopUrl(shop.slug)} target="_blank" rel="noreferrer" aria-label="Voir la boutique">
+              <ExternalLink size={18} className="text-gray-500" />
+            </Link>
+          )}
         </header>
-        <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 bg-white px-2 py-2 md:hidden">
-          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
-                  isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
-                }`
-              }
-            >
-              <Icon size={15} aria-hidden /> {label}
-            </NavLink>
-          ))}
-          <NavLink
-            to="/admin/parametres"
-            className={() =>
-              `flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
-                onSettings ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
-              }`
-            }
-          >
-            <Settings size={15} aria-hidden /> Paramètres
-          </NavLink>
-        </nav>
+
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu de navigation">
+            <div
+              className="absolute inset-0 bg-ink-900/50"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+            <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-ink-900 shadow-xl">
+              <div className="flex items-center justify-between px-5 py-5 text-white">
+                <div className="flex items-center gap-2">
+                  <LogoMark />
+                  <span className="font-heading text-lg font-bold tracking-tight text-white">Bitiko</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Fermer le menu"
+                  className="rounded-lg p-1.5 text-white/60 hover:bg-white/5 hover:text-white"
+                >
+                  <X size={20} aria-hidden />
+                </button>
+              </div>
+
+              <nav className="flex flex-1 flex-col gap-1 px-3">
+                {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+                      }`
+                    }
+                  >
+                    <Icon size={18} aria-hidden />
+                    {label}
+                  </NavLink>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen((open) => !open)}
+                  aria-expanded={settingsExpanded}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <Settings size={18} aria-hidden />
+                  <span className="flex-1 text-left">Paramètres</span>
+                  <ChevronDown
+                    size={15}
+                    aria-hidden
+                    className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {settingsExpanded && (
+                  <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+                    {settingsSections.map(({ to, label, icon: Icon }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                            isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
+                          }`
+                        }
+                      >
+                        <Icon size={15} aria-hidden />
+                        {label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </nav>
+
+              <div className="px-3 pb-4">
+                {shop && (
+                  <div className="mb-2 rounded-xl bg-white/5 p-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
+                        {shop.logo_url ? (
+                          <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <Store size={16} className="text-gold-400" aria-hidden />
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{shop.name}</p>
+                        <p className="truncate text-xs text-white/50">{shop.slug}.{DISPLAY_ROOT_DOMAIN}</p>
+                      </div>
+                    </div>
+                    <Link
+                      to={shopUrl(shop.slug)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2.5 flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
+                    >
+                      <ExternalLink size={13} aria-hidden /> Voir la boutique
+                    </Link>
+                  </div>
+                )}
+                <button
+                  onClick={() => signOut()}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                >
+                  <LogOut size={18} aria-hidden />
+                  Déconnexion
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Suspense fallback={<PageLoader />}>
             <Outlet />

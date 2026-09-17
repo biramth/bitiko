@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
+import { supabase } from '@/lib/supabaseClient'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -9,22 +10,35 @@ import { Lock } from 'lucide-react'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
 /**
- * Landing point for the "reset password" email link. supabase-js parses the
- * recovery code from the URL and establishes a session automatically
- * (detectSessionInUrl, same mechanism AuthCallbackPage relies on for OAuth/
- * email confirmation) — this page waits for that session, then lets the
- * user set a new password via updateUser.
+ * Landing point for the "reset password" email link, which carries a
+ * `token_hash`. It's verified explicitly via verifyOtp rather than relying
+ * on supabase-js to parse a PKCE code from the URL (detectSessionInUrl),
+ * since that code's verifier only exists in the browser that requested the
+ * link and is absent when the recovery email is opened on another
+ * device/browser — verifyOtp works regardless of where the link is opened.
  */
 export function ResetPasswordPage() {
   usePageSeo({ title: 'Nouveau mot de passe — Bitiko', noindex: true })
   const { session, loading, updatePassword } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [timedOut, setTimedOut] = useState(false)
+  const [verifyError, setVerifyError] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+
+  const tokenHash = searchParams.get('token_hash')
+  const type = searchParams.get('type')
+
+  useEffect(() => {
+    if (!tokenHash || type !== 'recovery') return
+    supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' }).then(({ error: otpError }) => {
+      if (otpError) setVerifyError(true)
+    })
+  }, [tokenHash, type])
 
   useEffect(() => {
     const timeout = setTimeout(() => setTimedOut(true), 8000)
@@ -37,7 +51,7 @@ export function ResetPasswordPage() {
     return () => clearTimeout(timeout)
   }, [done, navigate])
 
-  if (!loading && !session && timedOut) {
+  if (!loading && !session && (verifyError || timedOut)) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-sm text-center">

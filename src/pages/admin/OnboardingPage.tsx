@@ -21,10 +21,10 @@ import {
   XCircle,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
-import { seedDefaultDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
@@ -111,14 +111,25 @@ export function OnboardingPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated')
-      await ensureProfile(user.id, 'owner', {
+      // A stale or storage-restricted session (common in in-app browsers like
+      // the Google app's on iOS) can leave `user` populated in React state
+      // while the client's actual access token is gone — requests then go
+      // out unauthenticated and fail with a cryptic RLS error. Confirming
+      // the session against the server first turns that into a clear
+      // "reconnect" message instead, and refreshes the token if it's just
+      // close to expiring.
+      const { data: freshUserData, error: freshUserError } = await supabase.auth.getUser()
+      if (freshUserError || !freshUserData.user) {
+        throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
+      }
+      const ownerId = freshUserData.user.id
+      await ensureProfile(ownerId, 'owner', {
         firstName,
         lastName,
         phone: personalPhone,
         address: personalAddress,
       })
-      let shop = await createShop({ ownerId: user.id, name: name.trim(), slug, whatsappNumber, templateId })
-      await seedDefaultDeliverySecteurs(shop.id)
+      let shop = await createShop({ ownerId, name: name.trim(), slug, whatsappNumber, templateId })
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
         shop = await updateShop(shop.id, { logo_url: logoUrl })
@@ -169,11 +180,11 @@ export function OnboardingPage() {
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4 py-8 sm:py-12">
       <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-brand-100 opacity-50 blur-3xl" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-gold-300 opacity-20 blur-3xl" aria-hidden />
 
-      <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-8 shadow-xl shadow-ink-900/5 lg:p-10">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8 lg:p-10">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <Logo size={40} withWordmark={false} />
           <h1 className="font-heading text-xl font-bold text-ink-900">Créons ta boutique</h1>
@@ -606,11 +617,17 @@ export function OnboardingPage() {
                       />
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4">
                     <span className="text-gray-500">Logo</span>
-                    <span className="truncate text-right font-medium text-ink-900">
-                      {logoFile ? logoFile.name : 'Sans logo'}
-                    </span>
+                    {logoPreviewUrl ? (
+                      <img
+                        src={logoPreviewUrl}
+                        alt="Logo sélectionné"
+                        className="h-8 w-8 shrink-0 rounded-md border border-sand-200 object-cover"
+                      />
+                    ) : (
+                      <span className="text-right font-medium text-ink-900">Sans logo</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -626,13 +643,14 @@ export function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                aria-label="Retour"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 sm:px-4"
               >
-                <ArrowLeft size={15} aria-hidden /> Retour
+                <ArrowLeft size={15} aria-hidden /> <span className="hidden sm:inline">Retour</span>
               </button>
             )}
 
-            <div className="flex-1" />
+            {step < 5 && <div className="flex-1" />}
 
             {step < 5 ? (
               <button
@@ -642,7 +660,7 @@ export function OnboardingPage() {
                   setError(null)
                   setStep((s) => s + 1)
                 }}
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Suivant <ArrowRight size={15} aria-hidden />
               </button>
@@ -654,7 +672,7 @@ export function OnboardingPage() {
                   setError(null)
                   if (canSubmit && !mutation.isPending) mutation.mutate()
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {mutation.isPending ? 'Création…' : 'Confirmer et créer ma boutique'}
               </button>

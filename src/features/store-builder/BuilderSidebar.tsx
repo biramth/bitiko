@@ -42,6 +42,7 @@ export function BuilderSidebar({
   onAdd,
   availableTypes,
   templateId,
+  allowTemplates = true,
   maxCustomSections,
 }: {
   sections: LayoutSection[]
@@ -60,6 +61,9 @@ export function BuilderSidebar({
   /** The shop's current template — resolves which section types (core plus
    *  whatever that template contributes) show up here. */
   templateId?: string | null
+  /** Whether the plan allows switching templates at all (see `Plan.advancedBuilder`).
+   *  Hides the "Styles" tab entirely rather than showing an empty/locked one. */
+  allowTemplates?: boolean
   /** Plan cap on freely-addable content blocks on this page (see
    *  `Plan.maxCustomSections`) — catalog-display and commerce blocks are
    *  never limited. `null`/absent = unlimited. */
@@ -95,9 +99,9 @@ export function BuilderSidebar({
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
   for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
 
-  // Content blocks (Bannière, Texte, Image, Promotion…) are the "profondeur
-  // de personnalisation" the plan gates — catalog-display and commerce
-  // blocks (Catégories, Produits, Panier…) are never limited.
+  // Content blocks (Bannière, Texte, Image, Promotion, FAQ…) are the
+  // "profondeur de personnalisation" the plan gates — catalog-display and
+  // commerce blocks (Catégories, Produits, Panier…) are never limited.
   const customSectionCount = sections.filter((s) => {
     const def = registry[s.type]
     return !!def && def.category === 'content' && !def.pinned
@@ -109,7 +113,7 @@ export function BuilderSidebar({
       {/* Segmented pill tab bar */}
       <div className="p-2">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
-          {TABS.map(({ key, label, icon: Icon }) => (
+          {TABS.filter(({ key }) => key !== 'templates' || allowTemplates).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -244,11 +248,11 @@ export function BuilderSidebar({
                         </p>
                         {cat === 'content' && contentLimitReached && (
                           <Link
-                            to="/admin/facturation"
+                            to="/admin/parametres/facturation"
                             onClick={() => setAddMenuOpen(false)}
                             className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700"
                           >
-                            <Lock size={10} aria-hidden /> Passer à Pro
+                            <Lock size={10} aria-hidden /> Changer de plan
                           </Link>
                         )}
                       </div>
@@ -261,7 +265,7 @@ export function BuilderSidebar({
                             key={type}
                             type="button"
                             disabled={locked}
-                            title={locked ? `Limite de blocs de contenu atteinte (${maxCustomSections}) — passez à Pro pour plus.` : undefined}
+                            title={locked ? `Limite de blocs de contenu atteinte (${maxCustomSections}) — changez de plan pour plus.` : undefined}
                             onClick={() => {
                               onAdd(type)
                               setAddMenuOpen(false)

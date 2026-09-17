@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ImageOff, Package, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react'
+import { ImageOff, Package, Pencil, Plus, Search, Tags, Trash2, Upload, X } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ProductImportDialog } from './ProductImportDialog'
+import { CategoriesPage } from './CategoriesPage'
 import type { ProductWithRelations } from '@/types'
 
 const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
@@ -26,6 +27,37 @@ const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
   { value: 'low', label: 'Stock faible' },
   { value: 'out', label: 'Rupture' },
 ]
+
+type CatalogTab = 'produits' | 'categories'
+
+/** Catégories used to be its own top-level nav item/route; folding it in
+ *  here as a tab keeps the sidebar shorter without losing anything — both
+ *  still get their own URL (?tab=categories) so links/back-button work. */
+function CatalogTabs({ tab, onChange }: { tab: CatalogTab; onChange: (tab: CatalogTab) => void }) {
+  const tabs: { key: CatalogTab; label: string; icon: typeof Package }[] = [
+    { key: 'produits', label: 'Produits', icon: Package },
+    { key: 'categories', label: 'Catégories', icon: Tags },
+  ]
+  return (
+    <div className="flex gap-1 border-b border-gray-200">
+      {tabs.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+            tab === key
+              ? 'border-brand-600 text-brand-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <Icon size={15} aria-hidden />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function InlineField({
   value,
@@ -93,12 +125,12 @@ function InlineField({
   )
 }
 
-function PlanGauge({ active, max }: { active: number; max: number }) {
+function PlanGauge({ active, max, label }: { active: number; max: number; label: string }) {
   const pct = Math.min(100, Math.round((active / max) * 100))
   return (
     <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="text-gray-500">Plan gratuit — produits actifs</span>
+        <span className="text-gray-500">{label} — produits actifs</span>
         <span className="font-medium text-gray-900">
           {active}/{max}
         </span>
@@ -114,7 +146,7 @@ function PlanGauge({ active, max }: { active: number; max: number }) {
           {pct >= 100
             ? 'Limite atteinte : les nouveaux produits seront enregistrés inactifs. '
             : 'Vous approchez de la limite des produits actifs. '}
-          <Link to="/admin/facturation" className="font-medium text-brand-700 underline underline-offset-2">
+          <Link to="/admin/parametres/facturation" className="font-medium text-brand-700 underline underline-offset-2">
             Passer à Pro
           </Link>
         </p>
@@ -134,6 +166,18 @@ export function ProductsPage() {
   const lowStockThreshold = shop?.low_stock_threshold ?? 5
 
   const [searchParams, setSearchParams] = useSearchParams()
+  const tab: CatalogTab = searchParams.get('tab') === 'categories' ? 'categories' : 'produits'
+  const switchTab = (next: CatalogTab) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next === 'categories') params.set('tab', 'categories')
+        else params.delete('tab')
+        return params
+      },
+      { replace: true },
+    )
+  }
   const stockParam = searchParams.get('stock')
   const categoryParam = searchParams.get('category')
   const categoryFilter = categoryParam ?? ''
@@ -201,11 +245,17 @@ export function ProductsPage() {
     onError: () => toast.error('Impossible de mettre à jour le produit.'),
   })
 
-  if (isLoading) return <PageLoader />
-  if (isError) return <ErrorMessage />
+  if (isLoading && tab === 'produits') return <PageLoader />
+  if (isError && tab === 'produits') return <ErrorMessage />
 
   return (
     <div>
+      <CatalogTabs tab={tab} onChange={switchTab} />
+
+      {tab === 'categories' ? (
+        <CategoriesPage />
+      ) : (
+      <>
       <PageHeader
         title="Produits"
         subtitle="Gérez vos produits, leur stock et leur visibilité."
@@ -313,15 +363,94 @@ export function ProductsPage() {
         </div>
       )}
 
-      {planKey === 'free' && activeProductCount != null && PLANS.free.maxActiveProducts !== null && (
-        <PlanGauge active={activeProductCount} max={PLANS.free.maxActiveProducts} />
+      {activeProductCount != null && PLANS[planKey].maxActiveProducts !== null && (
+        <PlanGauge active={activeProductCount} max={PLANS[planKey].maxActiveProducts} label={PLANS[planKey].label} />
       )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
         {products.length === 0 ? (
           <EmptyState icon={Package} title="Aucun produit" description="Ajoutez votre premier produit." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Cards below sm — a horizontally-scrolled table hides the price/stock
+                columns off-screen on a phone; a stacked card shows everything at once. */}
+            <ul className="divide-y divide-gray-100 sm:hidden">
+              {products.map((product) => (
+                <li key={product.id} className="flex flex-col gap-3 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      {product.images[0] ? (
+                        <img src={product.images[0].public_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-gray-300">
+                          <ImageOff size={16} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-gray-900">{product.name}</p>
+                      {product.category && <p className="truncate text-xs text-gray-500">{product.category.name}</p>}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <Link
+                        to={`/admin/produits/${product.id}`}
+                        aria-label={`Modifier ${product.name}`}
+                        className="text-gray-400 hover:text-gray-700"
+                      >
+                        <Pencil size={16} />
+                      </Link>
+                      <button
+                        onClick={() => setDeleteTarget(product)}
+                        aria-label={`Supprimer ${product.name}`}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-4 text-sm">
+                      <InlineField
+                        value={product.price}
+                        label={`Modifier le prix de ${product.name}`}
+                        display={<span className="font-medium text-gray-900">{formatCurrency(product.price, currency)}</span>}
+                        onSave={(price) => quickUpdate.mutate({ id: product.id, updates: { price } })}
+                      />
+                      <InlineField
+                        value={product.stock}
+                        label={`Modifier le stock de ${product.name}`}
+                        min={0}
+                        display={
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              product.stock <= 0
+                                ? 'bg-red-100 text-red-800'
+                                : product.stock <= lowStockThreshold
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
+                        }
+                        onSave={(stock) => quickUpdate.mutate({ id: product.id, updates: { stock } })}
+                      />
+                    </div>
+                    <button
+                      onClick={() => toggleActive.mutate({ id: product.id, active: !product.active })}
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        product.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {product.active ? 'Actif' : 'Inactif'}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* Table from sm up. */}
+            <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
@@ -347,7 +476,7 @@ export function ProductsPage() {
                       </div>
                       <span className="font-medium text-gray-900">{product.name}</span>
                       {product.category && (
-                        <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline">
+                        <span className="inline rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                           {product.category.name}
                         </span>
                       )}
@@ -413,7 +542,8 @@ export function ProductsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -459,6 +589,8 @@ export function ProductsPage() {
           maxActiveProducts={PLANS[planKey].maxActiveProducts}
           onImported={invalidate}
         />
+      )}
+      </>
       )}
     </div>
   )

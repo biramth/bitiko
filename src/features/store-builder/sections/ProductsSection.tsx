@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PackageSearch, Search } from 'lucide-react'
 import { useActiveProducts } from '@/features/products/useProducts'
@@ -15,9 +15,9 @@ import type { ProductsSectionConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 
 export function ProductsRenderer({ shop, config }: { shop: Shop; config: ProductsSectionConfig }) {
-  const [searchInput, setSearchInput] = useState('')
-  const search = useDebouncedValue(searchInput, 300)
   const [searchParams, setSearchParams] = useSearchParams()
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '')
+  const search = useDebouncedValue(searchInput, 300)
   const { data: categories } = useCategories(shop.id)
 
   // The catalogue template's toolbar drives search / category / pagination via
@@ -40,6 +40,22 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
   const total = result?.total ?? products.length
   const totalPages = fullToolbox ? Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE)) : 1
 
+  useEffect(() => {
+    if (!fullToolbox) return
+    const urlSearch = searchParams.get('q') ?? ''
+    if (urlSearch === search) return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (search) next.set('q', search)
+        else next.delete('q')
+        next.delete('page')
+        return next
+      },
+      { replace: true },
+    )
+  }, [fullToolbox, search, searchParams, setSearchParams])
+
   const setParam = (key: string, value: string) => {
     setSearchParams(
       (prev) => {
@@ -54,9 +70,9 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
   }
 
   return (
-    <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
-      <div className="mb-6 flex items-center justify-between border-b border-ink-900/10 pb-4">
-        <h2 className="font-heading text-lg font-bold text-[var(--shop-text)]">{config.heading || 'Produits'}</h2>
+    <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
+        <h2 className="font-heading text-xl font-bold text-[var(--shop-text)] sm:text-2xl">{config.heading || 'Produits'}</h2>
         {!fullToolbox && products.length > 0 && (
           <Link to="/catalogue" className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
             Tout voir
@@ -81,7 +97,20 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
           <div className="flex items-center gap-4">
             <select
               value={categorySlug}
-              onChange={(e) => { setSearchInput(''); setParam('categorie', e.target.value) }}
+              onChange={(e) => {
+                setSearchInput('')
+                setSearchParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev)
+                    next.delete('q')
+                    if (e.target.value) next.set('categorie', e.target.value)
+                    else next.delete('categorie')
+                    next.delete('page')
+                    return next
+                  },
+                  { replace: true },
+                )
+              }}
               aria-label="Filtrer par catégorie"
               className="border-b border-ink-900/15 bg-transparent py-2 text-sm text-ink-900 focus:border-ink-900 focus:outline-none"
             >
@@ -115,11 +144,15 @@ export function ProductsRenderer({ shop, config }: { shop: Shop; config: Product
       {isLoading && <Spinner />}
       {isError && <ErrorMessage />}
       {!isLoading && !isError && products.length === 0 && (
-        <EmptyState icon={PackageSearch} title="Aucun produit pour le moment" />
+        <EmptyState
+          icon={PackageSearch}
+          title={search ? 'Aucun produit trouvé' : 'Aucun produit pour le moment'}
+          description={search ? `Aucun résultat pour « ${search} ».` : undefined}
+        />
       )}
       {!isLoading && products.length > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
             ))}

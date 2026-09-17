@@ -167,7 +167,7 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
           <span>
             Masquer « Propulsé par Bitiko » est réservé au plan Pro.{' '}
-            <Link to="/admin/facturation" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+            <Link to="/admin/parametres/facturation" className="font-semibold underline underline-offset-2 hover:text-amber-900">
               Passer à Pro
             </Link>
           </span>

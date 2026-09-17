@@ -11,6 +11,9 @@ interface ConfirmDialogProps {
   pending?: boolean
   /** 'danger' (default) is for irreversible/destructive actions (red button, warning banner). 'default' is a neutral yes/no confirmation. */
   tone?: 'danger' | 'default'
+  /** Disables the confirm button while true (in addition to `pending`) — e.g. a typed-confirmation gate not yet satisfied. */
+  confirmDisabled?: boolean
+  children?: React.ReactNode
   onConfirm: () => void
   onClose: () => void
 }
@@ -24,6 +27,8 @@ export function ConfirmDialog({
   pendingLabel,
   pending = false,
   tone = 'danger',
+  confirmDisabled = false,
+  children,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -47,7 +52,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={pending}
+            disabled={pending || confirmDisabled}
             className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 ${
               isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-600 hover:bg-brand-700'
             }`}
@@ -64,6 +69,7 @@ export function ConfirmDialog({
           <p className="text-sm text-red-700">Cette action est irréversible.</p>
         </div>
       )}
+      {children && <div className="mt-3">{children}</div>}
     </Dialog>
   )
 }

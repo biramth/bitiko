@@ -22,8 +22,9 @@ describe('effectivePlanKey', () => {
     expect(effectivePlanKey(expired)).toBe('free')
   })
 
-  it('is pro while the subscription is in force', () => {
+  it('keeps the active paid plan while it is in force', () => {
     expect(effectivePlanKey(subscription({}))).toBe('pro')
+    expect(effectivePlanKey(subscription({ plan: 'essential' }))).toBe('essential')
   })
 })
 
@@ -32,7 +33,8 @@ describe('effectivePlan', () => {
     const plan = effectivePlan(null)
     expect(plan.key).toBe('free')
     expect(plan.maxActiveProducts).toBe(8)
-    expect(plan.storeBuilderAccess).toBe(false)
+    expect(plan.storeBuilderAccess).toBe(true)
+    expect(plan.advancedBuilder).toBe(false)
   })
 })
 
@@ -46,13 +48,23 @@ describe('canAddProduct', () => {
   it('never blocks the Pro plan', () => {
     expect(canAddProduct(PLANS.pro, 999)).toBe(true)
   })
+
+  it('limits the Essential plan at 50 products', () => {
+    expect(canAddProduct(PLANS.essential, 49)).toBe(true)
+    expect(canAddProduct(PLANS.essential, 50)).toBe(false)
+  })
 })
 
 describe('canAddSection', () => {
-  it('blocks the free plan at its content-block cap', () => {
+  it('blocks the free plan at its 3-content-block cap', () => {
     expect(canAddSection(PLANS.free, 3)).toBe(false)
     expect(canAddSection(PLANS.free, 2)).toBe(true)
     expect(canAddSection(PLANS.free, 0)).toBe(true)
+  })
+
+  it('gives the Essential plan more room than free', () => {
+    expect(canAddSection(PLANS.essential, 9)).toBe(true)
+    expect(canAddSection(PLANS.essential, 10)).toBe(false)
   })
 
   it('never blocks the Pro plan', () => {

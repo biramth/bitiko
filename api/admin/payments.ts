@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getPlatformAdminFromAuthHeader, getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { proActivatedEmailHtml } from '../_lib/emailTemplates.js'
+import { PLANS } from '../../src/config/plans.js'
 
 const SUBSCRIPTION_PERIOD_DAYS = 30
 
@@ -123,11 +124,12 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
       if (shop && ownerData.user?.email) {
         await sendEmail({
           to: ownerData.user.email,
-          subject: `Bienvenue dans Bitiko Pro — ${shop.name}`,
+          subject: `Bienvenue dans Bitiko ${PLANS[payment.plan as keyof typeof PLANS].label} — ${shop.name}`,
           html: proActivatedEmailHtml({
             origin,
             shopName: shop.name,
             periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            planLabel: PLANS[payment.plan as keyof typeof PLANS].label,
           }),
         })
       }

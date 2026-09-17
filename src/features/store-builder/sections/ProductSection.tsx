@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Minus,
   Plus,
+  Share2,
   ShieldCheck,
   Truck,
   X,
@@ -20,6 +21,7 @@ import { useRecentlyViewed, type RecentlyViewedEntry } from '@/features/products
 import { useCart } from '@/features/cart/CartContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
+import { trackEvent } from '@/lib/analytics'
 import { formatCurrency } from '@/utils/format'
 import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBreadcrumbStructuredData'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
@@ -133,6 +135,7 @@ function ProductDetails({
   config,
   currency,
   lowStockThreshold,
+  whatsappNumber,
 }: {
   product: Product & {
     category?: { name: string; slug: string } | null
@@ -142,6 +145,7 @@ function ProductDetails({
   config: ProductSectionConfig
   currency: string
   lowStockThreshold: number
+  whatsappNumber: string | null
 }) {
   const { addItem } = useCart()
   const toast = useToast()
@@ -164,6 +168,26 @@ function ProductDetails({
   const displayPrice = hasVariants && variant ? (variant.price ?? product.price) : product.price
   const displayStock = hasVariants && variant ? variant.stock : product.stock
   const outOfStock = displayStock <= 0
+
+  useEffect(() => {
+    trackEvent('view_item', { product_id: product.id, product_name: product.name, value: displayPrice, currency })
+  }, [currency, displayPrice, product.id, product.name])
+
+  const handleShare = async () => {
+    const shareData = { title: product.name, text: `Découvre ${product.name}`, url: window.location.href }
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        trackEvent('share', { content_type: 'product', product_id: product.id })
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+        trackEvent('share', { content_type: 'product', product_id: product.id, method: 'copy_link' })
+        toast.success('Lien du produit copié.')
+      }
+    } catch {
+      // The share sheet can be dismissed by the customer; that is not an error.
+    }
+  }
 
   const ctaSentinelRef = useRef<HTMLDivElement>(null)
   const [ctaVisible, setCtaVisible] = useState(true)
@@ -195,6 +219,7 @@ function ProductDetails({
       imageUrl: images[0]?.public_url ?? null,
       stock: displayStock,
     })
+    trackEvent('add_to_cart', { product_id: product.id, product_name: product.name, value: displayPrice * quantity, currency })
     setAdded(true)
     toast.success(`« ${product.name} » ajouté au panier.`)
     setTimeout(() => setAdded(false), 2000)
@@ -278,7 +303,8 @@ function ProductDetails({
                             : 'border-ink-900/20 text-ink-900 hover:border-ink-900/50'
                         } ${soldOut ? 'cursor-not-allowed opacity-40' : ''}`}
                       >
-                        {v.name}
+                        <span className="block">{v.name}</span>
+                        {soldOut && <span className="mt-0.5 block text-[10px] opacity-70">Épuisé</span>}
                       </button>
                     )
                   })}
@@ -308,6 +334,19 @@ function ProductDetails({
                   {outOfStock ? 'Rupture de stock' : added ? <><Check size={16} aria-hidden /> Ajouté</> : 'Ajouter au panier'}
                 </button>
               </div>
+            )}
+            <button type="button" onClick={handleShare} className="mt-3 flex w-full items-center justify-center gap-2 border border-ink-900/15 px-6 py-3 text-sm font-semibold text-ink-900 transition-colors hover:border-ink-900 hover:bg-sand-50">
+              <Share2 size={16} aria-hidden /> Partager ce produit
+            </button>
+            {whatsappNumber && (
+              <a
+                href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour, je voudrais en savoir plus sur « ${product.name} ».`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 flex w-full items-center justify-center gap-2 border border-emerald-600/30 px-6 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+              >
+                <MessageCircle size={16} aria-hidden /> Poser une question sur WhatsApp
+              </a>
             )}
             <div aria-live="polite">
               {added && (
@@ -459,6 +498,7 @@ export function ProductRenderer({ shop, config }: { shop: Shop; config: ProductS
         config={config}
         currency={currency}
         lowStockThreshold={shop.low_stock_threshold}
+        whatsappNumber={shop.whatsapp_number}
       />
       {config.showRelatedProducts !== false && (
         <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} />

@@ -44,9 +44,7 @@ export function StoreBuilderPage() {
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
 
-  return (
-    <StoreBuilder key={shop.id} shop={shop} removableBranding={plan.removableBranding} maxCustomSections={plan.maxCustomSections} />
-  )
+  return <StoreBuilder key={shop.id} shop={shop} plan={plan} />
 }
 
 function StoreBuilderLock() {
@@ -55,13 +53,13 @@ function StoreBuilderLock() {
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
         <Lock size={24} aria-hidden />
       </span>
-      <h1 className="font-heading text-xl font-bold text-gray-900">Éditeur visuel réservé au plan Pro</h1>
+      <h1 className="font-heading text-xl font-bold text-gray-900">Personnalisez votre boutique</h1>
       <p className="text-sm text-gray-500">
-        Passez à Pro pour personnaliser librement l'apparence de votre boutique : thème, bannière, sections et
-        bibliothèque de templates.
+        Cette fonctionnalité est incluse dans les offres payantes. Passez à Essentiel ou Pro pour débloquer les
+        outils avancés de personnalisation.
       </p>
       <Link
-        to="/admin/facturation"
+        to="/admin/parametres/facturation"
         className="mt-2 flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
       >
         <Wand2 size={15} aria-hidden /> Passer à Pro
@@ -180,7 +178,6 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
 
 function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   const shared = {
-    templateId: shop.template_id,
     initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
     initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
     storeApplyDraft: storeApplyDraft(shop),
@@ -285,15 +282,7 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 /* ─────────────────────── Builder ─────────────────────────────── */
 
-function StoreBuilder({
-  shop,
-  removableBranding,
-  maxCustomSections,
-}: {
-  shop: Shop
-  removableBranding: boolean
-  maxCustomSections: number | null
-}) {
+function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useShopPlan>['plan'] }) {
   const toast = useToast()
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
@@ -321,6 +310,11 @@ function StoreBuilder({
   }
 
   const handleCreatePage = async (title: string, slug: string) => {
+    if (plan.maxCustomPages !== null && pages.length >= plan.maxCustomPages) {
+      toast.error(`Votre plan ${plan.label} est limité à ${plan.maxCustomPages} page${plan.maxCustomPages > 1 ? 's' : ''} personnalisée${plan.maxCustomPages > 1 ? 's' : ''}.`)
+      setCreateOpen(false)
+      return
+    }
     const page = await createPage(shop.id, title, slug)
     setCreateOpen(false)
     setActiveKey(`page:${page.id}`)
@@ -361,8 +355,7 @@ function StoreBuilder({
       <BuilderEditor
         key={activeKey}
         shop={shop}
-        removableBranding={removableBranding}
-        maxCustomSections={maxCustomSections}
+        removableBranding={plan.removableBranding}
         target={target}
         label={context.label}
         previewPath={previewPath}
@@ -377,6 +370,8 @@ function StoreBuilder({
         pages={pages}
         activeKey={activeKey}
         publishesStore={publishesStore}
+        allowAdvancedBuilder={plan.advancedBuilder}
+        maxCustomSections={plan.maxCustomSections}
       />
 
       <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
@@ -400,7 +395,6 @@ function StoreBuilder({
 function BuilderEditor({
   shop,
   removableBranding,
-  maxCustomSections,
   target,
   label,
   previewPath,
@@ -415,10 +409,11 @@ function BuilderEditor({
   pages,
   activeKey,
   publishesStore,
+  allowAdvancedBuilder,
+  maxCustomSections,
 }: {
   shop: Shop
   removableBranding: boolean
-  maxCustomSections: number | null
   target: BuilderTarget
   label: string
   previewPath: string | null
@@ -433,6 +428,8 @@ function BuilderEditor({
   pages: StorePage[]
   activeKey: ActiveKey
   publishesStore: boolean
+  allowAdvancedBuilder: boolean
+  maxCustomSections: number | null
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
@@ -591,6 +588,7 @@ function BuilderEditor({
           onAdd={builder.addSection}
           availableTypes={availableTypes}
           templateId={shop.template_id}
+          allowTemplates={allowAdvancedBuilder}
           maxCustomSections={maxCustomSections}
         />
 
@@ -672,7 +670,7 @@ function BuilderEditor({
         title={publishesStore ? "Publier le design de toute la boutique ?" : 'Publier cette page ?'}
         description={
           publishesStore
-            ? 'Le thème et la mise en page de l\u2019accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients.'
+            ? 'Le thème et la mise en page de l’accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients.'
             : 'Le contenu de cette page sera immédiatement visible par vos clients.'
         }
         confirmLabel="Publier"
@@ -736,7 +734,7 @@ function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
 }

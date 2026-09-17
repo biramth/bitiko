@@ -14,6 +14,7 @@ export type CoreSectionType =
   | 'products'
   | 'featured_products'
   | 'promo'
+  | 'faq'
   | 'footer'
   | 'product'
   | 'cart'
@@ -136,6 +137,11 @@ export interface PromoSectionConfig {
   backgroundColor: string
 }
 
+export interface FaqSectionConfig {
+  heading: string
+  items: { question: string; answer: string }[]
+}
+
 export interface LookbookImage {
   id: string
   imageUrl: string | null
@@ -158,6 +164,7 @@ export type SectionConfigMap = {
   products: ProductsSectionConfig
   featured_products: FeaturedProductsSectionConfig
   promo: PromoSectionConfig
+  faq: FaqSectionConfig
   footer: FooterSectionConfig
   product: ProductSectionConfig
   cart: CartSectionConfig

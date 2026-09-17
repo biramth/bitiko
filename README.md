@@ -60,6 +60,12 @@ Point important : `order_items` conserve `product_name` et `unit_price` au momen
 - **Storage** : buckets `product-images` et `shop-assets` publics en lecture, écriture/suppression réservées au propriétaire de la ressource concernée ([`0004_storage.sql`](supabase/migrations/0004_storage.sql)).
 - La clé `service_role` de Supabase n'est jamais utilisée côté frontend — seule la clé publique `anon` est présente dans les variables d'environnement du client.
 
+## Analytiques
+
+- **Vercel Web Analytics + Speed Insights** : montés dans `src/main.tsx` (`@vercel/analytics` / `@vercel/speed-insights`), activité automatiquement visible dans le tableau de bord Vercel, sans configuration.
+- **Google Analytics 4 (optionnel, par boutique)** : le storefront charge le GA4 du commerçant si `shops.ga_measurement_id` est renseigné ([`GoogleAnalytics.tsx`](src/components/GoogleAnalytics.tsx)) — fonctionnalité Pro.
+- **Analytics maison (`page_views`)** : chaque vue de page (plateforme et storefronts) est enregistrée par le client dans `public.page_views` avec la clé publique ([`selfAnalytics.ts`](src/lib/selfAnalytics.ts), [`SelfAnalytics.tsx`](src/components/SelfAnalytics.tsx)). RLS : insertion libre, lecture réservée au propriétaire de la boutique. Les agrégats plateforme ne sortent que par les RPC `SECURITY DEFINER` `get_platform_stats()` / `get_platform_shops()` / `get_platform_orders()` (migration [`0033`](supabase/migrations/0033_platform_analytics.sql)), qui refusent quiconque n'est pas dans la liste d'admins. **Si vous changez l'email super-admin, mettez-le à jour à la fois dans `is_platform_admin()` (SQL) et `PLATFORM_ADMIN_EMAILS` (`api/_lib/supabaseAdmin.ts`).** Un commerçant lit ses visites/visiteurs via `get_shop_visit_stats()` (migration [`0036`](supabase/migrations/0036_shop_visit_stats.sql)).
+
 ## Prérequis
 
 - Node.js 20+

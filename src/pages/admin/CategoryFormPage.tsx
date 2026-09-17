@@ -48,7 +48,7 @@ export function CategoryFormPage() {
   const toast = useToast()
   const { data: shop } = useMyShop()
   const { planKey, isLoading: planLoading } = useShopPlan(shop?.id)
-  const isPro = planKey === 'pro'
+  const isPro = planKey !== 'free'
   const availableColors = themeTileColors(shop)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -106,7 +106,7 @@ export function CategoryFormPage() {
       queryClient.invalidateQueries({ queryKey: ['categories', shop?.id] })
       queryClient.invalidateQueries({ queryKey: ['products', 'active'] })
       toast.success('Catégorie créée.')
-      navigate('/admin/categories', { replace: true })
+      navigate('/admin/produits?tab=categories', { replace: true })
     },
     onError: () => {
       setError('Impossible de créer la catégorie (nom dupliqué ou fichier non accepté ?).')
@@ -117,7 +117,7 @@ export function CategoryFormPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <Link
-        to="/admin/categories"
+        to="/admin/produits?tab=categories"
         className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
       >
         <ArrowLeft size={16} /> Retour aux catégories
@@ -213,7 +213,7 @@ export function CategoryFormPage() {
                   uploading={uploadingImage}
                   isPro={isPro}
                   availableColors={availableColors}
-                  onLockedFeature={() => navigate('/admin/facturation')}
+                  onLockedFeature={() => navigate('/admin/parametres/facturation')}
                   onColorChange={setColor}
                   onFileSelected={handleFileSelected}
                   onRemoveImage={() => {
@@ -285,7 +285,7 @@ export function CategoryFormPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => navigate('/admin/categories')}
+                onClick={() => navigate('/admin/produits?tab=categories')}
                 className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Annuler

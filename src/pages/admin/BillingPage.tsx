@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
-import { useMyShop } from '@/features/shop-settings/useMyShop'
-import { getShopSubscription, listPayments, requestProUpgrade, confirmPayment } from '@/services/billing.service'
-import { PLANS, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
+import { getShopSubscription, listPayments, requestPlanUpgrade, confirmPayment } from '@/services/billing.service'
+import { PLANS, WAVE_ESSENTIAL_PAYMENT_LINK, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
+import type { PlanKey } from '@/types/billing'
 import { formatCurrency } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
-import { usePageSeo } from '@/hooks/usePageSeo'
-import { PageHeader } from '@/components/ui/PageHeader'
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -20,17 +18,9 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function BillingPage() {
-  usePageSeo({ title: 'Facturation — Bitiko', noindex: true })
-  const { data: shop, isLoading: shopLoading } = useMyShop()
-
-  if (shopLoading) return <PageLoader />
-  if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
-
-  return <BillingForShop key={shop.id} shopId={shop.id} />
-}
-
-function BillingForShop({ shopId }: { shopId: string }) {
+/** Rendered as SettingsPage's "Facturation" section — Paramètres owns the
+ *  page chrome (title/SEO) there, so this is just the billing content. */
+export function BillingForShop({ shopId }: { shopId: string }) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -58,7 +48,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
         if (result.status === 'succeeded') {
           queryClient.invalidateQueries({ queryKey: ['shop-subscription', shopId] })
           queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] })
-          toast.success('Paiement confirmé — votre plan Pro est activé.')
+          toast.success('Paiement confirmé — votre abonnement est activé.')
         } else if (result.status === 'failed') {
           setConfirmError("Le paiement n'a pas abouti. Vous pouvez réessayer.")
           toast.error("Le paiement n'a pas abouti. Vous pouvez réessayer.")
@@ -79,7 +69,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
   }, [reference])
 
   const upgradeRequestMutation = useMutation({
-    mutationFn: () => requestProUpgrade(shopId),
+    mutationFn: (planKey: Exclude<PlanKey, 'free'>) => requestPlanUpgrade(shopId, planKey),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] })
       toast.success('Demande envoyée. Votre upgrade sera activé après vérification.')
@@ -92,15 +82,12 @@ function BillingForShop({ shopId }: { shopId: string }) {
 
   const planKey = effectivePlanKey(subscription)
   const plan = effectivePlan(subscription)
-  const isPro = planKey === 'pro'
   const pendingManualRequest = payments.find(
     (p) => p.status === 'pending' && p.client_reference.startsWith('manual_'),
   )
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Facturation" subtitle="Votre abonnement Bitiko et votre historique de paiement." />
-
+    <div className="mt-6 max-w-3xl">
       {confirming && (
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
           <Loader2 size={16} className="animate-spin" /> Vérification du paiement…
@@ -127,7 +114,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
             <p className="font-heading text-lg font-semibold text-gray-900">{plan.label}</p>
           </div>
         </div>
-        {isPro && subscription?.current_period_end && (
+        {planKey !== 'free' && subscription?.current_period_end && (
           <p className="mt-3 text-sm text-gray-500">
             Actif jusqu'au{' '}
             {new Date(subscription.current_period_end).toLocaleDateString('fr-FR', {
@@ -139,79 +126,61 @@ function BillingForShop({ shopId }: { shopId: string }) {
         )}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <p className="font-heading font-semibold text-gray-900">{PLANS.free.label}</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">Gratuit</p>
-          <ul className="mt-4 space-y-2">
-            <PlanFeature>Jusqu'à {PLANS.free.maxActiveProducts} produits actifs</PlanFeature>
-            <PlanFeature>Style de boutique adapté à votre activité</PlanFeature>
-            <PlanFeature>Personnalisation de base ({PLANS.free.maxCustomSections} blocs de contenu)</PlanFeature>
-            <PlanFeature>Sous-domaine bitiko.shop</PlanFeature>
-          </ul>
-          {!isPro && (
-            <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">
-              Plan actuel
-            </p>
-          )}
-        </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {(['free', 'essential', 'pro'] as const).map((key) => {
+          const tier = PLANS[key]
+          const isCurrent = planKey === key
+          const paymentLink = key === 'essential' ? WAVE_ESSENTIAL_PAYMENT_LINK : WAVE_PRO_PAYMENT_LINK
+          const features = key === 'free'
+            ? [
+                `Jusqu'à ${tier.maxActiveProducts} produits actifs`,
+                `Personnalisation de base (${tier.maxCustomSections} blocs de contenu)`,
+                'Commandes via WhatsApp',
+              ]
+            : key === 'essential'
+              ? [
+                  'Jusqu’à 50 produits actifs',
+                  `Builder complet (${tier.maxCustomSections} blocs de contenu) et pages personnalisées`,
+                  'Analytics standard et import CSV',
+                ]
+              : [
+                  'Produits illimités',
+                  'Personnalisation illimitée (blocs et pages) et styles avancés',
+                  'Analytics avancées et branding retiré',
+                ]
 
-        <div className="rounded-xl border-2 border-brand-500 bg-white p-5">
-          <p className="font-heading font-semibold text-gray-900">{PLANS.pro.label}</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
-            {formatCurrency(PLANS.pro.priceXof, 'XOF')}
-            <span className="text-sm font-normal text-gray-500"> / mois</span>
-          </p>
-          <ul className="mt-4 space-y-2">
-            <PlanFeature>Produits illimités</PlanFeature>
-            <PlanFeature>Éditeur visuel complet : styles, sections, thème</PlanFeature>
-            <PlanFeature>Personnalisation illimitée du storefront</PlanFeature>
-            <PlanFeature>Images de couverture pour les catégories</PlanFeature>
-            <PlanFeature>Retirer "Propulsé par Bitiko"</PlanFeature>
-          </ul>
-          {isPro ? (
-            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">
-              Plan actuel
-            </p>
-          ) : pendingManualRequest ? (
-            <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700">
-              <Clock size={14} /> Paiement en cours de vérification
-            </div>
-          ) : upgradeRequestMutation.isSuccess ? (
-            <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">
-              <CheckCircle2 size={14} /> Demande envoyée
-            </div>
-          ) : (
-            <div className="mt-4 space-y-2">
-              <a
-                href={WAVE_PRO_PAYMENT_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
-              >
-                <CreditCard size={15} />
-                Payer {formatCurrency(PLANS.pro.priceXof, 'XOF')} avec Wave
-              </a>
-              <button
-                type="button"
-                onClick={() => upgradeRequestMutation.mutate()}
-                disabled={upgradeRequestMutation.isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-              >
-                {upgradeRequestMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
-                J'ai payé, activer mon compte
-              </button>
-              <p className="text-center text-xs text-gray-400">
-                Paiement vérifié manuellement le temps que l'intégration automatique soit prête — activation sous peu.
+          return (
+            <div key={key} className={`rounded-xl bg-white p-5 ${key === 'essential' ? 'border-2 border-brand-500 shadow-sm' : 'border border-gray-200'}`}>
+              {key === 'essential' && <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-600">Le plus choisi</p>}
+              <p className="font-heading font-semibold text-gray-900">{tier.label}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">
+                {tier.priceXof === 0 ? 'Gratuit' : formatCurrency(tier.priceXof, 'XOF')}
+                {tier.priceXof > 0 && <span className="text-sm font-normal text-gray-500"> / mois</span>}
               </p>
+              <ul className="mt-4 space-y-2">
+                {features.map((feature) => <PlanFeature key={feature}>{feature}</PlanFeature>)}
+              </ul>
+              {isCurrent ? (
+                <p className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">Plan actuel</p>
+              ) : key === 'free' ? (
+                <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Disponible au démarrage</p>
+              ) : pendingManualRequest ? (
+                <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700"><Clock size={14} /> Paiement en vérification</div>
+              ) : (
+                <div className="mt-5 space-y-2">
+                  <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <CreditCard size={15} /> Payer avec Wave
+                  </a>
+                  <button type="button" onClick={() => upgradeRequestMutation.mutate(key)} disabled={upgradeRequestMutation.isPending} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+                    {upgradeRequestMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    J'ai payé, activer
+                  </button>
+                </div>
+              )}
+              {upgradeRequestMutation.isError && !isCurrent && <p className="mt-2 text-xs text-red-600">Impossible d'envoyer la demande.</p>}
             </div>
-          )}
-          {upgradeRequestMutation.isError && (
-            <p className="mt-2 text-xs text-red-600">
-              {upgradeRequestMutation.error instanceof Error ? upgradeRequestMutation.error.message : 'Erreur.'}
-            </p>
-          )}
-        </div>
+          )
+        })}
       </div>
 
       {payments.length > 0 && (
