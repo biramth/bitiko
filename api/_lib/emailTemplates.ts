@@ -245,3 +245,47 @@ export function welcomeEmailHtml({
     footnote: "Besoin d'aide pour démarrer ? Réponds simplement à cet email, on te répond directement.",
   })
 }
+
+/**
+ * Renders a merchant-authored campaign body: variables are substituted first
+ * (so a shop name containing "<" can't smuggle markup), then the whole thing
+ * is HTML-escaped, and only then is the tiny markdown subset applied — the
+ * order matters for safety.
+ */
+function renderCampaignBody(body: string): string {
+  return escapeHtml(body)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>')
+}
+
+export interface CampaignEmailInput {
+  origin: string
+  subject: string
+  body: string
+  shopName: string
+  shopUrl: string
+  ownerName: string
+}
+
+/**
+ * A platform-team campaign rendered in the branded shell. Supported variables
+ * (case-insensitive): {{shop_name}}, {{shop_url}}, {{owner_name}}.
+ */
+export function campaignEmailHtml({ origin, subject, body, shopName, shopUrl, ownerName }: CampaignEmailInput): string {
+  const substituted = body
+    .replace(/\{\{\s*shop_name\s*\}\}/gi, shopName)
+    .replace(/\{\{\s*shop_url\s*\}\}/gi, shopUrl.replace(/^https?:\/\//, ''))
+    .replace(/\{\{\s*owner_name\s*\}\}/gi, ownerName)
+
+  return shell({
+    origin,
+    preheader: escapeHtml(subject),
+    eyebrow: 'Bitiko',
+    heading: escapeHtml(subject),
+    body: renderCampaignBody(substituted),
+    buttonLabel: 'Ouvrir mon tableau de bord',
+    buttonUrl: `${origin}/admin`,
+    footnote: 'Tu reçois cet email car tu as une boutique sur Bitiko. Réponds directement à cet email pour toute question.',
+  })
+}

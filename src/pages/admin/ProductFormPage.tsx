@@ -15,6 +15,8 @@ import {
   createVariant,
   deleteVariant,
   updateVariant,
+  uploadVariantImage,
+  clearVariantImage,
 } from '@/services/productVariant.service'
 import { deleteProductImage, reorderProductImages, uploadProductImage } from '@/services/productImage.service'
 import { createCategory } from '@/services/category.service'
@@ -23,9 +25,9 @@ import { storefrontUrl } from '@/lib/tenant'
 import { formatCurrency, slugify } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
-import type { Category, ProductImage, ProductWithRelations, Shop } from '@/types'
+import type { Category, ProductImage, ProductVariant, ProductWithRelations, Shop } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
-import { PLANS } from '@/config/plans'
+import { PLANS, canAddProductImage, canAddVariant } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
 
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
@@ -51,6 +53,14 @@ interface VariantDraft {
   price: string
   stock: string
   active: boolean
+  /** Persisted photo (already uploaded to Storage). */
+  imageUrl: string | null
+  /** Photo picked but not uploaded yet — upload happens at save. */
+  photoFile?: File
+  /** Object URL for a just-picked photo (revoked when the draft is replaced). */
+  photoPreviewUrl?: string
+  /** User removed an existing photo → persisted by clearing image_url at save. */
+  photoCleared?: boolean
 }
 
 let variantKeyCounter = 0
@@ -186,6 +196,7 @@ function ProductForm({
   const queryClient = useQueryClient()
   const toast = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const variantPhotoInputRefs = useRef<Record<string, HTMLInputElement>>({})
   const formRef = useRef<HTMLFormElement>(null)
 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
@@ -216,6 +227,7 @@ function ProductForm({
       price: v.price !== null && v.price !== undefined ? String(v.price) : '',
       stock: String(v.stock),
       active: v.active,
+      imageUrl: v.image_url ?? null,
     })),
   )
   const [error, setError] = useState<string | null>(null)
@@ -269,10 +281,17 @@ function ProductForm({
           active: v.active,
           sort_order: i,
         }
+        let saved: ProductVariant
         if (v.id) {
-          await updateVariant(v.id, fields)
+          saved = await updateVariant(v.id, fields)
         } else {
-          await createVariant({ ...fields, product_id: product.id })
+          saved = await createVariant({ ...fields, product_id: product.id })
+        }
+        if (v.photoFile) {
+          // Upload the newly-picked photo now that the variant row exists.
+          await uploadVariantImage(product.id, saved.id, v.photoFile)
+        } else if (v.photoCleared && v.id) {
+          await clearVariantImage(saved.id)
         }
       }
 
@@ -312,6 +331,12 @@ function ProductForm({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
+    if (imageLimitReached) {
+      const limit = plan.maxProductImages
+      setError(limit ? `Limite du plan gratuit atteinte : ${limit} photos max par produit.` : "Impossible d'ajouter plus de photos.")
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     const items = Array.from(files).map((file) => ({ file, url: URL.createObjectURL(file) }))
     pendingUrlsRef.current.push(...items.map((item) => item.url))
     setPendingUploads((prev) => [...prev, ...items])
@@ -336,6 +361,43 @@ function ProductForm({
     } catch {
       setError("Impossible de supprimer l'image.")
     }
+  }
+
+  const handleVariantPhotoChange = (key: string, file: File) => {
+    if (imageLimitReached) {
+      const limit = plan.maxProductImages
+      setError(limit ? `Limite du plan gratuit atteinte : ${limit} photos max par produit.` : "Impossible d'ajouter plus de photos.")
+      return
+    }
+    const url = URL.createObjectURL(file)
+    pendingUrlsRef.current.push(url)
+    setVariants((prev) =>
+      prev.map((v) =>
+        v.key === key ? { ...v, photoFile: file, photoPreviewUrl: url, photoCleared: false } : v,
+      ),
+    )
+  }
+
+  const handleRemoveVariantPhoto = (key: string) => {
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.key !== key) return v
+        if (v.photoPreviewUrl) {
+          pendingUrlsRef.current = pendingUrlsRef.current.filter((u) => u !== v.photoPreviewUrl)
+          URL.revokeObjectURL(v.photoPreviewUrl)
+        }
+        const removedPreview = !!v.photoPreviewUrl
+        return {
+          ...v,
+          photoFile: undefined,
+          photoPreviewUrl: undefined,
+          // Dropping a just-picked photo keeps the persisted one (if any);
+          // otherwise the persisted photo itself is being removed.
+          imageUrl: removedPreview ? v.imageUrl : null,
+          photoCleared: removedPreview ? false : v.photoCleared || !!v.imageUrl,
+        }
+      }),
+    )
   }
 
   const handleCreateCategory = async () => {
@@ -401,6 +463,16 @@ function ProductForm({
   const liveSlug = existingProduct?.slug ?? null
   const previewImage = pendingUploads[0]?.url ?? images[0]?.public_url ?? null
   const hasVariants = variants.length > 0
+
+  // Free-plan photo budget: 4 photos per product, shared between the gallery
+  // and variant photos (1 main + up to 2 variant photos). Server-side trigger
+  // (migration 0046) mirrors this. Variants: 2 max on free.
+  const plan = PLANS[planKey]
+  const variantPhotoCount = variants.filter((v) => v.imageUrl || v.photoFile).length
+  const photoCount = images.length + variantPhotoCount
+  const imageLimitReached = !canAddProductImage(plan, images.length, variantPhotoCount)
+  const variantLimitReached = !canAddVariant(plan, variants.length)
+  const photoBudgetNote = plan.maxProductImages !== null ? `${photoCount} / ${plan.maxProductImages}` : null
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -687,7 +759,9 @@ function ProductForm({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-brand-300 hover:text-brand-600"
+                  disabled={imageLimitReached}
+                  title={imageLimitReached ? `Limite : ${plan.maxProductImages} photos max par produit` : undefined}
+                  className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-400"
                 >
                   <Upload size={20} />
                   <span className="text-xs">Ajouter</span>
@@ -698,12 +772,22 @@ function ProductForm({
                   accept="image/*"
                   multiple
                   onChange={handleFileChange}
+                  disabled={imageLimitReached}
                   className="hidden"
                 />
               </div>
               <p className="text-xs text-gray-500">
                 Glissez-déposez pour réorganiser. La première photo est utilisée comme miniature
-                dans le catalogue.
+                dans le catalogue.{' '}
+                {photoBudgetNote && (
+                  <>
+                    <span className={imageLimitReached ? 'font-semibold text-amber-600' : ''}>
+                      {photoBudgetNote} photo{photoCount > 1 ? 's' : ''} utilisée{photoCount > 1 ? 's' : ''}
+                    </span>{' '}
+                    (photos produit + photos de variantes). Le plan gratuit plafonne à{' '}
+                    {plan.maxProductImages} photos par produit.
+                  </>
+                )}
               </p>
             </Card>
 
@@ -714,11 +798,58 @@ function ProductForm({
             >
               {variants.length > 0 && (
                 <ul className="space-y-3">
-                  {variants.map((variant) => (
+                  {variants.map((variant) => {
+                    const displayUrl = variant.photoPreviewUrl ?? variant.imageUrl
+                    return (
                     <li
                       key={variant.key}
                       className="rounded-lg border border-gray-200 p-3"
                     >
+                      <div className="mb-3 flex items-center gap-3">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                          {displayUrl ? (
+                            <img src={displayUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-gray-300">
+                              <ImagePlus size={18} aria-hidden />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => variantPhotoInputRefs.current[variant.key]?.click()}
+                            disabled={imageLimitReached && !displayUrl}
+                            title={imageLimitReached && !displayUrl ? `Limite : ${plan.maxProductImages} photos max par produit` : undefined}
+                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Upload size={13} aria-hidden />
+                            {displayUrl ? 'Changer la photo' : 'Ajouter une photo'}
+                          </button>
+                          {displayUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVariantPhoto(variant.key)}
+                              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 hover:underline"
+                            >
+                              <Trash2 size={13} aria-hidden /> Retirer
+                            </button>
+                          )}
+                          <input
+                            ref={(el) => {
+                              if (el) variantPhotoInputRefs.current[variant.key] = el
+                            }}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleVariantPhotoChange(variant.key, file)
+                              e.currentTarget.value = ''
+                            }}
+                          />
+                        </div>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <input
@@ -817,7 +948,8 @@ function ProductForm({
                         </button>
                       </div>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               )}
               <button
@@ -832,17 +964,30 @@ function ProductForm({
                       price: '',
                       stock: '0',
                       active: true,
+                      imageUrl: null,
                     },
                   ])
                 }
-                className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600"
+                disabled={variantLimitReached}
+                title={variantLimitReached ? `Limite : ${plan.maxVariants} variantes max sur le plan gratuit` : undefined}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-600"
               >
                 <Plus size={16} />
                 Ajouter une variante
               </button>
               <p className="text-xs text-gray-500">
                 Avec des variantes, le prix et le stock du produit sont gérés par chaque variante
-                (le prix peut rester vide : hérité du produit).
+                (le prix peut rester vide : hérité du produit). Chaque variante peut avoir sa
+                photo, affichée dans la fiche produit quand on la sélectionne.
+                {plan.maxVariants !== null && (
+                  <>
+                    {' '}
+                    <span className={variantLimitReached ? 'font-semibold text-amber-600' : ''}>
+                      {variants.length} / {plan.maxVariants} variantes
+                    </span>{' '}
+                    sur le plan gratuit.
+                  </>
+                )}
               </p>
             </Card>
           </div>

@@ -217,7 +217,7 @@ const faq = [
   {
     question: 'Est-ce que Bitiko est vraiment gratuit ?',
     answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
+      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 15 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
   },
   {
     question: 'Comment les clients paient-ils ?',
@@ -655,7 +655,7 @@ export function LandingPage() {
               </a>
             </div>
             <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/60 [animation-delay:400ms] lg:justify-start">
-              {['0 F pour lancer', 'Zéro commission', '8 produits offerts', 'Sans carte bancaire'].map((t) => (
+              {['0 F pour lancer', 'Zéro commission', '15 produits offerts', 'Sans carte bancaire'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} className="text-brand-500" aria-hidden /> {t}
                 </span>
@@ -979,7 +979,7 @@ export function LandingPage() {
                     {[
                       'Boutique en ligne complète',
                       'Commandes sur WhatsApp',
-                      'Jusqu\'à 8 produits actifs',
+                      'Jusqu\'à 15 produits actifs',
                       'Livraison par secteurs & villes',
                       'Espace client mobile-first',
                       '1 utilisateur',

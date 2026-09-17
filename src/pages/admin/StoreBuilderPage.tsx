@@ -26,6 +26,8 @@ import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPa
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { updateShop } from '@/services/shop.service'
+import { generateHomeLayout } from '@/features/onboarding/generateStorefront'
+import { profileFromShop } from '@/features/onboarding/storeProfile'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { storefrontUrl } from '@/lib/tenant'
@@ -246,7 +248,10 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeColor: shop.theme_color,
         themeConfig: shop.theme_config,
       },
-      templateSections: (tpl) => ensurePinnedSections(tpl.layout.home),
+      templateSections: (tpl) => {
+        const profile = profileFromShop(shop)
+        return profile ? generateHomeLayout(tpl, profile) : ensurePinnedSections(tpl.layout.home)
+      },
       saveDraft: (snap) =>
         updateShop(shop.id, {
           builder_draft: {
@@ -646,7 +651,7 @@ function BuilderEditor({
             {builder.saveDraftMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : builder.saveDraftMutation.isSuccess && !builder.dirty ? <Check size={14} className="text-emerald-600" /> : null}
             <span className="hidden sm:inline">Enregistrer</span>
           </button>
-          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60 sm:px-4">
+          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} data-guide="guide-publier" className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60 sm:px-4">
             {builder.publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             Publier
           </button>

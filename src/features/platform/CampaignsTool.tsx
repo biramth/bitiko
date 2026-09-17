@@ -1,0 +1,469 @@
+import { useEffect, useState, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Eye, Mail, Pencil, Plus, Send } from 'lucide-react'
+import {
+  listCampaigns,
+  previewCampaignAudience,
+  saveCampaign,
+  sendCampaign,
+  type CampaignAudience,
+  type CampaignInput,
+  type CampaignRow,
+} from '@/services/platform.service'
+import { Spinner } from '@/components/ui/Spinner'
+
+const VARIABLES = [
+  { token: '{{shop_name}}', label: 'Nom de la boutique' },
+  { token: '{{shop_url}}', label: 'Lien de la boutique' },
+  { token: '{{owner_name}}', label: 'Prénom du gérant' },
+]
+
+interface Preset {
+  key: string
+  label: string
+  name: string
+  subject: string
+  body: string
+  audience: CampaignAudience
+}
+
+const PRESETS: Preset[] = [
+  {
+    key: 'blank',
+    label: 'Campagne vierge',
+    name: '',
+    subject: '',
+    body: '',
+    audience: { vibe: 'any', plan: 'any', logo: 'any', products: 'any', created_within_days: null },
+  },
+  {
+    key: 'ambiance',
+    label: 'Annonce : nouvelle ambiance',
+    name: 'Annonce ambiance',
+    subject: '🎨 Ta boutique s’affine — choisis son ambiance',
+    body:
+      'Bonjour {{owner_name}},\n\n' +
+      'On a ajouté les **ambiances** à Bitiko : un thème prêt à l’emploi qui habille **{{shop_name}}** — typographie, arrondis, couleurs — sans rien changer à ce que tu as déjà mis en place.\n\n' +
+      'Choisis la tienne en un clic depuis ton tableau de bord.\n\n' +
+      '**Au programme aussi :** plus de produits et de photos sur le plan gratuit, et un guide intégré pour t’accompagner.\n\n' +
+      'À très vite,\nL’équipe Bitiko',
+    audience: { vibe: 'missing', plan: 'any', logo: 'any', products: 'any', created_within_days: null },
+  },
+]
+
+const SAMPLE = { shop_name: 'Awa Boutique', shop_url: 'awa.bitiko.shop', owner_name: 'Awa' }
+
+function substitute(text: string): string {
+  return text
+    .replace(/\{\{\s*shop_name\s*\}\}/gi, SAMPLE.shop_name)
+    .replace(/\{\{\s*shop_url\s*\}\}/gi, SAMPLE.shop_url)
+    .replace(/\{\{\s*owner_name\s*\}\}/gi, SAMPLE.owner_name)
+}
+
+/** Renders **bold** as <strong> without dangerouslySetInnerHTML. */
+function renderBold(line: string): ReactNode[] {
+  return line.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={index}>{part.slice(2, -2)}</strong>
+    ) : (
+      <span key={index}>{part}</span>
+    ),
+  )
+}
+
+function CampaignPreview({ subject, body }: { subject: string; body: string }) {
+  const paragraphs = substitute(body).split(/\n{2,}/)
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200">
+      <div className="bg-ink-900 px-6 py-4 text-center">
+        <p className="font-heading text-sm font-bold text-white">Bitiko</p>
+      </div>
+      <div className="bg-white px-6 py-6">
+        <h3 className="text-center text-lg font-semibold text-gray-900">{subject || '(objet)'}</h3>
+        <div className="mt-4 space-y-3 text-sm leading-relaxed text-gray-600">
+          {paragraphs.map((para, i) => (
+            <p key={i}>
+              {para.split('\n').map((line, j, arr) => (
+                <span key={j}>
+                  {renderBold(line)}
+                  {j < arr.length - 1 && <br />}
+                </span>
+              ))}
+            </p>
+          ))}
+        </div>
+        <div className="mt-6 text-center">
+          <span className="inline-block rounded-lg bg-brand-600 px-6 py-3 text-sm font-medium text-white">
+            Ouvrir mon tableau de bord →
+          </span>
+        </div>
+      </div>
+      <div className="border-t border-gray-100 bg-gray-50 px-6 py-3 text-center text-[11px] text-gray-400">
+        Aperçu — rendu réel avec le nom de chaque boutique.
+      </div>
+    </div>
+  )
+}
+
+function useDebounced<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+  return debounced
+}
+
+const STATUS_LABEL: Record<CampaignRow['status'], string> = { draft: 'Brouillon', sending: 'En cours', sent: 'Envoyée' }
+const STATUS_BADGE: Record<CampaignRow['status'], string> = {
+  draft: 'bg-gray-100 text-gray-700',
+  sending: 'bg-amber-100 text-amber-800',
+  sent: 'bg-emerald-100 text-emerald-800',
+}
+
+export function CampaignsTool() {
+  const queryClient = useQueryClient()
+  const [view, setView] = useState<'list' | 'compose'>('list')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [audience, setAudience] = useState<CampaignAudience>(PRESETS[1].audience)
+  const [sentResult, setSentResult] = useState<string | null>(null)
+
+  const campaigns = useQuery({ queryKey: ['platform-campaigns'], queryFn: listCampaigns, retry: false })
+
+  const debouncedAudience = useDebounced(audience)
+  const preview = useQuery({
+    queryKey: ['platform-campaign-audience', JSON.stringify(debouncedAudience)],
+    queryFn: () => previewCampaignAudience(debouncedAudience),
+    retry: false,
+    enabled: view === 'compose',
+  })
+
+  const save = useMutation({
+    mutationFn: (input: CampaignInput) => saveCampaign(input),
+  })
+  const send = useMutation({
+    mutationFn: async () => {
+      const input: CampaignInput = { id: editingId ?? undefined, name, subject, body, audience }
+      const { id } = await saveCampaign(input)
+      return sendCampaign(id)
+    },
+    onSuccess: (result) => {
+      setSentResult(`${result.sent} email(s) envoyé(s) sur ${result.recipientCount} destinataire(s).`)
+      setView('list')
+      setEditingId(null)
+      queryClient.invalidateQueries({ queryKey: ['platform-campaigns'] })
+    },
+    onError: () => {
+      // The server releases its 'sending' claim on failure — refresh so the
+      // list shows the campaign back as a draft.
+      queryClient.invalidateQueries({ queryKey: ['platform-campaigns'] })
+    },
+  })
+
+  const startNew = (preset: Preset) => {
+    setEditingId(null)
+    setName(preset.name)
+    setSubject(preset.subject)
+    setBody(preset.body)
+    setAudience(preset.audience)
+    setSentResult(null)
+    setView('compose')
+  }
+
+  const editDraft = (campaign: CampaignRow) => {
+    setEditingId(campaign.id)
+    setName(campaign.name)
+    setSubject(campaign.subject)
+    setBody(campaign.body)
+    setAudience(campaign.audience ?? {})
+    setSentResult(null)
+    setView('compose')
+  }
+
+  const saveDraft = () => {
+    save.mutate(
+      { id: editingId ?? undefined, name, subject, body, audience },
+      {
+        onSuccess: ({ id }) => {
+          setEditingId(id)
+          queryClient.invalidateQueries({ queryKey: ['platform-campaigns'] })
+        },
+      },
+    )
+  }
+
+  const canSend = name.trim() && subject.trim() && body.trim() && (preview.data?.withEmail ?? 0) > 0
+
+  if (view === 'list') {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => startNew(PRESETS[0])}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            <Plus size={16} aria-hidden /> Nouvelle campagne
+          </button>
+          <button
+            type="button"
+            onClick={() => startNew(PRESETS[1])}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Modèle « nouvelle ambiance »
+          </button>
+        </div>
+
+        {sentResult && (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sentResult}</p>
+        )}
+
+        {campaigns.isLoading && <Spinner />}
+        {campaigns.isError && (
+          <p className="text-sm text-red-600">{campaigns.error instanceof Error ? campaigns.error.message : 'Erreur.'}</p>
+        )}
+
+        {campaigns.data && campaigns.data.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
+            <Mail size={26} className="mx-auto text-gray-300" aria-hidden />
+            <p className="mt-3 text-sm text-gray-500">Aucune campagne pour l’instant.</p>
+          </div>
+        )}
+
+        {campaigns.data && campaigns.data.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-gray-100 text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Campagne</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 font-medium">Audience</th>
+                  <th className="px-4 py-3 font-medium">Envoyés</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {campaigns.data.map((campaign) => (
+                  <tr key={campaign.id}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{campaign.name}</p>
+                      <p className="text-xs text-gray-400">{campaign.subject}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE[campaign.status]}`}>
+                        {STATUS_LABEL[campaign.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {campaign.status === 'sent' ? campaign.recipient_count : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {campaign.status === 'sent' ? (
+                        <span>
+                          {campaign.sent_count}
+                          {campaign.failed_count > 0 && <span className="text-red-600"> · {campaign.failed_count} échec(s)</span>}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(campaign.sent_at ?? campaign.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {campaign.status === 'draft' && (
+                        <button
+                          type="button"
+                          onClick={() => editDraft(campaign)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                        >
+                          <Pencil size={13} aria-hidden /> Modifier
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const count = preview.data?.count ?? 0
+  const withEmail = preview.data?.withEmail ?? 0
+
+  return (
+    <div className="space-y-6">
+      <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+        <ArrowLeft size={15} aria-hidden /> Retour aux campagnes
+      </button>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <label className="block text-xs font-medium text-gray-500">Nom interne</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex. Annonce ambiance"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            <label className="mt-4 block text-xs font-medium text-gray-500">Objet de l’email</label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={160}
+              placeholder="Ce que le commerçant voit dans sa boîte mail"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-500">Contenu</label>
+              <span className="text-[11px] text-gray-400">
+                **gras** · double saut de ligne = nouveau paragraphe
+              </span>
+            </div>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={12}
+              placeholder="Rédige ton message…"
+              className="mt-1 w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {VARIABLES.map((variable) => (
+                <button
+                  key={variable.token}
+                  type="button"
+                  onClick={() => setBody((prev) => `${prev}${variable.token}`)}
+                  className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100"
+                  title={variable.label}
+                >
+                  {variable.token}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="text-sm font-semibold text-gray-900">Audience</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Field label="Ambiance">
+                <select value={audience.vibe ?? 'any'} onChange={(e) => setAudience({ ...audience, vibe: e.target.value as CampaignAudience['vibe'] })} className={selectClass}>
+                  <option value="any">Toutes</option>
+                  <option value="missing">Sans ambiance (anciennes boutiques)</option>
+                  <option value="set">Avec ambiance</option>
+                </select>
+              </Field>
+              <Field label="Offre">
+                <select value={audience.plan ?? 'any'} onChange={(e) => setAudience({ ...audience, plan: e.target.value as CampaignAudience['plan'] })} className={selectClass}>
+                  <option value="any">Toutes</option>
+                  <option value="free">Plan gratuit</option>
+                  <option value="paid">Offres payantes</option>
+                  <option value="essential">Essentiel</option>
+                  <option value="pro">Pro</option>
+                </select>
+              </Field>
+              <Field label="Logo">
+                <select value={audience.logo ?? 'any'} onChange={(e) => setAudience({ ...audience, logo: e.target.value as CampaignAudience['logo'] })} className={selectClass}>
+                  <option value="any">Tous</option>
+                  <option value="has">Avec logo</option>
+                  <option value="none">Sans logo</option>
+                </select>
+              </Field>
+              <Field label="Produits">
+                <select value={audience.products ?? 'any'} onChange={(e) => setAudience({ ...audience, products: e.target.value as CampaignAudience['products'] })} className={selectClass}>
+                  <option value="any">Tous</option>
+                  <option value="has">Avec produits</option>
+                  <option value="none">Sans produit</option>
+                </select>
+              </Field>
+              <Field label="Inscription">
+                <select
+                  value={audience.created_within_days ?? ''}
+                  onChange={(e) => setAudience({ ...audience, created_within_days: e.target.value ? Number(e.target.value) : null })}
+                  className={selectClass}
+                >
+                  <option value="">Toutes</option>
+                  <option value="7">7 derniers jours</option>
+                  <option value="30">30 derniers jours</option>
+                  <option value="90">90 derniers jours</option>
+                </select>
+              </Field>
+            </div>
+
+            <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm">
+              {preview.isLoading ? (
+                <span className="text-gray-500">Calcul de l’audience…</span>
+              ) : preview.isError ? (
+                <span className="text-red-600">Impossible de calculer l’audience.</span>
+              ) : (
+                <span className="text-gray-700">
+                  <strong className="text-gray-900">{withEmail}</strong> destinataire(s) joignable(s)
+                  {count !== withEmail && <span className="text-gray-400"> sur {count} boutique(s)</span>}
+                </span>
+              )}
+              {preview.data && preview.data.sample.length > 0 && (
+                <p className="mt-1 truncate text-xs text-gray-400">
+                  {preview.data.sample.map((s) => s.name).join(' · ')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
+          {send.isError && <p className="text-sm text-red-600">{(send.error as Error).message}</p>}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={saveDraft}
+              disabled={save.isPending || !name.trim() || !subject.trim() || !body.trim()}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {save.isPending ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Enregistrer le brouillon'}
+            </button>
+            <button
+              type="button"
+              onClick={() => send.mutate()}
+              disabled={send.isPending || !canSend}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              <Send size={15} aria-hidden /> {send.isPending ? 'Envoi…' : 'Envoyer la campagne'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400">
+            L’envoi est définitif : la campagne passe en « Envoyée » et ne peut plus être renvoyée depuis cet outil.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <Eye size={16} aria-hidden /> Aperçu
+          </h3>
+          <CampaignPreview subject={subject} body={body} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const selectClass =
+  'mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500'
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-500">{label}</label>
+      {children}
+    </div>
+  )
+}

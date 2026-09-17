@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { useAuth } from '@/features/auth/AuthContext'
 import { supabase } from '@/lib/supabaseClient'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { usePageSeo } from '@/hooks/usePageSeo'
-import { PLATFORM_ADMIN_EMAILS } from '@/config/constants'
+import { PlatformAwareRedirect } from '@/features/platform/PlatformAwareRedirect'
 
 /**
  * Landing point for the Google OAuth redirect and for email links (signup
@@ -42,8 +42,7 @@ export function AuthCallbackPage() {
   }, [])
 
   if (session) {
-    const dest = PLATFORM_ADMIN_EMAILS.includes(session.user.email ?? '') ? '/super-admin' : '/admin'
-    return <Navigate to={dest} replace />
+    return <PlatformAwareRedirect fallback="/admin" />
   }
 
   if (verifyError || (!loading && timedOut)) {

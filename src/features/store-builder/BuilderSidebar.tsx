@@ -109,7 +109,7 @@ export function BuilderSidebar({
   const contentLimitReached = maxCustomSections != null && customSectionCount >= maxCustomSections
 
   return (
-    <div className="flex h-full flex-col border-r border-gray-200 bg-white">
+    <div className="flex h-full flex-col border-r border-gray-200 bg-white" data-guide="guide-builder-sidebar">
       {/* Segmented pill tab bar */}
       <div className="p-2">
         <div className="flex gap-1 rounded-lg bg-gray-100 p-1">

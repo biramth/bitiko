@@ -46,11 +46,13 @@ export function themeConfigToCssVars(themeColor: string, config: ThemeConfig): R
   }
 }
 
-/** Heading size classes per text-scale step, used by section renderers. */
+/** Heading size classes per text-scale step, used by the storefront hero.
+ *  Kept intentionally more compact than the theme's max so a freshly created
+ *  store opens on content, not on an oversized title. */
 export const HEADING_SCALE: Record<ThemeConfig['textScale'], string> = {
-  sm: 'text-3xl sm:text-4xl',
-  base: 'text-4xl sm:text-6xl',
-  lg: 'text-5xl sm:text-7xl',
+  sm: 'text-2xl sm:text-4xl',
+  base: 'text-3xl sm:text-5xl',
+  lg: 'text-3xl sm:text-5xl',
 }
 
 export const SECTION_HEADING_SCALE: Record<ThemeConfig['textScale'], string> = {

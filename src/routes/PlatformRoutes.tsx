@@ -4,6 +4,8 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { LandingPage } from '@/pages/marketing/LandingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PlatformLayout } from '@/features/platform/PlatformLayout'
+import { CapabilityGate, RequirePlatformMember } from '@/features/platform/RequirePlatformMember'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireShop } from './RequireShop'
 
@@ -46,8 +48,23 @@ const SettingsPage = lazy(() =>
 const StoreBuilderPage = lazy(() =>
   import('@/pages/admin/StoreBuilderPage').then((m) => ({ default: m.StoreBuilderPage })),
 )
-const SuperAdminPage = lazy(() =>
-  import('@/pages/admin/SuperAdminPage').then((m) => ({ default: m.SuperAdminPage })),
+const PlatformHomePage = lazy(() =>
+  import('@/pages/platform/PlatformHomePage').then((m) => ({ default: m.PlatformHomePage })),
+)
+const PlatformAnalyticsPage = lazy(() =>
+  import('@/pages/platform/PlatformAnalyticsPage').then((m) => ({ default: m.PlatformAnalyticsPage })),
+)
+const PlatformShopsPage = lazy(() =>
+  import('@/pages/platform/PlatformShopsPage').then((m) => ({ default: m.PlatformShopsPage })),
+)
+const PlatformPaymentsPage = lazy(() =>
+  import('@/pages/platform/PlatformPaymentsPage').then((m) => ({ default: m.PlatformPaymentsPage })),
+)
+const PlatformCampaignsPage = lazy(() =>
+  import('@/pages/platform/PlatformCampaignsPage').then((m) => ({ default: m.PlatformCampaignsPage })),
+)
+const PlatformTeamPage = lazy(() =>
+  import('@/pages/platform/PlatformTeamPage').then((m) => ({ default: m.PlatformTeamPage })),
 )
 
 const standalone = (page: React.ReactNode) => (
@@ -68,7 +85,47 @@ export function PlatformRoutes() {
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
       <Route element={<ProtectedRoute />}>
-        <Route path="super-admin" element={standalone(<SuperAdminPage />)} />
+        {/* /super-admin is superseded by the /plateforme workspace (per-tool
+            pages, role-gated). Kept as a redirect so old bookmarks still land. */}
+        <Route path="super-admin" element={<Navigate to="/plateforme" replace />} />
+        <Route element={<RequirePlatformMember />}>
+          <Route element={<PlatformLayout />}>
+            <Route path="plateforme" element={standalone(<PlatformHomePage />)} />
+            <Route path="plateforme/analytiques" element={standalone(<PlatformAnalyticsPage />)} />
+            <Route
+              path="plateforme/boutiques"
+              element={standalone(
+                <CapabilityGate capability="view_shops">
+                  <PlatformShopsPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/paiements"
+              element={standalone(
+                <CapabilityGate capability="manage_payments">
+                  <PlatformPaymentsPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/campagnes"
+              element={standalone(
+                <CapabilityGate capability="send_campaigns">
+                  <PlatformCampaignsPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/equipe"
+              element={standalone(
+                <CapabilityGate capability="manage_team">
+                  <PlatformTeamPage />
+                </CapabilityGate>,
+              )}
+            />
+          </Route>
+        </Route>
       </Route>
       <Route path="admin">
         <Route path="login" element={standalone(<LoginPage />)} />

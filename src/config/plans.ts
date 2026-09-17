@@ -26,6 +26,18 @@ export interface Plan {
    * top of one. `null` = unlimited.
    */
   maxCustomSections: number | null
+  /**
+   * Cap on photos per product (product gallery photos + one photo per
+   * variant combined). Free plan = 4 (1 main photo + up to 3 gallery
+   * photos, or up to 2 variant photos within the same budget); paid plans
+   * are unlimited. `null` = unlimited.
+   */
+  maxProductImages: number | null
+  /**
+   * Cap on product variants. Free plan = 2 (each variant can hold one
+   * photo, so up to 4 total photos with the main one). `null` = unlimited.
+   */
+  maxVariants: number | null
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -33,13 +45,15 @@ export const PLANS: Record<PlanKey, Plan> = {
     key: 'free',
     label: 'Découverte',
     priceXof: 0,
-    maxActiveProducts: 8,
+    maxActiveProducts: 15,
     storeBuilderAccess: true,
     advancedBuilder: false,
     removableBranding: false,
     analytics: 'basic',
     maxCustomPages: 1,
     maxCustomSections: 3,
+    maxProductImages: 4,
+    maxVariants: 2,
   },
   essential: {
     key: 'essential',
@@ -52,6 +66,8 @@ export const PLANS: Record<PlanKey, Plan> = {
     analytics: 'standard',
     maxCustomPages: 5,
     maxCustomSections: 10,
+    maxProductImages: null,
+    maxVariants: null,
   },
   pro: {
     key: 'pro',
@@ -64,6 +80,8 @@ export const PLANS: Record<PlanKey, Plan> = {
     analytics: 'advanced',
     maxCustomPages: null,
     maxCustomSections: null,
+    maxProductImages: null,
+    maxVariants: null,
   },
 }
 
@@ -91,6 +109,25 @@ export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
  *  many the page being edited already has (see `Plan.maxCustomSections`). */
 export function canAddSection(plan: Plan, currentCustomSectionCount: number): boolean {
   return plan.maxCustomSections === null || currentCustomSectionCount < plan.maxCustomSections
+}
+
+/**
+ * Whether the plan allows one more photo on a product. The image budget is
+ * shared between gallery photos and variant photos: on the free plan a
+ * product holds 4 photos total, so a new gallery photo is blocked once
+ * productPhotos + variantPhotos >= the budget.
+ */
+export function canAddProductImage(
+  plan: Plan,
+  productPhotos: number,
+  variantPhotos: number,
+): boolean {
+  return plan.maxProductImages === null || productPhotos + variantPhotos < plan.maxProductImages
+}
+
+/** Whether the plan allows one more product variant (see `Plan.maxVariants`). */
+export function canAddVariant(plan: Plan, currentVariantCount: number): boolean {
+  return plan.maxVariants === null || currentVariantCount < plan.maxVariants
 }
 
 /**

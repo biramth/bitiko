@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickDominantColor } from './extractColorFromImage'
+import { pickBrandPalette, pickDominantColor } from './extractColorFromImage'
 
 /** Builds a flat RGBA pixel buffer from a list of [r, g, b, a] pixels, each repeated `count` times. */
 function buildPixels(...groups: { rgba: [number, number, number, number]; count: number }[]): Uint8ClampedArray {
@@ -70,5 +70,44 @@ describe('pickDominantColor', () => {
     const g = parseInt(color!.slice(3, 5), 16)
     const r = parseInt(color!.slice(1, 3), 16)
     expect(g).toBeGreaterThan(r)
+  })
+})
+
+describe('pickBrandPalette', () => {
+  it('picks a primary and a distinct secondary hue for a bicolor logo', () => {
+    const pixels = buildPixels(
+      { rgba: [255, 255, 255, 255], count: 80 }, // white background
+      { rgba: [200, 30, 30, 255], count: 40 }, // red
+      { rgba: [30, 60, 200, 255], count: 30 }, // blue
+    )
+    const palette = pickBrandPalette(pixels)
+    expect(palette.primary).not.toBeNull()
+    expect(palette.secondary).not.toBeNull()
+    const primaryR = parseInt(palette.primary!.slice(1, 3), 16)
+    const primaryB = parseInt(palette.primary!.slice(5, 7), 16)
+    const secondaryR = parseInt(palette.secondary!.slice(1, 3), 16)
+    const secondaryB = parseInt(palette.secondary!.slice(5, 7), 16)
+    // The two colors are on opposite sides of the hue wheel (red vs blue).
+    expect(primaryR - primaryB).not.toBe(0)
+    expect(Math.sign(primaryR - primaryB)).not.toBe(Math.sign(secondaryR - secondaryB))
+  })
+
+  it('returns a single color (no secondary) for a one-hue logo', () => {
+    const pixels = buildPixels(
+      { rgba: [255, 255, 255, 255], count: 60 },
+      { rgba: [200, 160, 30, 255], count: 60 }, // golden — all within the same hue family
+      { rgba: [180, 140, 20, 255], count: 40 },
+    )
+    const palette = pickBrandPalette(pixels)
+    expect(palette.primary).not.toBeNull()
+    expect(palette.secondary).toBeNull()
+  })
+
+  it('returns nulls for a monochrome logo', () => {
+    const pixels = buildPixels(
+      { rgba: [255, 255, 255, 255], count: 50 },
+      { rgba: [0, 0, 0, 255], count: 30 },
+    )
+    expect(pickBrandPalette(pixels)).toEqual({ primary: null, secondary: null })
   })
 })

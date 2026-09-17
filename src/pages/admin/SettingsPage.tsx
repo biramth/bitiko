@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { AmbianceSection } from '@/features/shop-settings/AmbianceSection'
 import { STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
@@ -778,7 +779,8 @@ function SettingsForm({
           )}
 
           {section === 'appearance' && (
-            <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleur affichés sur la boutique.">
+            <Card icon={ImagePlus} title="Apparence" description="Ambiance, logo, bannière et couleur affichés sur la boutique.">
+              <AmbianceSection shop={shop} />
               {(() => {
                 const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : undefined
                 if (!template) return null

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { ShopSubscription } from '../types/billing.js'
-import { PLANS, canAddProduct, canAddSection, effectivePlan, effectivePlanKey } from './plans'
+import {
+  PLANS,
+  canAddProduct,
+  canAddProductImage,
+  canAddSection,
+  canAddVariant,
+  effectivePlan,
+  effectivePlanKey,
+} from './plans'
 
 const subscription = (overrides: Partial<ShopSubscription>): ShopSubscription => ({
   shop_id: 'test-shop',
@@ -32,16 +40,16 @@ describe('effectivePlan', () => {
   it('defaults to the free plan', () => {
     const plan = effectivePlan(null)
     expect(plan.key).toBe('free')
-    expect(plan.maxActiveProducts).toBe(8)
+    expect(plan.maxActiveProducts).toBe(15)
     expect(plan.storeBuilderAccess).toBe(true)
     expect(plan.advancedBuilder).toBe(false)
   })
 })
 
 describe('canAddProduct', () => {
-  it('blocks the free plan at its 8-product cap', () => {
-    expect(canAddProduct(PLANS.free, 8)).toBe(false)
-    expect(canAddProduct(PLANS.free, 7)).toBe(true)
+  it('blocks the free plan at its 15-product cap', () => {
+    expect(canAddProduct(PLANS.free, 15)).toBe(false)
+    expect(canAddProduct(PLANS.free, 14)).toBe(true)
     expect(canAddProduct(PLANS.free, 0)).toBe(true)
   })
 
@@ -69,5 +77,34 @@ describe('canAddSection', () => {
 
   it('never blocks the Pro plan', () => {
     expect(canAddSection(PLANS.pro, 999)).toBe(true)
+  })
+})
+
+describe('canAddProductImage', () => {
+  it('shares the free plan 4-photo budget between gallery and variant photos', () => {
+    // 0 main + 0 variant photos → 1 more OK; 3 main + 1 variant → blocked.
+    expect(canAddProductImage(PLANS.free, 0, 0)).toBe(true)
+    expect(canAddProductImage(PLANS.free, 2, 0)).toBe(true)
+    expect(canAddProductImage(PLANS.free, 3, 1)).toBe(false)
+    expect(canAddProductImage(PLANS.free, 4, 0)).toBe(false)
+    expect(canAddProductImage(PLANS.free, 0, 4)).toBe(false)
+  })
+
+  it('never limits paid plans', () => {
+    expect(canAddProductImage(PLANS.essential, 999, 999)).toBe(true)
+    expect(canAddProductImage(PLANS.pro, 999, 999)).toBe(true)
+  })
+})
+
+describe('canAddVariant', () => {
+  it('caps the free plan at 2 variants', () => {
+    expect(canAddVariant(PLANS.free, 0)).toBe(true)
+    expect(canAddVariant(PLANS.free, 1)).toBe(true)
+    expect(canAddVariant(PLANS.free, 2)).toBe(false)
+  })
+
+  it('never limits paid plans', () => {
+    expect(canAddVariant(PLANS.essential, 999)).toBe(true)
+    expect(canAddVariant(PLANS.pro, 999)).toBe(true)
   })
 })

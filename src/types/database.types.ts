@@ -1,4 +1,5 @@
 import type { BuilderDraft, LayoutSection, SystemTemplateMap, ThemeConfig } from './builder.js'
+import type { StoreProfileAnswers } from '../features/onboarding/storeProfile.js'
 
 export type Json =
   | string
@@ -411,6 +412,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          image_url: string | null
           name: string
           price: number | null
           product_id: string
@@ -422,6 +424,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          image_url?: string | null
           name: string
           price?: number | null
           product_id: string
@@ -433,6 +436,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          image_url?: string | null
           name?: string
           price?: number | null
           product_id?: string
@@ -569,6 +573,42 @@ export type Database = {
           },
         ]
       }
+      platform_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shops: {
         Row: {
           address: string | null
@@ -586,6 +626,7 @@ export type Database = {
           logo_url: string | null
           low_stock_threshold: number
           name: string
+          onboarding_responses: StoreProfileAnswers | null
           owner_id: string
           page_templates: SystemTemplateMap
           payment_instructions: string | null
@@ -595,6 +636,7 @@ export type Database = {
           theme_color: string
           theme_config: ThemeConfig
           updated_at: string
+          vibe: string | null
           whatsapp_number: string
         }
         Insert: {
@@ -613,6 +655,7 @@ export type Database = {
           logo_url?: string | null
           low_stock_threshold?: number
           name: string
+          onboarding_responses?: StoreProfileAnswers | null
           owner_id: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
@@ -622,6 +665,7 @@ export type Database = {
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string
+          vibe?: string | null
           whatsapp_number: string
         }
         Update: {
@@ -640,6 +684,7 @@ export type Database = {
           logo_url?: string | null
           low_stock_threshold?: number
           name?: string
+          onboarding_responses?: StoreProfileAnswers | null
           owner_id?: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
@@ -649,6 +694,7 @@ export type Database = {
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string
+          vibe?: string | null
           whatsapp_number?: string
         }
         Relationships: [
@@ -730,6 +776,10 @@ export type Database = {
           status: string
           total: number
         }[]
+      }
+      get_platform_role: {
+        Args: never
+        Returns: string | null
       }
       get_platform_shops: {
         Args: never
@@ -961,4 +1011,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 

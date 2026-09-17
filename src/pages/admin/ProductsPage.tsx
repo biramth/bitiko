@@ -270,6 +270,7 @@ export function ProductsPage() {
             </button>
             <Link
               to="/admin/produits/nouveau"
+              data-guide="guide-nouveau-produit"
               className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               <Plus size={16} /> Nouveau produit
@@ -289,6 +290,7 @@ export function ProductsPage() {
             }}
             placeholder="Rechercher un produit…"
             aria-label="Rechercher un produit"
+            data-guide="guide-recherche-produit"
             className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-gray-400 focus:outline-none"
           />
         </div>
@@ -364,7 +366,9 @@ export function ProductsPage() {
       )}
 
       {activeProductCount != null && PLANS[planKey].maxActiveProducts !== null && (
-        <PlanGauge active={activeProductCount} max={PLANS[planKey].maxActiveProducts} label={PLANS[planKey].label} />
+        <div data-guide="guide-plan-produits">
+          <PlanGauge active={activeProductCount} max={PLANS[planKey].maxActiveProducts} label={PLANS[planKey].label} />
+        </div>
       )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">

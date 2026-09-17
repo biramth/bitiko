@@ -31,6 +31,11 @@ import { editorInputClass, editorLabelClass, type SectionEditorProps } from './s
 
 type ProductImage = { public_url: string; id: string }
 
+/** One selectable photo on the product page: a gallery photo or a variant's
+ *  photo (variantId set). The merchant's photo budget (free plan: 3 total —
+ *  1 main + 1 per variant) is what feeds this list. */
+type GalleryImage = { public_url: string; id: string; variantId: string | null }
+
 /** Fullscreen photo viewer opened by clicking the main product image. */
 function ImageLightbox({
   images,
@@ -140,7 +145,7 @@ function ProductDetails({
   product: Product & {
     category?: { name: string; slug: string } | null
     images: ProductImage[]
-    variants?: { id: string; name: string; price: number | null; stock: number; active: boolean }[]
+    variants?: { id: string; name: string; price: number | null; stock: number; active: boolean; image_url?: string | null }[]
   }
   config: ProductSectionConfig
   currency: string
@@ -153,7 +158,6 @@ function ProductDetails({
   const [activeImage, setActiveImage] = useState(0)
   const [added, setAdded] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const images = product.images
   const variants = (product.variants ?? []).filter((v) => v.active)
   const hasVariants = variants.length > 0
   const [selectedVariant, setSelectedVariant] = useState(0)
@@ -164,6 +168,28 @@ function ProductDetails({
     setSelectedVariant(0)
   }
   const variant = hasVariants ? variants[selectedVariant] : null
+
+  // Gallery = product photos + variant photos (deduped). A variant's photo is
+  // shown and highlighted when that variant is selected.
+  const galleryImages = useMemo<GalleryImage[]>(() => {
+    const base = product.images.map((img) => ({ public_url: img.public_url, id: img.id, variantId: null as string | null }))
+    const variantImgs = variants
+      .filter((v) => v.image_url && !base.some((b) => b.public_url === v.image_url))
+      .map((v) => ({ public_url: v.image_url!, id: v.id, variantId: v.id }))
+    return [...base, ...variantImgs]
+  }, [product.images, variants])
+  if (activeImage >= galleryImages.length) setActiveImage(0)
+
+  // Selecting a variant with its own photo shows that photo; clicking a
+  // variant's thumbnail in the gallery selects the variant.
+  useEffect(() => {
+    if (!variant?.image_url) return
+    const idx = galleryImages.findIndex((g) => g.variantId === variant.id)
+    if (idx >= 0 && activeImage !== idx) {
+      setActiveImage(idx)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variant?.id, variant?.image_url])
 
   const displayPrice = hasVariants && variant ? (variant.price ?? product.price) : product.price
   const displayStock = hasVariants && variant ? variant.stock : product.stock
@@ -216,7 +242,7 @@ function ProductDetails({
       slug: product.slug,
       price: displayPrice,
       quantity,
-      imageUrl: images[0]?.public_url ?? null,
+      imageUrl: variant?.image_url ?? galleryImages[0]?.public_url ?? null,
       stock: displayStock,
     })
     trackEvent('add_to_cart', { product_id: product.id, product_name: product.name, value: displayPrice * quantity, currency })
@@ -238,19 +264,19 @@ function ProductDetails({
           )}
         </nav>
 
-        <div className="grid gap-10 md:grid-cols-2 md:gap-16">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-14">
           {config.showGallery && (
             <div>
               <button
                 type="button"
-                onClick={() => images.length > 0 && setLightboxOpen(true)}
-                aria-label={images.length > 0 ? `Agrandir la photo de ${product.name}` : undefined}
-                disabled={images.length === 0}
+                onClick={() => galleryImages.length > 0 && setLightboxOpen(true)}
+                aria-label={galleryImages.length > 0 ? `Agrandir la photo de ${product.name}` : undefined}
+                disabled={galleryImages.length === 0}
                 className="group relative aspect-[4/5] w-full overflow-hidden bg-sand-100"
               >
-                {images[activeImage] ? (
+                {galleryImages[activeImage] ? (
                   <>
-                    <img src={images[activeImage].public_url} alt={product.name} className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
+                    <img src={galleryImages[activeImage].public_url} alt={product.name} className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
                     <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-ink-900 opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
@@ -259,10 +285,23 @@ function ProductDetails({
                   <div className="flex h-full w-full items-center justify-center text-ink-200"><ImageOff size={48} aria-hidden /></div>
                 )}
               </button>
-              {images.length > 1 && (
+              {galleryImages.length > 1 && (
                 <div className="mt-4 flex gap-4" role="tablist" aria-label={`Photos de ${product.name}`}>
-                  {images.map((img, i) => (
-                    <button key={img.id} role="tab" aria-selected={i === activeImage} onClick={() => setActiveImage(i)} className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-ink-900' : 'border-transparent opacity-50 hover:opacity-100'}`}>
+                  {galleryImages.map((img, i) => (
+                    <button
+                      key={`${img.id}-${img.public_url}`}
+                      role="tab"
+                      aria-selected={i === activeImage}
+                      onClick={() => {
+                        setActiveImage(i)
+                        // Clicking a variant's thumbnail selects that variant.
+                        if (img.variantId) {
+                          const variantIdx = variants.findIndex((v) => v.id === img.variantId)
+                          if (variantIdx >= 0) setSelectedVariant(variantIdx)
+                        }
+                      }}
+                      className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-ink-900' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                    >
                       <img src={img.public_url} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </button>
                   ))}
@@ -377,9 +416,9 @@ function ProductDetails({
         </div>
       )}
 
-      {lightboxOpen && images.length > 0 && (
+      {lightboxOpen && galleryImages.length > 0 && (
         <ImageLightbox
-          images={images}
+          images={galleryImages}
           activeImage={activeImage}
           onSelect={setActiveImage}
           onClose={() => setLightboxOpen(false)}

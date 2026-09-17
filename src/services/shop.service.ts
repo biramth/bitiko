@@ -1,8 +1,11 @@
 import { supabase } from '@/lib/supabaseClient'
 import { ensurePinnedSections } from '@/config/defaultLayout'
-import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
+import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
+import type { StoreVibeKey } from '@/config/ambiances'
 import type { Shop, TenantContext } from '@/types'
 import type { SystemTemplateMap } from '@/types/builder'
+import { generateStorefront, type StoreBrandPalette } from '@/features/onboarding/generateStorefront'
+import type { StoreProfileAnswers } from '@/features/onboarding/storeProfile'
 
 export async function getShopByTenant(tenant: TenantContext): Promise<Shop | null> {
   if (tenant.type !== 'shop') return null
@@ -41,6 +44,14 @@ export interface CreateShopInput {
   currency?: string
   /** Genre template key (mode, epicerie, beaute, tech) picked during onboarding. */
   templateId?: string
+  /** The merchant's onboarding answers — when present, the storefront is
+   *  generated from them instead of the template's generic copy. */
+  profile?: StoreProfileAnswers
+  /** Palette suggested from the merchant's logo, used to set the theme colors. */
+  palette?: StoreBrandPalette | null
+  /** The ambiance picked during onboarding ("Épuré", "Cosy"…), which styles
+   *  the generated theme on top of the template + logo colors. */
+  vibe?: StoreVibeKey | null
 }
 
 /** Flattens a selected genre template into the shop record so the storefront
@@ -65,6 +76,12 @@ function templateFields(templateId: string | undefined): Partial<Shop> {
 }
 
 export async function createShop(input: CreateShopInput): Promise<Shop> {
+  const template = input.templateId ? STORE_TEMPLATE_BY_KEY[input.templateId] : undefined
+  const generatedSource = template ?? STORE_TEMPLATES[0]
+  const generated = input.profile
+    ? generateStorefront({ template: generatedSource, answers: input.profile, palette: input.palette, vibe: input.vibe })
+    : null
+
   const { data, error } = await supabase
     .from('shops')
     .insert({
@@ -73,7 +90,19 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
       currency: input.currency ?? 'XOF',
-      ...templateFields(input.templateId),
+      vibe: input.vibe ?? null,
+      ...(generated
+        ? {
+            onboarding_responses: input.profile,
+            description: generated.description,
+            template_id: generatedSource.key,
+            business_type: generatedSource.vertical,
+            theme_color: generated.themeColor,
+            theme_config: generated.themeConfig,
+            layout_sections: generated.layoutSections,
+            page_templates: generated.pageTemplates,
+          }
+        : templateFields(input.templateId)),
     })
     .select()
     .single()

@@ -8,7 +8,7 @@ function header(overrides: Partial<Extract<LayoutSection, { type: 'header' }>['c
     id: createSectionId('header'),
     type: 'header',
     visible: true,
-    config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [], ...overrides },
+    config: { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [], ...overrides },
   }
 }
 

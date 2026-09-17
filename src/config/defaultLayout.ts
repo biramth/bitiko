@@ -17,7 +17,7 @@ export function buildDefaultSections(): LayoutSection[] {
       id: createSectionId('header'),
       type: 'header',
       visible: true,
-      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] },
+      config: { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] },
     },
     {
       id: createSectionId('hero'),

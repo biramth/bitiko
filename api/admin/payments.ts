@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getPlatformAdminFromAuthHeader, getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
+import { getPlatformOperatorFromAuthHeader, getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { proActivatedEmailHtml } from '../_lib/emailTemplates.js'
 import { PLANS } from '../../src/config/plans.js'
@@ -25,7 +25,7 @@ async function handlePending(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const admin = await getPlatformAdminFromAuthHeader(req.headers.authorization)
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
     if (!admin) {
       res.status(403).json({ error: 'Accès réservé.' })
       return
@@ -83,7 +83,7 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const admin = await getPlatformAdminFromAuthHeader(req.headers.authorization)
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
     if (!admin) {
       res.status(403).json({ error: 'Accès réservé.' })
       return
@@ -175,7 +175,7 @@ async function handleReject(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const admin = await getPlatformAdminFromAuthHeader(req.headers.authorization)
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
     if (!admin) {
       res.status(403).json({ error: 'Accès réservé.' })
       return

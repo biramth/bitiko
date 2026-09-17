@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Lock, Mail } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -8,7 +8,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Turnstile } from '@/components/ui/Turnstile'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { trackEvent } from '@/lib/analytics'
-import { PLATFORM_ADMIN_EMAILS } from '@/config/constants'
+import { PlatformAwareRedirect } from '@/features/platform/PlatformAwareRedirect'
 
 const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 
@@ -53,9 +53,8 @@ export function LoginPage() {
   }, [step])
 
   if (session) {
-    if (PLATFORM_ADMIN_EMAILS.includes(session.user.email ?? '')) return <Navigate to="/super-admin" replace />
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/admin'
-    return <Navigate to={from} replace />
+    return <PlatformAwareRedirect fallback={from} />
   }
 
   const backToEmail = () => {
@@ -103,7 +102,6 @@ export function LoginPage() {
       }
       return
     }
-    navigate(PLATFORM_ADMIN_EMAILS.includes(email) ? '/super-admin' : '/admin', { replace: true })
   }
 
   const handleSignupSubmit = async (e: React.FormEvent) => {

@@ -15,7 +15,7 @@ import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
 
-const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] }
+const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] }
 const DEFAULT_FOOTER: FooterSectionConfig = {
   showContact: true,
   showAddress: true,
@@ -113,6 +113,13 @@ export function StoreLayout() {
   const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
   const navLinks = resolveHeaderNavLinks(header, shop)
+  // With the stock header (logo + Catalogue), nav links render as prominent
+  // CTA buttons so shopping is the obvious next step; with a custom menu the
+  // merchant's own list keeps the classic link style.
+  const usesCustomMenu = (header.menu?.length ?? 0) > 0
+  const nativeLinkClass = 'text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60'
+  const ctaLinkClass = 'inline-flex items-center rounded-lg bg-[var(--shop-button)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90'
+  const ghostLinkClass = 'inline-flex items-center rounded-lg border border-ink-900/15 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-ink-900/40'
 
   useShopFavicon(shop?.logo_url)
 
@@ -143,7 +150,7 @@ export function StoreLayout() {
                       href={link.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60"
+                      className={usesCustomMenu ? nativeLinkClass : ghostLinkClass}
                     >
                       {link.label}
                     </a>
@@ -151,7 +158,7 @@ export function StoreLayout() {
                     <Link
                       key={link.key}
                       to={link.href}
-                      className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60"
+                      className={usesCustomMenu ? nativeLinkClass : ctaLinkClass}
                     >
                       {link.label}
                     </Link>
@@ -194,7 +201,7 @@ export function StoreLayout() {
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60"
+                  className={usesCustomMenu ? "block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60" : "mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:border-ink-900/40"}
                 >
                   {link.label}
                 </a>
@@ -203,7 +210,7 @@ export function StoreLayout() {
                   key={link.key}
                   to={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60"
+                  className={usesCustomMenu ? "block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60" : "mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-white"}
                 >
                   {link.label}
                 </Link>

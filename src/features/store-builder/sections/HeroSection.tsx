@@ -26,20 +26,20 @@ export function HeroRenderer({
           <img src={shop.banner_url!} alt="" className="h-full w-full object-cover" />
         </div>
       )}
-      <section className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-8 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-10 sm:pt-16'}`}>
+      <section className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-6 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-8 sm:pt-12'}`}>
         {config.eyebrow.trim() && (
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-accent)]">{config.eyebrow}</p>
         )}
         <h1
-          className={`mt-3 max-w-2xl font-bold tracking-tight text-[var(--shop-text)] ${HEADING_SCALE[themeConfig.textScale]}`}
+          className={`mt-2 max-w-2xl font-bold tracking-tight text-[var(--shop-text)] ${HEADING_SCALE[themeConfig.textScale]}`}
           style={{ fontFamily: 'var(--shop-font-heading)' }}
         >
           {heading}
         </h1>
         {subheading && (
-          <p className="mt-4 max-w-lg text-base text-[var(--shop-text)]/60 sm:text-lg">{subheading}</p>
+          <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--shop-text)]/60">{subheading}</p>
         )}
-        <div className="mt-7 flex flex-wrap items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link to="/catalogue" className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90">
             Découvrir la boutique
             <ArrowRight size={16} aria-hidden />

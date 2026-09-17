@@ -1,14 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3,
   CheckCircle2,
   CreditCard,
   ExternalLink,
-  LayoutDashboard,
   Package,
   ShoppingBag,
-  ShieldAlert,
   Store,
   Users,
   XCircle,
@@ -21,90 +19,21 @@ import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { usePageSeo } from '@/hooks/usePageSeo'
 
-type Tab = 'overview' | 'analytics' | 'shops' | 'payments'
+/**
+ * Panels shared by the platform workspace pages. They used to be tabs inside
+ * the single /super-admin page; each one now backs its own tool page under
+ * /plateforme so a member only loads the tool their role grants.
+ */
 
-const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
-  { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard },
-  { key: 'analytics', label: 'Analytiques', icon: BarChart3 },
-  { key: 'shops', label: 'Boutiques', icon: Store },
-  { key: 'payments', label: 'Paiements', icon: CreditCard },
-]
-
-const PLAN_LABELS: Record<string, string> = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro' }
-const PLAN_BADGE: Record<string, string> = {
+export const PLAN_LABELS: Record<string, string> = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro' }
+export const PLAN_BADGE: Record<string, string> = {
   free: 'bg-gray-100 text-gray-700',
   essential: 'bg-blue-100 text-blue-800',
   pro: 'bg-brand-100 text-brand-800',
 }
 
-/**
- * Platform-operator tool (not a merchant dashboard) — reachable only at
- * /super-admin, unlinked from any merchant-facing nav. Access is enforced
- * server-side twice: the Data API RPCs raise "Accès réservé." for anyone
- * outside the operator allowlist, and api/admin/* checks the same allowlist.
- * A non-admin landing here just sees the reserved placeholder, nothing leaks.
- */
-export function SuperAdminPage() {
-  usePageSeo({ title: 'Super admin — Bitiko', noindex: true })
-  const [tab, setTab] = useState<Tab>('overview')
-
-  const statsQuery = useQuery({ queryKey: ['platform-stats'], queryFn: getPlatformStats, retry: false })
-
-  if (statsQuery.isLoading) return <div className="mx-auto max-w-5xl p-4 sm:p-8"><Spinner /></div>
-
-  if (statsQuery.isError || !statsQuery.data) {
-    return (
-      <div className="mx-auto max-w-5xl p-4 sm:p-8">
-        <PageHeader title="Super admin" />
-        <div className="mt-6 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <ShieldAlert size={28} className="text-gray-300" aria-hidden />
-          <p className="text-sm text-gray-500">
-            {statsQuery.error instanceof Error ? statsQuery.error.message : 'Accès réservé.'}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const stats = statsQuery.data
-
-  return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-8">
-      <PageHeader title="Super admin" subtitle="Pilotage de la plateforme Bitiko." />
-
-      <div className="mt-4 overflow-x-auto">
-        <div role="tablist" aria-label="Sections du super admin" className="flex min-w-max gap-1 rounded-lg bg-gray-100 p-1">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                tab === key ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon size={15} aria-hidden /> {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-6">
-        {tab === 'overview' && <OverviewTab stats={stats} />}
-        {tab === 'analytics' && <AnalyticsTab stats={stats} />}
-        {tab === 'shops' && <ShopsTab />}
-        {tab === 'payments' && <PaymentsTab />}
-      </div>
-    </div>
-  )
-}
-
-function MetricCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: LucideIcon }) {
+export function MetricCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: LucideIcon }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -129,33 +58,13 @@ function RevenueList({ rows, fallback }: { rows: { currency: string; total: numb
   )
 }
 
-function OverviewTab({ stats }: { stats: Awaited<ReturnType<typeof getPlatformStats>> }) {
+export function OverviewPanel({ stats }: { stats: Awaited<ReturnType<typeof getPlatformStats>> }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <MetricCard
-        icon={Store}
-        label="Boutiques"
-        value={String(stats.total_shops)}
-        hint={`${stats.paid_shops} en offre payante`}
-      />
-      <MetricCard
-        icon={Package}
-        label="Produits"
-        value={String(stats.total_products)}
-        hint={`${stats.active_products} actifs`}
-      />
-      <MetricCard
-        icon={ShoppingBag}
-        label="Commandes"
-        value={String(stats.total_orders)}
-        hint={`${stats.orders_today} aujourd'hui`}
-      />
-      <MetricCard
-        icon={Users}
-        label="Visites (30 j)"
-        value={String(stats.visits_30d)}
-        hint={`${stats.visitors_30d} visiteurs uniques`}
-      />
+      <MetricCard icon={Store} label="Boutiques" value={String(stats.total_shops)} hint={`${stats.paid_shops} en offre payante`} />
+      <MetricCard icon={Package} label="Produits" value={String(stats.total_products)} hint={`${stats.active_products} actifs`} />
+      <MetricCard icon={ShoppingBag} label="Commandes" value={String(stats.total_orders)} hint={`${stats.orders_today} aujourd'hui`} />
+      <MetricCard icon={Users} label="Visites (30 j)" value={String(stats.visits_30d)} hint={`${stats.visitors_30d} visiteurs uniques`} />
       <MetricCard icon={BarChart3} label="Visites aujourd'hui" value={String(stats.visits_today)} hint={`${stats.visitors_today} visiteurs uniques`} />
       <div className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -219,15 +128,7 @@ function VisitsChart({ rows }: { rows: PlatformVisitsByDay[] | null }) {
   )
 }
 
-function RankList({
-  title,
-  empty,
-  rows,
-}: {
-  title: string
-  empty: string
-  rows: { label: string; value: number }[]
-}) {
+function RankList({ title, empty, rows }: { title: string; empty: string; rows: { label: string; value: number }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value))
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -253,7 +154,7 @@ function RankList({
   )
 }
 
-function AnalyticsTab({ stats }: { stats: Awaited<ReturnType<typeof getPlatformStats>> }) {
+export function AnalyticsPanel({ stats }: { stats: Awaited<ReturnType<typeof getPlatformStats>> }) {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -287,7 +188,7 @@ function AnalyticsTab({ stats }: { stats: Awaited<ReturnType<typeof getPlatformS
   )
 }
 
-function ShopsTab() {
+export function ShopsPanel() {
   const { data, isLoading, isError, error } = useQuery({ queryKey: ['platform-shops'], queryFn: getPlatformShops, retry: false })
 
   if (isLoading) return <Spinner />
@@ -314,13 +215,7 @@ function ShopsTab() {
               <td className="px-4 py-3">
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-gray-900">{shop.name}</span>
-                  <a
-                    href={shopUrl(shop.slug)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-gray-400 hover:text-gray-700"
-                    aria-label={`Ouvrir ${shop.name}`}
-                  >
+                  <a href={shopUrl(shop.slug)} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-gray-700" aria-label={`Ouvrir ${shop.name}`}>
                     <ExternalLink size={13} aria-hidden />
                   </a>
                 </div>
@@ -345,7 +240,7 @@ function ShopsTab() {
   )
 }
 
-function PaymentsTab() {
+export function PaymentsPanel() {
   const queryClient = useQueryClient()
   const { data: payments, isLoading, isError, error } = useQuery({
     queryKey: ['admin-pending-payments'],
@@ -379,10 +274,7 @@ function PaymentsTab() {
       {payments && payments.length > 0 && (
         <div className="mt-4 space-y-3">
           {payments.map((payment) => (
-            <div
-              key={payment.id}
-              className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
+            <div key={payment.id} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-heading font-semibold text-gray-900">{payment.shop?.name ?? 'Boutique supprimée'}</p>
@@ -438,9 +330,7 @@ function PaymentsTab() {
 
       {(approve.isError || reject.isError) && (
         <p className="mt-4 text-sm text-red-600">
-          {(approve.error ?? reject.error) instanceof Error
-            ? ((approve.error ?? reject.error) as Error).message
-            : 'Erreur.'}
+          {(approve.error ?? reject.error) instanceof Error ? ((approve.error ?? reject.error) as Error).message : 'Erreur.'}
         </p>
       )}
     </div>

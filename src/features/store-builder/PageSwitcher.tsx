@@ -64,7 +64,7 @@ export function PageSwitcher({
   const current = activeSystem ?? { label: activePage?.title ?? 'Accueil', icon: FileText, color: 'from-slate-400 to-slate-600' }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} data-guide="guide-page-switcher">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

@@ -24,15 +24,18 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
+import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
+import { AmbianceMigrationDialog } from '@/features/shop-settings/AmbianceMigrationDialog'
 
 // Flat list, not grouped — Catégories now lives as a tab of Produits and
 // Facturation moved under Paramètres (see settingsSections below), so there
 // are too few top-level items left to justify collapsible groups.
 const visibleNavItems = [
-  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
-  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
-  { to: '/admin/produits', label: 'Produits', icon: Package },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2 },
+  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard' },
+  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, guide: 'guide-nav-commandes' },
+  { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
+  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
 ]
 
 const settingsSections = [
@@ -154,7 +157,8 @@ export function AdminLayout() {
   )
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <GuidedTourProvider>
+      <div className="flex h-screen bg-gray-50">
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
           collapsed ? 'w-[4.5rem]' : 'w-64'
@@ -166,8 +170,8 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
+          {visibleNavItems.map(({ to, label, icon: Icon, end, guide }) => (
+            <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
               <Icon size={18} aria-hidden />
               {!collapsed && label}
             </NavLink>
@@ -178,6 +182,7 @@ export function AdminLayout() {
             onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
             aria-expanded={settingsExpanded}
             title={collapsed ? 'Paramètres' : undefined}
+            data-guide="guide-nav-parametres"
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               collapsed ? 'justify-center' : ''
             } ${onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
@@ -274,7 +279,7 @@ export function AdminLayout() {
               </div>
 
               <nav className="flex flex-1 flex-col gap-1 px-3">
-                {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
+                {visibleNavItems.map(({ to, label, icon: Icon, end, guide }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -284,6 +289,7 @@ export function AdminLayout() {
                         isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
                       }`
                     }
+                    data-guide={guide}
                   >
                     <Icon size={18} aria-hidden />
                     {label}
@@ -294,6 +300,7 @@ export function AdminLayout() {
                   type="button"
                   onClick={() => setSettingsOpen((open) => !open)}
                   aria-expanded={settingsExpanded}
+                  data-guide="guide-nav-parametres"
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
                   }`}
@@ -370,7 +377,10 @@ export function AdminLayout() {
           </Suspense>
         </main>
       </div>
-    </div>
+      </div>
+      {shop && <AmbianceMigrationDialog shop={shop} />}
+      <GuidedTourButton />
+    </GuidedTourProvider>
   )
 }
 

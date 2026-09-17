@@ -92,7 +92,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
       id: createSectionId('header'),
       type: 'header',
       visible: true,
-      config: { showLogo: true, showCatalogLink: true, showContactLink: true, sticky: true, menu: [] } satisfies HeaderSectionConfig,
+      config: { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] } satisfies HeaderSectionConfig,
     }),
     Editor: HeaderEditor,
   },

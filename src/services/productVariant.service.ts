@@ -4,7 +4,9 @@ import type { ProductVariant } from '@/types'
 export type VariantInput = Pick<
   ProductVariant,
   'product_id' | 'name' | 'sku' | 'price' | 'stock' | 'active' | 'sort_order'
->
+> & {
+  image_url?: string | null
+}
 
 export async function listVariants(productId: string): Promise<ProductVariant[]> {
   const { data, error } = await supabase
@@ -49,4 +51,35 @@ export async function reorderVariants(ordered: { id: string; sort_order: number 
   const results = await Promise.all(updates)
   const error = results.find((r) => r.error)?.error
   if (error) throw error
+}
+
+const VARIANT_IMAGE_BUCKET = 'product-images'
+
+/** Uploads a variant's photo and stores its public URL on the variant row.
+ *  Free plan: a variant photo consumes one of the product's 4 photo slots
+ *  (enforced server-side by the 0046 trigger as well). */
+export async function uploadVariantImage(
+  productId: string,
+  variantId: string,
+  file: File,
+): Promise<ProductVariant> {
+  const ext = file.name.split('.').pop()
+  const path = `${productId}/variants/${crypto.randomUUID()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from(VARIANT_IMAGE_BUCKET)
+    .upload(path, file, { cacheControl: '3600', upsert: false })
+  if (uploadError) throw uploadError
+
+  const { data: publicUrlData } = supabase.storage
+    .from(VARIANT_IMAGE_BUCKET)
+    .getPublicUrl(path)
+
+  return updateVariant(variantId, { image_url: publicUrlData.publicUrl })
+}
+
+/** Clears a variant's photo (the storage object is left in place — the copy
+ *  in Storage is cheap; removing it would require tracking the storage path). */
+export async function clearVariantImage(variantId: string): Promise<void> {
+  await updateVariant(variantId, { image_url: null })
 }

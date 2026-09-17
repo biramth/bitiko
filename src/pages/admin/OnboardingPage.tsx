@@ -1,24 +1,33 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ArrowRight,
+  Banknote,
+  Briefcase,
   Check,
   CheckCircle2,
   Globe,
   ImageIcon,
+  Info,
   Lock,
   Mail,
   MapPin,
   MessageCircle,
+  Package,
   Palette,
   Pencil,
   Phone,
+  Scissors,
+  Sparkles,
   Store,
+  Truck,
   User,
   Users,
   XCircle,
+  Zap,
+  type LucideIcon,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { supabase } from '@/lib/supabaseClient'
@@ -27,7 +36,20 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
-import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
+import { STORE_VIBES, STORE_VIBE_BY_KEY, type StoreVibeKey } from '@/config/ambiances'
+import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
+import { ensureReadableAccent } from '@/utils/color'
+import {
+  AUDIENCE_LABELS,
+  EMPTY_STORE_PROFILE,
+  FAQ_SLOTS,
+  PRICE_RANGE_LABELS,
+  type StoreAudience,
+  type StoreFaqItem,
+  type StorePriceRange,
+  type StoreProfileAnswers,
+} from '@/features/onboarding/storeProfile'
+import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { slugify } from '@/utils/format'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -40,12 +62,106 @@ const STEPS = [
   { number: 1, label: 'Tes infos' },
   { number: 2, label: 'Boutique' },
   { number: 3, label: 'Commerce' },
-  { number: 4, label: 'Logo' },
-  { number: 5, label: 'Récap' },
+  { number: 4, label: 'Détails' },
+  { number: 5, label: 'Logo' },
+  { number: 6, label: 'Récap' },
 ] as const
 
 const fieldClass =
   'w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
+
+const textareaClass =
+  'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
+
+const AUDIENCE_OPTIONS: { key: StoreAudience; label: string; icon: LucideIcon }[] = [
+  { key: 'particuliers', label: 'Particuliers', icon: User },
+  { key: 'professionnels', label: 'Professionnels', icon: Briefcase },
+  { key: 'mixte', label: 'Les deux', icon: Users },
+]
+
+const PRICE_OPTIONS: { key: StorePriceRange; label: string; icon: LucideIcon }[] = [
+  { key: 'entree', label: 'Entrée de gamme', icon: Package },
+  { key: 'milieu', label: 'Milieu de gamme', icon: Store },
+  { key: 'haut', label: 'Haut de gamme', icon: Sparkles },
+]
+
+/** Rounded-corner preview per vibe so the "Aa" tile hints at each ambiance's
+ *  geometry (radii aren't exposed as pixel values elsewhere). */
+const VIBE_RADIUS_PREVIEW: Record<StoreVibeKey, string> = {
+  epure: '6px',
+  cosy: '16px',
+  colorful: '16px',
+  premium: '6px',
+}
+
+function ChoicePills<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { key: T; label: string; icon?: LucideIcon }[]
+  value: T
+  onChange: (key: T) => void
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {options.map((option) => {
+        const selected = value === option.key
+        const Icon = option.icon
+        return (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => onChange(option.key)}
+            aria-pressed={selected}
+            className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors ${
+              selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500 text-ink-900' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            {Icon && <Icon size={16} className={selected ? 'text-brand-700' : 'text-gray-400'} aria-hidden />}
+            {option.label}
+            {selected && <Check size={12} className="text-brand-700" aria-hidden />}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ToggleTile({
+  checked,
+  onChange,
+  label,
+  icon: Icon,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+  icon: LucideIcon
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      aria-pressed={checked}
+      className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+        checked ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      <Icon size={16} className={checked ? 'text-brand-700' : 'text-gray-400'} aria-hidden />
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block truncate text-xs font-medium text-ink-900">{label}</span>
+      </span>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          checked ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
+        }`}
+      >
+        {checked ? 'Oui' : 'Non'}
+      </span>
+    </button>
+  )
+}
 
 export function OnboardingPage() {
   usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
@@ -67,19 +183,27 @@ export function OnboardingPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
   const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
-  const templatesForBusinessType = templatesForVertical(businessType)
+  const [ambiance, setAmbiance] = useState<StoreVibeKey>(STORE_VIBES[0].key)
 
   const handleSelectVertical = (vertical: string) => {
     setBusinessType(vertical)
     const first = templatesForVertical(vertical)[0]
     if (first) setTemplateId(first.key)
   }
+  const [profile, setProfile] = useState<StoreProfileAnswers>(EMPTY_STORE_PROFILE)
+  const updateProfile = (patch: Partial<StoreProfileAnswers>) => setProfile((prev) => ({ ...prev, ...patch }))
+  const updateFaq = (index: number, field: keyof StoreFaqItem, value: string) =>
+    setProfile((prev) => ({
+      ...prev,
+      faq: prev.faq.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    }))
+
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null)
-  // Best-effort brand-color suggestion from the logo — applied instead of
-  // the template's default color if found, but stays a plain shop.theme_color
-  // like any other, editable later in Réglages just the same.
-  const [logoSuggestedColor, setLogoSuggestedColor] = useState<string | null>(null)
+  // Best-effort brand palette suggestion from the logo — applied instead of the
+  // template's default color if found, but stays plain shop theme colors like
+  // any other, editable later in Réglages.
+  const [logoPalette, setLogoPalette] = useState<StoreBrandPalette | null>(null)
   const latestLogoFileRef = useRef<File | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,13 +214,13 @@ export function OnboardingPage() {
       return url
     })
     setLogoFile(file)
-    setLogoSuggestedColor(null)
+    setLogoPalette(null)
     latestLogoFileRef.current = file
     if (file) {
-      void extractDominantColorFromFile(file).then((color) => {
+      void extractPaletteFromFile(file).then((palette) => {
         // The merchant may have already removed/replaced the logo by the
         // time this resolves — only apply it if this is still the same file.
-        if (latestLogoFileRef.current === file) setLogoSuggestedColor(color)
+        if (latestLogoFileRef.current === file && palette.primary) setLogoPalette(palette)
       })
     }
   }
@@ -144,13 +268,19 @@ export function OnboardingPage() {
         phone: personalPhone,
         address: personalAddress,
       })
-      let shop = await createShop({ ownerId, name: name.trim(), slug, whatsappNumber, templateId })
+      let shop = await createShop({
+        ownerId,
+        name: name.trim(),
+        slug,
+        whatsappNumber,
+        templateId,
+        profile,
+        palette: logoPalette,
+        vibe: ambiance,
+      })
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
-        shop = await updateShop(shop.id, {
-          logo_url: logoUrl,
-          ...(logoSuggestedColor ? { theme_color: logoSuggestedColor } : {}),
-        })
+        shop = await updateShop(shop.id, { logo_url: logoUrl })
       }
       return shop
     },
@@ -158,7 +288,8 @@ export function OnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       trackEvent('shop_created', { shop_slug: shop.slug })
       void sendWelcomeEmail(shop.id)
-      navigate('/admin', { replace: true })
+      // The `tour` param makes the admin open the welcome guided tour once.
+      navigate('/admin?tour=welcome', { replace: true })
     },
     onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
   })
@@ -168,7 +299,11 @@ export function OnboardingPage() {
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
   const selectedVertical = VERTICAL_BY_KEY[businessType]
-  const effectiveThemeColor = logoSuggestedColor ?? selectedTemplate.themeColor
+  // The recap shows the color actually applied: a light logo color is deepened
+  // so white text on it stays readable.
+  const effectiveThemeColor = logoPalette?.primary
+    ? ensureReadableAccent(logoPalette.primary)
+    : selectedTemplate.themeColor
 
   const slugStatus: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error' = !slug
     ? 'idle'
@@ -188,15 +323,20 @@ export function OnboardingPage() {
 
   const step3Valid = !!businessType && !!templateId
 
+  const step4Valid = profile.description.trim().length > 0
+
   const canGoNext =
     (step === 1 && step1Valid) ||
     (step === 2 && step2Valid) ||
     (step === 3 && step3Valid) ||
-    step === 4
+    (step === 4 && step4Valid) ||
+    step === 5
 
-  const canSubmit = step1Valid && step2Valid && step3Valid
+  const canSubmit = step1Valid && step2Valid && step3Valid && step4Valid
 
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
+
+  const completedFaqCount = profile.faq.filter((item) => item.question.trim() && item.answer.trim()).length
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sand-50 to-white px-4 py-8 sm:py-12">
@@ -240,7 +380,7 @@ export function OnboardingPage() {
           onSubmit={(e) => {
             e.preventDefault()
             setError(null)
-            if (step === 5 && canSubmit) {
+            if (step === 6 && canSubmit) {
               mutation.mutate()
             }
           }}
@@ -465,57 +605,187 @@ export function OnboardingPage() {
                   })}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Détermine les styles proposés pour ta boutique. Modifiable plus tard dans Réglages.
+                  Le type de commerce définit la structure de ta boutique. Modifiable plus tard dans « Personnaliser ».
                 </p>
               </div>
 
-              {templatesForBusinessType.length > 0 && (
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <Palette size={15} className="text-gray-400" aria-hidden /> Choisis ton style
-                  </label>
-                  <div className="mt-2 grid grid-cols-2 gap-2.5">
-                    {templatesForBusinessType.map((template) => {
-                      const selected = templateId === template.key
-                      return (
-                        <button
-                          key={template.key}
-                          type="button"
-                          onClick={() => setTemplateId(template.key)}
-                          aria-pressed={selected}
-                          className={`rounded-xl border p-3 text-left transition-colors ${
-                            selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span
-                              className="h-5 w-5 rounded-full border border-black/10"
-                              style={{ backgroundColor: template.swatch[0] }}
-                              aria-hidden
-                            />
-                            <span
-                              className="h-5 w-5 rounded-full border border-black/10"
-                              style={{ backgroundColor: template.swatch[1] }}
-                              aria-hidden
-                            />
-                            <span className="ml-auto text-xs font-semibold text-brand-700">{selected ? '✓' : ''}</span>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Palette size={15} className="text-gray-400" aria-hidden /> Quelle ambiance pour ta boutique ?
+                </label>
+                <div className="mt-2 grid grid-cols-2 gap-2.5">
+                  {STORE_VIBES.map((vibe) => {
+                    const selected = ambiance === vibe.key
+                    return (
+                      <button
+                        key={vibe.key}
+                        type="button"
+                        onClick={() => setAmbiance(vibe.key)}
+                        aria-pressed={selected}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="flex items-center justify-between">
+                          <span
+                            className="flex h-9 w-14 items-center justify-center text-lg font-bold"
+                            style={{
+                              backgroundColor: vibe.theme.backgroundColor,
+                              color: vibe.swatch[0],
+                              borderRadius: VIBE_RADIUS_PREVIEW[vibe.key],
+                            }}
+                            aria-hidden
+                          >
+                            Aa
                           </span>
-                          <span className="mt-2 block text-sm font-semibold text-ink-900">{template.label}</span>
-                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">{template.description}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Les couleurs de ta boutique s'appliquent automatiquement. Tu pourras explorer d'autres styles de
-                    ce type de commerce plus tard, dans « Personnaliser ma boutique ».
-                  </p>
+                          {selected && <Check size={14} className="text-brand-700" aria-hidden />}
+                        </span>
+                        <span className="mt-2 flex items-center gap-1.5">
+                          <span className="block text-sm font-semibold text-ink-900">{vibe.label}</span>
+                          <span
+                            className="h-3.5 w-3.5 rounded-full border border-black/10"
+                            style={{ backgroundColor: vibe.swatch[0] }}
+                            aria-hidden
+                          />
+                          <span
+                            className="h-3.5 w-3.5 rounded-full border border-black/10"
+                            style={{ backgroundColor: vibe.swatch[1] }}
+                            aria-hidden
+                          />
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-snug text-gray-500">{vibe.description}</span>
+                      </button>
+                    )
+                  })}
                 </div>
-              )}
+                <p className="mt-2 text-xs text-gray-500">
+                  L'ambiance adapte les couleurs, polices et arrondis de ta boutique. Tu pourras tout modifier plus tard dans « Personnaliser ».
+                </p>
+              </div>
             </div>
           )}
 
           {step === 4 && (
+            <div className="space-y-5">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Info size={15} className="text-gray-400" aria-hidden /> Ta boutique en détail
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Tes réponses servent à créer une vitrine qui te ressemble. Tu pourras tout modifier plus tard.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="shopDescription" className="block text-sm font-medium text-gray-700">
+                  Décris ta boutique en une phrase
+                </label>
+                <textarea
+                  id="shopDescription"
+                  required
+                  rows={2}
+                  value={profile.description}
+                  onChange={(e) => updateProfile({ description: e.target.value })}
+                  placeholder="Ex : Robes et accessoires en pagne, cousus et teints à Dakar."
+                  className={`${textareaClass} mt-1`}
+                />
+                <p className="mt-1 text-xs text-gray-500">C'est ce que les clients lisent en premier sur ta page d'accueil.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">À qui s'adresse ta boutique ?</label>
+                <div className="mt-2">
+                  <ChoicePills options={AUDIENCE_OPTIONS} value={profile.audience} onChange={(audience) => updateProfile({ audience })} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ton positionnement</label>
+                <div className="mt-2">
+                  <ChoicePills options={PRICE_OPTIONS} value={profile.priceRange} onChange={(priceRange) => updateProfile({ priceRange })} />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <ToggleTile
+                    icon={Truck}
+                    checked={profile.homeDelivery}
+                    onChange={(homeDelivery) => updateProfile({ homeDelivery })}
+                    label="Livraison à domicile"
+                  />
+                  <ToggleTile
+                    icon={Banknote}
+                    checked={profile.payOnDelivery}
+                    onChange={(payOnDelivery) => updateProfile({ payOnDelivery })}
+                    label="Paiement à la livraison"
+                  />
+                  <ToggleTile
+                    icon={Zap}
+                    checked={profile.expressDelivery}
+                    onChange={(expressDelivery) => updateProfile({ expressDelivery })}
+                    label="Livraison express"
+                  />
+                  <ToggleTile
+                    icon={Scissors}
+                    checked={profile.madeToOrder}
+                    onChange={(madeToOrder) => updateProfile({ madeToOrder })}
+                    label="Préparé sur commande"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="story" className="block text-sm font-medium text-gray-700">
+                  Parle de ton histoire (optionnel)
+                </label>
+                <textarea
+                  id="story"
+                  rows={3}
+                  value={profile.story}
+                  onChange={(e) => updateProfile({ story: e.target.value })}
+                  placeholder="Ex : Ce que nous vendons est cousu par notre équipe à Dakar depuis 2015. Chaque pièce est unique."
+                  className={`${textareaClass} mt-1`}
+                />
+                <p className="mt-1 text-xs text-gray-500">Ajoute une section « Notre histoire » à ta page d'accueil.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Questions fréquentes (optionnel)
+                </label>
+                <p className="mt-1 text-xs text-gray-500">Rassure tes clients avant qu'ils ne commandent.</p>
+                <div className="mt-2 space-y-3">
+                  {profile.faq.slice(0, FAQ_SLOTS).map((item, index) => (
+                    <div key={index} className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50/60 p-3 sm:grid-cols-2">
+                      <input
+                        value={item.question}
+                        onChange={(e) => updateFaq(index, 'question', e.target.value)}
+                        placeholder="Question"
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                      />
+                      <textarea
+                        rows={1}
+                        value={item.answer}
+                        onChange={(e) => updateFaq(index, 'answer', e.target.value)}
+                        placeholder="Réponse"
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {completedFaqCount > 0 && (
+                  <p className="mt-1 text-xs text-emerald-600">
+                    {completedFaqCount} question{completedFaqCount > 1 ? 's' : ''} prête{completedFaqCount > 1 ? 's' : ''} à être affichée
+                    {completedFaqCount > 1 ? 's' : ''} sur ta boutique.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ta boutique
@@ -539,14 +809,19 @@ export function OnboardingPage() {
                   {logoPreviewUrl && logoFile ? (
                     <>
                       <p className="truncate text-sm font-medium text-ink-900">{logoFile.name}</p>
-                      {logoSuggestedColor ? (
+                      {logoPalette ? (
                         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
                           <span
                             className="inline-block h-3 w-3 shrink-0 rounded-full border border-black/10"
-                            style={{ backgroundColor: logoSuggestedColor }}
+                            style={{ backgroundColor: logoPalette.primary ?? undefined }}
                             aria-hidden
                           />
-                          Couleur de la boutique mise à jour à partir de ton logo — modifiable plus tard.
+                          <span
+                            className="inline-block h-3 w-3 shrink-0 rounded-full border border-black/10"
+                            style={{ backgroundColor: logoPalette.secondary ?? undefined }}
+                            aria-hidden
+                          />
+                          Couleurs de la boutique mises à jour à partir de ton logo — modifiables plus tard.
                         </p>
                       ) : (
                         <p className="mt-0.5 text-xs text-gray-500">Image prête à être utilisée.</p>
@@ -571,7 +846,7 @@ export function OnboardingPage() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-4">
               <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Users size={15} className="text-gray-400" aria-hidden /> Vérifie les informations avant de créer
@@ -637,21 +912,24 @@ export function OnboardingPage() {
                     <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Style</span>
+                    <span className="text-gray-500">Ambiance</span>
                     <span className="flex items-center justify-end gap-1.5 font-medium text-ink-900">
                       <Palette size={14} className="text-gray-400" aria-hidden />
-                      <span>{selectedTemplate.label}</span>
+                      <span>{STORE_VIBE_BY_KEY[ambiance]?.label ?? '—'}</span>
                       <span
                         className="inline-block h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ backgroundColor: effectiveThemeColor }}
+                        style={{ backgroundColor: STORE_VIBE_BY_KEY[ambiance]?.swatch[0] }}
                         aria-hidden
                       />
                     </span>
                   </div>
-                  {logoSuggestedColor && (
+                  {logoPalette?.primary && (
                     <div className="flex justify-between gap-4">
                       <span className="text-gray-500">Couleur</span>
-                      <span className="text-right text-xs text-gray-500">Suggérée à partir de ton logo</span>
+                      <span className="flex items-center gap-1.5 text-right text-xs text-gray-500">
+                        <span className="inline-block h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: effectiveThemeColor }} aria-hidden />
+                        Suggérée à partir de ton logo, assombrie pour rester lisible
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-4">
@@ -665,6 +943,59 @@ export function OnboardingPage() {
                     ) : (
                       <span className="text-right font-medium text-ink-900">Sans logo</span>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ta boutique en détail</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Description</span>
+                    <span className="truncate text-right font-medium text-ink-900">{profile.description.trim()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Clients</span>
+                    <span className="text-right font-medium text-ink-900">{AUDIENCE_LABELS[profile.audience]}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Positionnement</span>
+                    <span className="text-right font-medium text-ink-900">{PRICE_RANGE_LABELS[profile.priceRange]}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Ventes</span>
+                    <span className="text-right text-xs">
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {profile.homeDelivery && <Chip>Livraison à domicile</Chip>}
+                        {profile.payOnDelivery && <Chip>Paiement à la livraison</Chip>}
+                        {profile.expressDelivery && <Chip>Livraison express</Chip>}
+                        {profile.madeToOrder && <Chip>Sur commande</Chip>}
+                        {!profile.homeDelivery && !profile.payOnDelivery && !profile.expressDelivery && !profile.madeToOrder && (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </span>
+                    </span>
+                  </div>
+                  {profile.story.trim() && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500">Histoire</span>
+                      <span className="max-w-[70%] truncate text-right font-medium text-ink-900">{profile.story.trim()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">FAQ</span>
+                    <span className="text-right font-medium text-ink-900">
+                      {completedFaqCount > 0 ? `${completedFaqCount} question${completedFaqCount > 1 ? 's' : ''}` : '—'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -687,9 +1018,9 @@ export function OnboardingPage() {
               </button>
             )}
 
-            {step < 5 && <div className="flex-1" />}
+            {step < 6 && <div className="flex-1" />}
 
-            {step < 5 ? (
+            {step < 6 ? (
               <button
                 type="button"
                 disabled={!canGoNext}
@@ -718,5 +1049,13 @@ export function OnboardingPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+      {children}
+    </span>
   )
 }
