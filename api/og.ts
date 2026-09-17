@@ -29,13 +29,13 @@ function formatPrice(amount: number, currency: string | null | undefined): strin
   }
 }
 
-function page(title: string, description: string, url: string, image?: string | null): string {
+function page(title: string, description: string, url: string, image?: string | null, siteName = 'Bitiko'): string {
   return [
     '<!doctype html><html lang="fr"><head><meta charset="utf-8">',
     `<title>${htmlEscape(title)}</title>`,
     `<meta name="description" content="${htmlEscape(description)}">`,
     '<meta property="og:type" content="website">',
-    '<meta property="og:site_name" content="Bitiko">',
+    `<meta property="og:site_name" content="${htmlEscape(siteName)}">`,
     '<meta property="og:locale" content="fr_FR">',
     `<meta property="og:title" content="${htmlEscape(title)}">`,
     `<meta property="og:description" content="${htmlEscape(description)}">`,
@@ -150,7 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const description = pageData.seo_description || shopDescription
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-      res.status(200).send(page(title, description, `${origin}/pages/${pageSlug}`, shopImage))
+      res.status(200).send(page(title, description, `${origin}/pages/${pageSlug}`, shopImage, shop.name))
       return
     }
   }
@@ -180,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `<title>${htmlEscape(title)}</title>`,
           `<meta name="description" content="${htmlEscape(description)}">`,
           '<meta property="og:type" content="product">',
-          '<meta property="og:site_name" content="Bitiko">',
+          `<meta property="og:site_name" content="${htmlEscape(shop.name)}">`,
           '<meta property="og:locale" content="fr_FR">',
           `<meta property="og:title" content="${htmlEscape(title)}">`,
           `<meta property="og:description" content="${htmlEscape(description)} — ${htmlEscape(price)}">`,
@@ -205,5 +205,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Shop home & catalogue: name, description, banner/logo ─────────────
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-  res.status(200).send(page(`${shop.name} — Boutique en ligne`, shopDescription, `${origin}/`, shopImage))
+  res.status(200).send(page(`${shop.name} — Boutique en ligne`, shopDescription, `${origin}/`, shopImage, shop.name))
 }

@@ -26,7 +26,7 @@ export function OrderConfirmationPage() {
   const confirmation = state as OrderConfirmationState | null
   const orderNumber = confirmation?.orderNumber ?? id
 
-  usePageSeo({ title: orderNumber ? `Commande ${orderNumber}` : 'Commande confirmée', noindex: true })
+  usePageSeo({ title: orderNumber ? `Commande ${orderNumber}` : 'Commande confirmée', noindex: true, siteName: shop?.name })
 
   if (!shop) return null
 

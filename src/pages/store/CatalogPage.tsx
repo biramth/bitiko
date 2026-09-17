@@ -8,6 +8,7 @@ export function CatalogPage() {
     title: shop ? `Catalogue — ${shop.name}` : 'Catalogue',
     description: shop ? `Découvrez tous les produits de ${shop.name}${shop.description ? ` — ${shop.description}` : ''}.` : undefined,
     image: shop?.banner_url ?? shop?.logo_url,
+    siteName: shop?.name,
   })
 
   return <TemplateBody template="catalogue" />

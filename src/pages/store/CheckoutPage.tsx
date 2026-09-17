@@ -4,7 +4,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CheckoutPage() {
   const { shop } = useTenant()
-  usePageSeo({ title: shop ? `Commande — ${shop.name}` : 'Commande', noindex: true })
+  usePageSeo({ title: shop ? `Commande — ${shop.name}` : 'Commande', noindex: true, siteName: shop?.name })
 
   return <TemplateBody template="checkout" />
 }

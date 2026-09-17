@@ -9,6 +9,7 @@ export function HomePage() {
     title: shop ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne',
     description: shop?.description ?? undefined,
     image: shop?.banner_url ?? shop?.logo_url,
+    siteName: shop?.name,
   })
   const { bodySections, themeConfig, isDraftPreview } = useEffectiveShopConfig(shop)
 
