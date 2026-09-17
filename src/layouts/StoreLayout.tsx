@@ -14,6 +14,7 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
+import { ensureReadableAccent } from '@/utils/color'
 import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
 
 const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] }
@@ -110,6 +111,11 @@ export function StoreLayout() {
   const shopName = shop?.name ?? 'Boutique'
   const header = (headerSection?.config as HeaderSectionConfig | undefined) ?? DEFAULT_HEADER
   const footer = (footerSection?.config as FooterSectionConfig | undefined) ?? DEFAULT_FOOTER
+  // Unset, the footer's background derives from the shop's own primary color
+  // (itself suggested from the merchant's logo — see the onboarding/settings
+  // palette extraction) darkened just enough for white text to stay legible,
+  // rather than a fixed navy that has nothing to do with the shop's brand.
+  const footerBackground = footer.backgroundColor || ensureReadableAccent(themeColor || '#d9612e', 4.5)
   const socialLinks = Object.entries(shop?.social_links ?? {}).filter(([, url]) => !!url)
   const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
@@ -232,7 +238,7 @@ export function StoreLayout() {
         <footer
           className="text-[var(--footer-text)]"
           style={{
-            backgroundColor: footer.backgroundColor || '#17152e',
+            backgroundColor: footerBackground,
             '--footer-text': footer.textColor || '#fffbf5',
             '--footer-button': footer.buttonColor || 'var(--shop-button)',
           } as React.CSSProperties}
