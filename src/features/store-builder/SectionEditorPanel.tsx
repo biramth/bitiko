@@ -28,7 +28,7 @@ export function SectionEditorPanel({
         <div>
           <p className="text-sm font-medium text-gray-700">Aucun bloc sélectionné</p>
           <p className="mt-1 max-w-[16rem] text-xs leading-relaxed text-gray-400">
-            Cliquez sur un bloc dans la liste à gauche, ou directement dans l'aperçu, pour le personnaliser.
+            Cliquez sur un bloc dans la liste des blocs, ou directement dans l'aperçu, pour le personnaliser.
           </p>
         </div>
       </div>

@@ -76,7 +76,7 @@ export function PageSwitcher({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
+        <div className="absolute left-0 z-20 mt-1.5 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
           <p className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Pages du site</p>
           {SYSTEM_PAGES.map(({ key, label, icon, color }) => (
             <button
