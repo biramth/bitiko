@@ -230,8 +230,12 @@ export function StoreLayout() {
 
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={footerSection?.id} label={CORE_SECTION_REGISTRY.footer.label}>
         <footer
-          className="bg-ink-900 text-[var(--footer-text)]"
-          style={{ '--footer-text': footer.textColor || '#fffbf5', '--footer-button': footer.buttonColor || 'var(--shop-button)' } as React.CSSProperties}
+          className="text-[var(--footer-text)]"
+          style={{
+            backgroundColor: footer.backgroundColor || '#17152e',
+            '--footer-text': footer.textColor || '#fffbf5',
+            '--footer-button': footer.buttonColor || 'var(--shop-button)',
+          } as React.CSSProperties}
         >
         <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
           <div>
@@ -255,7 +259,7 @@ export function StoreLayout() {
                     target="_blank"
                     rel="noreferrer"
                     aria-label={socialLabel(platform)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-[var(--footer-text)]/70 hover:bg-white/20 hover:text-[var(--footer-text)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--footer-text)]/10 text-[var(--footer-text)]/70 hover:bg-[var(--footer-text)]/20 hover:text-[var(--footer-text)]"
                   >
                     <SocialIcon platform={platform} size={15} />
                   </a>
@@ -306,7 +310,7 @@ export function StoreLayout() {
             )}
           </div>
         </div>
-        <div className="flex flex-col items-center gap-2 border-t border-white/10 py-4 text-center text-xs text-[var(--footer-text)]/40 sm:flex-row sm:justify-between sm:px-4">
+        <div className="flex flex-col items-center gap-2 border-t border-[var(--footer-text)]/10 py-4 text-center text-xs text-[var(--footer-text)]/40 sm:flex-row sm:justify-between sm:px-4">
           <p>{footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}</p>
           <p className="flex items-center gap-3">
             <a href={`${platformUrl()}/legal/cgu`} className="hover:text-[var(--footer-text)]/70">CGU</a>
