@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Globe,
   ImageIcon,
+  Loader2,
   Lock,
   Mail,
   MapPin,
@@ -15,6 +16,7 @@ import {
   Palette,
   Pencil,
   Phone,
+  ShieldCheck,
   Store,
   User,
   Users,
@@ -25,6 +27,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
+import { checkWhatsAppOtp, sendWhatsAppOtp } from '@/services/whatsappVerification.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
 import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
@@ -65,6 +68,45 @@ export function OnboardingPage() {
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [waStatus, setWaStatus] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle')
+  const [waCode, setWaCode] = useState('')
+  const [waError, setWaError] = useState<string | null>(null)
+  const handleWhatsappNumberChange = (value: string) => {
+    setWhatsappNumber(value)
+    if (waStatus !== 'idle') {
+      setWaStatus('idle')
+      setWaCode('')
+      setWaError(null)
+    }
+  }
+  const handleSendWhatsAppOtp = async () => {
+    setWaError(null)
+    setWaStatus('sending')
+    try {
+      await sendWhatsAppOtp(whatsappNumber)
+      setWaStatus('sent')
+    } catch (err) {
+      setWaError(err instanceof Error ? err.message : "Impossible d'envoyer le code.")
+      setWaStatus('idle')
+    }
+  }
+  const handleCheckWhatsAppOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWaError(null)
+    setWaStatus('verifying')
+    try {
+      const ok = await checkWhatsAppOtp(whatsappNumber, waCode)
+      if (ok) {
+        setWaStatus('verified')
+      } else {
+        setWaError('Code incorrect ou expiré.')
+        setWaStatus('sent')
+      }
+    } catch (err) {
+      setWaError(err instanceof Error ? err.message : 'Impossible de vérifier le code.')
+      setWaStatus('sent')
+    }
+  }
   const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
   const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
   const templatesForBusinessType = templatesForVertical(businessType)
@@ -184,7 +226,8 @@ export function OnboardingPage() {
     name.trim().length > 0 &&
     (slugStatus === 'available' || slugStatus === 'error') &&
     !!slug &&
-    whatsappNumber.trim().length > 0
+    whatsappNumber.trim().length > 0 &&
+    waStatus === 'verified'
 
   const step3Valid = !!businessType && !!templateId
 
@@ -423,14 +466,62 @@ export function OnboardingPage() {
                     id="whatsapp"
                     required
                     value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    onChange={(e) => handleWhatsappNumberChange(e.target.value)}
                     placeholder="+221771234567"
                     className={fieldClass}
+                    disabled={waStatus === 'verified'}
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
                   C'est ce numéro qui recevra les commandes. Il peut être différent de ton numéro personnel.
                 </p>
+
+                {waStatus === 'verified' ? (
+                  <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                    <ShieldCheck size={14} aria-hidden /> Numéro vérifié
+                  </p>
+                ) : waStatus === 'sent' || waStatus === 'verifying' ? (
+                  <form onSubmit={handleCheckWhatsAppOtp} className="mt-2 space-y-2">
+                    <p className="text-xs text-gray-500">Code envoyé par WhatsApp au {whatsappNumber}.</p>
+                    <div className="flex gap-2">
+                      <input
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        value={waCode}
+                        onChange={(e) => setWaCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="123456"
+                        className="w-28 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm tracking-widest text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={waCode.length !== 6 || waStatus === 'verifying'}
+                        className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                      >
+                        {waStatus === 'verifying' ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                        Confirmer
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendWhatsAppOtp}
+                      className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Renvoyer le code
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSendWhatsAppOtp}
+                    disabled={whatsappNumber.replace(/[^0-9]/g, '').length < 8 || waStatus === 'sending'}
+                    className="mt-2 flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    {waStatus === 'sending' ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                    {waStatus === 'sending' ? 'Envoi du code…' : 'Vérifier ce numéro'}
+                  </button>
+                )}
+                {waError && <p className="mt-1.5 text-xs text-red-600">{waError}</p>}
               </div>
             </>
           )}
