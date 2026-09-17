@@ -186,7 +186,7 @@ export function DashboardPage() {
               <PackagePlus size={16} /> Nouveau produit
             </Link>
             <Link
-              to="/admin/categories"
+              to="/admin/produits?tab=categories"
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <Tags size={16} /> Catégories
@@ -299,7 +299,7 @@ export function DashboardPage() {
             <h2 className="mt-1 text-lg font-semibold text-gray-900">Comprenez ce qui se vend vraiment</h2>
             <p className="mt-1 max-w-xl text-sm text-gray-600">Panier moyen, produits les plus vendus et tendances détaillées sont disponibles à partir de l’offre Essentiel.</p>
           </div>
-          <Link to="/admin/facturation" className="mt-4 inline-flex shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:mt-0">Voir les offres</Link>
+          <Link to="/admin/parametres/facturation" className="mt-4 inline-flex shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:mt-0">Voir les offres</Link>
         </div>
       ) : (
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

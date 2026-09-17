@@ -1,23 +1,19 @@
 import { Suspense, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
-  Boxes,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   CreditCard,
   ExternalLink,
-  Gauge,
   ImagePlus,
   LayoutDashboard,
   LogOut,
   Package,
   Phone,
-  Rocket,
   Settings,
   ShoppingBag,
   Store,
-  Tags,
   Truck,
   User,
   Wand2,
@@ -28,28 +24,25 @@ import { BUILDER_INTERNAL } from '@/config/features'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 
+// Flat list, not grouped — Catégories now lives as a tab of Produits and
+// Facturation moved under Paramètres (see settingsSections below), so there
+// are too few top-level items left to justify collapsible groups. Personnaliser
+// only exists for the internal/dev build (BUILDER_INTERNAL).
 const navItems = [
-  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, group: 'Piloter' },
-  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, group: 'Piloter' },
-  { to: '/admin/produits', label: 'Produits', icon: Package, group: 'Catalogue' },
-  { to: '/admin/categories', label: 'Catégories', icon: Tags, group: 'Catalogue' },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true, group: 'Développer' },
-  { to: '/admin/facturation', label: 'Facturation', icon: CreditCard, group: 'Développer' },
+  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
+  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
+  { to: '/admin/produits', label: 'Produits', icon: Package },
+  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, internal: true },
 ]
 
 const visibleNavItems = navItems.filter((item) => !('internal' in item) || BUILDER_INTERNAL)
-
-const navGroupIcons = {
-  Piloter: Gauge,
-  Catalogue: Boxes,
-  Développer: Rocket,
-} as const
 
 const settingsSections = [
   { to: '/admin/parametres/general', label: 'Général', icon: Store },
   { to: '/admin/parametres/appearance', label: 'Apparence', icon: ImagePlus },
   { to: '/admin/parametres/contact', label: 'Contact & devise', icon: Phone },
   { to: '/admin/parametres/shipping', label: 'Livraison & stock', icon: Truck },
+  { to: '/admin/parametres/facturation', label: 'Facturation', icon: CreditCard },
   { to: '/admin/parametres/compte', label: 'Mon compte', icon: User },
 ]
 
@@ -60,23 +53,15 @@ export function AdminLayout() {
   const { data: shop } = useMyShop()
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
-  const activeGroup = visibleNavItems.find((item) =>
-    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
-  )?.group
-  // Accordion, not independent toggles: only one section (a nav group or
-  // Paramètres) is ever open at a time, so the sidebar's expanded height is
-  // always bounded — opening every group used to make it taller than the
-  // viewport and force it to scroll internally.
-  const activeSection = onSettings ? 'Paramètres' : (activeGroup ?? null)
-  const [openSection, setOpenSection] = useState<string | null>(activeSection)
-  // Navigate into a group → open it (adjust during render rather than in an
-  // effect, so a manual collapse isn't re-opened on an unrelated re-render).
-  const [prevActiveSection, setPrevActiveSection] = useState(activeSection)
-  if (activeSection !== prevActiveSection) {
-    setPrevActiveSection(activeSection)
-    if (activeSection) setOpenSection(activeSection)
+  const [settingsOpen, setSettingsOpen] = useState(onSettings)
+  // Navigate into/out of Paramètres → follow it (adjust during render rather
+  // than in an effect, so a manual collapse isn't re-opened by an unrelated
+  // re-render, but the link itself always reflects where you actually are).
+  const [prevOnSettings, setPrevOnSettings] = useState(onSettings)
+  if (onSettings !== prevOnSettings) {
+    setPrevOnSettings(onSettings)
+    if (onSettings) setSettingsOpen(true)
   }
-  const toggleSection = (section: string) => setOpenSection((prev) => (prev === section ? null : section))
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -85,7 +70,7 @@ export function AdminLayout() {
     }
   })
 
-  const settingsExpanded = openSection === 'Paramètres'
+  const settingsExpanded = settingsOpen
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -108,8 +93,6 @@ export function AdminLayout() {
     `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
     }`
-
-  const navGroups = ['Piloter', 'Catalogue', 'Développer'] as const
 
   const shopIdentity = shop && (
     <div className={`mb-2 rounded-xl bg-white/5 ${collapsed ? 'p-2' : 'p-3'}`}>
@@ -167,45 +150,16 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {navGroups.map((group) => {
-            const items = visibleNavItems.filter((item) => item.group === group)
-            const open = collapsed || openSection === group
-            const GroupIcon = navGroupIcons[group]
-            return (
-              <div key={group} className="mb-1">
-                {!collapsed && (
-                  <button
-                    type="button"
-                    onClick={() => toggleSection(group)}
-                    aria-expanded={open}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
-                  >
-                    <GroupIcon size={18} aria-hidden />
-                    <span className="flex-1 text-left">{group}</span>
-                    <ChevronDown
-                      size={15}
-                      aria-hidden
-                      className={`transition-transform ${open ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-                )}
-                {(collapsed || open) && (
-                  <div className={collapsed ? 'flex flex-col gap-1' : 'ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3'}>
-                    {items.map(({ to, label, icon: Icon, end }) => (
-                      <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
-                        <Icon size={18} aria-hidden />
-                        {!collapsed && label}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {visibleNavItems.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined}>
+              <Icon size={18} aria-hidden />
+              {!collapsed && label}
+            </NavLink>
+          ))}
 
           <button
             type="button"
-            onClick={() => (collapsed ? undefined : toggleSection('Paramètres'))}
+            onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
             aria-expanded={settingsExpanded}
             title={collapsed ? 'Paramètres' : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${

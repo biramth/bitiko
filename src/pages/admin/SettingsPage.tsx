@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  CreditCard,
   Image,
   ImagePlus,
   Loader2,
@@ -28,6 +29,7 @@ import { useShopPlan } from '@/features/billing/useShopPlan'
 import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
+import { BillingForShop } from './BillingPage'
 import {
   createDeliverySecteur,
   createDeliveryVille,
@@ -52,13 +54,14 @@ const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'compte'
+type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'facturation' | 'compte'
 
 const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'general', label: 'Général', icon: Store },
   { key: 'appearance', label: 'Apparence', icon: ImagePlus },
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
+  { key: 'facturation', label: 'Facturation', icon: CreditCard },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -702,6 +705,8 @@ function SettingsForm({
 
       {section === 'compte' ? (
         <AccountSection />
+      ) : section === 'facturation' ? (
+        <BillingForShop shopId={shop.id} />
       ) : (
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="space-y-6">
@@ -747,7 +752,7 @@ function SettingsForm({
                 <div className="flex flex-col gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-gray-600">Disponible à partir de l'offre Essentiel.</p>
                   <Link
-                    to="/admin/facturation"
+                    to="/admin/parametres/facturation"
                     className="shrink-0 text-sm font-medium text-brand-700 hover:text-brand-800"
                   >
                     Voir les offres

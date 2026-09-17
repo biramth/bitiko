@@ -209,7 +209,7 @@ export function renewalReminderEmailHtml({
     heading: 'Ton abonnement Pro expire bientôt',
     body: `L'abonnement Pro de <strong>${escapeHtml(shopName)}</strong> arrive à échéance le <strong>${periodEndLabel}</strong>. Renouvelle-le pour ${amountLabel} afin de garder tes fonctionnalités Pro sans interruption.`,
     buttonLabel: 'Renouveler mon abonnement',
-    buttonUrl: `${origin}/admin/facturation`,
+    buttonUrl: `${origin}/admin/parametres/facturation`,
     footnote: "Sans renouvellement, ta boutique repasse automatiquement en plan gratuit à la date d'échéance — tes produits et données restent intacts.",
   })
 }

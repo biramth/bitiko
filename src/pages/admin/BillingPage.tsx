@@ -2,15 +2,12 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
-import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getShopSubscription, listPayments, requestPlanUpgrade, confirmPayment } from '@/services/billing.service'
 import { PLANS, WAVE_ESSENTIAL_PAYMENT_LINK, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
 import { formatCurrency } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
-import { usePageSeo } from '@/hooks/usePageSeo'
-import { PageHeader } from '@/components/ui/PageHeader'
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -21,17 +18,9 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function BillingPage() {
-  usePageSeo({ title: 'Facturation — Bitiko', noindex: true })
-  const { data: shop, isLoading: shopLoading } = useMyShop()
-
-  if (shopLoading) return <PageLoader />
-  if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
-
-  return <BillingForShop key={shop.id} shopId={shop.id} />
-}
-
-function BillingForShop({ shopId }: { shopId: string }) {
+/** Rendered as SettingsPage's "Facturation" section — Paramètres owns the
+ *  page chrome (title/SEO) there, so this is just the billing content. */
+export function BillingForShop({ shopId }: { shopId: string }) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -98,9 +87,7 @@ function BillingForShop({ shopId }: { shopId: string }) {
   )
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Facturation" subtitle="Votre abonnement Bitiko et votre historique de paiement." />
-
+    <div className="mt-6 max-w-3xl">
       {confirming && (
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
           <Loader2 size={16} className="animate-spin" /> Vérification du paiement…
