@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import type { BuilderTab } from './useBuilderState'
@@ -41,6 +42,7 @@ export function BuilderSidebar({
   onAdd,
   availableTypes,
   templateId,
+  maxCustomSections,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -58,6 +60,10 @@ export function BuilderSidebar({
   /** The shop's current template — resolves which section types (core plus
    *  whatever that template contributes) show up here. */
   templateId?: string | null
+  /** Plan cap on freely-addable content blocks on this page (see
+   *  `Plan.maxCustomSections`) — catalog-display and commerce blocks are
+   *  never limited. `null`/absent = unlimited. */
+  maxCustomSections?: number | null
 }) {
   const registry = getEffectiveRegistry(templateId)
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -88,6 +94,15 @@ export function BuilderSidebar({
   })
   const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
   for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
+
+  // Content blocks (Bannière, Texte, Image, Promotion…) are the "profondeur
+  // de personnalisation" the plan gates — catalog-display and commerce
+  // blocks (Catégories, Produits, Panier…) are never limited.
+  const customSectionCount = sections.filter((s) => {
+    const def = registry[s.type]
+    return !!def && def.category === 'content' && !def.pinned
+  }).length
+  const contentLimitReached = maxCustomSections != null && customSectionCount >= maxCustomSections
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
@@ -204,6 +219,12 @@ export function BuilderSidebar({
             })}
           </ul>
 
+          {maxCustomSections != null && (
+            <p className="mt-3 text-center text-[11px] text-gray-400">
+              {customSectionCount}/{maxCustomSections} blocs de contenu utilisés sur cette page
+            </p>
+          )}
+
           <div className="relative mt-3" ref={addMenuRef}>
             <button
               type="button"
@@ -217,27 +238,44 @@ export function BuilderSidebar({
                 {(['commerce', 'content'] as const).map((cat) =>
                   groupedAddable[cat].length === 0 ? null : (
                     <div key={cat} className="mb-1 last:mb-0">
-                      <p className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                        {CATEGORY_LABELS[cat]}
-                      </p>
+                      <div className="flex items-center justify-between gap-2 px-2 pb-1 pt-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                          {CATEGORY_LABELS[cat]}
+                        </p>
+                        {cat === 'content' && contentLimitReached && (
+                          <Link
+                            to="/admin/facturation"
+                            onClick={() => setAddMenuOpen(false)}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700"
+                          >
+                            <Lock size={10} aria-hidden /> Passer à Pro
+                          </Link>
+                        )}
+                      </div>
                       {groupedAddable[cat].map((type) => {
                         const def = registry[type]
                         if (!def) return null
+                        const locked = cat === 'content' && contentLimitReached
                         return (
                           <button
                             key={type}
                             type="button"
+                            disabled={locked}
+                            title={locked ? `Limite de blocs de contenu atteinte (${maxCustomSections}) — passez à Pro pour plus.` : undefined}
                             onClick={() => {
                               onAdd(type)
                               setAddMenuOpen(false)
                             }}
-                            className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-gray-50"
+                            className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left ${
+                              locked ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'
+                            }`}
                           >
                             <SectionIcon type={type} registry={registry} size="md" />
                             <span className="min-w-0 flex-1 pt-0.5">
                               <span className="block text-sm font-medium text-gray-900">{def.label}</span>
                               <span className="block text-xs leading-snug text-gray-500">{def.description}</span>
                             </span>
+                            {locked && <Lock size={13} className="mt-0.5 shrink-0 text-amber-500" aria-hidden />}
                           </button>
                         )
                       })}

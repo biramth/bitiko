@@ -44,7 +44,9 @@ export function StoreBuilderPage() {
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!BUILDER_INTERNAL && !plan.storeBuilderAccess) return <StoreBuilderLock />
 
-  return <StoreBuilder key={shop.id} shop={shop} removableBranding={plan.removableBranding} />
+  return (
+    <StoreBuilder key={shop.id} shop={shop} removableBranding={plan.removableBranding} maxCustomSections={plan.maxCustomSections} />
+  )
 }
 
 function StoreBuilderLock() {
@@ -283,7 +285,15 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 /* ─────────────────────── Builder ─────────────────────────────── */
 
-function StoreBuilder({ shop, removableBranding }: { shop: Shop; removableBranding: boolean }) {
+function StoreBuilder({
+  shop,
+  removableBranding,
+  maxCustomSections,
+}: {
+  shop: Shop
+  removableBranding: boolean
+  maxCustomSections: number | null
+}) {
   const toast = useToast()
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
@@ -352,6 +362,7 @@ function StoreBuilder({ shop, removableBranding }: { shop: Shop; removableBrandi
         key={activeKey}
         shop={shop}
         removableBranding={removableBranding}
+        maxCustomSections={maxCustomSections}
         target={target}
         label={context.label}
         previewPath={previewPath}
@@ -389,6 +400,7 @@ function StoreBuilder({ shop, removableBranding }: { shop: Shop; removableBrandi
 function BuilderEditor({
   shop,
   removableBranding,
+  maxCustomSections,
   target,
   label,
   previewPath,
@@ -406,6 +418,7 @@ function BuilderEditor({
 }: {
   shop: Shop
   removableBranding: boolean
+  maxCustomSections: number | null
   target: BuilderTarget
   label: string
   previewPath: string | null
@@ -578,6 +591,7 @@ function BuilderEditor({
           onAdd={builder.addSection}
           availableTypes={availableTypes}
           templateId={shop.template_id}
+          maxCustomSections={maxCustomSections}
         />
 
         {previewPath && previewUrl ? (

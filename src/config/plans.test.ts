@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ShopSubscription } from '../types/billing.js'
-import { PLANS, canAddProduct, effectivePlan, effectivePlanKey } from './plans'
+import { PLANS, canAddProduct, canAddSection, effectivePlan, effectivePlanKey } from './plans'
 
 const subscription = (overrides: Partial<ShopSubscription>): ShopSubscription => ({
   shop_id: 'test-shop',
@@ -45,5 +45,17 @@ describe('canAddProduct', () => {
 
   it('never blocks the Pro plan', () => {
     expect(canAddProduct(PLANS.pro, 999)).toBe(true)
+  })
+})
+
+describe('canAddSection', () => {
+  it('blocks the free plan at its content-block cap', () => {
+    expect(canAddSection(PLANS.free, 3)).toBe(false)
+    expect(canAddSection(PLANS.free, 2)).toBe(true)
+    expect(canAddSection(PLANS.free, 0)).toBe(true)
+  })
+
+  it('never blocks the Pro plan', () => {
+    expect(canAddSection(PLANS.pro, 999)).toBe(true)
   })
 })

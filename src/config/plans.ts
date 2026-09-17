@@ -11,6 +11,16 @@ export interface Plan {
   maxActiveProducts: number | null
   storeBuilderAccess: boolean
   removableBranding: boolean
+  /**
+   * Cap on freely-addable content blocks (Bannière/Hero, Texte, Image,
+   * Promotion, Lookbook…) per page — not the catalog-display blocks
+   * (Catégories, Produits) or the commerce singletons, which every plan can
+   * always use in full. This is the "profondeur de personnalisation" lever:
+   * every template stays available to every plan (see StoreBuilderLock,
+   * TemplateLibraryPanel), plans differ on how much a merchant can build on
+   * top of one — not on which templates they can pick. `null` = unlimited.
+   */
+  maxCustomSections: number | null
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -21,6 +31,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveProducts: 8,
     storeBuilderAccess: false,
     removableBranding: false,
+    maxCustomSections: 3,
   },
   pro: {
     key: 'pro',
@@ -29,6 +40,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveProducts: null,
     storeBuilderAccess: true,
     removableBranding: true,
+    maxCustomSections: null,
   },
 }
 
@@ -50,6 +62,12 @@ export function effectivePlan(subscription: ShopSubscription | null | undefined)
 
 export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
   return plan.maxActiveProducts === null || currentActiveCount < plan.maxActiveProducts
+}
+
+/** Whether the plan allows one more freely-addable content block, given how
+ *  many the page being edited already has (see `Plan.maxCustomSections`). */
+export function canAddSection(plan: Plan, currentCustomSectionCount: number): boolean {
+  return plan.maxCustomSections === null || currentCustomSectionCount < plan.maxCustomSections
 }
 
 /**
