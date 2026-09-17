@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { PLATFORM_ADMIN_EMAILS } from '@/config/constants'
 
 /**
  * Landing point for the Google OAuth redirect and for email links (signup
@@ -40,7 +41,10 @@ export function AuthCallbackPage() {
     return () => clearTimeout(timeout)
   }, [])
 
-  if (session) return <Navigate to="/admin" replace />
+  if (session) {
+    const dest = PLATFORM_ADMIN_EMAILS.includes(session.user.email ?? '') ? '/super-admin' : '/admin'
+    return <Navigate to={dest} replace />
+  }
 
   if (verifyError || (!loading && timedOut)) {
     return (
