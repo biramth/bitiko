@@ -23,7 +23,6 @@
     { "source": "/api/admin/approve-payment", "destination": "/api/admin/payments?action=approve" },
     { "source": "/api/admin/reject-payment", "destination": "/api/admin/payments?action=reject" },
     { "source": "/api/check-email", "destination": "/api/onboarding" },
-    { "source": "/api/verify-whatsapp", "destination": "/api/onboarding?flow=verify-whatsapp" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [{ "path": "/api/cron/renewal-reminders", "schedule": "0 9 * * *" }]

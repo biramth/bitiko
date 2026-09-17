@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { listPendingPayments, approvePayment, rejectPayment } from '@/services/admin.service'
 import { getPlatformShops, getPlatformStats, type PlatformVisitsByDay } from '@/services/platform.service'
+import { PLANS } from '@/config/plans'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
@@ -353,7 +354,10 @@ function PaymentsTab() {
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-pending-payments'] })
-  const approve = useMutation({ mutationFn: approvePayment, onSuccess: invalidate })
+  const approve = useMutation({
+    mutationFn: ({ paymentId, plan }: { paymentId: string; plan: 'essential' | 'pro' }) => approvePayment(paymentId, plan),
+    onSuccess: invalidate,
+  })
   const reject = useMutation({ mutationFn: rejectPayment, onSuccess: invalidate })
 
   if (isLoading) return <Spinner />
@@ -361,7 +365,10 @@ function PaymentsTab() {
 
   return (
     <div>
-      <p className="text-sm text-gray-500">Paiements Wave en attente de vérification manuelle.</p>
+      <p className="text-sm text-gray-500">
+        Paiements Wave en attente de vérification manuelle. Contrôle le montant réellement reçu dans l'app Wave, puis
+        active le plan correspondant.
+      </p>
 
       {payments && payments.length === 0 && (
         <div className="mt-6">
@@ -374,7 +381,7 @@ function PaymentsTab() {
           {payments.map((payment) => (
             <div
               key={payment.id}
-              className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -384,32 +391,45 @@ function PaymentsTab() {
                       <ExternalLink size={14} aria-hidden />
                     </a>
                   )}
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${PLAN_BADGE[payment.plan] ?? PLAN_BADGE.free}`}>
+                    {PLAN_LABELS[payment.plan] ?? payment.plan}
+                  </span>
                 </div>
                 <p className="mt-0.5 text-sm text-gray-500">
-                  {formatCurrency(payment.amount, payment.currency)} · plan {payment.plan} ·{' '}
-                  {new Date(payment.created_at).toLocaleString('fr-FR')}
+                  {formatCurrency(payment.amount, payment.currency)} · {new Date(payment.created_at).toLocaleString('fr-FR')}
                 </p>
                 <p className="mt-1 text-xs text-gray-400">
                   WhatsApp : {payment.shop?.whatsapp_number ?? '—'} · Email : {payment.ownerEmail ?? '—'}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => reject.mutate(payment.id)}
-                  disabled={approve.isPending || reject.isPending}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  <XCircle size={15} aria-hidden /> Rejeter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => approve.mutate(payment.id)}
-                  disabled={approve.isPending || reject.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-                >
-                  <CheckCircle2 size={15} aria-hidden /> Activer le Pro
-                </button>
+              <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+                <p className="text-xs text-gray-400">Montant déclaré par le commerçant — à vérifier dans Wave.</p>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => reject.mutate(payment.id)}
+                    disabled={approve.isPending || reject.isPending}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <XCircle size={15} aria-hidden /> Rejeter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => approve.mutate({ paymentId: payment.id, plan: 'essential' })}
+                    disabled={approve.isPending || reject.isPending}
+                    className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    <CheckCircle2 size={15} aria-hidden /> Activer Essentiel · {formatCurrency(PLANS.essential.priceXof, 'XOF')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => approve.mutate({ paymentId: payment.id, plan: 'pro' })}
+                    disabled={approve.isPending || reject.isPending}
+                    className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                  >
+                    <CheckCircle2 size={15} aria-hidden /> Activer Pro · {formatCurrency(PLANS.pro.priceXof, 'XOF')}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

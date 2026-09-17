@@ -26,14 +26,15 @@ export async function listPendingPayments(): Promise<PendingPayment[]> {
   return body.payments as PendingPayment[]
 }
 
-export async function approvePayment(paymentId: string): Promise<void> {
+/** Approves a pending payment, activating the plan the admin verified in Wave. */
+export async function approvePayment(paymentId: string, plan: 'essential' | 'pro'): Promise<void> {
   const res = await fetch('/api/admin/approve-payment', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ paymentId }),
+    body: JSON.stringify({ paymentId, plan }),
   })
   const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? "Impossible d'activer le Pro.")
+  if (!res.ok) throw new Error(body.error ?? "Impossible d'activer le plan.")
 }
 
 export async function rejectPayment(paymentId: string): Promise<void> {

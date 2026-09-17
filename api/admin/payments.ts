@@ -63,7 +63,19 @@ async function handlePending(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-/** Manual counterpart to settlePaymentFromWaveSession for the Wave manual-bridge payments (see api/request-pro-upgrade.ts). */
+/**
+ * Manual counterpart to settlePaymentFromWaveSession for the Wave manual-bridge
+ * payments (see api/request-pro-upgrade.ts).
+ *
+ * The plan to activate is chosen explicitly by the platform admin here, in the
+ * request body — it is never read from the payment row. That row only carries
+ * the merchant's own claim (requested plan + its price), which cannot be
+ * trusted: the admin verifies the amount that actually arrived in the Wave
+ * transaction list and picks the matching plan (Essentiel = PLANS.essential,
+ * Pro = PLANS.pro). Both the payment row and the subscription are rewritten to
+ * that verified plan + its real price, so the audit trail reflects what was
+ * actually confirmed rather than what was claimed.
+ */
 async function handleApprove(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
@@ -77,11 +89,17 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const { paymentId } = req.body ?? {}
+    const body: { paymentId?: unknown; plan?: unknown } = req.body ?? {}
+    const { paymentId, plan } = body
     if (typeof paymentId !== 'string' || !paymentId) {
       res.status(400).json({ error: 'paymentId manquant.' })
       return
     }
+    if (plan !== 'essential' && plan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const verifiedPlan = PLANS[plan]
 
     const supabase = getSupabaseAdmin()
     const { data: payment, error: paymentError } = await supabase
@@ -103,14 +121,19 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
 
     const { error: updatePaymentError } = await supabase
       .from('wave_payments')
-      .update({ status: 'succeeded', completed_at: new Date().toISOString() })
+      .update({
+        status: 'succeeded',
+        plan,
+        amount: verifiedPlan.priceXof,
+        completed_at: new Date().toISOString(),
+      })
       .eq('id', paymentId)
     if (updatePaymentError) throw updatePaymentError
 
     const { error: upsertSubError } = await supabase
       .from('shop_subscriptions')
       .upsert(
-        { shop_id: payment.shop_id, plan: payment.plan, status: 'active', current_period_end: periodEnd },
+        { shop_id: payment.shop_id, plan, status: 'active', current_period_end: periodEnd },
         { onConflict: 'shop_id' },
       )
     if (upsertSubError) throw upsertSubError
@@ -124,12 +147,12 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
       if (shop && ownerData.user?.email) {
         await sendEmail({
           to: ownerData.user.email,
-          subject: `Bienvenue dans Bitiko ${PLANS[payment.plan as keyof typeof PLANS].label} — ${shop.name}`,
+          subject: `Bienvenue dans Bitiko ${verifiedPlan.label} — ${shop.name}`,
           html: proActivatedEmailHtml({
             origin,
             shopName: shop.name,
             periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-            planLabel: PLANS[payment.plan as keyof typeof PLANS].label,
+            planLabel: verifiedPlan.label,
           }),
         })
       }
