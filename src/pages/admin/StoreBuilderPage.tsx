@@ -2,18 +2,21 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Blocks,
   Check,
+  Eye,
   ExternalLink,
   Loader2,
   Lock,
   Redo2,
   RotateCcw,
+  SlidersHorizontal,
   Undo2,
   Wand2,
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
+import { useBuilderState, type BuilderSnapshot, type BuilderTab, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
@@ -63,6 +66,56 @@ function StoreBuilderLock() {
       >
         <Wand2 size={15} aria-hidden /> Passer à Pro
       </Link>
+    </div>
+  )
+}
+
+/** Whether the viewport is at least Tailwind's `lg` breakpoint (1024px) —
+ *  decides between the desktop 3-column builder layout and the single-pane
+ *  mobile/tablet one below. This has to be a real conditional render, not a
+ *  `hidden lg:block` CSS toggle: the layout embeds a live preview iframe
+ *  (with its own postMessage channel) plus draggable-list state, and a CSS
+ *  toggle would keep both mounted at once — two iframes fighting over the
+ *  same messages, two independent drag states, etc. */
+function useIsDesktopBuilder() {
+  const query = '(min-width: 1024px)'
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia(query)
+    const handler = () => setIsDesktop(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+  return isDesktop
+}
+
+type MobileView = 'blocks' | 'preview' | 'settings'
+
+/** Mobile/tablet only: picks which single pane of the 3-column desktop
+ *  layout (blocks list, live preview, settings) is currently shown. */
+function MobileViewSwitcher({ value, onChange }: { value: MobileView; onChange: (v: MobileView) => void }) {
+  const options: { key: MobileView; label: string; icon: typeof Blocks }[] = [
+    { key: 'blocks', label: 'Blocs', icon: Blocks },
+    { key: 'preview', label: 'Aperçu', icon: Eye },
+    { key: 'settings', label: 'Réglages', icon: SlidersHorizontal },
+  ]
+  return (
+    <div className="flex gap-1 border-b border-gray-200 bg-white p-2">
+      {options.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-colors ${
+            value === key ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <Icon size={14} aria-hidden />
+          {label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -462,6 +515,21 @@ function BuilderEditor({
     toast.info('Section supprimée — Ctrl+Z pour annuler.')
   }
 
+  // Mobile/tablet: only one of blocks/preview/settings is shown at a time
+  // (see useIsDesktopBuilder above). Selecting a block or switching tabs
+  // drills straight into the pane that shows the result, mirroring what's
+  // simultaneously visible on desktop.
+  const isDesktop = useIsDesktopBuilder()
+  const [mobileView, setMobileView] = useState<MobileView>('preview')
+  const selectSectionAndFocus = (id: string) => {
+    builder.selectSection(id)
+    setMobileView('settings')
+  }
+  const handleTabChange = (tab: BuilderTab) => {
+    builder.setActiveTab(tab)
+    setMobileView(tab === 'blocks' ? 'blocks' : 'settings')
+  }
+
   /* Keyboard shortcuts */
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -553,115 +621,153 @@ function BuilderEditor({
             onClick={() => setDiscardConfirmOpen(true)}
             disabled={!canDiscard || builder.discardMutation.isPending}
             title="Revenir à la version publiée"
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Annuler les modifications"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3"
           >
             {builder.discardMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} aria-hidden />}
-            Annuler les modifications
+            <span className="hidden sm:inline">Annuler les modifications</span>
           </button>
-          <button type="button" onClick={handlePreview} disabled={builder.saveDraftMutation.isPending || !previewUrl} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
-            <ExternalLink size={14} aria-hidden /> Prévisualiser
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={builder.saveDraftMutation.isPending || !previewUrl}
+            aria-label="Prévisualiser"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 sm:px-3"
+          >
+            <ExternalLink size={14} aria-hidden /> <span className="hidden sm:inline">Prévisualiser</span>
           </button>
-          <button type="button" onClick={() => builder.saveDraftMutation.mutate(undefined, { onSuccess: () => toast.success('Brouillon enregistré.') })} disabled={builder.saveDraftMutation.isPending} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+          <button
+            type="button"
+            onClick={() => builder.saveDraftMutation.mutate(undefined, { onSuccess: () => toast.success('Brouillon enregistré.') })}
+            disabled={builder.saveDraftMutation.isPending}
+            aria-label="Enregistrer"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 sm:px-3"
+          >
             {builder.saveDraftMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : builder.saveDraftMutation.isSuccess && !builder.dirty ? <Check size={14} className="text-emerald-600" /> : null}
-            Enregistrer
+            <span className="hidden sm:inline">Enregistrer</span>
           </button>
-          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60">
+          <button type="button" onClick={() => setPublishConfirmOpen(true)} disabled={builder.publishMutation.isPending} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60 sm:px-4">
             {builder.publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             Publier
           </button>
         </div>
       </div>
 
-      {/* ── 3-column layout ─────────────────────────────────── */}
-      <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
-        <BuilderSidebar
-          sections={builder.sections}
-          selectedSectionId={builder.selectedSectionId}
-          activeTab={builder.activeTab}
-          onTabChange={builder.setActiveTab}
-          onSelect={builder.selectSection}
-          onToggleVisible={builder.toggleVisible}
-          onRemove={handleRemoveSection}
-          onDuplicate={builder.duplicateSection}
-          onReorder={builder.reorderSection}
-          onAdd={builder.addSection}
-          availableTypes={availableTypes}
-          templateId={shop.template_id}
-          allowTemplates={allowAdvancedBuilder}
-          maxCustomSections={maxCustomSections}
-        />
+      {/* ── Blocks / preview / settings panes ─────────────────
+          Built once, then laid out either as the desktop 3-column grid or
+          (< lg, see useIsDesktopBuilder) as a single pane switched by
+          MobileViewSwitcher — never both at once, see that hook's comment. */}
+      {(() => {
+        const sidebarPane = (
+          <BuilderSidebar
+            sections={builder.sections}
+            selectedSectionId={builder.selectedSectionId}
+            activeTab={builder.activeTab}
+            onTabChange={handleTabChange}
+            onSelect={selectSectionAndFocus}
+            onToggleVisible={builder.toggleVisible}
+            onRemove={handleRemoveSection}
+            onDuplicate={builder.duplicateSection}
+            onReorder={builder.reorderSection}
+            onAdd={builder.addSection}
+            availableTypes={availableTypes}
+            templateId={shop.template_id}
+            allowTemplates={allowAdvancedBuilder}
+            maxCustomSections={maxCustomSections}
+          />
+        )
 
-        {previewPath && previewUrl ? (
-          <div className="flex min-w-0 flex-col">
-            {previewTemplate && (
-              <div className="flex items-center justify-between gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
-                <p className="text-sm font-medium text-brand-800">
-                  Aperçu avec vos données : <span className="font-semibold">{previewTemplate.label}</span>
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewTemplate(null)}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100"
-                  >
-                    Annuler l'aperçu
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setApplyConfirmOpen(true)}
-                    className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
-                  >
-                    Appliquer ce style
-                  </button>
+        const previewPane =
+          previewPath && previewUrl ? (
+            <div className="flex h-full min-w-0 flex-col">
+              {previewTemplate && (
+                <div className="flex items-center justify-between gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
+                  <p className="text-sm font-medium text-brand-800">
+                    Aperçu avec vos données : <span className="font-semibold">{previewTemplate.label}</span>
+                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTemplate(null)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100"
+                    >
+                      Annuler l'aperçu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplyConfirmOpen(true)}
+                      className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+                    >
+                      Appliquer ce style
+                    </button>
+                  </div>
                 </div>
+              )}
+              <div className="min-h-0 flex-1">
+                <BuilderPreviewFrame
+                  slug={shop.slug}
+                  pagePath={previewPath}
+                  templateKey={previewTemplateKey}
+                  sections={previewSections}
+                  themeColor={previewThemeColor}
+                  themeConfig={previewThemeConfig}
+                  onSelectSection={previewTemplate ? () => {} : selectSectionAndFocus}
+                  onNavigate={onNavigate}
+                />
               </div>
-            )}
-            <div className="min-h-0 flex-1">
-              <BuilderPreviewFrame
-                slug={shop.slug}
-                pagePath={previewPath}
-                templateKey={previewTemplateKey}
-                sections={previewSections}
-                themeColor={previewThemeColor}
-                themeConfig={previewThemeConfig}
-                onSelectSection={previewTemplate ? () => {} : builder.selectSection}
-                onNavigate={onNavigate}
-              />
             </div>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-50 p-8 text-center">
+              <p className="text-sm font-medium text-gray-700">Aucun produit actif pour prévisualiser la fiche produit.</p>
+              <p className="text-xs text-gray-500">Ajoutez un produit : l'aperçu affichera la fiche produit.</p>
+              <Link to="/admin/produits" className="mt-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+                Gérer les produits
+              </Link>
+            </div>
+          )
+
+        const settingsPane = (
+          <div className={`h-full overflow-y-auto bg-white p-4 ${isDesktop ? 'border-l border-gray-200' : ''}`}>
+            {builder.activeTab === 'blocks' && (
+              <SectionEditorPanel
+                section={builder.selectedSection}
+                shopId={shop.id}
+                templateId={shop.template_id}
+                removableBranding={removableBranding}
+                onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
+              />
+            )}
+            {builder.activeTab === 'theme' && (
+              <ThemeEditorPanel
+                themeColor={builder.themeColor}
+                themeConfig={builder.themeConfig}
+                onThemeColorChange={builder.setThemeColor}
+                onThemeConfigChange={builder.setThemeConfig}
+              />
+            )}
+            {builder.activeTab === 'templates' && (
+              <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
+            )}
+          </div>
+        )
+
+        return isDesktop ? (
+          <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
+            {sidebarPane}
+            {previewPane}
+            {settingsPane}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 bg-gray-50 p-8 text-center">
-            <p className="text-sm font-medium text-gray-700">Aucun produit actif pour prévisualiser la fiche produit.</p>
-            <p className="text-xs text-gray-500">Ajoutez un produit : l'aperçu affichera la fiche produit.</p>
-            <Link to="/admin/produits" className="mt-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              Gérer les produits
-            </Link>
+          <div className="flex min-h-[70vh] flex-1 flex-col overflow-hidden rounded-xl border border-gray-200">
+            <MobileViewSwitcher value={mobileView} onChange={setMobileView} />
+            <div className="min-h-0 flex-1">
+              {mobileView === 'blocks' && sidebarPane}
+              {mobileView === 'preview' && previewPane}
+              {mobileView === 'settings' && settingsPane}
+            </div>
           </div>
-        )}
-
-        <div className="overflow-y-auto border-l border-gray-200 bg-white p-4">
-          {builder.activeTab === 'blocks' && (
-            <SectionEditorPanel
-              section={builder.selectedSection}
-              shopId={shop.id}
-              templateId={shop.template_id}
-              removableBranding={removableBranding}
-              onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
-            />
-          )}
-          {builder.activeTab === 'theme' && (
-            <ThemeEditorPanel
-              themeColor={builder.themeColor}
-              themeConfig={builder.themeConfig}
-              onThemeColorChange={builder.setThemeColor}
-              onThemeConfigChange={builder.setThemeConfig}
-            />
-          )}
-          {builder.activeTab === 'templates' && (
-            <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
-          )}
-        </div>
-      </div>
+        )
+      })()}
 
       {/* ── Dialogs ─────────────────────────────────────────── */}
       <ConfirmDialog
