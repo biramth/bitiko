@@ -17,6 +17,7 @@ export function ProductPage() {
     title: product ? (shop ? `${product.name} — ${shop.name}` : product.name) : 'Produit',
     description: product?.description ?? undefined,
     image: product?.images[0]?.public_url,
+    siteName: shop?.name,
   })
   useProductStructuredData(product ?? null, currency)
 

@@ -9,6 +9,10 @@ interface PageSeoOptions {
   /** Absolute canonical URL. Defaults to the current origin + pathname, so
    * each shop subdomain keeps its own canonical. */
   canonicalUrl?: string
+  /** og:site_name — the shop's own name on a storefront page, left as
+   * "Bitiko" (the default) on the platform's own pages. A shared shop link
+   * should read as that shop's own site in the preview card, not the SaaS's. */
+  siteName?: string
 }
 
 function setMetaTag(attr: 'name' | 'property', key: string, content: string) {
@@ -57,12 +61,13 @@ export function useShopFavicon(logoUrl: string | null | undefined) {
 
 /**
  * Sets the document title and description/OG meta tags for the current
- * page. Note: this only affects the client-rendered DOM — crawlers that
- * don't execute JS (most link-preview bots, e.g. WhatsApp/Facebook) will
- * still see the static tags from index.html. It does help the browser tab,
- * bookmarks, and search engines that do render JS (Googlebot).
+ * page. Note: this only affects the client-rendered DOM — non-JS link-preview
+ * bots (WhatsApp, Facebook, Twitter…) never see this; they're served
+ * per-shop tags server-side instead (see middleware.ts + api/og.ts). This
+ * hook covers the browser tab, bookmarks, and search engines that do render
+ * JS (Googlebot).
  */
-export function usePageSeo({ title, description, image, noindex, canonicalUrl }: PageSeoOptions) {
+export function usePageSeo({ title, description, image, noindex, canonicalUrl, siteName }: PageSeoOptions) {
   useEffect(() => {
     const previousTitle = document.title
     document.title = title
@@ -72,7 +77,7 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl }:
 
     setCanonical(canonical)
     setMetaTag('property', 'og:url', canonical)
-    setMetaTag('property', 'og:site_name', 'Bitiko')
+    setMetaTag('property', 'og:site_name', siteName || 'Bitiko')
 
     if (description) {
       setMetaTag('name', 'description', description)
@@ -85,5 +90,5 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl }:
     return () => {
       document.title = previousTitle
     }
-  }, [title, description, image, noindex, canonicalUrl])
+  }, [title, description, image, noindex, canonicalUrl, siteName])
 }

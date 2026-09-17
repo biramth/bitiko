@@ -64,6 +64,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   usePageSeo({
     title: page ? `${page.title} — ${shop?.name ?? 'Boutique'}` : (shop?.name ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne'),
     description: page?.seo_description ?? page?.seo_title ?? shop?.description ?? undefined,
+    siteName: shop?.name,
   })
 
   if (!shop) return null

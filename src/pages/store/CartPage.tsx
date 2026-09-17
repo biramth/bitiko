@@ -4,7 +4,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function CartPage() {
   const { shop } = useTenant()
-  usePageSeo({ title: shop ? `Panier — ${shop.name}` : 'Panier', noindex: true })
+  usePageSeo({ title: shop ? `Panier — ${shop.name}` : 'Panier', noindex: true, siteName: shop?.name })
 
   return <TemplateBody template="cart" />
 }
