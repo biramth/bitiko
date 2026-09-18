@@ -476,7 +476,7 @@ export function StoreLayout() {
           <InlineText
             as="p"
             editable={inlineEditable}
-            value={inlineEditable ? footer.copyrightText : footer.copyrightText.trim() || defaultCopyright}
+            value={footer.copyrightText.trim() || defaultCopyright}
             onCommit={(copyrightText) => footerPatch({ copyrightText })}
             placeholder={defaultCopyright}
             label="Texte de copyright"

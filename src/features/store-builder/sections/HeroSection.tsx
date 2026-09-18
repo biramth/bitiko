@@ -25,11 +25,17 @@ export function HeroRenderer({
   editable?: boolean
 }) {
   const patch = useInlineEdit(sectionId)
-  const heading = editable ? config.heading : config.heading.trim() || shop.name
-  const subheading = editable ? config.subheading : config.subheading.trim() || shop.description || ''
+  // Always the *effective* text (falling back to the shop's own name/
+  // description/default copy) — including while editing. A field left empty
+  // isn't "missing content" here, it's the shop's real data standing in for
+  // it, so it should look and edit like normal filled-in text, not like a
+  // blank field waiting to be typed into (that read as "the template didn't
+  // actually fill anything in").
+  const heading = config.heading.trim() || shop.name
+  const subheading = config.subheading.trim() || shop.description || ''
   const showBanner = config.showBanner && !!shop.banner_url
-  const primaryLabel = editable ? config.primaryButtonLabel ?? '' : config.primaryButtonLabel?.trim() || 'Découvrir la boutique'
-  const whatsappLabel = editable ? config.whatsappButtonLabel ?? '' : config.whatsappButtonLabel?.trim() || 'Nous contacter'
+  const primaryLabel = config.primaryButtonLabel?.trim() || 'Découvrir la boutique'
+  const whatsappLabel = config.whatsappButtonLabel?.trim() || 'Nous contacter'
 
   return (
     <div>
