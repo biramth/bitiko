@@ -28,6 +28,11 @@ export interface BuilderTarget {
   /** What's currently live for this context — lets "Annuler les
    *  modifications" throw away the draft and go back to it in one action. */
   publishedSnapshot: BuilderSnapshot
+  /** Section type that must stay present in this context (e.g. the 'cart'
+   *  section on the cart page) — removing it would leave the page unable to
+   *  do its job. Undefined for contexts with no single required type (home,
+   *  custom pages). */
+  protectedType?: SectionType
   /** Persist draft state (called on "Enregistrer"). */
   saveDraft: (snapshot: BuilderSnapshot) => Promise<unknown>
   /** Persist published state (called on "Publier"). */
@@ -96,9 +101,9 @@ export function useBuilderState(target: BuilderTarget) {
   }
 
   const removeSection = (id: string) => {
-    const target = sections.find((s) => s.id === id)
-    if (!target || registry[target.type]?.pinned) return
-    const index = sections.indexOf(target)
+    const found = sections.find((s) => s.id === id)
+    if (!found || registry[found.type]?.pinned || found.type === target.protectedType) return
+    const index = sections.indexOf(found)
     const next = sections.filter((s) => s.id !== id)
     commit({ ...snapshot, sections: next })
     if (selectedSectionId === id) {
@@ -111,7 +116,10 @@ export function useBuilderState(target: BuilderTarget) {
 
   const duplicateSection = (id: string) => {
     const original = sections.find((s) => s.id === id)
-    if (!original || registry[original.type]?.pinned) return
+    // A singleton section (product/cart/checkout…) only ever makes sense
+    // once per page — duplicating it would render the same dynamic block
+    // twice, not add variety.
+    if (!original || registry[original.type]?.pinned || registry[original.type]?.singleton) return
     const copy: LayoutSection = { ...original, id: createSectionId(original.type) }
     const index = sections.indexOf(original)
     commit({

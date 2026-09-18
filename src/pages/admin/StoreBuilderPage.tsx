@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -163,13 +163,25 @@ function pathToKey(path: string, pages: StorePage[]): ActiveKey | null {
   return null
 }
 
-/** Addable section types per system template (keeps the commerce toolbox
- *  relevant on the page it belongs to). Home/pages keep everything. */
+/** Addable section types per system template. These pages now compose as
+ *  freely as the home page (marketing/content blocks alongside the page's
+ *  own commerce block) — curated per page so combinations stay sensible
+ *  (e.g. no second product grid on the checkout page). */
 const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
-  catalogue: ['products', 'text', 'categories'],
-  product: ['product', 'text', 'image'],
-  cart: ['cart', 'text'],
-  checkout: ['checkout', 'text'],
+  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
+  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
+  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
+  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq'],
+}
+
+/** The one section type each system template can't do without — removing it
+ *  would leave the page unable to do its job (no way to buy, no cart, no
+ *  checkout form). Content/marketing blocks around it stay fully removable. */
+const SYSTEM_CORE_SECTION: Record<SystemTemplateKey, SectionType> = {
+  catalogue: 'products',
+  product: 'product',
+  cart: 'cart',
+  checkout: 'checkout',
 }
 
 /** Persist an applied store-wide template as the shop's whole-store draft
@@ -267,6 +279,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   if (context.kind === 'system') {
     return {
       ...shared,
+      protectedType: SYSTEM_CORE_SECTION[context.key],
       initialSections:
         shop.builder_draft?.templates?.[context.key] ??
         shop.page_templates?.[context.key]?.published ??
@@ -396,6 +409,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
   const previewPath = contextPreviewPath(context, productSlug)
   const previewTemplateKey = context.kind === 'system' ? context.key : undefined
   const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
+  const protectedType = context.kind === 'system' ? SYSTEM_CORE_SECTION[context.key] : undefined
   const draftBadge = context.kind === 'page' && !context.page.is_published
   const publishesStore = context.kind !== 'page'
   // Whether there's a persisted draft to discard even with no unsaved local
@@ -418,6 +432,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
         previewPath={previewPath}
         previewTemplateKey={previewTemplateKey}
         availableTypes={availableTypes}
+        protectedType={protectedType}
         draftBadge={draftBadge}
         hasStoredDraft={hasStoredDraft}
         onContextChange={setActiveKey}
@@ -457,6 +472,7 @@ function BuilderEditor({
   previewPath,
   previewTemplateKey,
   availableTypes,
+  protectedType,
   draftBadge,
   hasStoredDraft,
   onContextChange,
@@ -476,6 +492,7 @@ function BuilderEditor({
   previewPath: string | null
   previewTemplateKey?: SystemTemplateKey
   availableTypes?: SectionType[]
+  protectedType?: SectionType
   draftBadge: boolean
   hasStoredDraft: boolean
   onContextChange: (key: ActiveKey) => void
@@ -515,10 +532,18 @@ function BuilderEditor({
   const previewThemeColor = previewTemplate ? previewTemplate.themeColor : builder.themeColor
   const previewThemeConfig = previewTemplate ? previewTemplate.themeConfig : builder.themeConfig
 
-  const handleRemoveSection = (id: string) => {
-    builder.removeSection(id)
-    toast.info('Section supprimée — Ctrl+Z pour annuler.')
-  }
+  const handleRemoveSection = useCallback(
+    (id: string) => {
+      const section = builder.sections.find((s) => s.id === id)
+      if (protectedType && section?.type === protectedType) {
+        toast.error('Ce bloc est indispensable à cette page et ne peut pas être supprimé.')
+        return
+      }
+      builder.removeSection(id)
+      toast.info('Section supprimée — Ctrl+Z pour annuler.')
+    },
+    [builder, protectedType, toast],
+  )
 
   // Mobile/tablet: only one of blocks/preview/settings is shown at a time
   // (see useIsDesktopBuilder above). Selecting a block or switching tabs
@@ -555,12 +580,12 @@ function BuilderEditor({
       }
       if (!isEditing && (e.key === 'Delete' || e.key === 'Backspace') && builder.selectedSectionId) {
         e.preventDefault()
-        builder.removeSection(builder.selectedSectionId)
+        handleRemoveSection(builder.selectedSectionId)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [builder])
+  }, [builder, handleRemoveSection])
 
   /* Warn before closing/refreshing the tab with unsaved changes — React
    * Router navigation isn't covered (would need a data router with a
@@ -679,6 +704,7 @@ function BuilderEditor({
             templateId={shop.template_id}
             allowTemplates={allowAdvancedBuilder}
             maxCustomSections={maxCustomSections}
+            protectedType={protectedType}
           />
         )
 
