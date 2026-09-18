@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient'
 import { ORDERS_PAGE_SIZE } from '@/config/constants'
+import { parseOrderOptions } from '@/utils/productOptions'
 import type { CartItem, Order, OrderStatus, OrderWithItems, PaymentMethod } from '@/types'
 
 export interface CreateOrderInput {
@@ -20,6 +21,7 @@ export interface CreateOrderResult {
   items: {
     productName: string
     variantName?: string | null
+    options: { label: string; value: string }[]
     unitPrice: number
     quantity: number
     subtotal: number
@@ -31,6 +33,8 @@ interface CreateOrderRpcRow {
   order_number: string
   total: number
   product_name: string
+  variant_name: string | null
+  options: unknown
   unit_price: number
   quantity: number
   subtotal: number
@@ -52,6 +56,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       product_id: i.productId,
       variant_id: i.variantId ?? null,
       quantity: i.quantity,
+      options: (i.options ?? []).map((o) => ({ field_id: o.fieldId, value: o.value })),
     })),
     p_delivery_fee: input.deliveryFee,
     p_delivery_zone_name: input.deliveryZoneName,
@@ -69,6 +74,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     total: Number(rows[0].total),
     items: rows.map((r) => ({
       productName: r.product_name,
+      variantName: r.variant_name,
+      options: parseOrderOptions(r.options),
       unitPrice: Number(r.unit_price),
       quantity: r.quantity,
       subtotal: Number(r.subtotal),
@@ -172,59 +179,4 @@ export async function updateOrderDeliveryFee(id: string, fee: number): Promise<O
   return data as Order
 }
 
-export function buildWhatsAppMessage(params: {
-  orderNumber: string
-  items: {
-    productName: string
-    variantName?: string | null
-    unitPrice: number
-    quantity: number
-    subtotal: number
-  }[]
-  deliveryFee?: number
-  deliveryZoneName?: string
-  paymentMethod?: PaymentMethod
-  paymentInstructions?: string | null
-  total: number
-  customerName: string
-  customerPhone: string
-  customerAddress: string
-  formatCurrency: (amount: number) => string
-}): string {
-  const lines = [
-    `Bonjour, je souhaite passer la commande #${params.orderNumber}.`,
-    '',
-    'Produits :',
-    ...params.items.map((i) => {
-      const label = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
-      return `- ${label} x${i.quantity} — ${params.formatCurrency(i.subtotal)}`
-    }),
-  ]
-  if (params.deliveryZoneName) {
-    lines.push('', `Zone de livraison : ${params.deliveryZoneName}`)
-  }
-  if (params.deliveryFee && params.deliveryFee > 0) {
-    lines.push(`Livraison : ${params.formatCurrency(params.deliveryFee)}`)
-  }
-  lines.push('', `Total : ${params.formatCurrency(params.total)}`)
-  lines.push(
-    params.paymentMethod === 'mobile_money'
-      ? 'Paiement : Mobile money (Wave / Orange Money) avant envoi.'
-      : 'Paiement : Espèces à la livraison.',
-  )
-  if (params.paymentMethod === 'mobile_money' && params.paymentInstructions?.trim()) {
-    lines.push(params.paymentInstructions.trim())
-  }
-  lines.push(
-    `Nom : ${params.customerName}`,
-    `Téléphone : ${params.customerPhone}`,
-    `Adresse : ${params.customerAddress}`,
-    'Merci.',
-  )
-  return lines.join('\n')
-}
-
-export function buildWhatsAppUrl(whatsappNumber: string, message: string): string {
-  const digitsOnly = whatsappNumber.replace(/[^0-9]/g, '')
-  return `https://wa.me/${digitsOnly}?text=${encodeURIComponent(message)}`
-}
+export { buildWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'

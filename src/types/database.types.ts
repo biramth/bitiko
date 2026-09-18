@@ -178,6 +178,7 @@ export type Database = {
           unit_price: number
           variant_id: string | null
           variant_name: string | null
+          options: Json | null
         }
         Insert: {
           id?: string
@@ -189,6 +190,7 @@ export type Database = {
           unit_price: number
           variant_id?: string | null
           variant_name?: string | null
+          options?: Json | null
         }
         Update: {
           id?: string
@@ -200,6 +202,7 @@ export type Database = {
           unit_price?: number
           variant_id?: string | null
           variant_name?: string | null
+          options?: Json | null
         }
         Relationships: [
           {
@@ -462,6 +465,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          option_fields: Json
           price: number
           shop_id: string
           slug: string
@@ -475,6 +479,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          option_fields?: Json
           price: number
           shop_id: string
           slug: string
@@ -488,6 +493,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          option_fields?: Json
           price?: number
           shop_id?: string
           slug?: string
@@ -902,12 +908,14 @@ export type Database = {
         }
         Returns: {
           order_id: string
+          options: Json
           order_number: string
           product_name: string
           quantity: number
           subtotal: number
           total: number
           unit_price: number
+          variant_name: string | null
         }[]
       }
       set_order_delivery_fee: {

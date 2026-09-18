@@ -49,6 +49,9 @@ export function OrderConfirmationPage() {
                 <li key={`${item.productName}-${index}`} className="flex justify-between gap-4">
                   <span>
                     {item.variantName ? `${item.productName} (${item.variantName})` : item.productName} × {item.quantity}
+                    {item.options?.map((opt) => (
+                      <span key={opt.label} className="block text-xs text-ink-700/60">{opt.label} : {opt.value}</span>
+                    ))}
                   </span>
                   <span className="shrink-0">{formatCurrency(item.subtotal, confirmation.currency)}</span>
                 </li>

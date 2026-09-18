@@ -191,7 +191,7 @@ export async function countActiveProducts(shopId: string): Promise<number> {
 export type ProductInput = Pick<
   Product,
   'shop_id' | 'category_id' | 'name' | 'slug' | 'description' | 'price' | 'stock' | 'active'
->
+> & { option_fields?: Product['option_fields'] }
 
 export async function createProduct(input: ProductInput): Promise<Product> {
   const { data, error } = await supabase.from('products').insert(input).select().single()
@@ -288,6 +288,7 @@ export interface ProductStockInfo {
   price: number
   stock: number
   active: boolean
+  option_fields: unknown
   variants: Pick<ProductVariant, 'id' | 'price' | 'stock' | 'active'>[]
 }
 
@@ -297,7 +298,7 @@ export async function listProductsByIds(
   if (ids.length === 0) return []
   const { data, error } = await supabase
     .from('products')
-    .select('id, price, stock, active, variants:product_variants(id, price, stock, active)')
+    .select('id, price, stock, active, option_fields, variants:product_variants(id, price, stock, active)')
     .in('id', ids)
     .order('sort_order', { foreignTable: 'product_variants', ascending: true })
   if (error) throw error

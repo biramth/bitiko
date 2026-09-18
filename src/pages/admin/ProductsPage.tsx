@@ -20,7 +20,14 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ProductImportDialog } from './ProductImportDialog'
 import { CategoriesPage } from './CategoriesPage'
+import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
+
+/** Advertised price: "À partir de X" when variants are priced differently. */
+function priceLabel(product: ProductWithRelations, currency: string): string {
+  const { min, hasRange } = priceRange(product)
+  return `${hasRange ? 'À partir de ' : ''}${formatCurrency(min, currency)}`
+}
 
 const STOCK_FILTERS: { value: 'all' | 'low' | 'out'; label: string }[] = [
   { value: 'all', label: 'Tous' },
@@ -417,7 +424,7 @@ export function ProductsPage() {
                       <InlineField
                         value={product.price}
                         label={`Modifier le prix de ${product.name}`}
-                        display={<span className="font-medium text-gray-900">{formatCurrency(product.price, currency)}</span>}
+                        display={<span className="font-medium text-gray-900">{priceLabel(product, currency)}</span>}
                         onSave={(price) => quickUpdate.mutate({ id: product.id, updates: { price } })}
                       />
                       <InlineField
@@ -489,7 +496,7 @@ export function ProductsPage() {
                       <InlineField
                         value={product.price}
                         label={`Modifier le prix de ${product.name}`}
-                        display={formatCurrency(product.price, currency)}
+                        display={priceLabel(product, currency)}
                         onSave={(price) => quickUpdate.mutate({ id: product.id, updates: { price } })}
                       />
                     </td>

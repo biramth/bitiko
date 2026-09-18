@@ -23,9 +23,11 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { formatCurrency } from '@/utils/format'
+import { MAX_OPTION_TEXT_LENGTH, parseOptionFields, resolveSelection } from '@/utils/productOptions'
+import { effectivePrice } from '@/utils/productPricing'
 import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBreadcrumbStructuredData'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
-import type { Product, ProductWithRelations, Shop } from '@/types'
+import type { Product, ProductWithRelations, SelectedOption, Shop } from '@/types'
 import type { ProductLayout, ProductSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
@@ -199,7 +201,15 @@ function ProductDetails({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variant?.id, variant?.image_url])
 
-  const displayPrice = hasVariants && variant ? (variant.price ?? product.price) : product.price
+  const optionFields = useMemo(() => parseOptionFields(product.option_fields), [product.option_fields])
+  const [optionValues, setOptionValues] = useState<Record<string, string>>({})
+  const [optionError, setOptionError] = useState<{ fieldId: string; message: string } | null>(null)
+  const setOptionValue = (fieldId: string, value: string) => {
+    setOptionValues((prev) => ({ ...prev, [fieldId]: value }))
+    setOptionError((prev) => (prev?.fieldId === fieldId ? null : prev))
+  }
+
+  const displayPrice = effectivePrice(product, variant)
   const displayStock = hasVariants && variant ? variant.stock : product.stock
   const outOfStock = displayStock <= 0
 
@@ -242,7 +252,22 @@ function ProductDetails({
   useBreadcrumbStructuredData(crumbs)
 
   const handleAddToCart = () => {
+    let selectedOptions: SelectedOption[] | undefined
+    if (optionFields.length > 0) {
+      const result = resolveSelection(optionFields, optionValues)
+      if (!result.ok) {
+        setOptionError({ fieldId: result.fieldId, message: result.error })
+        toast.error(result.error)
+        const el = document.querySelector<HTMLElement>(`[data-option-field="${CSS.escape(result.fieldId)}"]`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el?.querySelector<HTMLElement>('input, button')?.focus({ preventScroll: true })
+        return
+      }
+      setOptionError(null)
+      selectedOptions = result.options
+    }
     addItem({
+      options: selectedOptions,
       productId: product.id,
       variantId: variant?.id,
       variantName: variant?.name,
@@ -250,7 +275,9 @@ function ProductDetails({
       slug: product.slug,
       price: displayPrice,
       quantity,
-      imageUrl: variant?.image_url ?? galleryImages[0]?.public_url ?? null,
+      // The photo the customer is actually looking at, not always the first
+      // one — otherwise the cart/checkout thumbnail "changes" on them.
+      imageUrl: variant?.image_url ?? galleryImages[activeImage]?.public_url ?? galleryImages[0]?.public_url ?? null,
       stock: displayStock,
     })
     trackEvent('add_to_cart', { product_id: product.id, product_name: product.name, value: displayPrice * quantity, currency })
@@ -365,6 +392,62 @@ function ProductDetails({
                 </div>
               </div>
             )}
+            {optionFields.length > 0 && (
+              <div className="mt-4 space-y-4">
+                {optionFields.map((field) => {
+                  const value = optionValues[field.id] ?? ''
+                  const error = optionError?.fieldId === field.id ? optionError.message : null
+                  const labelId = `opt-label-${field.id}`
+                  return (
+                    <div key={field.id} data-option-field={field.id}>
+                      <p id={labelId} className="text-sm font-medium text-[var(--shop-text)]">
+                        {field.label}
+                        {field.required ? (
+                          <span className="ml-1 text-xs font-normal text-[var(--shop-text)]/50">* (obligatoire)</span>
+                        ) : null}
+                      </p>
+                      {field.type === 'choice' ? (
+                        <div role="radiogroup" aria-labelledby={labelId} className="mt-2 flex flex-wrap gap-2">
+                          {field.choices.map((choice) => {
+                            const isSelected = value === choice
+                            return (
+                              <button
+                                key={choice}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => setOptionValue(field.id, isSelected && !field.required ? '' : choice)}
+                                style={{ borderRadius: 'var(--shop-radius)' }}
+                                className={`border px-4 py-2 text-sm transition-colors ${
+                                  isSelected
+                                    ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-white'
+                                    : 'border-[var(--shop-text)]/20 text-[var(--shop-text)] hover:border-[var(--shop-text)]/50'
+                                }`}
+                              >
+                                {choice}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={value}
+                          maxLength={MAX_OPTION_TEXT_LENGTH}
+                          placeholder="Votre réponse"
+                          aria-labelledby={labelId}
+                          aria-invalid={error ? true : undefined}
+                          onChange={(e) => setOptionValue(field.id, e.target.value)}
+                          style={{ borderRadius: 'var(--shop-radius)' }}
+                          className="mt-2 w-full border border-[var(--shop-text)]/20 bg-transparent px-4 py-2 text-sm text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/40 focus:border-[var(--shop-button)] focus:outline-none"
+                        />
+                      )}
+                      {error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <div className="mt-2">
               <StockBadge stock={displayStock} lowStockThreshold={lowStockThreshold} />
             </div>
@@ -404,7 +487,7 @@ function ProductDetails({
             </button>
             {whatsappNumber && (
               <a
-                href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour, je voudrais en savoir plus sur « ${product.name} ».`)}`}
+                href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`À propos de « ${product.name} » : je voudrais en savoir plus.`)}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{ borderRadius: 'var(--shop-radius)' }}
