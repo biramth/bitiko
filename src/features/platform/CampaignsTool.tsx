@@ -1,6 +1,20 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Copy, Eye, Mail, Pencil, Plus, RotateCcw, Send, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  BadgeCheck,
+  BellRing,
+  Copy,
+  Eye,
+  Mail,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Send,
+  Sparkles,
+  Trash2,
+  Wrench,
+} from 'lucide-react'
 import {
   deleteCampaign,
   listCampaigns,
@@ -179,6 +193,35 @@ const STATUS_BADGE: Record<CampaignRow['status'], string> = {
   sent: 'bg-emerald-100 text-emerald-800',
 }
 
+/**
+ * Transactional emails already sent automatically by the platform. Shown on
+ * the marketing workspace so the operator sees what the system sends on its
+ * own; per-email editing is planned but not implemented yet.
+ */
+const AUTOMATED_EMAILS: { key: string; icon: ReactNode; name: string; trigger: string; recipient: string }[] = [
+  {
+    key: 'welcome',
+    icon: <Sparkles size={15} aria-hidden />,
+    name: 'Email de bienvenue',
+    trigger: 'À la mise en ligne d’une nouvelle boutique.',
+    recipient: 'Le gérant',
+  },
+  {
+    key: 'plan-activated',
+    icon: <BadgeCheck size={15} aria-hidden />,
+    name: 'Abonnement activé',
+    trigger: 'Dès qu’un paiement est vérifié (Essentiel ou Pro).',
+    recipient: 'Le gérant',
+  },
+  {
+    key: 'renewal-reminder',
+    icon: <BellRing size={15} aria-hidden />,
+    name: 'Rappel de renouvellement',
+    trigger: '2 à 3 jours avant l’échéance d’un abonnement actif.',
+    recipient: 'Le gérant',
+  },
+]
+
 export function CampaignsTool() {
   const queryClient = useQueryClient()
   const [view, setView] = useState<'list' | 'compose'>('list')
@@ -333,20 +376,56 @@ export function CampaignsTool() {
         {resume.isError && <p className="text-sm text-red-600">{(resume.error as Error).message}</p>}
         {del.isError && <p className="text-sm text-red-600">{(del.error as Error).message}</p>}
 
-        {campaigns.isLoading && <Spinner />}
-        {campaigns.isError && (
-          <p className="text-sm text-red-600">{campaigns.error instanceof Error ? campaigns.error.message : 'Erreur.'}</p>
-        )}
-
-        {campaigns.data && campaigns.data.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-            <Mail size={26} className="mx-auto text-gray-300" aria-hidden />
-            <p className="mt-3 text-sm text-gray-500">Aucune campagne pour l’instant.</p>
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-gray-900">Emails automatisés</h2>
+            <span className="text-xs text-gray-400">Envoyés automatiquement · personnalisation à venir</span>
           </div>
-        )}
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {AUTOMATED_EMAILS.map((email) => (
+              <div key={email.key} className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-2 font-medium text-gray-900">
+                    <span className="text-brand-600">{email.icon}</span>
+                    {email.name}
+                  </span>
+                  <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                    Actif
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">{email.trigger}</p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <p className="text-xs text-gray-400">Reçoit : {email.recipient}</p>
+                  <button
+                    type="button"
+                    disabled
+                    title="Personnalisation bientôt disponible."
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <Wrench size={12} aria-hidden /> Configurer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        {campaigns.data && campaigns.data.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900">Campagnes manuelles</h2>
+          {campaigns.isLoading && <Spinner />}
+          {campaigns.isError && (
+            <p className="mt-3 text-sm text-red-600">{campaigns.error instanceof Error ? campaigns.error.message : 'Erreur.'}</p>
+          )}
+
+          {campaigns.data && campaigns.data.length === 0 && (
+            <div className="mt-3 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
+              <Mail size={26} className="mx-auto text-gray-300" aria-hidden />
+              <p className="mt-3 text-sm text-gray-500">Aucune campagne pour l’instant.</p>
+            </div>
+          )}
+
+          {campaigns.data && campaigns.data.length > 0 && (
+            <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
@@ -462,7 +541,8 @@ export function CampaignsTool() {
               </tbody>
             </table>
           </div>
-        )}
+          )}
+        </section>
       </div>
     )
   }
