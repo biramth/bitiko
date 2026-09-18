@@ -247,13 +247,43 @@ export function welcomeEmailHtml({
 }
 
 /**
+ * Substitutes the campaign variables (case-insensitive) in raw merchant text.
+ * Runs before HTML-escaping so a shop name containing "<" can't smuggle markup.
+ */
+function substituteCampaignVariables(
+  text: string,
+  { shopName, shopUrl, ownerName }: { shopName: string; shopUrl: string; ownerName: string },
+): string {
+  return text
+    .replace(/\{\{\s*shop_name\s*\}\}/gi, shopName)
+    .replace(/\{\{\s*shop_url\s*\}\}/gi, shopUrl.replace(/^https?:\/\//, ''))
+    .replace(/\{\{\s*owner_name\s*\}\}/gi, ownerName)
+}
+
+/**
+ * Same idea for a link target: text is user-authored and lands in an href, so
+ * it's escaped (not sanitized — the caller only accepts http(s)/relative
+ * paths). `{{shop_url}}` keeps its protocol here so the href stays absolute,
+ * and free-text variables are URL-encoded so a space can't break the link.
+ */
+function substituteCampaignUrl(
+  url: string,
+  { shopName, shopUrl, ownerName }: { shopName: string; shopUrl: string; ownerName: string },
+): string {
+  return url
+    .replace(/\{\{\s*shop_url\s*\}\}/gi, shopUrl)
+    .replace(/\{\{\s*shop_name\s*\}\}/gi, encodeURIComponent(shopName))
+    .replace(/\{\{\s*owner_name\s*\}\}/gi, encodeURIComponent(ownerName))
+}
+
+/**
  * Renders a merchant-authored campaign body: variables are substituted first
  * (so a shop name containing "<" can't smuggle markup), then the whole thing
  * is HTML-escaped, and only then is the tiny markdown subset applied — the
  * order matters for safety.
  */
-function renderCampaignBody(body: string): string {
-  return escapeHtml(body)
+function renderCampaignBody(body: string, vars: { shopName: string; shopUrl: string; ownerName: string }): string {
+  return escapeHtml(substituteCampaignVariables(body, vars))
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\n{2,}/g, '<br><br>')
     .replace(/\n/g, '<br>')
@@ -266,26 +296,39 @@ export interface CampaignEmailInput {
   shopName: string
   shopUrl: string
   ownerName: string
+  /** Label of the call-to-action button; falls back to the dashboard prompt. */
+  buttonLabel?: string
+  /** Target of the call-to-action button; empty falls back to the dashboard. */
+  buttonUrl?: string
 }
 
 /**
  * A platform-team campaign rendered in the branded shell. Supported variables
- * (case-insensitive): {{shop_name}}, {{shop_url}}, {{owner_name}}.
+ * (case-insensitive): {{shop_name}}, {{shop_url}}, {{owner_name}} — in the
+ * body, the object and the button link.
  */
-export function campaignEmailHtml({ origin, subject, body, shopName, shopUrl, ownerName }: CampaignEmailInput): string {
-  const substituted = body
-    .replace(/\{\{\s*shop_name\s*\}\}/gi, shopName)
-    .replace(/\{\{\s*shop_url\s*\}\}/gi, shopUrl.replace(/^https?:\/\//, ''))
-    .replace(/\{\{\s*owner_name\s*\}\}/gi, ownerName)
+export function campaignEmailHtml({
+  origin,
+  subject,
+  body,
+  shopName,
+  shopUrl,
+  ownerName,
+  buttonLabel,
+  buttonUrl,
+}: CampaignEmailInput): string {
+  const vars = { shopName, shopUrl, ownerName }
+  const effectiveSubject = substituteCampaignVariables(subject, vars)
+  const effectiveButtonUrl = buttonUrl?.trim() ? substituteCampaignUrl(buttonUrl.trim(), vars) : `${origin}/admin`
 
   return shell({
     origin,
-    preheader: escapeHtml(subject),
+    preheader: escapeHtml(effectiveSubject),
     eyebrow: 'Bitiko',
-    heading: escapeHtml(subject),
-    body: renderCampaignBody(substituted),
-    buttonLabel: 'Ouvrir mon tableau de bord',
-    buttonUrl: `${origin}/admin`,
+    heading: escapeHtml(effectiveSubject),
+    body: renderCampaignBody(body, vars),
+    buttonLabel: escapeHtml(buttonLabel?.trim() || 'Ouvrir mon tableau de bord'),
+    buttonUrl: escapeHtml(effectiveButtonUrl),
     footnote: 'Tu reçois cet email car tu as une boutique sur Bitiko. Réponds directement à cet email pour toute question.',
   })
 }

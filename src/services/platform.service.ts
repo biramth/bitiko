@@ -139,6 +139,8 @@ export interface CampaignRow {
   recipient_count: number
   sent_count: number
   failed_count: number
+  button_label: string | null
+  button_url: string | null
 }
 
 export interface CampaignAudiencePreview {
@@ -153,6 +155,8 @@ export interface CampaignInput {
   subject: string
   body: string
   audience: CampaignAudience
+  buttonLabel?: string
+  buttonUrl?: string
 }
 
 export async function listCampaigns(): Promise<CampaignRow[]> {
@@ -168,6 +172,20 @@ export function previewCampaignAudience(audience: CampaignAudience): Promise<Cam
   return platformFetch('/api/admin/campaigns/audience', { method: 'POST', body: JSON.stringify({ audience }) })
 }
 
-export function sendCampaign(id: string): Promise<{ recipientCount: number; sent: number; failed: number }> {
+export function sendCampaign(id: string): Promise<CampaignSendResult> {
   return platformFetch('/api/admin/campaigns/send', { method: 'POST', body: JSON.stringify({ id }) })
+}
+
+export interface CampaignSendResult {
+  recipientCount: number
+  sent: number
+  failed: number
+  sentThisRun: number
+  failedThisRun: number
+  skipped: number
+  alreadySent: number
+}
+
+export function deleteCampaign(id: string): Promise<{ ok: true }> {
+  return platformFetch('/api/admin/campaigns/delete', { method: 'POST', body: JSON.stringify({ id }) })
 }
