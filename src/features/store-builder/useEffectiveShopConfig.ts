@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { DEFAULT_THEME_CONFIG } from '@/config/themeTokens'
 import { buildDefaultSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { isPreviewUpdateMessage, PREVIEW_READY, type PreviewUpdateMessage } from './previewBridge'
+import { useIsDraftPreview } from './useEmbeddedPreview'
 import type { Shop } from '@/types'
 import type { LayoutSection, SystemTemplateKey, ThemeConfig } from '@/types/builder'
 
@@ -42,8 +42,7 @@ export function useEffectiveConfig(
   shop: Shop | null | undefined,
   templateKey: EffectiveTemplateKey = 'home',
 ): EffectiveConfig {
-  const [searchParams] = useSearchParams()
-  const isDraftPreview = searchParams.get('preview') === 'draft'
+  const isDraftPreview = useIsDraftPreview()
   const [liveUpdate, setLiveUpdate] = useState<PreviewUpdateMessage | null>(null)
 
   useEffect(() => {

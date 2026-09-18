@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry'
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
+import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { StoreNotFoundPage } from './StoreNotFoundPage'
@@ -18,8 +19,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const { slug: routeSlug = '' } = useParams<{ slug: string }>()
   const slug = pageSlug ? pageSlug.replace(/^pages\//, '').replace(/\/+$/, '') : routeSlug
   const { shop } = useTenant()
-  const [searchParams] = useSearchParams()
-  const isDraftPreview = searchParams.get('preview') === 'draft'
+  const isDraftPreview = useIsDraftPreview()
 
   // Keyed by slug so "loading" can be derived during render (comparing the
   // last-resolved slug against the current one) instead of toggled with a
