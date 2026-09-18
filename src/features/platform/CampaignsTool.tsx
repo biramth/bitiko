@@ -43,19 +43,6 @@ const PRESETS: Preset[] = [
     body: '',
     audience: { vibe: 'any', plan: 'any', logo: 'any', products: 'any', created_within_days: null },
   },
-  {
-    key: 'ambiance',
-    label: 'Annonce : nouvelle ambiance',
-    name: 'Annonce ambiance',
-    subject: '🎨 Ta boutique s’affine — choisis son ambiance',
-    body:
-      'Bonjour {{owner_name}},\n\n' +
-      'On a ajouté les **ambiances** à Bitiko : un thème prêt à l’emploi qui habille **{{shop_name}}** — typographie, arrondis, couleurs — sans rien changer à ce que tu as déjà mis en place.\n\n' +
-      'Choisis la tienne en un clic depuis ton tableau de bord.\n\n' +
-      '**Au programme aussi :** plus de produits et de photos sur le plan gratuit, et un guide intégré pour t’accompagner.\n\n' +
-      'À très vite,\nL’équipe Bitiko',
-    audience: { vibe: 'missing', plan: 'any', logo: 'any', products: 'any', created_within_days: null },
-  },
 ]
 
 const SAMPLE = { shop_name: 'Awa Boutique', shop_url: 'awa.bitiko.shop', owner_name: 'Awa' }
@@ -199,7 +186,7 @@ export function CampaignsTool() {
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [audience, setAudience] = useState<CampaignAudience>(PRESETS[1].audience)
+  const [audience, setAudience] = useState<CampaignAudience>(PRESETS[0].audience)
   const [buttonLabel, setButtonLabel] = useState('')
   const [buttonUrl, setButtonUrl] = useState('')
   const [sentResult, setSentResult] = useState<string | null>(null)
@@ -337,13 +324,6 @@ export function CampaignsTool() {
             className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
             <Plus size={16} aria-hidden /> Nouvelle campagne
-          </button>
-          <button
-            type="button"
-            onClick={() => startNew(PRESETS[1])}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Modèle « nouvelle ambiance »
           </button>
         </div>
 
