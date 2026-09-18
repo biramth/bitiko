@@ -1,5 +1,6 @@
 import {
   BellRing,
+  Blocks,
   Image as ImageIcon,
   LayoutTemplate,
   Megaphone,
@@ -22,6 +23,7 @@ import type {
   CheckoutSectionConfig,
   CoreSectionType,
   FeaturedProductsSectionConfig,
+  FlexibleSectionConfig,
   FooterSectionConfig,
   HeaderSectionConfig,
   HeroSectionConfig,
@@ -37,6 +39,7 @@ import type {
 import { AnnouncementBarEditor } from './sections/AnnouncementBarEditor'
 import { CategoriesEditor, CategoriesRenderer } from './sections/CategoriesSection'
 import { FeaturedProductsEditor, FeaturedProductsRenderer } from './sections/FeaturedProductsSection'
+import { FlexibleEditor, FlexibleRenderer } from './sections/FlexibleSection'
 import { FooterEditor, HeaderEditor } from './sections/HeaderFooterEditors'
 import { HeroEditor, HeroRenderer } from './sections/HeroSection'
 import { ImageEditor, ImageRenderer } from './sections/ImageSection'
@@ -250,6 +253,22 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     }),
     Editor: FaqEditor,
     Renderer: FaqRenderer,
+  },
+  flexible: {
+    label: 'Section personnalisée',
+    description: 'Composez librement avec des blocs texte, image, bouton et espacement.',
+    icon: Blocks,
+    color: 'from-violet-500 to-violet-700',
+    category: 'content',
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('flexible'),
+      type: 'flexible',
+      visible: true,
+      config: { blocks: [] } satisfies FlexibleSectionConfig,
+    }),
+    Editor: FlexibleEditor,
+    Renderer: FlexibleRenderer,
   },
   footer: {
     label: 'Footer',

@@ -20,6 +20,7 @@ export type CoreSectionType =
   | 'product'
   | 'cart'
   | 'checkout'
+  | 'flexible'
 
 /** Section types a specific template contributes on top of the core set
  *  (see `TEMPLATE_EXTRA_SECTIONS` in `features/store-builder/templateSections.ts`).
@@ -193,6 +194,50 @@ export interface LookbookSectionConfig {
   images: LookbookImage[]
 }
 
+/** The building blocks a "Section personnalisée" (flexible) can hold —
+ *  Shopify-style blocks nested inside one section, rather than each being
+ *  its own top-level section. Kept intentionally small (text, image, button,
+ *  spacer): enough to compose a real layout without duplicating what the
+ *  existing top-level sections already do well. */
+export type FlexibleBlockType = 'text' | 'image' | 'button' | 'spacer'
+
+export interface FlexibleTextBlock {
+  id: string
+  type: 'text'
+  heading: string
+  body: string
+  align: 'left' | 'center'
+}
+
+export interface FlexibleImageBlock {
+  id: string
+  type: 'image'
+  imageUrl: string | null
+  caption: string
+  focalX?: number
+  focalY?: number
+}
+
+export interface FlexibleButtonBlock {
+  id: string
+  type: 'button'
+  label: string
+  url: string
+  style: 'solid' | 'outline'
+}
+
+export interface FlexibleSpacerBlock {
+  id: string
+  type: 'spacer'
+  height: 'sm' | 'md' | 'lg'
+}
+
+export type FlexibleBlock = FlexibleTextBlock | FlexibleImageBlock | FlexibleButtonBlock | FlexibleSpacerBlock
+
+export interface FlexibleSectionConfig {
+  blocks: FlexibleBlock[]
+}
+
 export type SectionConfigMap = {
   announcement: AnnouncementBarSectionConfig
   header: HeaderSectionConfig
@@ -209,6 +254,7 @@ export type SectionConfigMap = {
   cart: CartSectionConfig
   checkout: CheckoutSectionConfig
   lookbook: LookbookSectionConfig
+  flexible: FlexibleSectionConfig
 }
 
 export type LayoutSection = {

@@ -170,11 +170,11 @@ function pathToKey(path: string, pages: StorePage[]): ActiveKey | null {
  *  own commerce block) — curated per page so combinations stay sensible
  *  (e.g. no second product grid on the checkout page). */
 const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
-  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
-  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
-  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
-  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq'],
-  not_found: ['text', 'hero', 'image', 'promo', 'faq'],
+  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  not_found: ['text', 'hero', 'image', 'promo', 'faq', 'flexible'],
 }
 
 /** The one section type each system template can't do without — removing it
