@@ -8,24 +8,37 @@ import { uploadShopSectionVideo } from '@/services/shop.service'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { FocalPointPicker } from './FocalPointPicker'
 import { VideoUploadField } from './VideoUploadField'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
 
 export function HeroRenderer({
   shop,
   config,
   themeConfig,
+  sectionId,
+  editable = false,
 }: {
   shop: Shop
   config: HeroSectionConfig
   themeConfig: ThemeConfig
+  sectionId?: string
+  editable?: boolean
 }) {
-  const heading = config.heading.trim() || shop.name
-  const subheading = config.subheading.trim() || shop.description || ''
+  const patch = useInlineEdit(sectionId)
+  const heading = editable ? config.heading : config.heading.trim() || shop.name
+  const subheading = editable ? config.subheading : config.subheading.trim() || shop.description || ''
   const showBanner = config.showBanner && !!shop.banner_url
+  const primaryLabel = editable ? config.primaryButtonLabel ?? '' : config.primaryButtonLabel?.trim() || 'Découvrir la boutique'
+  const whatsappLabel = editable ? config.whatsappButtonLabel ?? '' : config.whatsappButtonLabel?.trim() || 'Nous contacter'
 
   return (
     <div>
       {showBanner && (
-        <div className="aspect-[3/1] w-full overflow-hidden sm:aspect-[16/5]">
+        // The banner image itself is a shop-level asset (Réglages →
+        // Apparence), not part of this section's config, so it isn't
+        // upload-on-hover like the other images here — only its crop
+        // (focal point, in the sidebar) and video overlay are section config.
+        <div className="group/banner relative aspect-[3/1] w-full overflow-hidden sm:aspect-[16/5]">
           {config.bannerVideoUrl ? (
             <video
               src={config.bannerVideoUrl}
@@ -44,20 +57,46 @@ export function HeroRenderer({
               style={{ objectPosition: `${config.bannerFocalX ?? 50}% ${config.bannerFocalY ?? 50}%` }}
             />
           )}
+          {editable && (
+            <span className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover/banner:opacity-100">
+              Image modifiable dans Réglages → Apparence
+            </span>
+          )}
         </div>
       )}
       <section className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-6 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-8 sm:pt-12'}`}>
-        {config.eyebrow.trim() && (
-          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-accent)]">{config.eyebrow}</p>
+        {(config.eyebrow.trim() || editable) && (
+          <InlineText
+            as="p"
+            editable={editable}
+            value={config.eyebrow}
+            onCommit={(eyebrow) => patch({ eyebrow })}
+            placeholder="Texte d'accroche"
+            className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-accent)]"
+            label="Texte d'accroche"
+          />
         )}
-        <h1
+        <InlineText
+          as="h1"
+          editable={editable}
+          value={heading}
+          onCommit={(value) => patch({ heading: value })}
+          placeholder={shop.name}
           className={`mt-2 max-w-2xl font-bold tracking-tight text-[var(--shop-text)] ${HEADING_SCALE[themeConfig.textScale]}`}
           style={{ fontFamily: 'var(--shop-font-heading)' }}
-        >
-          {heading}
-        </h1>
-        {subheading && (
-          <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--shop-text)]/60">{subheading}</p>
+          label="Titre"
+        />
+        {(subheading || editable) && (
+          <InlineText
+            as="p"
+            editable={editable}
+            value={subheading}
+            onCommit={(value) => patch({ subheading: value })}
+            placeholder={shop.description || 'Sous-titre'}
+            className="mt-3 max-w-lg text-base leading-relaxed text-[var(--shop-text)]/60"
+            multiline
+            label="Sous-titre"
+          />
         )}
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link
@@ -65,18 +104,31 @@ export function HeroRenderer({
             style={{ borderRadius: 'var(--shop-radius)' }}
             className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
-            Découvrir la boutique
+            <InlineText
+              editable={editable}
+              value={primaryLabel}
+              onCommit={(value) => patch({ primaryButtonLabel: value })}
+              placeholder="Découvrir la boutique"
+              label="Texte du bouton principal"
+            />
             <ArrowRight size={16} aria-hidden />
           </Link>
-          {shop.whatsapp_number && (
+          {(shop.whatsapp_number || editable) && (
             <a
-              href={`https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}`}
+              href={shop.whatsapp_number ? `https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}` : undefined}
               target="_blank"
               rel="noreferrer"
               style={{ borderRadius: 'var(--shop-radius)' }}
               className="inline-flex items-center gap-2 border border-[var(--shop-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)]/50"
             >
-              <MessageCircle size={16} aria-hidden /> Nous contacter
+              <MessageCircle size={16} aria-hidden />
+              <InlineText
+                editable={editable}
+                value={whatsappLabel}
+                onCommit={(value) => patch({ whatsappButtonLabel: value })}
+                placeholder="Nous contacter"
+                label="Texte du bouton WhatsApp"
+              />
             </a>
           )}
         </div>
@@ -115,6 +167,26 @@ export function HeroEditor({ config, onChange, shop, shopId, sectionId }: Sectio
           placeholder="Laisser vide = description de la boutique"
           className={editorInputClass}
         />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={editorLabelClass}>Texte du bouton principal</label>
+          <input
+            value={config.primaryButtonLabel ?? ''}
+            onChange={(e) => onChange({ ...config, primaryButtonLabel: e.target.value })}
+            placeholder="Découvrir la boutique"
+            className={editorInputClass}
+          />
+        </div>
+        <div>
+          <label className={editorLabelClass}>Texte du bouton WhatsApp</label>
+          <input
+            value={config.whatsappButtonLabel ?? ''}
+            onChange={(e) => onChange({ ...config, whatsappButtonLabel: e.target.value })}
+            placeholder="Nous contacter"
+            className={editorInputClass}
+          />
+        </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input

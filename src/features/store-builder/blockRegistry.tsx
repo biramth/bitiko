@@ -13,6 +13,17 @@ export interface BlockEditorProps<TBlock> {
   sectionId: string
 }
 
+export interface BlockRendererProps<TBlock> {
+  block: TBlock
+  /** Present (and `onChange` set) only inside the builder's live preview —
+   *  lets a block's own Renderer double as its direct-edit surface instead
+   *  of only being editable through the sidebar accordion. */
+  editable?: boolean
+  onChange?: (block: TBlock) => void
+  shopId?: string
+  sectionId?: string
+}
+
 export interface BlockDefinition {
   label: string
   icon: typeof Type
@@ -20,7 +31,7 @@ export interface BlockDefinition {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Editor: React.ComponentType<BlockEditorProps<any>>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Renderer: React.ComponentType<{ block: any }>
+  Renderer: React.ComponentType<BlockRendererProps<any>>
 }
 
 export const BLOCK_REGISTRY: Record<FlexibleBlockType, BlockDefinition> = {

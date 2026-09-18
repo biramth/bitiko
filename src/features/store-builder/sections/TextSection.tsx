@@ -1,24 +1,50 @@
 import type { TextSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
 
-export function TextRenderer({ config, themeConfig }: { config: TextSectionConfig; themeConfig: ThemeConfig }) {
-  if (!config.heading.trim() && !config.body.trim()) return null
+export function TextRenderer({
+  config,
+  themeConfig,
+  sectionId,
+  editable = false,
+}: {
+  config: TextSectionConfig
+  themeConfig: ThemeConfig
+  sectionId?: string
+  editable?: boolean
+}) {
+  const patch = useInlineEdit(sectionId)
+  if (!editable && !config.heading.trim() && !config.body.trim()) return null
   const align = config.align === 'center' ? 'text-center mx-auto' : 'text-left'
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6">
       <div className={`max-w-2xl ${align}`}>
-        {config.heading.trim() && (
-          <h2
+        {(config.heading.trim() || editable) && (
+          <InlineText
+            as="h2"
+            editable={editable}
+            value={config.heading}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre"
             className={`font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
             style={{ fontFamily: 'var(--shop-font-heading)' }}
-          >
-            {config.heading}
-          </h2>
+            label="Titre"
+          />
         )}
-        {config.body.trim() && (
-          <p className="mt-3 whitespace-pre-line text-[var(--shop-text)]/70">{config.body}</p>
+        {(config.body.trim() || editable) && (
+          <InlineText
+            as="p"
+            editable={editable}
+            value={config.body}
+            onCommit={(body) => patch({ body })}
+            placeholder="Texte"
+            className="mt-3 whitespace-pre-line text-[var(--shop-text)]/70"
+            multiline
+            label="Texte"
+          />
         )}
       </div>
     </section>

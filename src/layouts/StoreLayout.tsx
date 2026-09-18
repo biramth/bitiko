@@ -1,11 +1,14 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { MapPin, Menu, MessageCircle, ShoppingCart, Store, X } from 'lucide-react'
+import { MapPin, Menu, MessageCircle, Plus, ShoppingCart, Store, Trash2, X } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
 import { CORE_SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
 import { PREVIEW_NAV, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
+import { useInlineEdit } from '@/features/store-builder/inline/useInlineEdit'
+import { InlineText } from '@/features/store-builder/inline/InlineText'
+import { InlineLinkPopover } from '@/features/store-builder/inline/InlineLinkPopover'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { themeConfigToCssVars } from '@/config/themeTokens'
 import { useShopFavicon } from '@/hooks/usePageSeo'
@@ -15,7 +18,7 @@ import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import { ensureReadableAccent } from '@/utils/color'
-import type { AnnouncementBarSectionConfig, FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
+import type { AnnouncementBarSectionConfig, FooterSectionConfig, HeaderSectionConfig, NavigationLink } from '@/types/builder'
 
 const DEFAULT_ANNOUNCEMENT: AnnouncementBarSectionConfig = { message: '', linkLabel: '', linkUrl: '', dismissible: true }
 const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] }
@@ -102,20 +105,52 @@ function isExternalUrl(url: string) {
   return /^https?:\/\//i.test(url)
 }
 
-function AnnouncementBar({ shopId, config }: { shopId: string | undefined; config: AnnouncementBarSectionConfig }) {
+function AnnouncementBar({
+  shopId,
+  sectionId,
+  config,
+  editable,
+}: {
+  shopId: string | undefined
+  sectionId: string | undefined
+  config: AnnouncementBarSectionConfig
+  editable: boolean
+}) {
   const { isDismissed, dismiss } = useAnnouncementDismissed(shopId, config.message)
-  if (!config.message.trim() || isDismissed) return null
+  const patch = useInlineEdit(sectionId)
+  // In the builder, an empty bar still needs to render so there's something
+  // to click into and type a first message — customers never see this case
+  // since editable is false on the real storefront.
+  if ((!config.message.trim() || isDismissed) && !editable) return null
 
-  const hasLink = config.linkLabel.trim() && config.linkUrl.trim()
+  const hasLink = editable ? config.linkLabel.trim() || config.linkUrl.trim() : config.linkLabel.trim() && config.linkUrl.trim()
 
   return (
     <div
       style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', color: config.textColor || '#ffffff' }}
       className="relative flex items-center justify-center gap-x-3 gap-y-1 px-10 py-2 text-center text-xs font-medium sm:text-sm"
     >
-      <span>{config.message}</span>
+      <InlineText
+        editable={editable}
+        value={config.message}
+        onCommit={(message) => patch({ message })}
+        placeholder="Écrivez votre annonce…"
+        label="Message de l'annonce"
+      />
       {hasLink &&
-        (isExternalUrl(config.linkUrl) ? (
+        (editable ? (
+          <InlineLinkPopover url={config.linkUrl} onCommit={(linkUrl) => patch({ linkUrl })} editable fieldLabel="Lien de l'annonce">
+            <InlineText
+              as="span"
+              editable
+              value={config.linkLabel}
+              onCommit={(linkLabel) => patch({ linkLabel })}
+              placeholder="En savoir plus"
+              className="shrink-0 underline underline-offset-2"
+              label="Texte du lien"
+            />
+          </InlineLinkPopover>
+        ) : isExternalUrl(config.linkUrl) ? (
           <a href={config.linkUrl} target="_blank" rel="noreferrer" className="shrink-0 underline underline-offset-2 hover:opacity-80">
             {config.linkLabel}
           </a>
@@ -164,7 +199,7 @@ function resolveHeaderNavLinks(
 export function StoreLayout() {
   const { itemCount } = useCart()
   const { shop } = useTenant()
-  const { themeColor, themeConfig, announcementSection, headerSection, footerSection, isDraftPreview } = useEffectiveShopConfig(shop)
+  const { themeColor, themeConfig, announcementSection, headerSection, footerSection, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
   const { planKey } = useShopPlan(shop?.id)
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -185,6 +220,7 @@ export function StoreLayout() {
   // palette extraction) darkened just enough for white text to stay legible,
   // rather than a fixed navy that has nothing to do with the shop's brand.
   const footerBackground = footer.backgroundColor || ensureReadableAccent(themeColor || '#d9612e', 4.5)
+  const defaultCopyright = `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`
   const socialLinks = Object.entries(shop?.social_links ?? {}).filter(([, url]) => !!url)
   const showBitikoBranding = !(planKey === 'pro' && footer.hideBitikoBranding)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
@@ -196,6 +232,9 @@ export function StoreLayout() {
   const nativeLinkClass = 'text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60'
   const ctaLinkClass = 'inline-flex items-center rounded-lg bg-[var(--shop-button)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90'
   const ghostLinkClass = 'inline-flex items-center rounded-lg border border-ink-900/15 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-ink-900/40'
+  const headerPatch = useInlineEdit(headerSection?.id)
+  const setMenu = (menu: NavigationLink[]) => headerPatch({ menu })
+  const footerPatch = useInlineEdit(footerSection?.id)
 
   useShopFavicon(shop?.logo_url)
 
@@ -206,7 +245,7 @@ export function StoreLayout() {
     >
       <PreviewNavPing enabled={isEmbeddedPreview} />
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={announcementSection?.id} label={CORE_SECTION_REGISTRY.announcement.label}>
-        <AnnouncementBar shopId={shop?.id} config={announcement} />
+        <AnnouncementBar shopId={shop?.id} sectionId={announcementSection?.id} config={announcement} editable={inlineEditable} />
       </PreviewClickTarget>
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={CORE_SECTION_REGISTRY.header.label}>
         <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
@@ -220,28 +259,73 @@ export function StoreLayout() {
             <span className="truncate text-base sm:text-lg">{shopName}</span>
           </Link>
           <div className="flex shrink-0 items-center gap-4 sm:gap-7">
-            {navLinks.length > 0 && (
+            {(navLinks.length > 0 || (inlineEditable && usesCustomMenu)) && (
               <nav className="hidden items-center gap-5 sm:flex sm:gap-7">
-                {navLinks.map((link) =>
-                  link.external ? (
-                    <a
-                      key={link.key}
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={usesCustomMenu ? nativeLinkClass : ghostLinkClass}
-                    >
-                      {link.label}
-                    </a>
-                  ) : (
-                    <Link
-                      key={link.key}
-                      to={link.href}
-                      className={usesCustomMenu ? nativeLinkClass : ctaLinkClass}
-                    >
-                      {link.label}
-                    </Link>
-                  ),
+                {inlineEditable && usesCustomMenu
+                  ? header.menu!.map((link, index) => (
+                      <div key={index} className="group/navlink relative flex items-center gap-1">
+                        <InlineLinkPopover
+                          url={link.href}
+                          onCommit={(href) => setMenu(header.menu!.map((l, i) => (i === index ? { ...l, href } : l)))}
+                          editable
+                          fieldLabel="Lien de navigation"
+                        >
+                          <InlineText
+                            editable
+                            value={link.label}
+                            onCommit={(label) => setMenu(header.menu!.map((l, i) => (i === index ? { ...l, label } : l)))}
+                            placeholder="Lien"
+                            className={nativeLinkClass}
+                            label="Libellé du lien"
+                          />
+                        </InlineLinkPopover>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setMenu(header.menu!.filter((_, i) => i !== index))
+                          }}
+                          aria-label="Supprimer ce lien"
+                          className="shrink-0 text-[var(--shop-text)]/40 opacity-0 transition-opacity group-hover/navlink:opacity-100 hover:text-red-600"
+                        >
+                          <Trash2 size={12} aria-hidden />
+                        </button>
+                      </div>
+                    ))
+                  : navLinks.map((link) =>
+                      link.external ? (
+                        <a
+                          key={link.key}
+                          href={link.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={usesCustomMenu ? nativeLinkClass : ghostLinkClass}
+                        >
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link
+                          key={link.key}
+                          to={link.href}
+                          className={usesCustomMenu ? nativeLinkClass : ctaLinkClass}
+                        >
+                          {link.label}
+                        </Link>
+                      ),
+                    )}
+                {inlineEditable && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setMenu([...(header.menu ?? []), { label: 'Nouveau lien', href: '/catalogue' }])
+                    }}
+                    className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/40 transition-opacity hover:text-[var(--shop-text)]"
+                  >
+                    <Plus size={13} aria-hidden /> Lien
+                  </button>
                 )}
               </nav>
             )}
@@ -389,7 +473,14 @@ export function StoreLayout() {
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 border-t border-[var(--footer-text)]/10 py-4 text-center text-xs text-[var(--footer-text)]/40 sm:flex-row sm:justify-between sm:px-4">
-          <p>{footer.copyrightText.trim() || `© ${new Date().getFullYear()} ${shopName}. Tous droits réservés.`}</p>
+          <InlineText
+            as="p"
+            editable={inlineEditable}
+            value={inlineEditable ? footer.copyrightText : footer.copyrightText.trim() || defaultCopyright}
+            onCommit={(copyrightText) => footerPatch({ copyrightText })}
+            placeholder={defaultCopyright}
+            label="Texte de copyright"
+          />
           <p className="flex items-center gap-3">
             <a href={`${platformUrl()}/legal/cgu`} className="hover:text-[var(--footer-text)]/70">CGU</a>
             <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-[var(--footer-text)]/70">Confidentialité</a>

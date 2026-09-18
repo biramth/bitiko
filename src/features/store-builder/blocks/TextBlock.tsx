@@ -1,18 +1,37 @@
 import type { FlexibleTextBlock } from '@/types/builder'
 import { editorInputClass, editorLabelClass } from '../sections/shared'
-import type { BlockEditorProps } from '../blockRegistry'
+import type { BlockEditorProps, BlockRendererProps } from '../blockRegistry'
+import { InlineText } from '../inline/InlineText'
 
-export function TextBlockRenderer({ block }: { block: FlexibleTextBlock }) {
-  if (!block.heading.trim() && !block.body.trim()) return null
+export function TextBlockRenderer({ block, editable = false, onChange }: BlockRendererProps<FlexibleTextBlock>) {
+  if (!editable && !block.heading.trim() && !block.body.trim()) return null
   const align = block.align === 'center' ? 'text-center mx-auto' : 'text-left'
   return (
     <div className={`max-w-2xl ${align}`}>
-      {block.heading.trim() && (
-        <h3 className="font-bold text-[var(--shop-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
-          {block.heading}
-        </h3>
+      {(block.heading.trim() || editable) && (
+        <InlineText
+          as="h3"
+          editable={editable}
+          value={block.heading}
+          onCommit={(heading) => onChange?.({ ...block, heading })}
+          placeholder="Titre (optionnel)"
+          className="font-bold text-[var(--shop-text)]"
+          style={{ fontFamily: 'var(--shop-font-heading)' }}
+          label="Titre"
+        />
       )}
-      {block.body.trim() && <p className="mt-2 whitespace-pre-line text-[var(--shop-text)]/70">{block.body}</p>}
+      {(block.body.trim() || editable) && (
+        <InlineText
+          as="p"
+          editable={editable}
+          value={block.body}
+          onCommit={(body) => onChange?.({ ...block, body })}
+          placeholder="Texte"
+          className="mt-2 whitespace-pre-line text-[var(--shop-text)]/70"
+          multiline
+          label="Texte"
+        />
+      )}
     </div>
   )
 }

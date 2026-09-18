@@ -91,6 +91,12 @@ export interface HeroSectionConfig {
    *  a looping muted background video — the image and its focal point stay
    *  configured as a fallback/poster-equivalent for browsers that can't play it. */
   bannerVideoUrl?: string
+  /** CTA button labels — both buttons' destinations stay fixed (catalogue /
+   *  WhatsApp, the only two actions a hero can meaningfully send someone to)
+   *  but their wording is a copy choice, so it's editable like everything
+   *  else. Undefined = the historical hardcoded French copy. */
+  primaryButtonLabel?: string
+  whatsappButtonLabel?: string
 }
 
 export interface TextSectionConfig {

@@ -1,20 +1,78 @@
 import { useState } from 'react'
 import { ChevronDown, GripVertical, Plus, Trash2 } from 'lucide-react'
+import type { Shop } from '@/types'
 import type { FlexibleBlock, FlexibleSectionConfig } from '@/types/builder'
 import { BLOCK_REGISTRY } from '../blockRegistry'
+import { useInlineEdit } from '../inline/useInlineEdit'
 import type { SectionEditorProps } from './shared'
 
-export function FlexibleRenderer({ config }: { config: FlexibleSectionConfig }) {
+export function FlexibleRenderer({
+  config,
+  shop,
+  sectionId,
+  editable = false,
+}: {
+  config: FlexibleSectionConfig
+  shop?: Shop
+  sectionId?: string
+  editable?: boolean
+}) {
+  const patch = useInlineEdit(sectionId)
   const blocks = config.blocks ?? []
-  if (blocks.length === 0) return null
+  const addBlock = (type: keyof typeof BLOCK_REGISTRY) => patch({ blocks: [...blocks, BLOCK_REGISTRY[type].createDefault()] })
+  if (blocks.length === 0 && !editable) return null
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] space-y-6 px-4 py-6 sm:px-6">
       {blocks.map((block) => {
         const def = BLOCK_REGISTRY[block.type]
         if (!def) return null
         const Renderer = def.Renderer
-        return <Renderer key={block.id} block={block} />
+        const content = (
+          <Renderer
+            block={block}
+            editable={editable}
+            shopId={shop?.id}
+            sectionId={sectionId}
+            onChange={(next: FlexibleBlock) => patch({ blocks: blocks.map((b) => (b.id === block.id ? next : b)) })}
+          />
+        )
+        if (!editable) return <div key={block.id}>{content}</div>
+        return (
+          <div key={block.id} className="group/block relative rounded-lg outline-1 -outline-offset-1 outline-transparent hover:outline-dashed hover:outline-[var(--shop-accent)]/40">
+            {content}
+            <button
+              type="button"
+              onClick={() => patch({ blocks: blocks.filter((b) => b.id !== block.id) })}
+              aria-label="Supprimer ce bloc"
+              className="absolute -right-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-red-600 text-white opacity-0 shadow transition-opacity group-hover/block:opacity-100 hover:bg-red-700"
+            >
+              <Trash2 size={12} aria-hidden />
+            </button>
+          </div>
+        )
       })}
+      {editable && blocks.length === 0 && (
+        <p className="rounded-lg border border-dashed border-[var(--shop-text)]/15 py-8 text-center text-sm text-[var(--shop-text)]/40">
+          Section vide — ajoutez un bloc ci-dessous.
+        </p>
+      )}
+      {editable && (
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(BLOCK_REGISTRY) as (keyof typeof BLOCK_REGISTRY)[]).map((type) => {
+            const Icon = BLOCK_REGISTRY[type].icon
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => addBlock(type)}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--shop-text)]/20 px-3 py-1.5 text-xs font-medium text-[var(--shop-text)]/60 hover:border-[var(--shop-accent)] hover:text-[var(--shop-accent)]"
+              >
+                <Icon size={13} aria-hidden /> {BLOCK_REGISTRY[type].label}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

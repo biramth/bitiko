@@ -11,7 +11,7 @@ export function HomePage() {
     image: shop?.banner_url ?? shop?.logo_url,
     siteName: shop?.name,
   })
-  const { bodySections, themeConfig, isDraftPreview } = useEffectiveShopConfig(shop)
+  const { bodySections, themeConfig, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
 
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
 
@@ -19,7 +19,13 @@ export function HomePage() {
 
   return (
     <div>
-      <SectionList sections={bodySections} shop={shop} themeConfig={themeConfig} isEmbeddedPreview={isEmbeddedPreview} />
+      <SectionList
+        sections={bodySections}
+        shop={shop}
+        themeConfig={themeConfig}
+        isEmbeddedPreview={isEmbeddedPreview}
+        inlineEditable={inlineEditable}
+      />
     </div>
   )
 }

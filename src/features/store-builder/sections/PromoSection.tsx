@@ -3,20 +3,43 @@ import { ArrowRight } from 'lucide-react'
 import type { PromoSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
+import { InlineLinkPopover } from '../inline/InlineLinkPopover'
 
 function isExternal(url: string) {
   return /^https?:\/\//i.test(url)
 }
 
-export function PromoRenderer({ config, themeConfig }: { config: PromoSectionConfig; themeConfig: ThemeConfig }) {
-  if (!config.heading.trim()) return null
+export function PromoRenderer({
+  config,
+  themeConfig,
+  sectionId,
+  editable = false,
+}: {
+  config: PromoSectionConfig
+  themeConfig: ThemeConfig
+  sectionId?: string
+  editable?: boolean
+}) {
+  const patch = useInlineEdit(sectionId)
+  if (!editable && !config.heading.trim()) return null
 
-  const button = config.buttonLabel.trim() && (
+  const buttonLabel = (
+    <InlineText
+      editable={editable}
+      value={config.buttonLabel}
+      onCommit={(buttonLabel) => patch({ buttonLabel })}
+      placeholder="Voir l'offre"
+      label="Texte du bouton"
+    />
+  )
+  const button = (config.buttonLabel.trim() || editable) && (
     <span
       className="mt-5 inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-accent)]"
       style={{ borderRadius: 'var(--shop-radius)' }}
     >
-      {config.buttonLabel}
+      {buttonLabel}
       <ArrowRight size={15} aria-hidden />
     </span>
   )
@@ -27,12 +50,34 @@ export function PromoRenderer({ config, themeConfig }: { config: PromoSectionCon
         className="flex flex-col items-start px-6 py-10 text-white sm:px-10"
         style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', borderRadius: 'var(--shop-radius)' }}
       >
-        <h2 className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={{ fontFamily: 'var(--shop-font-heading)' }}>
-          {config.heading}
-        </h2>
-        {config.body.trim() && <p className="mt-2 max-w-md text-white/80">{config.body}</p>}
+        <InlineText
+          as="h2"
+          editable={editable}
+          value={config.heading}
+          onCommit={(heading) => patch({ heading })}
+          placeholder="Titre de la promotion"
+          className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+          style={{ fontFamily: 'var(--shop-font-heading)' }}
+          label="Titre"
+        />
+        {(config.body.trim() || editable) && (
+          <InlineText
+            as="p"
+            editable={editable}
+            value={config.body}
+            onCommit={(body) => patch({ body })}
+            placeholder="Texte"
+            className="mt-2 max-w-md text-white/80"
+            multiline
+            label="Texte"
+          />
+        )}
         {button &&
-          (config.buttonLink && isExternal(config.buttonLink) ? (
+          (editable ? (
+            <InlineLinkPopover url={config.buttonLink} onCommit={(buttonLink) => patch({ buttonLink })} editable>
+              {button}
+            </InlineLinkPopover>
+          ) : config.buttonLink && isExternal(config.buttonLink) ? (
             <a href={config.buttonLink} target="_blank" rel="noreferrer">
               {button}
             </a>

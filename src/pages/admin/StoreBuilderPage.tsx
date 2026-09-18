@@ -779,6 +779,14 @@ function BuilderEditor({
                   themeConfig={previewThemeConfig}
                   onSelectSection={previewTemplate ? () => {} : selectSectionAndFocus}
                   onNavigate={onNavigate}
+                  onInlineEdit={
+                    previewTemplate
+                      ? undefined
+                      : (id, patch) => {
+                          const section = builder.sections.find((s) => s.id === id)
+                          if (section) builder.updateSectionConfig(id, { ...section.config, ...patch })
+                        }
+                  }
                 />
               </div>
             </div>

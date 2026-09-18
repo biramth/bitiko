@@ -4,25 +4,52 @@ import { uploadShopSectionImage } from '@/services/shop.service'
 import type { FlexibleImageBlock } from '@/types/builder'
 import { editorLabelClass } from '../sections/shared'
 import { FocalPointPicker } from '../sections/FocalPointPicker'
-import type { BlockEditorProps } from '../blockRegistry'
+import type { BlockEditorProps, BlockRendererProps } from '../blockRegistry'
+import { InlineText } from '../inline/InlineText'
+import { InlineImage } from '../inline/InlineImage'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
-export function ImageBlockRenderer({ block }: { block: FlexibleImageBlock }) {
-  if (!block.imageUrl) return null
+export function ImageBlockRenderer({ block, editable = false, onChange, shopId, sectionId }: BlockRendererProps<FlexibleImageBlock>) {
+  if (!block.imageUrl && !editable) return null
   return (
     <figure>
-      <div className="aspect-[21/9] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
-        <img
-          src={block.imageUrl}
-          alt={block.caption}
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
-          style={{ objectPosition: `${block.focalX ?? 50}% ${block.focalY ?? 50}%` }}
+      <InlineImage
+        editable={editable}
+        onUpload={async (file) => {
+          if (!shopId || !sectionId) return
+          const url = await uploadShopSectionImage(shopId, sectionId, file, block.id)
+          onChange?.({ ...block, imageUrl: url })
+        }}
+        className="aspect-[21/9] w-full overflow-hidden bg-sand-100"
+        style={{ borderRadius: 'var(--shop-radius)' }}
+      >
+        {block.imageUrl ? (
+          <img
+            src={block.imageUrl}
+            alt={block.caption}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+            style={{ objectPosition: `${block.focalX ?? 50}% ${block.focalY ?? 50}%` }}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[var(--shop-text)]/30">
+            <ImageOff size={24} aria-hidden />
+          </div>
+        )}
+      </InlineImage>
+      {(block.caption.trim() || editable) && (
+        <InlineText
+          as="figcaption"
+          editable={editable}
+          value={block.caption}
+          onCommit={(caption) => onChange?.({ ...block, caption })}
+          placeholder="Légende (optionnel)"
+          className="mt-2 text-sm text-[var(--shop-text)]/60"
+          label="Légende"
         />
-      </div>
-      {block.caption.trim() && <figcaption className="mt-2 text-sm text-[var(--shop-text)]/60">{block.caption}</figcaption>}
+      )}
     </figure>
   )
 }

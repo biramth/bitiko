@@ -18,6 +18,12 @@ interface EffectiveConfig {
   footerSection: LayoutSection | undefined
   bodySections: LayoutSection[]
   isDraftPreview: boolean
+  /** True only inside the builder's embedded preview iframe, and only once
+   *  the parent has confirmed inline editing is allowed (it's disabled while
+   *  previewing a not-yet-applied template). A standalone "Preview" tab
+   *  (draft mode, no parent window) never receives this, so it stays false
+   *  there — there'd be nowhere to send an inline edit anyway. */
+  inlineEditable: boolean
 }
 
 /**
@@ -89,7 +95,9 @@ export function useEffectiveConfig(
     (s) => s.type !== 'announcement' && s.type !== 'header' && s.type !== 'footer' && s.visible,
   )
 
-  return { sections, themeColor, themeConfig, announcementSection, headerSection, footerSection, bodySections, isDraftPreview }
+  const inlineEditable = isDraftPreview && liveUpdate?.inlineEditable === true
+
+  return { sections, themeColor, themeConfig, announcementSection, headerSection, footerSection, bodySections, isDraftPreview, inlineEditable }
 }
 
 /** Backwards-compatible alias used by the home storefront. */
