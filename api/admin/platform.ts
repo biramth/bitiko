@@ -471,7 +471,7 @@ async function handleCampaignAudience(req: VercelRequest, res: VercelResponse) {
 
     const audience = sanitizeAudience((req.body ?? {}).audience)
     const admin = getSupabaseAdmin()
-    const { data, error } = await admin.rpc('platform_audience', { audience })
+    const { data, error } = await admin.rpc('platform_audience', { audience, viewer: member.id })
     if (error) throw error
 
     const rows = (data ?? []) as {
@@ -583,6 +583,7 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
 
     const { data: audienceRows, error: audienceError } = await admin.rpc('platform_audience', {
       audience: campaign.audience ?? {},
+      viewer: member.id,
     })
     if (audienceError) throw audienceError
     const recipients = (audienceRows ?? []) as { shop_id: string; owner_id: string; shop_name: string; slug: string }[]
