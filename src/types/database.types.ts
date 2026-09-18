@@ -1,4 +1,4 @@
-import type { BuilderDraft, LayoutSection, SystemTemplateMap, ThemeConfig } from './builder.js'
+import type { BuilderDraft, LayoutSection, SystemTemplateKey, SystemTemplateMap, ThemeConfig } from './builder.js'
 import type { StoreProfileAnswers } from '../features/onboarding/storeProfile.js'
 
 export type Json =
@@ -703,6 +703,50 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_saved_themes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sections: LayoutSection[]
+          shop_id: string
+          templates: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color: string
+          theme_config: ThemeConfig
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sections?: LayoutSection[]
+          shop_id: string
+          templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color: string
+          theme_config: ThemeConfig
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sections?: LayoutSection[]
+          shop_id?: string
+          templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color?: string
+          theme_config?: ThemeConfig
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_saved_themes_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]

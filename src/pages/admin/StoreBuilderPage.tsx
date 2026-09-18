@@ -22,7 +22,7 @@ import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFram
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
-import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
+import { TemplateLibraryPanel, isSavedThemeKey } from '@/features/store-builder/TemplateLibraryPanel'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { updateShop } from '@/services/shop.service'
@@ -203,7 +203,10 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           checkout: template.layout.checkout,
           not_found: template.layout.not_found ?? buildDefaultSystemTemplate('not_found'),
         },
-        templateId: template.key,
+        // A saved theme is layered on top of the shop's existing vertical,
+        // not a vertical switch — never overwrite template_id for one (see
+        // publishStore, which only sets it when this is present).
+        ...(isSavedThemeKey(template.key) ? {} : { templateId: template.key }),
       },
     })
 }
@@ -265,6 +268,10 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeConfig: shop.theme_config,
       },
       templateSections: (tpl) => {
+        // A saved theme is the merchant's own exact design, already final —
+        // never run it through onboarding-profile personalization, which is
+        // only meant to fill in the built-in templates' placeholder copy.
+        if (isSavedThemeKey(tpl.key)) return ensurePinnedSections(tpl.layout.home)
         const profile = profileFromShop(shop)
         return profile ? generateHomeLayout(tpl, profile) : ensurePinnedSections(tpl.layout.home)
       },
