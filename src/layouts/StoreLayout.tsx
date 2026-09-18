@@ -15,8 +15,9 @@ import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
 import { ensureReadableAccent } from '@/utils/color'
-import type { FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
+import type { AnnouncementBarSectionConfig, FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
 
+const DEFAULT_ANNOUNCEMENT: AnnouncementBarSectionConfig = { message: '', linkLabel: '', linkUrl: '', dismissible: true }
 const DEFAULT_HEADER: HeaderSectionConfig = { showLogo: true, showCatalogLink: true, showContactLink: false, sticky: true, menu: [] }
 const DEFAULT_FOOTER: FooterSectionConfig = {
   showContact: true,
@@ -70,6 +71,73 @@ function PreviewClickTarget({
   )
 }
 
+const ANNOUNCEMENT_DISMISS_KEY_PREFIX = 'bitiko:announcement-dismissed'
+
+/** Persists the dismissed message per shop in localStorage — a per-visitor
+ *  preference, not shop data — so changing the message brings the bar back
+ *  even for someone who dismissed a previous one on this device. */
+function useAnnouncementDismissed(shopId: string | undefined, message: string) {
+  const storageKey = shopId ? `${ANNOUNCEMENT_DISMISS_KEY_PREFIX}:${shopId}` : null
+  const [dismissedMessage, setDismissedMessage] = useState<string | null>(() => {
+    if (!storageKey || typeof window === 'undefined') return null
+    try {
+      return window.localStorage.getItem(storageKey)
+    } catch {
+      return null
+    }
+  })
+  const dismiss = () => {
+    if (!storageKey) return
+    setDismissedMessage(message)
+    try {
+      window.localStorage.setItem(storageKey, message)
+    } catch {
+      // Private browsing / full quota — dismissal just won't survive a reload.
+    }
+  }
+  return { isDismissed: dismissedMessage === message, dismiss }
+}
+
+function isExternalUrl(url: string) {
+  return /^https?:\/\//i.test(url)
+}
+
+function AnnouncementBar({ shopId, config }: { shopId: string | undefined; config: AnnouncementBarSectionConfig }) {
+  const { isDismissed, dismiss } = useAnnouncementDismissed(shopId, config.message)
+  if (!config.message.trim() || isDismissed) return null
+
+  const hasLink = config.linkLabel.trim() && config.linkUrl.trim()
+
+  return (
+    <div
+      style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', color: config.textColor || '#ffffff' }}
+      className="relative flex items-center justify-center gap-x-3 gap-y-1 px-10 py-2 text-center text-xs font-medium sm:text-sm"
+    >
+      <span>{config.message}</span>
+      {hasLink &&
+        (isExternalUrl(config.linkUrl) ? (
+          <a href={config.linkUrl} target="_blank" rel="noreferrer" className="shrink-0 underline underline-offset-2 hover:opacity-80">
+            {config.linkLabel}
+          </a>
+        ) : (
+          <Link to={config.linkUrl} className="shrink-0 underline underline-offset-2 hover:opacity-80">
+            {config.linkLabel}
+          </Link>
+        ))}
+      {config.dismissible && (
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Fermer"
+          className="absolute right-3 top-1/2 -translate-y-1/2 opacity-70 hover:opacity-100"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  )
+}
+
 /** Resolves the header's nav links once so the desktop bar and the mobile
  *  menu panel render from the exact same source instead of duplicating the
  *  custom-menu-vs-catalogue/contact logic. */
@@ -96,7 +164,7 @@ function resolveHeaderNavLinks(
 export function StoreLayout() {
   const { itemCount } = useCart()
   const { shop } = useTenant()
-  const { themeColor, themeConfig, headerSection, footerSection, isDraftPreview } = useEffectiveShopConfig(shop)
+  const { themeColor, themeConfig, announcementSection, headerSection, footerSection, isDraftPreview } = useEffectiveShopConfig(shop)
   const { planKey } = useShopPlan(shop?.id)
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -109,6 +177,7 @@ export function StoreLayout() {
     setMobileMenuOpen(false)
   }
   const shopName = shop?.name ?? 'Boutique'
+  const announcement = (announcementSection?.config as AnnouncementBarSectionConfig | undefined) ?? DEFAULT_ANNOUNCEMENT
   const header = (headerSection?.config as HeaderSectionConfig | undefined) ?? DEFAULT_HEADER
   const footer = (footerSection?.config as FooterSectionConfig | undefined) ?? DEFAULT_FOOTER
   // Unset, the footer's background derives from the shop's own primary color
@@ -136,6 +205,9 @@ export function StoreLayout() {
       style={{ ...themeConfigToCssVars(themeColor, themeConfig), fontFamily: 'var(--shop-font-body)' } as React.CSSProperties}
     >
       <PreviewNavPing enabled={isEmbeddedPreview} />
+      <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={announcementSection?.id} label={CORE_SECTION_REGISTRY.announcement.label}>
+        <AnnouncementBar shopId={shop?.id} config={announcement} />
+      </PreviewClickTarget>
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={headerSection?.id} label={CORE_SECTION_REGISTRY.header.label}>
         <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
         <div className="mx-auto flex max-w-[var(--shop-content-width)] items-center justify-between gap-3 px-4 py-4 sm:px-6">

@@ -6,6 +6,7 @@
 
 /** Section types every template can use, regardless of vertical. */
 export type CoreSectionType =
+  | 'announcement'
   | 'header'
   | 'hero'
   | 'text'
@@ -32,6 +33,20 @@ export type SectionType = CoreSectionType | TemplateSectionType
 export interface NavigationLink {
   label: string
   href: string
+}
+
+/** Site-wide bar above the header — renders nothing until a message is set,
+ *  same "empty = hidden" convention as Promo/FAQ. Colors default to the
+ *  shop's own accent/button, kept overridable for the same reason the
+ *  footer's are (a bar sitting above the page needs its own contrast pair,
+ *  independent of the body's `--shop-bg`/`--shop-text`). */
+export interface AnnouncementBarSectionConfig {
+  message: string
+  linkLabel: string
+  linkUrl: string
+  dismissible: boolean
+  backgroundColor?: string
+  textColor?: string
 }
 
 export interface HeaderSectionConfig {
@@ -164,6 +179,7 @@ export interface LookbookSectionConfig {
 }
 
 export type SectionConfigMap = {
+  announcement: AnnouncementBarSectionConfig
   header: HeaderSectionConfig
   hero: HeroSectionConfig
   text: TextSectionConfig
@@ -221,7 +237,7 @@ export interface BuilderDraft {
  *  body sections of each are stored as an array under `shops.page_templates`;
  *  their drafts live store-wide in `builder_draft.templates`. The home page
  *  keeps its existing `layout_sections` / `builder_draft` columns. */
-export type SystemTemplateKey = 'catalogue' | 'product' | 'cart' | 'checkout'
+export type SystemTemplateKey = 'catalogue' | 'product' | 'cart' | 'checkout' | 'not_found'
 
 export interface SystemTemplateState {
   published?: LayoutSection[]
@@ -229,7 +245,7 @@ export interface SystemTemplateState {
 
 export type SystemTemplateMap = Partial<Record<SystemTemplateKey, SystemTemplateState>>
 
-export const SYSTEM_TEMPLATE_KEYS: SystemTemplateKey[] = ['catalogue', 'product', 'cart', 'checkout']
+export const SYSTEM_TEMPLATE_KEYS: SystemTemplateKey[] = ['catalogue', 'product', 'cart', 'checkout', 'not_found']
 
 /** A full-store design shipped by a template: the global theme plus a layout
  *  for every storefront page (home + the four system templates). Custom
@@ -240,6 +256,9 @@ export interface StoreTemplateLayout {
   product: LayoutSection[]
   cart: LayoutSection[]
   checkout: LayoutSection[]
+  /** Optional — a vertical template with no opinion on the 404 page falls
+   *  back to the generic default (see `buildDefaultSystemTemplate`). */
+  not_found?: LayoutSection[]
 }
 
 export interface StoreTemplate {

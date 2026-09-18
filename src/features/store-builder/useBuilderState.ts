@@ -148,8 +148,8 @@ export function useBuilderState(target: BuilderTarget) {
     const draggedIndex = sections.findIndex((s) => s.id === draggedId)
     const targetIndex = sections.findIndex((s) => s.id === targetId)
     if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) return
-    if (sections[draggedIndex].type === 'header' || sections[draggedIndex].type === 'footer') return
-    if (sections[targetIndex].type === 'header' || sections[targetIndex].type === 'footer') return
+    if (registry[sections[draggedIndex].type]?.pinned) return
+    if (registry[sections[targetIndex].type]?.pinned) return
     const next = [...sections]
     const [dragged] = next.splice(draggedIndex, 1)
     next.splice(targetIndex, 0, dragged)

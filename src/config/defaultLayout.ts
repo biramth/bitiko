@@ -14,6 +14,12 @@ export function createSectionId(type: string): string {
 export function buildDefaultSections(): LayoutSection[] {
   return [
     {
+      id: createSectionId('announcement'),
+      type: 'announcement',
+      visible: true,
+      config: { message: '', linkLabel: '', linkUrl: '', dismissible: true },
+    },
+    {
       id: createSectionId('header'),
       type: 'header',
       visible: true,
@@ -60,15 +66,18 @@ export function buildDefaultSections(): LayoutSection[] {
  * Backfills whichever is missing so every shop can always edit both.
  */
 export function ensurePinnedSections(sections: LayoutSection[]): LayoutSection[] {
+  const hasAnnouncement = sections.some((s) => s.type === 'announcement')
   const hasHeader = sections.some((s) => s.type === 'header')
   const hasFooter = sections.some((s) => s.type === 'footer')
-  if (hasHeader && hasFooter) return sections
+  if (hasAnnouncement && hasHeader && hasFooter) return sections
 
   const defaults = buildDefaultSections()
+  const defaultAnnouncement = defaults.find((s) => s.type === 'announcement')!
   const defaultHeader = defaults.find((s) => s.type === 'header')!
   const defaultFooter = defaults.find((s) => s.type === 'footer')!
 
   return [
+    ...(hasAnnouncement ? [] : [defaultAnnouncement]),
     ...(hasHeader ? [] : [defaultHeader]),
     ...sections,
     ...(hasFooter ? [] : [defaultFooter]),

@@ -10,7 +10,7 @@ import { CartPage } from '@/pages/store/CartPage'
 import { CheckoutPage } from '@/pages/store/CheckoutPage'
 import { OrderConfirmationPage } from '@/pages/store/OrderConfirmationPage'
 import { StorePageView } from '@/pages/store/StorePageView'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
 
 /** Root storefront route. On subdomains a custom page has a real path
  * (/pages/:slug); in the query-param preview fallback the page comes via
@@ -40,8 +40,8 @@ export function StoreApp() {
         <Route path="commande" element={<CheckoutPage />} />
         <Route path="commande/confirmation/:id" element={<OrderConfirmationPage />} />
         <Route path="pages/:slug" element={<StorePageView />} />
+        <Route path="*" element={<StoreNotFoundPage />} />
       </Route>
-      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

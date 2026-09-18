@@ -135,7 +135,7 @@ type PreparedContext =
 
 const HOME_CONTEXT: PreparedContext = { kind: 'home', label: 'Accueil' }
 
-const SYSTEM_LABELS: Record<SystemTemplateKey, string> = { catalogue: 'Catalogue', product: 'Fiche produit', cart: 'Panier', checkout: 'Commande' }
+const SYSTEM_LABELS: Record<SystemTemplateKey, string> = { catalogue: 'Catalogue', product: 'Fiche produit', cart: 'Panier', checkout: 'Commande', not_found: 'Page 404' }
 
 function resolveContext(key: ActiveKey, pages: StorePage[]): PreparedContext {
   if (key === 'home') return HOME_CONTEXT
@@ -172,12 +172,14 @@ const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
   product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
   cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq'],
   checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq'],
+  not_found: ['text', 'hero', 'image', 'promo', 'faq'],
 }
 
 /** The one section type each system template can't do without — removing it
  *  would leave the page unable to do its job (no way to buy, no cart, no
- *  checkout form). Content/marketing blocks around it stay fully removable. */
-const SYSTEM_CORE_SECTION: Record<SystemTemplateKey, SectionType> = {
+ *  checkout form). Content/marketing blocks around it stay fully removable.
+ *  The 404 page has no such requirement — it's pure content. */
+const SYSTEM_CORE_SECTION: Partial<Record<SystemTemplateKey, SectionType>> = {
   catalogue: 'products',
   product: 'product',
   cart: 'cart',
@@ -199,6 +201,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           product: template.layout.product,
           cart: template.layout.cart,
           checkout: template.layout.checkout,
+          not_found: template.layout.not_found ?? buildDefaultSystemTemplate('not_found'),
         },
         templateId: template.key,
       },
@@ -233,6 +236,7 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
       product: { published: systemPublished('product') },
       cart: { published: systemPublished('cart') },
       checkout: { published: systemPublished('checkout') },
+      not_found: { published: systemPublished('not_found') },
     },
     // Only set when the draft came from applying a whole-store template
     // (see storeApplyDraft) — a merchant tweaking colors/sections by hand
@@ -289,7 +293,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeColor: shop.theme_color,
         themeConfig: shop.theme_config,
       },
-      templateSections: (tpl) => tpl.layout[context.key],
+      templateSections: (tpl) => tpl.layout[context.key] ?? buildDefaultSystemTemplate(context.key),
       saveDraft: (snap) =>
         updateShop(shop.id, {
           builder_draft: {
@@ -344,6 +348,9 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
       if (context.key === 'catalogue') return '/catalogue'
       if (context.key === 'cart') return '/panier'
       if (context.key === 'checkout') return '/commande'
+      // A path guaranteed to match no real route, so the iframe naturally
+      // hits the storefront's own not-found handler for a true preview.
+      if (context.key === 'not_found') return '/____apercu-404____'
       return productSlug ? `/produits/${productSlug}` : null
     case 'page':
       return `/pages/${context.page.slug}`

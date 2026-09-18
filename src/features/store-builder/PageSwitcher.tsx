@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, CreditCard, FileText, Home, Package, Plus, Receipt, ShoppingCart, Trash2 } from 'lucide-react'
+import { AlertTriangle, ChevronDown, CreditCard, FileText, Home, Package, Plus, Receipt, ShoppingCart, Trash2 } from 'lucide-react'
 import type { StorePage } from '@/types'
 import type { SystemTemplateKey } from '@/types/builder'
 import type { ActiveKey } from '@/pages/admin/StoreBuilderPage'
@@ -10,6 +10,7 @@ const SYSTEM_PAGES: { key: 'home' | SystemTemplateKey; label: string; icon: type
   { key: 'product', label: 'Fiche produit', icon: Receipt, color: 'from-indigo-500 to-indigo-700' },
   { key: 'cart', label: 'Panier', icon: ShoppingCart, color: 'from-emerald-500 to-emerald-700' },
   { key: 'checkout', label: 'Commande', icon: CreditCard, color: 'from-cyan-500 to-cyan-700' },
+  { key: 'not_found', label: 'Page 404', icon: AlertTriangle, color: 'from-rose-500 to-rose-700' },
 ]
 
 function IconBadge({ icon: Icon, color }: { icon: typeof Home; color: string }) {

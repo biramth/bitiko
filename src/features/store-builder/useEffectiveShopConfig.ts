@@ -13,6 +13,7 @@ interface EffectiveConfig {
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  announcementSection: LayoutSection | undefined
   headerSection: LayoutSection | undefined
   footerSection: LayoutSection | undefined
   bodySections: LayoutSection[]
@@ -81,11 +82,14 @@ export function useEffectiveConfig(
     themeConfig = draftThemeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
   }
 
+  const announcementSection = sections.find((s) => s.type === 'announcement' && s.visible)
   const headerSection = sections.find((s) => s.type === 'header' && s.visible)
   const footerSection = sections.find((s) => s.type === 'footer' && s.visible)
-  const bodySections = sections.filter((s) => s.type !== 'header' && s.type !== 'footer' && s.visible)
+  const bodySections = sections.filter(
+    (s) => s.type !== 'announcement' && s.type !== 'header' && s.type !== 'footer' && s.visible,
+  )
 
-  return { sections, themeColor, themeConfig, headerSection, footerSection, bodySections, isDraftPreview }
+  return { sections, themeColor, themeConfig, announcementSection, headerSection, footerSection, bodySections, isDraftPreview }
 }
 
 /** Backwards-compatible alias used by the home storefront. */

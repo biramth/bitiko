@@ -5,7 +5,7 @@ import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { StoreNotFoundPage } from './StoreNotFoundPage'
 import type { StorePage } from '@/types/pages'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
@@ -76,7 +76,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   // system templates already behave (see useEffectiveConfig). Outside
   // preview, the page must exist and be published to be visible.
   const sections = isDraftPreview && live ? live.sections : isDraftPreview ? (page?.draft_content ?? page?.content ?? []) : (page?.content ?? [])
-  if (!isDraftPreview && !page) return <NotFoundPage />
+  if (!isDraftPreview && !page) return <StoreNotFoundPage />
 
   const themeConfig = live?.themeConfig ?? shop.theme_config
 

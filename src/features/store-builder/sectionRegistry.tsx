@@ -1,4 +1,5 @@
 import {
+  BellRing,
   Image as ImageIcon,
   LayoutTemplate,
   Megaphone,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react'
 import { createSectionId } from '@/config/defaultLayout'
 import type {
+  AnnouncementBarSectionConfig,
   CategoriesSectionConfig,
   CartSectionConfig,
   CheckoutSectionConfig,
@@ -32,6 +34,7 @@ import type {
   TextSectionConfig,
   FaqSectionConfig,
 } from '@/types/builder'
+import { AnnouncementBarEditor } from './sections/AnnouncementBarEditor'
 import { CategoriesEditor, CategoriesRenderer } from './sections/CategoriesSection'
 import { FeaturedProductsEditor, FeaturedProductsRenderer } from './sections/FeaturedProductsSection'
 import { FooterEditor, HeaderEditor } from './sections/HeaderFooterEditors'
@@ -81,6 +84,21 @@ export type SectionRegistry = Partial<Record<SectionType, SectionDefinition>>
  *  this via `getEffectiveRegistry` (see effectiveRegistry.ts); this object
  *  itself never varies by shop. */
 export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> = {
+  announcement: {
+    label: 'Barre d\'annonce',
+    description: 'Un message en haut de toutes les pages — promo, livraison offerte…',
+    icon: BellRing,
+    color: 'from-amber-500 to-amber-700',
+    category: 'content',
+    pinned: true,
+    createDefault: () => ({
+      id: createSectionId('announcement'),
+      type: 'announcement',
+      visible: true,
+      config: { message: '', linkLabel: '', linkUrl: '', dismissible: true } satisfies AnnouncementBarSectionConfig,
+    }),
+    Editor: AnnouncementBarEditor,
+  },
   header: {
     label: 'Header',
     description: 'Logo, navigation et panier — présent sur toutes les pages.',
