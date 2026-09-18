@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ImageOff, ImagePlus, Loader2, Trash2 } from 'lucide-react'
-import { uploadShopSectionImage } from '@/services/shop.service'
+import { uploadShopSectionImage, uploadShopSectionVideo } from '@/services/shop.service'
 import type { ImageSectionConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { FocalPointPicker } from './FocalPointPicker'
+import { VideoUploadField } from './VideoUploadField'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -136,18 +137,14 @@ export function ImageEditor({ config, onChange, shopId, sectionId }: SectionEdit
           className={editorInputClass}
         />
       </div>
-      <div className="border-t border-gray-200 pt-3">
-        <label className={editorLabelClass}>Vidéo de fond (optionnel)</label>
-        <input
-          value={config.videoUrl ?? ''}
-          onChange={(e) => onChange({ ...config, videoUrl: e.target.value || undefined })}
-          placeholder="https://…mp4"
-          className={editorInputClass}
-        />
-        <p className="mt-1 text-xs text-gray-400">
-          Lien direct vers un fichier vidéo (.mp4). Remplace l'image ci-dessus, qui reste utilisée en attendant que la vidéo charge.
-        </p>
-      </div>
+      <VideoUploadField
+        videoUrl={config.videoUrl}
+        onUpload={async (file) => {
+          const url = await uploadShopSectionVideo(shopId, sectionId, file)
+          onChange({ ...config, videoUrl: url })
+        }}
+        onRemove={() => onChange({ ...config, videoUrl: undefined })}
+      />
     </div>
   )
 }

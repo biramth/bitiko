@@ -4,8 +4,10 @@ import { ArrowRight, MessageCircle } from 'lucide-react'
 import type { HeroSectionConfig } from '@/types/builder'
 import { HEADING_SCALE } from '@/config/themeTokens'
 import type { ThemeConfig } from '@/types/builder'
+import { uploadShopSectionVideo } from '@/services/shop.service'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { FocalPointPicker } from './FocalPointPicker'
+import { VideoUploadField } from './VideoUploadField'
 
 export function HeroRenderer({
   shop,
@@ -83,7 +85,7 @@ export function HeroRenderer({
   )
 }
 
-export function HeroEditor({ config, onChange, shop }: SectionEditorProps<HeroSectionConfig>) {
+export function HeroEditor({ config, onChange, shop, shopId, sectionId }: SectionEditorProps<HeroSectionConfig>) {
   return (
     <div className="space-y-4">
       <div>
@@ -139,18 +141,15 @@ export function HeroEditor({ config, onChange, shop }: SectionEditorProps<HeroSe
               La bannière elle-même se change dans Réglages → Apparence.
             </p>
           </div>
-          <div>
-            <label className={editorLabelClass}>Vidéo de fond (optionnel)</label>
-            <input
-              value={config.bannerVideoUrl ?? ''}
-              onChange={(e) => onChange({ ...config, bannerVideoUrl: e.target.value || undefined })}
-              placeholder="https://…mp4"
-              className={editorInputClass}
-            />
-            <p className="mt-1 text-xs text-gray-400">
-              Lien direct vers un fichier vidéo (.mp4). Remplace la bannière ci-dessus, qui reste utilisée en attendant que la vidéo charge.
-            </p>
-          </div>
+          <VideoUploadField
+            videoUrl={config.bannerVideoUrl}
+            onUpload={async (file) => {
+              const url = await uploadShopSectionVideo(shopId, sectionId, file)
+              onChange({ ...config, bannerVideoUrl: url })
+            }}
+            onRemove={() => onChange({ ...config, bannerVideoUrl: undefined })}
+            helpText="Remplace la bannière ci-dessus, qui reste utilisée en attendant que la vidéo charge."
+          />
         </div>
       )}
     </div>
