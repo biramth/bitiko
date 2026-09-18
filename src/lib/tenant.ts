@@ -3,6 +3,15 @@ import type { TenantContext } from '@/types'
 const ROOT_DOMAIN = import.meta.env.VITE_ROOT_DOMAIN as string | undefined
 const DEV_SHOP_SLUG = import.meta.env.VITE_DEV_SHOP_SLUG as string | undefined
 
+// A Vercel Preview deployment (a branch build, not the production one) must
+// never link/embed the production "<slug>.bitiko.shop" subdomain: it would
+// show the OLD, already-deployed code instead of what's actually being
+// tested, and production's CSP frame-ancestors allowlist (only bitiko.shop/
+// www.bitiko.shop) blocks a *.vercel.app preview URL from framing it anyway
+// — the storefront preview would silently fail to load. Vercel sets this
+// automatically on every deploy, no project configuration required.
+const IS_VERCEL_PREVIEW = import.meta.env.VITE_VERCEL_ENV === 'preview'
+
 /** Root domain for display purposes (onboarding preview) even before one is configured. */
 export const DISPLAY_ROOT_DOMAIN = ROOT_DOMAIN || 'bitiko.shop'
 
@@ -88,7 +97,7 @@ export function isValidSlug(slug: string): boolean {
 }
 
 export function shopUrl(slug: string): string {
-  if (!ROOT_DOMAIN) return `/?boutique=${slug}`
+  if (!ROOT_DOMAIN || IS_VERCEL_PREVIEW) return `/?boutique=${slug}`
   const protocol = window.location.protocol
   return `${protocol}//${slug}.${ROOT_DOMAIN}`
 }
@@ -99,7 +108,7 @@ export function shopUrl(slug: string): string {
  * query param regardless of pathname, so every route (catalogue, produit,
  * panier, commande, pages/:slug) works identically to a real subdomain. */
 export function storefrontUrl(slug: string, pagePath = '/'): string {
-  if (!ROOT_DOMAIN) {
+  if (!ROOT_DOMAIN || IS_VERCEL_PREVIEW) {
     const query = new URLSearchParams({ boutique: slug })
     return `${pagePath}?${query.toString()}`
   }
