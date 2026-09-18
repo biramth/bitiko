@@ -707,6 +707,44 @@ export type Database = {
           },
         ]
       }
+      shop_publish_history: {
+        Row: {
+          id: string
+          published_at: string
+          sections: LayoutSection[]
+          shop_id: string
+          templates: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color: string
+          theme_config: ThemeConfig
+        }
+        Insert: {
+          id?: string
+          published_at?: string
+          sections?: LayoutSection[]
+          shop_id: string
+          templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color: string
+          theme_config: ThemeConfig
+        }
+        Update: {
+          id?: string
+          published_at?: string
+          sections?: LayoutSection[]
+          shop_id?: string
+          templates?: Partial<Record<SystemTemplateKey, LayoutSection[]>>
+          theme_color?: string
+          theme_config?: ThemeConfig
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_publish_history_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_saved_themes: {
         Row: {
           created_at: string

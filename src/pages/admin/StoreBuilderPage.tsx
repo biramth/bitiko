@@ -22,7 +22,8 @@ import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFram
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
-import { TemplateLibraryPanel, isSavedThemeKey } from '@/features/store-builder/TemplateLibraryPanel'
+import { TemplateLibraryPanel, isRestoredDesignKey } from '@/features/store-builder/TemplateLibraryPanel'
+import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { updateShop } from '@/services/shop.service'
@@ -37,6 +38,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
+import { SYSTEM_TEMPLATE_KEYS } from '@/types/builder'
 import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
 
 export function StoreBuilderPage() {
@@ -203,10 +205,11 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           checkout: template.layout.checkout,
           not_found: template.layout.not_found ?? buildDefaultSystemTemplate('not_found'),
         },
-        // A saved theme is layered on top of the shop's existing vertical,
-        // not a vertical switch — never overwrite template_id for one (see
-        // publishStore, which only sets it when this is present).
-        ...(isSavedThemeKey(template.key) ? {} : { templateId: template.key }),
+        // A saved theme or a restored past publish is layered on top of the
+        // shop's existing vertical, not a vertical switch — never overwrite
+        // template_id for either (see publishStore, which only sets it when
+        // this is present).
+        ...(isRestoredDesignKey(template.key) ? {} : { templateId: template.key }),
       },
     })
 }
@@ -215,7 +218,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
  *  every system template's published layout (using the live snapshot for the
  *  active context, the store-wide draft — or what's already published — for
  *  the others). This is the "publish the template" action the merchant expects. */
-function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
+async function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
   const draft = shop.builder_draft
   const homeSections: LayoutSection[] =
     context.kind === 'home' ? snap.sections : draft?.sections ?? shop.layout_sections
@@ -228,6 +231,23 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
       shop.page_templates?.[key]?.published ??
       buildDefaultSystemTemplate(key)
     )
+  }
+
+  // Best-effort: archive the outgoing design before it's overwritten, so a
+  // publish can be rolled back from the Styles tab's "Historique" list.
+  // Never blocks the actual publish — e.g. if the migration adding
+  // shop_publish_history hasn't been applied to this project yet.
+  try {
+    await archivePublishedSnapshot(shop.id, {
+      themeColor: shop.theme_color,
+      themeConfig: shop.theme_config,
+      sections: shop.layout_sections,
+      templates: Object.fromEntries(
+        SYSTEM_TEMPLATE_KEYS.map((key) => [key, shop.page_templates?.[key]?.published ?? buildDefaultSystemTemplate(key)]),
+      ),
+    })
+  } catch {
+    // Ignored — see comment above.
   }
 
   return updateShop(shop.id, {
@@ -268,10 +288,11 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeConfig: shop.theme_config,
       },
       templateSections: (tpl) => {
-        // A saved theme is the merchant's own exact design, already final —
-        // never run it through onboarding-profile personalization, which is
-        // only meant to fill in the built-in templates' placeholder copy.
-        if (isSavedThemeKey(tpl.key)) return ensurePinnedSections(tpl.layout.home)
+        // A saved theme or a restored past publish is the merchant's own
+        // exact design, already final — never run it through onboarding-
+        // profile personalization, which is only meant to fill in the
+        // built-in templates' placeholder copy.
+        if (isRestoredDesignKey(tpl.key)) return ensurePinnedSections(tpl.layout.home)
         const profile = profileFromShop(shop)
         return profile ? generateHomeLayout(tpl, profile) : ensurePinnedSections(tpl.layout.home)
       },

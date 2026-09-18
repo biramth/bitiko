@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, Eye, Pencil, Save, Trash2 } from 'lucide-react'
+import { Copy, Eye, History, Pencil, Save, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { templatesForVertical } from '@/config/storeTemplates'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
@@ -14,18 +14,21 @@ import {
   listSavedThemes,
   renameSavedTheme,
 } from '@/services/savedTheme.service'
+import { listPublishHistory } from '@/services/publishHistory.service'
 import type { Shop } from '@/types'
 import type { SavedTheme } from '@/types/savedTheme'
-import type { StoreTemplate, SystemTemplateKey } from '@/types/builder'
+import type { PublishHistoryEntry } from '@/types/publishHistory'
+import { SYSTEM_TEMPLATE_KEYS, type StoreTemplate } from '@/types/builder'
 
-const SYSTEM_KEYS: SystemTemplateKey[] = ['catalogue', 'product', 'cart', 'checkout', 'not_found']
-
-/** Marks a `StoreTemplate` synthesized from a merchant's own saved theme
- *  (see `savedThemeToTemplate`) rather than one of the built-in per-vertical
- *  templates — applying one must skip onboarding-profile personalization and
- *  never overwrite the shop's vertical (see StoreBuilderPage's buildTarget). */
+/** Marks a `StoreTemplate` synthesized from a merchant's own saved theme or
+ *  a past publish (see `savedThemeToTemplate`/`historyEntryToTemplate`)
+ *  rather than one of the built-in per-vertical templates — applying one
+ *  must skip onboarding-profile personalization and never overwrite the
+ *  shop's vertical (see StoreBuilderPage's buildTarget). */
 export const SAVED_THEME_KEY_PREFIX = 'saved:'
+export const HISTORY_KEY_PREFIX = 'history:'
 export const isSavedThemeKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX)
+export const isRestoredDesignKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX) || key.startsWith(HISTORY_KEY_PREFIX)
 
 /** What "the current design" means for saving a personal style: the shop's
  *  live, published design — not an in-progress unsaved draft, which the
@@ -36,8 +39,30 @@ function currentPublishedSnapshot(shop: Shop) {
     themeConfig: shop.theme_config,
     sections: shop.layout_sections,
     templates: Object.fromEntries(
-      SYSTEM_KEYS.map((key) => [key, shop.page_templates?.[key]?.published ?? buildDefaultSystemTemplate(key)]),
-    ) as Record<SystemTemplateKey, ReturnType<typeof buildDefaultSystemTemplate>>,
+      SYSTEM_TEMPLATE_KEYS.map((key) => [key, shop.page_templates?.[key]?.published ?? buildDefaultSystemTemplate(key)]),
+    ) as Record<(typeof SYSTEM_TEMPLATE_KEYS)[number], ReturnType<typeof buildDefaultSystemTemplate>>,
+  }
+}
+
+const historyDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+function historyEntryToTemplate(entry: PublishHistoryEntry, businessType: string | null): StoreTemplate {
+  return {
+    key: `${HISTORY_KEY_PREFIX}${entry.id}`,
+    vertical: businessType ?? '',
+    label: historyDateFormat.format(new Date(entry.published_at)),
+    description: 'Version publiée précédemment.',
+    swatch: [entry.theme_color, entry.theme_config.secondaryColor],
+    themeColor: entry.theme_color,
+    themeConfig: entry.theme_config,
+    layout: {
+      home: entry.sections,
+      catalogue: entry.templates.catalogue ?? [],
+      product: entry.templates.product ?? [],
+      cart: entry.templates.cart ?? [],
+      checkout: entry.templates.checkout ?? [],
+      not_found: entry.templates.not_found,
+    },
   }
 }
 
@@ -167,6 +192,16 @@ export function TemplateLibraryPanel({
   const { data: savedThemes = [] } = useQuery({
     queryKey: ['saved-themes', shop.id],
     queryFn: () => listSavedThemes(shop.id),
+  })
+
+  // Best-effort: the migration adding shop_publish_history may not be live
+  // yet on every shop's project, so a query error here just means an empty
+  // history list rather than breaking the whole Styles tab.
+  const { data: publishHistory = [] } = useQuery({
+    queryKey: ['publish-history', shop.id],
+    queryFn: () => listPublishHistory(shop.id),
+    retry: false,
+    throwOnError: false,
   })
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
@@ -299,6 +334,47 @@ export function TemplateLibraryPanel({
           </div>
         )}
       </div>
+
+      {publishHistory.length > 0 && (
+        <div className="mt-6 border-t border-gray-200 pt-4">
+          <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <History size={13} aria-hidden /> Historique des publications
+          </p>
+          <p className="mb-3 text-xs text-gray-400">
+            Chaque publication archive automatiquement la version précédente. Cliquez sur une version pour la prévisualiser, puis appliquez-la pour y revenir.
+          </p>
+          <div className="space-y-3">
+            {publishHistory.map((entry) => {
+              const template = historyEntryToTemplate(entry, shop.business_type)
+              const isPreviewing = previewingKey === template.key
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => onPreview(template)}
+                  aria-pressed={isPreviewing}
+                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left hover:border-brand-300 hover:bg-brand-50/40 ${
+                    isPreviewing ? 'border-brand-500 ring-1 ring-brand-500' : 'border-gray-200'
+                  }`}
+                >
+                  <TemplateThumbnail template={template} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
+                      {isPreviewing && (
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                          <Eye size={10} aria-hidden /> Aperçu
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-xs text-gray-500">{template.description}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={saveDialogOpen}
