@@ -61,6 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleCampaignAudience(req, res)
     case 'campaign-send':
       return handleCampaignSend(req, res)
+    case 'campaign-delete':
+      return handleCampaignDelete(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -354,7 +356,9 @@ async function handleCampaignList(req: VercelRequest, res: VercelResponse) {
     const admin = getSupabaseAdmin()
     const { data, error } = await admin
       .from('campaigns')
-      .select('id, name, subject, body, audience, status, created_at, sent_at, recipient_count, sent_count, failed_count')
+      .select(
+        'id, name, subject, body, audience, status, created_at, sent_at, recipient_count, sent_count, failed_count, button_label, button_url',
+      )
       .order('created_at', { ascending: false })
     if (error) throw error
 
@@ -374,7 +378,7 @@ async function handleCampaignSave(req: VercelRequest, res: VercelResponse) {
     const member = await requireMember(req, res)
     if (!member) return
 
-    const { id, name, subject, body, audience } = (req.body ?? {}) as Record<string, unknown>
+    const { id, name, subject, body, audience, button_label, button_url } = (req.body ?? {}) as Record<string, unknown>
     if (typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ error: 'Nom de campagne manquant.' })
       return
@@ -387,6 +391,19 @@ async function handleCampaignSave(req: VercelRequest, res: VercelResponse) {
       res.status(400).json({ error: 'Contenu invalide (8000 caractères max).' })
       return
     }
+    if (button_label != null && (typeof button_label !== 'string' || button_label.length > 60)) {
+      res.status(400).json({ error: 'Texte du bouton invalide (60 caractères max).' })
+      return
+    }
+    if (button_url != null && (typeof button_url !== 'string' || button_url.length > 2048)) {
+      res.status(400).json({ error: 'Lien du bouton invalide (2048 caractères max).' })
+      return
+    }
+    const trimmedUrl = typeof button_url === 'string' ? button_url.trim() : ''
+    if (trimmedUrl && !/^(\/(?!\/)|https?:\/\/)/.test(trimmedUrl)) {
+      res.status(400).json({ error: 'Lien du bouton invalide : commence par / ou https://.' })
+      return
+    }
 
     const admin = getSupabaseAdmin()
     const payload = {
@@ -394,12 +411,38 @@ async function handleCampaignSave(req: VercelRequest, res: VercelResponse) {
       subject: subject.trim(),
       body,
       audience: sanitizeAudience(audience),
+      button_label: typeof button_label === 'string' && button_label.trim() ? button_label.trim() : null,
+      button_url: trimmedUrl || null,
       updated_at: new Date().toISOString(),
     }
 
     if (typeof id === 'string' && id) {
-      const { error } = await admin.from('campaigns').update(payload).eq('id', id).eq('status', 'draft')
+      // Two operators can be editing the same draft. If the campaign stopped
+      // being a draft (a colleague sent it), a bare UPDATE would silently hit
+      // zero rows and the caller would keep editing a ghost — so check it.
+      const { data, error } = await admin
+        .from('campaigns')
+        .update(payload)
+        .eq('id', id)
+        .eq('status', 'draft')
+        .select('id')
+        .maybeSingle()
       if (error) throw error
+      if (!data) {
+        const { data: current, error: readError } = await admin
+          .from('campaigns')
+          .select('status, sent_at')
+          .eq('id', id)
+          .maybeSingle()
+        if (readError) throw readError
+        res.status(409).json({
+          error:
+            current?.status === 'sent'
+              ? 'Cette campagne a déjà été envoyée, elle ne peut plus être modifiée.'
+              : 'Impossible d’enregistrer : un envoi est en cours pour cette campagne.',
+        })
+        return
+      }
       res.status(200).json({ id })
       return
     }
@@ -514,7 +557,7 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
     const admin = getSupabaseAdmin()
     const { data: campaign, error: campaignError } = await admin
       .from('campaigns')
-      .select('id, subject, body, audience, status')
+      .select('id, subject, body, audience, status, button_label, button_url')
       .eq('id', id)
       .maybeSingle()
     if (campaignError) throw campaignError
@@ -544,25 +587,29 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
     if (audienceError) throw audienceError
     const recipients = (audienceRows ?? []) as { shop_id: string; owner_id: string; shop_name: string; slug: string }[]
 
+    const directory = await loadUserDirectory()
+    // Shops whose owner isn't reachable are skipped, not attempted — they must
+    // never inflate the recipient or failure counts.
+    const reachable = recipients.filter((recipient) => !!directory.get(recipient.owner_id)?.email)
+
     // Idempotence: a resumed run must never email a shop that already got this
     // campaign (happens after a partial failure or a killed send).
     const { data: priorSends, error: priorError } = await admin
       .from('campaign_sends')
-      .select('shop_id')
+      .select('shop_id, status')
       .eq('campaign_id', id)
-      .eq('status', 'sent')
     if (priorError) throw priorError
-    const alreadySent = new Set((priorSends ?? []).map((row) => row.shop_id as string))
-    const pending = recipients.filter((recipient) => !alreadySent.has(recipient.shop_id))
+    const alreadySent = new Set(
+      (priorSends ?? []).filter((row) => row.status === 'sent').map((row) => row.shop_id as string),
+    )
+    const pending = reachable.filter((recipient) => !alreadySent.has(recipient.shop_id))
 
-    const directory = await loadUserDirectory()
     const origin = platformOrigin(req)
     const rootDomain = process.env.VITE_ROOT_DOMAIN
 
     const logs: { campaign_id: string; shop_id: string; email: string; status: string; error?: string }[] = []
     let sent = 0
     let failed = 0
-    let skipped = 0
 
     for (let i = 0; i < pending.length; i += SEND_CONCURRENCY) {
       const batch = pending.slice(i, i + SEND_CONCURRENCY)
@@ -582,6 +629,8 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
                 shopName: recipient.shop_name,
                 shopUrl,
                 ownerName: owner.name,
+                buttonLabel: campaign.button_label ?? undefined,
+                buttonUrl: campaign.button_url ?? undefined,
               }),
             })
             return { recipient, skipped: false as const, ok: true as const, email: owner.email }
@@ -597,9 +646,8 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
         }),
       )
       for (const result of results) {
-        if (result.skipped) {
-          skipped += 1
-        } else if (result.ok) {
+        if (result.skipped) continue
+        if (result.ok) {
           sent += 1
           logs.push({ campaign_id: id, shop_id: result.recipient.shop_id, email: result.email, status: 'sent' })
         } else {
@@ -620,21 +668,22 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
       if (logError) console.error('platform campaign-send: logging failed', logError)
     }
 
-    const { count: sentCount, error: countError } = await admin
+    // Totals across runs: a resumed send must report every successfully
+    // delivered and failed email, not just this run's share.
+    const { data: finalLogs, error: finalError } = await admin
       .from('campaign_sends')
-      .select('id', { count: 'exact', head: true })
+      .select('status')
       .eq('campaign_id', id)
-      .eq('status', 'sent')
-    if (countError) throw countError
-    const totalSent = sentCount ?? alreadySent.size + sent
-    const totalFailed = Math.max(recipients.length - totalSent, 0)
+    if (finalError) throw finalError
+    const totalSent = (finalLogs ?? []).filter((row) => row.status === 'sent').length
+    const totalFailed = (finalLogs ?? []).filter((row) => row.status === 'failed').length
 
     const { error: updateError } = await admin
       .from('campaigns')
       .update({
         status: 'sent',
         sent_at: new Date().toISOString(),
-        recipient_count: recipients.length,
+        recipient_count: reachable.length,
         sent_count: totalSent,
         failed_count: totalFailed,
       })
@@ -642,12 +691,12 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
     if (updateError) throw updateError
 
     res.status(200).json({
-      recipientCount: recipients.length,
+      recipientCount: reachable.length,
       sent: totalSent,
       failed: totalFailed,
       sentThisRun: sent,
       failedThisRun: failed,
-      skipped,
+      skipped: recipients.length - reachable.length,
       alreadySent: alreadySent.size,
     })
   } catch (err) {
@@ -665,6 +714,32 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
       }
     }
     console.error('platform campaign-send failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleCampaignDelete(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+
+    const { id } = (req.body ?? {}) as { id?: unknown }
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Campagne manquante.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { error } = await admin.from('campaigns').delete().eq('id', id).eq('status', 'draft')
+    if (error) throw error
+
+    res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error('platform campaign-delete failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

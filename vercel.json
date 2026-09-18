@@ -30,6 +30,7 @@
     { "source": "/api/admin/campaigns/save", "destination": "/api/admin/platform?action=campaign-save" },
     { "source": "/api/admin/campaigns/audience", "destination": "/api/admin/platform?action=campaign-audience" },
     { "source": "/api/admin/campaigns/send", "destination": "/api/admin/platform?action=campaign-send" },
+    { "source": "/api/admin/campaigns/delete", "destination": "/api/admin/platform?action=campaign-delete" },
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },
