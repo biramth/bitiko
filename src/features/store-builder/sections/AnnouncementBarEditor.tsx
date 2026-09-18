@@ -1,11 +1,52 @@
 import type { AnnouncementBarSectionConfig } from '@/types/builder'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBar, SwatchFrame } from '../components/LayoutSwatch'
+import type { AnnouncementLayout } from '@/types/builder'
 
 const checkboxRow = 'flex items-center gap-2 text-sm text-gray-700'
+
+const ANNOUNCEMENT_LAYOUTS: { value: AnnouncementLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'bar',
+    label: 'Bandeau',
+    preview: (
+      <SwatchFrame className="flex-col justify-start">
+        <span className="flex h-2 w-full items-center justify-center rounded-[2px] bg-current opacity-30">
+          <SwatchBar w="w-1/2" className="!bg-white" />
+        </span>
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'pill',
+    label: 'Pastille',
+    preview: (
+      <SwatchFrame className="flex-col items-center justify-start pt-1.5">
+        <span className="flex h-2 w-2/3 items-center justify-center rounded-full bg-current opacity-30">
+          <SwatchBar w="w-1/2" className="!bg-white" />
+        </span>
+      </SwatchFrame>
+    ),
+  },
+]
 
 export function AnnouncementBarEditor({ config, onChange }: SectionEditorProps<AnnouncementBarSectionConfig>) {
   return (
     <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={2}
+            value={config.layout ?? 'bar'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={ANNOUNCEMENT_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>« Pastille » affiche le message dans une bulle centrée plutôt que sur toute la largeur.</p>
+      </div>
       <div>
         <label className={editorLabelClass}>Message</label>
         <input
@@ -14,9 +55,10 @@ export function AnnouncementBarEditor({ config, onChange }: SectionEditorProps<A
           placeholder="Laisser vide = barre masquée"
           className={editorInputClass}
         />
-        <p className="mt-1 text-xs text-gray-400">
+        <p className={`mt-1 ${editorHelpClass}`}>
           Livraison offerte, promotion en cours, fermeture exceptionnelle… La barre n'apparaît que si ce champ est rempli.
         </p>
+        <TextStyleField value={config.messageStyle} onChange={(messageStyle) => onChange({ ...config, messageStyle })} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -27,6 +69,7 @@ export function AnnouncementBarEditor({ config, onChange }: SectionEditorProps<A
             placeholder="En profiter"
             className={editorInputClass}
           />
+          <TextStyleField label="Style" value={config.linkLabelStyle} onChange={(linkLabelStyle) => onChange({ ...config, linkLabelStyle })} />
         </div>
         <div>
           <label className={editorLabelClass}>Lien</label>
@@ -47,7 +90,7 @@ export function AnnouncementBarEditor({ config, onChange }: SectionEditorProps<A
         Le client peut la fermer (elle ne réapparaît plus sur son appareil)
       </label>
       <div className="border-t border-gray-200 pt-3">
-        <p className="mb-2 text-xs text-gray-400">
+        <p className={`mb-2 ${editorHelpClass}`}>
           Sans réglage, la barre reprend la couleur principale de la boutique.
         </p>
         <label className={editorLabelClass}>Couleur de fond</label>

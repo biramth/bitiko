@@ -1,17 +1,21 @@
+import { lazy } from 'react'
 import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { DraftPreviewProvider } from '@/features/store-builder/useEmbeddedPreview'
 import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { StoreShell } from '@/components/ui/StoreShell'
-import { HomePage } from '@/pages/store/HomePage'
-import { CatalogPage } from '@/pages/store/CatalogPage'
-import { ProductPage } from '@/pages/store/ProductPage'
-import { CartPage } from '@/pages/store/CartPage'
-import { CheckoutPage } from '@/pages/store/CheckoutPage'
-import { OrderConfirmationPage } from '@/pages/store/OrderConfirmationPage'
-import { StorePageView } from '@/pages/store/StorePageView'
 import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
+
+// Each storefront page is its own chunk (StoreLayout already wraps <Outlet/> in
+// a Suspense boundary), so the home page doesn't ship the checkout funnel.
+const HomePage = lazy(() => import('@/pages/store/HomePage').then((m) => ({ default: m.HomePage })))
+const CatalogPage = lazy(() => import('@/pages/store/CatalogPage').then((m) => ({ default: m.CatalogPage })))
+const ProductPage = lazy(() => import('@/pages/store/ProductPage').then((m) => ({ default: m.ProductPage })))
+const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ default: m.CartPage })))
+const CheckoutPage = lazy(() => import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
+const OrderConfirmationPage = lazy(() => import('@/pages/store/OrderConfirmationPage').then((m) => ({ default: m.OrderConfirmationPage })))
+const StorePageView = lazy(() => import('@/pages/store/StorePageView').then((m) => ({ default: m.StorePageView })))
 
 /** Root storefront route. On subdomains a custom page has a real path
  * (/pages/:slug); in the query-param preview fallback the page comes via

@@ -24,7 +24,7 @@ const CONTENT_WIDTH_CSS: Record<ContentWidth, string> = {
   wide: '84rem',
 }
 
-const FONT_CSS: Record<FontChoice, { heading: string; body: string }> = {
+export const FONT_CSS: Record<FontChoice, { heading: string; body: string }> = {
   'sora-inter': { heading: '"Sora", "Inter", system-ui, sans-serif', body: '"Inter", system-ui, sans-serif' },
   inter: { heading: '"Inter", system-ui, sans-serif', body: '"Inter", system-ui, sans-serif' },
   sora: { heading: '"Sora", "Inter", system-ui, sans-serif', body: '"Sora", "Inter", system-ui, sans-serif' },

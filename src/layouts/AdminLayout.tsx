@@ -26,6 +26,7 @@ import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
+import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 import { AmbianceMigrationDialog } from '@/features/shop-settings/AmbianceMigrationDialog'
 
 // Flat list, not grouped — Catégories now lives as a tab of Produits and
@@ -77,6 +78,18 @@ export function AdminLayout() {
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [location.pathname])
+  // A guided-tour step can ask for the nav drawer (its links only exist on
+  // screen while it is open); desktop keeps the always-visible sidebar.
+  useEffect(() => {
+    const onPrepare = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail
+      if (detail !== 'admin-menu-open' && detail !== 'admin-menu-closed') return
+      if (!window.matchMedia('(max-width: 767px)').matches) return
+      setMobileMenuOpen(detail === 'admin-menu-open')
+    }
+    window.addEventListener(TOUR_PREPARE_EVENT, onPrepare)
+    return () => window.removeEventListener(TOUR_PREPARE_EVENT, onPrepare)
+  }, [])
   useEffect(() => {
     if (!mobileMenuOpen) return
     const previousOverflow = document.body.style.overflow

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 import { useQuery } from '@tanstack/react-query'
 import {
   Blocks,
@@ -586,6 +587,18 @@ function BuilderEditor({
   // simultaneously visible on desktop.
   const isDesktop = useIsDesktopBuilder()
   const [mobileView, setMobileView] = useState<MobileView>('preview')
+  // Guided-tour steps can ask for a specific pane on the one-pane-at-a-time
+  // mobile layout (e.g. the block list); a no-op on the desktop split view.
+  useEffect(() => {
+    const onPrepare = (e: Event) => {
+      const detail = String((e as CustomEvent<string>).detail)
+      if (!detail.startsWith('builder-tab:')) return
+      if (window.matchMedia('(min-width: 1024px)').matches) return
+      setMobileView(detail.slice('builder-tab:'.length) as MobileView)
+    }
+    window.addEventListener(TOUR_PREPARE_EVENT, onPrepare)
+    return () => window.removeEventListener(TOUR_PREPARE_EVENT, onPrepare)
+  }, [])
   const selectSectionAndFocus = (id: string) => {
     builder.selectSection(id)
     setMobileView('settings')

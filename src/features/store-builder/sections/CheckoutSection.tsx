@@ -21,7 +21,9 @@ import type { CheckoutSectionConfig, ThemeConfig } from '@/types/builder'
 import type { OrderConfirmationState } from '@/pages/store/OrderConfirmationPage'
 import { trackEvent } from '@/lib/analytics'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { resolveTextStyle } from '@/config/textStyle'
+import { TextStyleField } from '../components/TextStyleControls'
 
 function CheckoutFlow({
   items,
@@ -315,7 +317,7 @@ export function CheckoutRenderer({ shop, config, themeConfig }: { shop: Shop; co
     <>
       {config.heading && (
         <div className="mx-auto max-w-[min(32rem,var(--shop-content-width))] px-4 pt-8 sm:px-6">
-          <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h1>
+          <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1>
         </div>
       )}
       <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} showTrustBadges={config.showTrustBadges !== false} themeConfig={themeConfig} />
@@ -329,6 +331,8 @@ export function CheckoutEditor({ config, onChange }: SectionEditorProps<Checkout
       <div>
         <label className={editorLabelClass}>Titre (superposé)</label>
         <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} className={editorInputClass} />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = aucun titre superposé (« Finaliser la commande » reste affiché).</p>
+        <TextStyleField value={config.headingStyle} onChange={(headingStyle) => onChange({ ...config, headingStyle })} />
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input

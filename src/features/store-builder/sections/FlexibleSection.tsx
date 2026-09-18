@@ -4,7 +4,7 @@ import type { Shop } from '@/types'
 import type { FlexibleBlock, FlexibleSectionConfig } from '@/types/builder'
 import { BLOCK_REGISTRY } from '../blockRegistry'
 import { useInlineEdit } from '../inline/useInlineEdit'
-import type { SectionEditorProps } from './shared'
+import { editorHelpClass, type SectionEditorProps } from './shared'
 
 export function FlexibleRenderer({
   config,
@@ -113,7 +113,7 @@ export function FlexibleEditor({ config, onChange, shopId, sectionId }: SectionE
   return (
     <div className="space-y-3">
       {blocks.length === 0 && (
-        <p className="text-xs text-gray-400">
+        <p className={editorHelpClass}>
           Une section vide — ajoutez un bloc texte, image, bouton ou espacement pour composer votre mise en page.
         </p>
       )}

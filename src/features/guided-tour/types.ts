@@ -1,3 +1,15 @@
+/** Mobile-only UI states a step needs before its target is on screen (the nav
+ *  drawer, the builder's Blocs/Aperçu/Réglages panes). Broadcast as a
+ *  `bitiko:tour-prepare` event — listeners ignore it on desktop layouts. */
+export type TourPrepare =
+  | 'admin-menu-open'
+  | 'admin-menu-closed'
+  | 'builder-tab:blocks'
+  | 'builder-tab:preview'
+  | 'builder-tab:settings'
+
+export const TOUR_PREPARE_EVENT = 'bitiko:tour-prepare'
+
 /** A single coachmark inside a guided tour: an intro card (no `target`) or a
  *  highlight on a specific element of the admin (`target` selector). */
 export interface TourStep {
@@ -8,6 +20,8 @@ export interface TourStep {
   body: string
   /** Preferred tooltip side — falls back to whichever side actually fits. */
   placement?: 'top' | 'bottom' | 'left' | 'right'
+  /** See `TourPrepare` — run before this step is shown. */
+  prepare?: TourPrepare
 }
 
 export interface GuidedTour {

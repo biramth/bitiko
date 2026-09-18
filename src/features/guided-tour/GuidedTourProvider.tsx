@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, createContext, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import type { GuidedTour } from './types'
+import { TOUR_PREPARE_EVENT, type GuidedTour, type TourPrepare } from './types'
 import { GUIDED_TOUR_BY_ID } from './tours'
 import { isTourSeen, markTourSeen } from './storage'
 import { TourOverlay } from './TourOverlay'
@@ -27,6 +27,10 @@ function removeTourParam(): void {
   window.history.replaceState(null, '', url.toString())
 }
 
+function broadcastPrepare(prepare: TourPrepare) {
+  window.dispatchEvent(new CustomEvent(TOUR_PREPARE_EVENT, { detail: prepare }))
+}
+
 export function GuidedTourProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -43,6 +47,7 @@ export function GuidedTourProvider({ children }: { children: ReactNode }) {
     setActiveTour(null)
     setActiveTourId(null)
     setStepIndex(0)
+    broadcastPrepare('admin-menu-closed')
   }, [])
 
   const begin = useCallback((id: string) => {
@@ -80,6 +85,12 @@ export function GuidedTourProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search, begin])
+
+  // Steps can need a mobile-only UI state first (nav drawer open, builder pane).
+  const currentPrepare = activeTour?.steps[stepIndex]?.prepare
+  useEffect(() => {
+    if (currentPrepare) broadcastPrepare(currentPrepare)
+  }, [currentPrepare, stepIndex, activeTour])
 
   // The tour only makes sense on its own pages — leave and it stops.
   useEffect(() => {
