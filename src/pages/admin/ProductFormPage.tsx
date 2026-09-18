@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, Check, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
@@ -26,7 +26,9 @@ import { formatCurrency, slugify } from '@/utils/format'
 import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
-import type { Category, ProductImage, ProductVariant, ProductWithRelations, Shop } from '@/types'
+import type { Category, OptionField, ProductImage, ProductVariant, ProductWithRelations, Shop } from '@/types'
+import type { Json } from '@/types/database.types'
+import { MAX_OPTION_CHOICES, MAX_OPTION_FIELDS, parseOptionFields } from '@/utils/productOptions'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PLANS, canAddProductImage, canAddVariant } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
@@ -68,6 +70,34 @@ let variantKeyCounter = 0
 function nextVariantKey() {
   variantKeyCounter += 1
   return `variant-${variantKeyCounter}`
+}
+
+function newOptionFieldId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+  } catch {
+    // fall through
+  }
+  return `f${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`
+}
+
+function normalizeOptionFields(fields: OptionField[]): OptionField[] {
+  return fields.map((f) => {
+    const choices: string[] = []
+    if (f.type === 'choice') {
+      const seen = new Set<string>()
+      for (const c of f.choices) {
+        const t = c.trim()
+        if (t && !seen.has(t.toLowerCase())) {
+          seen.add(t.toLowerCase())
+          choices.push(t)
+        }
+      }
+    }
+    return { id: f.id, label: f.label.trim(), type: f.type, required: f.required, choices }
+  })
 }
 
 function Card({
@@ -237,6 +267,81 @@ function ProductForm({
 
   const id = existingProduct?.id
 
+  const [optionFields, setOptionFields] = useState<OptionField[]>(() =>
+    parseOptionFields(existingProduct?.option_fields),
+  )
+
+  const updateOptionField = (fieldId: string, patch: Partial<OptionField>) =>
+    setOptionFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)))
+
+  const addOptionField = () => {
+    if (optionFields.length >= MAX_OPTION_FIELDS) return
+    setOptionFields((prev) => [
+      ...prev,
+      { id: newOptionFieldId(), label: '', type: 'choice', required: false, choices: [] },
+    ])
+  }
+
+  const moveOptionField = (index: number, delta: number) =>
+    setOptionFields((prev) => {
+      const target = index + delta
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+
+  const updateOptionChoice = (fieldId: string, choiceIndex: number, value: string) =>
+    setOptionFields((prev) =>
+      prev.map((f) =>
+        f.id === fieldId
+          ? { ...f, choices: f.choices.map((c, i) => (i === choiceIndex ? value : c)) }
+          : f,
+      ),
+    )
+
+  const addOptionChoice = (fieldId: string) => {
+    const field = optionFields.find((f) => f.id === fieldId)
+    if (!field || field.choices.length >= MAX_OPTION_CHOICES) return
+    const nextIndex = field.choices.length
+    updateOptionField(fieldId, { choices: [...field.choices, ''] })
+    setTimeout(() => {
+      document
+        .querySelector<HTMLInputElement>(`[data-opt-choice="${fieldId}-${nextIndex}"]`)
+        ?.focus()
+    }, 0)
+  }
+
+  const validateBeforeSave = (): string | null => {
+    const basePrice = Number(price)
+    if (price.trim() === '' || !Number.isFinite(basePrice) || basePrice < 0) {
+      return 'Indiquez un prix de base valide.'
+    }
+    for (const v of variants) {
+      if (v.price.trim() !== '') {
+        const p = Number(v.price)
+        if (!Number.isFinite(p) || p < 0) {
+          return `Le prix de la variante « ${v.name.trim() || 'sans nom'} » est invalide.`
+        }
+      }
+    }
+    const seenLabels = new Set<string>()
+    for (const f of optionFields) {
+      const label = f.label.trim()
+      if (!label) return 'Chaque champ de précision doit avoir un nom.'
+      const key = label.toLowerCase()
+      if (seenLabels.has(key)) return `Le champ de précision « ${label} » existe en double.`
+      seenLabels.add(key)
+      if (f.type === 'choice') {
+        const choices = f.choices.map((c) => c.trim()).filter(Boolean)
+        if (choices.length < 2) return `Le champ « ${label} » doit avoir au moins 2 options.`
+        const distinct = new Set(choices.map((c) => c.toLowerCase()))
+        if (distinct.size !== choices.length) return `Le champ « ${label} » a des options en double.`
+      }
+    }
+    return null
+  }
+
   useEffect(() => {
     const revoke = () => pendingUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     return revoke
@@ -280,6 +385,7 @@ function ProductForm({
         price: basePrice,
         stock: Number(stock),
         active: effectiveActive,
+        option_fields: normalizeOptionFields(optionFields) as unknown as Json,
       }
       const product = isEditing
         ? await updateProduct(id as string, input)
@@ -509,6 +615,12 @@ function ProductForm({
         onSubmit={(e) => {
           e.preventDefault()
           setError(null)
+          const validationError = validateBeforeSave()
+          if (validationError) {
+            setError(validationError)
+            toast.error(validationError)
+            return
+          }
           saveMutation.mutate()
         }}
         className="mt-4"
@@ -575,7 +687,7 @@ function ProductForm({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                    Prix
+                    {hasVariants ? 'Prix de base' : 'Prix'}
                   </label>
                   <div className="relative mt-1">
                     <input
@@ -583,19 +695,20 @@ function ProductForm({
                       type="number"
                       min="0"
                       step="1"
-                      required={!hasVariants}
-                      disabled={hasVariants}
+                      required
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="0"
-                      className={`${inputClass} pr-20 disabled:cursor-not-allowed disabled:bg-gray-50`}
+                      className={`${inputClass} pr-20`}
                     />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
-                      {hasVariants ? '' : currency}
+                      {currency}
                     </span>
                   </div>
                   {hasVariants && (
-                    <p className="mt-1 text-xs text-gray-500">Géré par variante</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Prix des variantes qui n'ont pas de prix propre.
+                    </p>
                   )}
                 </div>
                 <div>
@@ -917,10 +1030,15 @@ function ProductForm({
                                 ),
                               )
                             }
-                            placeholder={`Prix (${currency}) — défaut: produit`}
+                            placeholder={
+                              price.trim() !== ''
+                                ? `Prix de base : ${Number(price).toLocaleString('fr-FR')}`
+                                : 'Prix de base'
+                            }
                             className={inputClass}
                             aria-label={`Prix de la variante ${variants.indexOf(variant) + 1}`}
                           />
+                          <p className="mt-1 text-xs text-gray-500">Laisser vide = prix de base.</p>
                         </div>
                         <div>
                           <input
@@ -1010,6 +1128,157 @@ function ProductForm({
                   </>
                 )}
               </p>
+            </Card>
+
+            <Card
+              icon={ListChecks}
+              title="Champs de précision"
+              description="Ajoutez les informations que le client doit préciser avant de commander (ton, taille, prénom à broder…). Elles apparaissent dans le panier et dans le message WhatsApp de commande."
+            >
+              {optionFields.length > 0 && (
+                <ul className="space-y-3">
+                  {optionFields.map((field, index) => (
+                    <li key={field.id} className="rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-end gap-2">
+                        <div className="min-w-0 flex-1">
+                          <label
+                            htmlFor={`opt-label-${field.id}`}
+                            className="block text-sm font-medium text-gray-700"
+                          >
+                            Nom du champ
+                          </label>
+                          <input
+                            id={`opt-label-${field.id}`}
+                            type="text"
+                            value={field.label}
+                            onChange={(e) => updateOptionField(field.id, { label: e.target.value })}
+                            placeholder="Ex. Ton, Taille, Prénom à broder"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveOptionField(index, -1)}
+                            disabled={index === 0}
+                            aria-label={`Monter le champ ${field.label || index + 1}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:border-brand-300 disabled:opacity-40"
+                          >
+                            <ArrowUp size={16} aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveOptionField(index, 1)}
+                            disabled={index === optionFields.length - 1}
+                            aria-label={`Descendre le champ ${field.label || index + 1}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:border-brand-300 disabled:opacity-40"
+                          >
+                            <ArrowDown size={16} aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOptionFields((prev) => prev.filter((f) => f.id !== field.id))
+                            }
+                            aria-label={`Supprimer le champ ${field.label || index + 1}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-red-600 hover:border-red-300"
+                          >
+                            <Trash2 size={16} aria-hidden />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                        <select
+                          value={field.type}
+                          onChange={(e) =>
+                            updateOptionField(field.id, {
+                              type: e.target.value === 'text' ? 'text' : 'choice',
+                            })
+                          }
+                          aria-label="Type de champ"
+                          className="min-h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none sm:w-auto"
+                        >
+                          <option value="choice">Choix dans une liste</option>
+                          <option value="text">Texte libre</option>
+                        </select>
+                        <label className="flex min-h-10 items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(e) => updateOptionField(field.id, { required: e.target.checked })}
+                            className="h-5 w-5 rounded border-gray-300"
+                          />
+                          Obligatoire
+                        </label>
+                      </div>
+
+                      {field.type === 'choice' ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-gray-500">Le client choisira une de ces options.</p>
+                          {field.choices.map((choice, ci) => (
+                            <div key={ci} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={choice}
+                                data-opt-choice={`${field.id}-${ci}`}
+                                onChange={(e) => updateOptionChoice(field.id, ci, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    if (ci === field.choices.length - 1) addOptionChoice(field.id)
+                                  }
+                                }}
+                                placeholder={`Option ${ci + 1}`}
+                                aria-label={`Option ${ci + 1} de ${field.label || 'ce champ'}`}
+                                className="min-h-10 w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateOptionField(field.id, {
+                                    choices: field.choices.filter((_, i) => i !== ci),
+                                  })
+                                }
+                                aria-label={`Supprimer l'option ${ci + 1}`}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-red-600 hover:border-red-300"
+                              >
+                                <Trash2 size={15} aria-hidden />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addOptionChoice(field.id)}
+                            disabled={field.choices.length >= MAX_OPTION_CHOICES}
+                            className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-brand-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Plus size={15} aria-hidden /> Ajouter une option
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs text-gray-500">
+                          Le client saisira librement sa réponse (200 caractères max).
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={addOptionField}
+                disabled={optionFields.length >= MAX_OPTION_FIELDS}
+                className="flex min-h-10 items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-600"
+              >
+                <Plus size={16} aria-hidden />
+                Ajouter un champ
+              </button>
+              {optionFields.length >= MAX_OPTION_FIELDS && (
+                <p className="text-xs text-amber-600">
+                  Maximum {MAX_OPTION_FIELDS} champs par produit.
+                </p>
+              )}
             </Card>
           </div>
 

@@ -11,6 +11,7 @@ import {
   buildWhatsAppUrl,
 } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
+import { parseOrderOptions } from '@/utils/productOptions'
 import {
   ORDER_STATUS_ACTION_LABELS,
   ORDER_STATUS_COLORS,
@@ -191,7 +192,7 @@ export function OrderDetailPage() {
               : 'Espèces à la livraison'}
           </span>
           <a
-            href={buildWhatsAppUrl(order.customer_phone, `Bonjour, à propos de votre commande #${order.order_number}.`)}
+            href={buildWhatsAppUrl(order.customer_phone, `À propos de votre commande #${order.order_number}.`)}
             target="_blank"
             rel="noreferrer"
             className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
@@ -266,7 +267,15 @@ export function OrderDetailPage() {
           <tbody className="divide-y divide-gray-100">
             {order.items.map((item) => (
               <tr key={item.id}>
-                <td className="px-4 py-3">{item.product_name}</td>
+                <td className="px-4 py-3">
+                  {item.product_name}
+                  {item.variant_name && !item.product_name.includes(item.variant_name) ? ` (${item.variant_name})` : ''}
+                  {parseOrderOptions(item.options).map((o) => (
+                    <p key={o.label} className="text-xs text-gray-500">
+                      {o.label} : {o.value}
+                    </p>
+                  ))}
+                </td>
                 <td className="px-4 py-3">{formatCurrency(Number(item.unit_price), currency)}</td>
                 <td className="px-4 py-3">{item.quantity}</td>
                 <td className="px-4 py-3">{formatCurrency(Number(item.subtotal), currency)}</td>

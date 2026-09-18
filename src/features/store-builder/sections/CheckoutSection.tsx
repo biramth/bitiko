@@ -12,6 +12,7 @@ import {
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
+import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import type { CartItem, PaymentMethod } from '@/types'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
@@ -176,9 +177,12 @@ function CheckoutFlow({
       <div className="mt-6 border-y border-[var(--shop-text)]/10 py-5">
         <ul className="space-y-1.5 text-sm text-[var(--shop-text)]/80">
           {items.map((item) => (
-            <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex justify-between">
+            <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex justify-between gap-4">
               <span>
                 {item.variantName ? `${item.name} (${item.variantName})` : item.name} × {item.quantity}
+                {item.options && item.options.length > 0 && (
+                  <span className="block text-xs text-[var(--shop-text)]/50">{formatOptionsInline(item.options)}</span>
+                )}
               </span>
               <span>{formatCurrency(item.price * item.quantity, currency)}</span>
             </li>

@@ -3,6 +3,7 @@ import { PartyPopper, Share2, ShoppingBag, Truck } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatCurrency } from '@/utils/format'
+import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import { buildDemoCart } from '../demoCart'
 import type { Shop } from '@/types'
@@ -120,7 +121,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
       <div className={aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10' : undefined}>
       <ul className="mt-8 divide-y divide-[var(--shop-text)]/10 border-t border-[var(--shop-text)]/10">
         {items.map((item) => (
-          <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex gap-5 py-5">
+          <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex gap-5 py-5">
             <div className="h-24 w-24 shrink-0 overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
               {item.imageUrl ? (
                 <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
@@ -140,10 +141,13 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                   {item.variantName && (
                     <p className="text-sm text-[var(--shop-text)]/50">{item.variantName}</p>
                   )}
+                  {item.options && item.options.length > 0 && (
+                    <p className="text-sm text-[var(--shop-text)]/50">{formatOptionsInline(item.options)}</p>
+                  )}
                 </div>
                 {!isDemo && (
                   <button
-                    onClick={() => removeItem(item.productId, item.variantId)}
+                    onClick={() => removeItem(item)}
                     aria-label={`Supprimer ${item.name} du panier`}
                     className="text-[var(--shop-text)]/30 hover:text-red-600"
                   >
@@ -157,9 +161,9 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                 <div className="flex items-center gap-4">
                   {!isDemo ? (
                     <>
-                      <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
                       <span className="w-4 text-center text-sm font-medium text-[var(--shop-text)]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
                     </>
                   ) : (
                     <span className="text-sm text-[var(--shop-text)]/60">Qté : {item.quantity}</span>

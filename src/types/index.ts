@@ -28,10 +28,31 @@ export interface ProductWithRelations extends Product {
   variants: ProductVariant[]
 }
 
+/** A field the merchant adds to a product for the customer to fill in before
+ *  ordering (no price, no stock — variants handle those). */
+export type OptionFieldType = 'choice' | 'text'
+
+export interface OptionField {
+  id: string
+  label: string
+  type: OptionFieldType
+  required: boolean
+  /** Listed answers, for `choice` fields (empty for `text`). */
+  choices: string[]
+}
+
+/** What the customer picked for one option field. */
+export interface SelectedOption {
+  fieldId: string
+  label: string
+  value: string
+}
+
 export interface CartItem {
   productId: string
   variantId?: string
   variantName?: string
+  options?: SelectedOption[]
   name: string
   slug: string
   price: number

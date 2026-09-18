@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { CART_STORAGE_KEY } from '@/config/constants'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { listProductsByIds } from '@/services/product.service'
+import { optionsKey, parseOptionFields, resolveSelection } from '@/utils/productOptions'
 import type { CartItem } from '@/types'
 
 interface CartContextValue {
@@ -10,8 +11,8 @@ interface CartContextValue {
   itemCount: number
   subtotal: number
   addItem: (item: CartItem) => void
-  updateQuantity: (productId: string, variantId: string | undefined, quantity: number) => void
-  removeItem: (productId: string, variantId: string | undefined) => void
+  updateQuantity: (line: CartLineRef, quantity: number) => void
+  removeItem: (line: CartLineRef) => void
   clear: () => void
 }
 
@@ -32,8 +33,16 @@ function readCart(shopId: string | undefined): CartItem[] {
   }
 }
 
-function sameLine(a: CartItem, b: Pick<CartItem, 'productId' | 'variantId'>) {
-  return a.productId === b.productId && (a.variantId ?? null) === (b.variantId ?? null)
+/** Identifies one cart line: product + variant + the customer's option picks
+ *  ("Ton: Rose" and "Ton: Bleu" of the same product are separate lines). */
+export type CartLineRef = Pick<CartItem, 'productId' | 'variantId' | 'options'>
+
+function sameLine(a: CartLineRef, b: CartLineRef) {
+  return (
+    a.productId === b.productId &&
+    (a.variantId ?? null) === (b.variantId ?? null) &&
+    optionsKey(a.options) === optionsKey(b.options)
+  )
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -70,18 +79,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const updateQuantity = (productId: string, variantId: string | undefined, quantity: number) => {
+  const updateQuantity = (line: CartLineRef, quantity: number) => {
     setItems((prev) =>
       prev.map((i) =>
-        sameLine(i, { productId, variantId })
+        sameLine(i, line)
           ? { ...i, quantity: Math.max(1, Math.min(quantity, i.stock)) }
           : i,
       ),
     )
   }
 
-  const removeItem = (productId: string, variantId: string | undefined) => {
-    setItems((prev) => prev.filter((i) => !sameLine(i, { productId, variantId })))
+  const removeItem = (line: CartLineRef) => {
+    setItems((prev) => prev.filter((i) => !sameLine(i, line)))
   }
 
   const clear = () => setItems([])
@@ -115,6 +124,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 p.variants.some((v) => v.id === item.variantId && v.active)),
           )
           if (!current) {
+            changed = true
+            return null
+          }
+
+          // The merchant may have edited the product's option fields since the
+          // customer picked — a line whose picks no longer fit must be redone.
+          const picked = Object.fromEntries((item.options ?? []).map((o) => [o.fieldId, o.value]))
+          const check = resolveSelection(parseOptionFields(current.option_fields), picked)
+          if (!check.ok || check.options.length !== (item.options ?? []).length) {
             changed = true
             return null
           }

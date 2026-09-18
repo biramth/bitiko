@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
 
 const SCRIPT_ID = 'product-structured-data'
@@ -10,6 +11,9 @@ export function useProductStructuredData(product: ProductWithRelations | null, c
   useEffect(() => {
     if (!product) return
 
+    const { min, max, hasRange } = priceRange(product)
+    const availability =
+      product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
     const script = document.createElement('script')
     script.type = 'application/ld+json'
     script.id = SCRIPT_ID
@@ -20,13 +24,21 @@ export function useProductStructuredData(product: ProductWithRelations | null, c
       description: product.description ?? undefined,
       image: product.images.map((i) => i.public_url),
       category: product.category?.name,
-      offers: {
-        '@type': 'Offer',
-        price: product.price,
-        priceCurrency: currency,
-        availability:
-          product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      },
+      offers: hasRange
+        ? {
+            '@type': 'AggregateOffer',
+            lowPrice: min,
+            highPrice: max,
+            priceCurrency: currency,
+            offerCount: (product.variants ?? []).filter((v) => v.active).length,
+            availability,
+          }
+        : {
+            '@type': 'Offer',
+            price: min,
+            priceCurrency: currency,
+            availability,
+          },
     })
     document.head.appendChild(script)
 

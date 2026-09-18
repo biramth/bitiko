@@ -6,6 +6,7 @@ import { StockBadge } from './StockBadge'
 import { useCart } from '@/features/cart/CartContext'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
+import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
 
 export function ProductCard({
@@ -20,6 +21,7 @@ export function ProductCard({
   const cover = product.images[0]?.public_url
   const outOfStock = product.stock <= 0
   const hasVariants = product.variants.length > 0
+  const { min, hasRange } = priceRange(product)
   const { addItem } = useCart()
   const toast = useToast()
   const [added, setAdded] = useState(false)
@@ -71,7 +73,10 @@ export function ProductCard({
         <h3 className="text-sm text-[var(--shop-text)] group-hover:underline group-hover:decoration-[var(--shop-text)]/40 group-hover:underline-offset-2">
           {product.name}
         </h3>
-        <p className="text-sm font-semibold text-[var(--shop-text)]">{formatCurrency(product.price, currency)}</p>
+        <p className="text-sm font-semibold text-[var(--shop-text)]">
+          {hasRange && <span className="mr-1 text-xs font-normal opacity-70">À partir de</span>}
+          {formatCurrency(min, currency)}
+        </p>
         <StockBadge stock={product.stock} lowStockThreshold={lowStockThreshold} compact />
       </div>
       {!outOfStock && !hasVariants && (
