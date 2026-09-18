@@ -4,6 +4,9 @@ import { editorInputClass, editorLabelClass } from '../sections/shared'
 import type { BlockEditorProps, BlockRendererProps } from '../blockRegistry'
 import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
+import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+import { TextStyleField } from '../components/TextStyleControls'
+import { resolveTextStyle } from '@/config/textStyle'
 
 function isExternalUrl(url: string) {
   return /^https?:\/\//i.test(url)
@@ -17,14 +20,18 @@ export function ButtonBlockRenderer({ block, editable = false, onChange }: Block
       : 'inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90'
   const style = { borderRadius: 'var(--shop-radius)' }
   const url = block.url.trim() || '/catalogue'
+  const labelStyle = resolveTextStyle(block.labelStyle)
   const label = (
-    <InlineText
-      editable={editable}
-      value={block.label}
-      onCommit={(value) => onChange?.({ ...block, label: value })}
-      placeholder="Voir l'offre"
-      label="Texte du bouton"
-    />
+    <InlineStyleToolbar editable={editable} display="inline" style={block.labelStyle} onCommit={(labelStyle) => onChange?.({ ...block, labelStyle })} label="Style du bouton">
+      <InlineText
+        editable={editable}
+        value={block.label}
+        onCommit={(value) => onChange?.({ ...block, label: value })}
+        placeholder="Voir l'offre"
+        style={labelStyle}
+        label="Texte du bouton"
+      />
+    </InlineStyleToolbar>
   )
 
   if (editable) {
@@ -38,11 +45,11 @@ export function ButtonBlockRenderer({ block, editable = false, onChange }: Block
   }
 
   return isExternalUrl(url) ? (
-    <a href={url} target="_blank" rel="noreferrer" style={style} className={className}>
+    <a href={url} target="_blank" rel="noreferrer" style={{ ...style, ...labelStyle }} className={className}>
       {block.label}
     </a>
   ) : (
-    <Link to={url} style={style} className={className}>
+    <Link to={url} style={{ ...style, ...labelStyle }} className={className}>
       {block.label}
     </Link>
   )
@@ -59,6 +66,7 @@ export function ButtonBlockEditor({ block, onChange }: BlockEditorProps<Flexible
           placeholder="Voir l'offre"
           className={editorInputClass}
         />
+        <TextStyleField value={block.labelStyle} onChange={(labelStyle) => onChange({ ...block, labelStyle })} />
       </div>
       <div>
         <label className={editorLabelClass}>Lien</label>

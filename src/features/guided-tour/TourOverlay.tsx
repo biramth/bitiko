@@ -13,6 +13,18 @@ interface HighlightRect {
   key: string
 }
 
+/** The same `data-guide` value can exist twice (desktop sidebar + mobile nav
+ *  drawer); only the copy that is actually rendered can be pointed at. */
+function findVisibleTarget(selector: string): HTMLElement | null {
+  for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+    if (el.getClientRects().length > 0) return el
+  }
+  return null
+}
+
+/** Below Tailwind's `sm` the card docks as a sheet instead of floating. */
+const MOBILE_QUERY = '(max-width: 639px)'
+
 /** Measures the highlighted element's viewport rect on every animation frame
  *  while a step has a target — this stays correct over the auto-scroll, nested
  *  scrollable containers (the admin sidebar) and window resizes. Only commits
@@ -29,8 +41,13 @@ function useHighlightRect(selector: string | undefined, stepIndex: number): High
     }
     let raf = 0
     const update = () => {
-      const el = document.querySelector<HTMLElement>(selector)
-      if (el) {
+      const el = findVisibleTarget(selector)
+      if (!el) {
+        if (prevRef.current) {
+          prevRef.current = null
+          setRect(null)
+        }
+      } else {
         const r = el.getBoundingClientRect()
         const key = `${r.left},${r.top},${r.width},${r.height}`
         const prev = prevRef.current
@@ -122,10 +139,17 @@ function TooltipCard({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
+  const [dock, setDock] = useState<'top' | 'bottom' | null>(null)
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    if (window.matchMedia(MOBILE_QUERY).matches && highlight) {
+      // Sheet docked opposite the target so it never covers what it points at.
+      setDock(highlight.top + highlight.height / 2 < window.innerHeight / 2 ? 'bottom' : 'top')
+      return
+    }
+    setDock(null)
     const card = el.getBoundingClientRect()
     if (!highlight) {
       setPosition({
@@ -144,8 +168,22 @@ function TooltipCard({
     <div
       ref={ref}
       role="tooltip"
-      className="pointer-events-auto fixed z-[51] w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-sand-200 bg-white p-4 shadow-2xl shadow-ink-900/20"
-      style={position ? { left: position.left, top: position.top } : { visibility: 'hidden' }}
+      className={`pointer-events-auto fixed z-[51] rounded-2xl border border-sand-200 bg-white p-4 shadow-2xl shadow-ink-900/20 ${
+        dock ? 'max-h-[45vh] touch-pan-y overflow-y-auto' : 'w-80 max-w-[calc(100vw-2rem)]'
+      }`}
+      style={
+        dock
+          ? {
+              left: EDGE,
+              right: EDGE,
+              ...(dock === 'bottom'
+                ? { bottom: `max(${EDGE}px, env(safe-area-inset-bottom))` }
+                : { top: `max(${EDGE}px, env(safe-area-inset-top))` }),
+            }
+          : position
+            ? { left: position.left, top: position.top }
+            : { visibility: 'hidden' }
+      }
     >
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-2 font-heading text-sm font-bold text-ink-900">
@@ -158,7 +196,7 @@ function TooltipCard({
           type="button"
           onClick={onClose}
           aria-label="Ignorer la visite guidée"
-          className="-mr-1 -mt-1 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          className="-mr-2 -mt-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 sm:-mr-1 sm:-mt-1 sm:h-8 sm:w-8"
         >
           <X size={15} aria-hidden />
         </button>
@@ -179,7 +217,7 @@ function TooltipCard({
             <button
               type="button"
               onClick={onPrev}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+              className="flex min-h-11 items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 sm:min-h-0 sm:px-2 sm:text-xs"
             >
               <ArrowLeft size={13} aria-hidden /> Précédent
             </button>
@@ -187,7 +225,7 @@ function TooltipCard({
           <button
             type="button"
             onClick={isLast ? onClose : onNext}
-            className="flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
+            className="flex min-h-11 items-center gap-1 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 sm:min-h-0 sm:px-3 sm:text-xs"
           >
             {isLast ? 'Terminer' : 'Suivant'}
             {!isLast && <ArrowRight size={13} aria-hidden />}
@@ -219,13 +257,13 @@ export function TourOverlay({
 
   useEffect(() => {
     if (step?.target) {
-      document.querySelector(step.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      findVisibleTarget(step.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step?.target, stepIndex])
 
   return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={tour.title}>
+    <div className="fixed inset-0 z-50 touch-none" role="dialog" aria-modal="true" aria-label={tour.title}>
       {highlight && (
         <div
           aria-hidden

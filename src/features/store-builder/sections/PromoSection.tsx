@@ -1,11 +1,16 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import type { PromoSectionConfig, ThemeConfig } from '@/types/builder'
+import type { PromoLayout, PromoSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
+import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { resolveTextStyle } from '@/config/textStyle'
 
 function isExternal(url: string) {
   return /^https?:\/\//i.test(url)
@@ -26,13 +31,16 @@ export function PromoRenderer({
   if (!editable && !config.heading.trim()) return null
 
   const buttonLabel = (
-    <InlineText
-      editable={editable}
-      value={config.buttonLabel}
-      onCommit={(buttonLabel) => patch({ buttonLabel })}
-      placeholder="Voir l'offre"
-      label="Texte du bouton"
-    />
+    <InlineStyleToolbar editable={editable} display="inline" style={config.buttonLabelStyle} onCommit={(buttonLabelStyle) => patch({ buttonLabelStyle })} label="Style du bouton">
+      <InlineText
+        editable={editable}
+        value={config.buttonLabel}
+        onCommit={(buttonLabel) => patch({ buttonLabel })}
+        placeholder="Voir l'offre"
+        style={resolveTextStyle(config.buttonLabelStyle)}
+        label="Texte du bouton"
+      />
+    </InlineStyleToolbar>
   )
   const button = (config.buttonLabel.trim() || editable) && (
     <span
@@ -44,33 +52,44 @@ export function PromoRenderer({
     </span>
   )
 
+  const card = (config.layout ?? 'banner') === 'card'
+
   return (
-    <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
+    <section className={`mx-auto px-4 py-6 sm:px-6 ${card ? 'max-w-3xl' : 'max-w-[var(--shop-content-width)]'}`}>
       <div
-        className="flex flex-col items-start px-6 py-10 text-white sm:px-10"
+        className={
+          card
+            ? 'flex flex-col items-center px-6 py-12 text-center text-white sm:px-14 sm:py-16'
+            : 'flex flex-col items-start px-6 py-10 text-white sm:px-10'
+        }
         style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', borderRadius: 'var(--shop-radius)' }}
       >
-        <InlineText
-          as="h2"
-          editable={editable}
-          value={config.heading}
-          onCommit={(heading) => patch({ heading })}
-          placeholder="Titre de la promotion"
-          className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
-          style={{ fontFamily: 'var(--shop-font-heading)' }}
-          label="Titre"
-        />
-        {(config.body.trim() || editable) && (
+        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
-            as="p"
+            as="h2"
             editable={editable}
-            value={config.body}
-            onCommit={(body) => patch({ body })}
-            placeholder="Texte"
-            className="mt-2 max-w-md text-white/80"
-            multiline
-            label="Texte"
+            value={config.heading}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre de la promotion"
+            className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            style={{ fontFamily: 'var(--shop-font-heading)', ...resolveTextStyle(config.headingStyle) }}
+            label="Titre"
           />
+        </InlineStyleToolbar>
+        {(config.body.trim() || editable) && (
+          <InlineStyleToolbar editable={editable} style={config.bodyStyle} onCommit={(bodyStyle) => patch({ bodyStyle })} label="Style du texte">
+            <InlineText
+              as="p"
+              editable={editable}
+              value={config.body}
+              onCommit={(body) => patch({ body })}
+              placeholder="Texte"
+              className="mt-2 max-w-md text-white/80"
+              style={resolveTextStyle(config.bodyStyle)}
+              multiline
+              label="Texte"
+            />
+          </InlineStyleToolbar>
         )}
         {button &&
           (editable ? (
@@ -89,9 +108,44 @@ export function PromoRenderer({
   )
 }
 
+const PROMO_LAYOUTS: { value: PromoLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'banner',
+    label: 'Bannière',
+    preview: (
+      <SwatchFrame className="flex-col justify-center gap-1">
+        <SwatchBlock className="h-full w-full" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'card',
+    label: 'Carte',
+    preview: (
+      <SwatchFrame className="items-center justify-center">
+        <SwatchBlock className="h-3/4 w-2/3" />
+      </SwatchFrame>
+    ),
+  },
+]
+
 export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectionConfig>) {
   return (
     <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={2}
+            value={config.layout ?? 'banner'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={PROMO_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>
+          « Carte » centre la promotion dans un encadré plus étroit, au lieu de la pleine largeur.
+        </p>
+      </div>
       <div>
         <label className={editorLabelClass}>Titre</label>
         <input
@@ -100,6 +154,8 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
           placeholder="Soldes de fin d'année"
           className={editorInputClass}
         />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = la promotion n'est pas affichée.</p>
+        <TextStyleField value={config.headingStyle} onChange={(headingStyle) => onChange({ ...config, headingStyle })} />
       </div>
       <div>
         <label className={editorLabelClass}>Texte</label>
@@ -109,6 +165,7 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
           onChange={(e) => onChange({ ...config, body: e.target.value })}
           className={editorInputClass}
         />
+        <TextStyleField value={config.bodyStyle} onChange={(bodyStyle) => onChange({ ...config, bodyStyle })} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -119,6 +176,7 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
             placeholder="Voir l'offre"
             className={editorInputClass}
           />
+          <TextStyleField label="Style" value={config.buttonLabelStyle} onChange={(buttonLabelStyle) => onChange({ ...config, buttonLabelStyle })} />
         </div>
         <div>
           <label className={editorLabelClass}>Lien du bouton</label>
@@ -128,6 +186,7 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
             placeholder="/catalogue"
             className={editorInputClass}
           />
+          <p className={`mt-1 ${editorHelpClass}`}>Vide = page catalogue.</p>
         </div>
       </div>
       <div>

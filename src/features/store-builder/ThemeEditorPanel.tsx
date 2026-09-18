@@ -1,5 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
 import { contrastWithWhite } from '@/utils/format'
+import { ColorField } from './components/ColorField'
+import { VisualPicker } from './components/VisualPicker'
 import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } from '@/types/builder'
 
 const labelClass = 'block text-sm font-medium text-gray-700'
@@ -13,68 +15,6 @@ function ThemeGroup({ title, children }: { title: string; children: React.ReactN
     <div className="border-t border-gray-100 pt-5 first:mt-0 first:border-t-0 first:pt-0">
       <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{title}</p>
       <div className="space-y-4">{children}</div>
-    </div>
-  )
-}
-
-/** A row of clickable visual options (radius corners, text size) instead of
- *  a plain <select> — the merchant sees the effect, not just a word. */
-function VisualPicker<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T
-  options: { value: T; label: string; preview: React.ReactNode }[]
-  onChange: (value: T) => void
-}) {
-  return (
-    <div className="grid grid-cols-4 gap-2">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 transition-colors ${
-            value === opt.value ? 'border-brand-400 bg-brand-50/70 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
-          }`}
-        >
-          {opt.preview}
-          <span className="text-[11px] font-medium leading-none">{opt.label}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function ColorField({
-  label,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string
-  value: string
-  placeholder: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <div className="mt-1 flex items-center gap-3">
-        <input
-          type="color"
-          value={value || placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-        />
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="mt-0 max-w-[9rem] flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono uppercase text-gray-900 focus:border-brand-400 focus:outline-none"
-        />
-      </div>
     </div>
   )
 }

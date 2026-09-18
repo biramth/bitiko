@@ -1,9 +1,81 @@
 import { Link } from 'react-router-dom'
 import { Lock, Plus, Trash2 } from 'lucide-react'
-import type { FooterSectionConfig, HeaderSectionConfig, NavigationLink } from '@/types/builder'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import type { FooterLayout, FooterSectionConfig, HeaderLayout, HeaderSectionConfig, NavigationLink } from '@/types/builder'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
 const checkboxRow = 'flex items-center gap-2 text-sm text-gray-700'
+
+const HEADER_LAYOUTS: { value: HeaderLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'left-logo',
+    label: 'Classique',
+    preview: (
+      <SwatchFrame className="items-center justify-between gap-1">
+        <SwatchBlock className="h-2 w-3" />
+        <SwatchBar w="w-1/3" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'centered-logo',
+    label: 'Logo centré',
+    preview: (
+      <SwatchFrame className="flex-col items-center justify-center gap-1">
+        <SwatchBlock className="h-2 w-3" />
+        <SwatchBar w="w-2/3" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'split',
+    label: 'Réparti',
+    preview: (
+      <SwatchFrame className="items-center justify-between gap-1">
+        <SwatchBar w="w-1/4" />
+        <SwatchBlock className="h-2 w-3" />
+        <SwatchBlock className="h-2 w-1.5" />
+      </SwatchFrame>
+    ),
+  },
+]
+
+const FOOTER_LAYOUTS: { value: FooterLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'columns',
+    label: '3 colonnes',
+    preview: (
+      <SwatchFrame className="items-center gap-1">
+        <SwatchBlock className="h-4 w-1/3" />
+        <SwatchBlock className="h-4 w-1/3" />
+        <SwatchBlock className="h-4 w-1/3" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'centered',
+    label: 'Centré',
+    preview: (
+      <SwatchFrame className="flex-col items-center justify-center gap-1">
+        <SwatchBlock className="h-2 w-3" />
+        <SwatchBar w="w-2/3" />
+        <SwatchBar w="w-1/3" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'minimal',
+    label: 'Minimal',
+    preview: (
+      <SwatchFrame className="items-center justify-between gap-1">
+        <SwatchBar w="w-1/3" />
+        <SwatchBar w="w-1/4" />
+      </SwatchFrame>
+    ),
+  },
+]
 
 function MenuEditor({
   menu,
@@ -20,7 +92,7 @@ function MenuEditor({
   return (
     <div className="space-y-2">
       <label className={editorLabelClass}>Liens de navigation</label>
-      <p className="text-xs text-gray-400">
+      <p className={editorHelpClass}>
         Définissez les liens affichés dans le header. Utilisez <code className="font-mono text-gray-500">/pages/…</code> pour vos pages personnalisées, <code className="font-mono text-gray-500">/catalogue</code> pour le catalogue, ou une URL complète pour un lien externe.
       </p>
       <div className="space-y-2">
@@ -64,13 +136,27 @@ export function HeaderEditor({ config, onChange }: SectionEditorProps<HeaderSect
   const menu = config.menu ?? []
   return (
     <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={3}
+            value={config.layout ?? 'left-logo'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={HEADER_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>
+          « Logo centré » place les liens sous le logo ; « Réparti » met les liens à gauche, le logo au centre et le panier à droite.
+        </p>
+      </div>
       <MenuEditor
         menu={menu}
         onChange={(newMenu) => onChange({ ...config, menu: newMenu })}
       />
       <div className="border-t border-gray-200 pt-4">
         <label className={editorLabelClass}>Boutons classiques</label>
-        <p className="mb-2 text-xs text-gray-400">
+        <p className={`mb-2 ${editorHelpClass}`}>
           Affichés à droite. Désactivez-les si vous utilisez des liens personnalisés ci-dessus.
         </p>
         <div className="space-y-2">
@@ -110,7 +196,7 @@ export function HeaderEditor({ config, onChange }: SectionEditorProps<HeaderSect
           Fixe en haut de l'écran au défilement
         </label>
       </div>
-      <p className="text-xs text-gray-500">
+      <p className={editorHelpClass}>
         Le header s'affiche sur toutes les pages de votre boutique, pas seulement l'accueil.
       </p>
     </div>
@@ -120,6 +206,20 @@ export function HeaderEditor({ config, onChange }: SectionEditorProps<HeaderSect
 export function FooterEditor({ config, onChange, removableBranding }: SectionEditorProps<FooterSectionConfig>) {
   return (
     <div className="space-y-3">
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={3}
+            value={config.layout ?? 'columns'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={FOOTER_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>
+          « Centré » empile tout au centre ; « Minimal » tient sur une seule ligne (sans bloc contact ni réseaux sociaux).
+        </p>
+      </div>
       <label className={checkboxRow}>
         <input
           type="checkbox"
@@ -152,9 +252,10 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           placeholder="Laisser vide = © année · nom de la boutique"
           className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
         />
+        <TextStyleField value={config.copyrightTextStyle} onChange={(copyrightTextStyle) => onChange({ ...config, copyrightTextStyle })} />
       </div>
       <div className="border-t border-gray-200 pt-3">
-        <p className="mb-2 text-xs text-gray-400">
+        <p className={`mb-2 ${editorHelpClass}`}>
           Sans réglage, le footer reprend automatiquement la couleur principale de la boutique (celle suggérée par votre logo), assombrie pour rester lisible — vous pouvez la remplacer ici.
         </p>
         <label className={editorLabelClass}>Couleur de fond</label>
@@ -227,7 +328,7 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           </span>
         </div>
       )}
-      <p className="text-xs text-gray-500">
+      <p className={editorHelpClass}>
         Le footer s'affiche sur toutes les pages. Les réseaux sociaux se règlent dans Paramètres → Contact.
       </p>
     </div>

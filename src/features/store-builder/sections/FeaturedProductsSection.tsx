@@ -4,25 +4,77 @@ import { useFeaturedProducts, useShopProducts } from '@/features/products/usePro
 import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
-import type { FeaturedProductsSectionConfig, ThemeConfig } from '@/types/builder'
+import type { FeaturedProductsSectionConfig, GridLayout, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { resolveTextStyle } from '@/config/textStyle'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
+import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
-export function FeaturedProductsRenderer({ shop, config, themeConfig }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig }) {
+export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId, editable = false }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
+  const patch = useInlineEdit(sectionId)
   const { data: products = [] } = useFeaturedProducts(shop.id, config.productIds)
   if (products.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
-      <h2 className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading || 'Sélection'}</h2>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
-        ))}
-      </div>
+      <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+          <InlineText
+            as="h2"
+            editable={editable}
+            value={config.heading || 'Sélection'}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre"
+            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            style={resolveTextStyle(config.headingStyle)}
+            label="Titre"
+          />
+        </InlineStyleToolbar>
+      {(config.layout ?? 'grid') === 'carousel' ? (
+        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
+          {products.map((product) => (
+            <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
+              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
+
+const GRID_LAYOUTS: { value: GridLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'grid',
+    label: 'Grille',
+    preview: (
+      <SwatchFrame className="flex-wrap content-between gap-1">
+        {Array.from({ length: 6 }, (_, i) => <SwatchBlock key={i} className="h-[45%] w-[30%]" />)}
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'carousel',
+    label: 'Carrousel',
+    preview: (
+      <SwatchFrame className="items-center gap-1">
+        <SwatchBlock className="h-3/4 w-1/3" />
+        <SwatchBlock className="h-3/4 w-1/3" />
+        <SwatchBlock className="h-3/4 w-1/3 opacity-50" />
+      </SwatchFrame>
+    ),
+  },
+]
 
 export function FeaturedProductsEditor({
   config,
@@ -50,6 +102,21 @@ export function FeaturedProductsEditor({
           onChange={(e) => onChange({ ...config, heading: e.target.value })}
           className={editorInputClass}
         />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = « Sélection ».</p>
+        <TextStyleField value={config.headingStyle} onChange={(headingStyle) => onChange({ ...config, headingStyle })} />
+      </div>
+
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={2}
+            value={config.layout ?? 'grid'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={GRID_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>« Carrousel » affiche une seule rangée défilante horizontalement.</p>
       </div>
 
       <div>

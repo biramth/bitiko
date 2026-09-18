@@ -3,13 +3,19 @@ import { Link } from 'react-router-dom'
 import { ImageOff, ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { uploadShopSectionImage, uploadShopSectionVideo } from '@/services/shop.service'
 import type { ImageSectionConfig } from '@/types/builder'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
+import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+import { TextStyleField } from '../components/TextStyleControls'
+import { resolveTextStyle } from '@/config/textStyle'
 import { FocalPointPicker } from './FocalPointPicker'
 import { VideoUploadField } from './VideoUploadField'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
-export function ImageRenderer({ config }: { config: ImageSectionConfig }) {
+export function ImageRenderer({ config, sectionId, editable = false }: { config: ImageSectionConfig; sectionId?: string; editable?: boolean }) {
+  const patch = useInlineEdit(sectionId)
   if (!config.imageUrl) return null
 
   const content = (
@@ -40,7 +46,20 @@ export function ImageRenderer({ config }: { config: ImageSectionConfig }) {
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
       {config.linkUrl ? <Link to={config.linkUrl}>{content}</Link> : content}
-      {config.caption.trim() && <p className="mt-2 text-sm text-[var(--shop-text)]/60">{config.caption}</p>}
+      {(config.caption.trim() || editable) && (
+        <InlineStyleToolbar editable={editable} style={config.captionStyle} onCommit={(captionStyle) => patch({ captionStyle })} label="Style de la légende">
+          <InlineText
+            as="p"
+            editable={editable}
+            value={config.caption}
+            onCommit={(caption) => patch({ caption })}
+            placeholder="Légende"
+            className="mt-2 text-sm text-[var(--shop-text)]/60"
+            style={resolveTextStyle(config.captionStyle)}
+            label="Légende"
+          />
+        </InlineStyleToolbar>
+      )}
     </section>
   )
 }
@@ -127,6 +146,8 @@ export function ImageEditor({ config, onChange, shopId, sectionId }: SectionEdit
           onChange={(e) => onChange({ ...config, caption: e.target.value })}
           className={editorInputClass}
         />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = aucune légende sous l'image.</p>
+        <TextStyleField value={config.captionStyle} onChange={(captionStyle) => onChange({ ...config, captionStyle })} />
       </div>
       <div>
         <label className={editorLabelClass}>Lien (optionnel)</label>
@@ -136,6 +157,7 @@ export function ImageEditor({ config, onChange, shopId, sectionId }: SectionEdit
           placeholder="/catalogue"
           className={editorInputClass}
         />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = l'image n'est pas cliquable.</p>
       </div>
       <VideoUploadField
         videoUrl={config.videoUrl}

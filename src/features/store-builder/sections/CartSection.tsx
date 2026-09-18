@@ -6,9 +6,13 @@ import { formatCurrency } from '@/utils/format'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import { buildDemoCart } from '../demoCart'
 import type { Shop } from '@/types'
-import type { CartSectionConfig, ThemeConfig } from '@/types/builder'
+import type { CartLayout, CartSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { resolveTextStyle } from '@/config/textStyle'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
@@ -51,6 +55,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
   const subtotal = demo ? demo.reduce((sum, i) => sum + i.price * i.quantity, 0) : realSubtotal
   const currency = shop.currency ?? 'XOF'
   const isDemo = demo !== null
+  const aside = (config.layout ?? 'stacked') === 'summary-aside'
 
   const handleShareCart = async () => {
     const lines = items.map((item) => `- ${item.name} x${item.quantity} : ${formatCurrency(item.price * item.quantity, currency)}`)
@@ -88,10 +93,10 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
   }
 
   return (
-    <div className="mx-auto max-w-[min(48rem,var(--shop-content-width))] px-4 py-8 sm:px-6">
+    <div className={`mx-auto max-w-[min(48rem,var(--shop-content-width))] px-4 py-8 sm:px-6 ${aside ? 'lg:max-w-[var(--shop-content-width)]' : ''}`}>
       {(config.heading || !isDemo) && (
         <div className="flex items-start justify-between gap-4">
-          {config.heading ? <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h1> : <span />}
+          {config.heading ? <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1> : <span />}
           {!isDemo && (
             <button
               type="button"
@@ -112,6 +117,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         </div>
       )}
 
+      <div className={aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10' : undefined}>
       <ul className="mt-8 divide-y divide-[var(--shop-text)]/10 border-t border-[var(--shop-text)]/10">
         {items.map((item) => (
           <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex gap-5 py-5">
@@ -168,7 +174,8 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         ))}
       </ul>
 
-      <div className="mt-6 flex items-center justify-between border-t border-[var(--shop-text)]/10 pt-4">
+      <div className={aside ? 'lg:sticky lg:top-24 lg:mt-8 lg:border lg:border-[var(--shop-text)]/10 lg:p-5' : undefined}>
+      <div className={`mt-6 flex items-center justify-between border-t ${aside ? 'lg:mt-0 lg:border-t-0 lg:pt-0' : ''} border-[var(--shop-text)]/10 pt-4`}>
         <div>
           <span className="block text-base font-semibold text-[var(--shop-text)]">Total</span>
           <Link to="/catalogue" className="mt-1 inline-block text-xs text-[var(--shop-text)]/60 underline underline-offset-2 hover:text-[var(--shop-text)]">
@@ -198,13 +205,56 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
           <ArrowRight size={16} aria-hidden />
         </Link>
       )}
+      </div>
+      </div>
     </div>
   )
 }
 
+const CART_LAYOUTS: { value: CartLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'stacked',
+    label: 'Empilé',
+    preview: (
+      <SwatchFrame className="flex-col gap-1">
+        <SwatchBlock className="h-2 w-full" />
+        <SwatchBlock className="h-2 w-full" />
+        <SwatchBar w="w-1/2" />
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'summary-aside',
+    label: 'Résumé à droite',
+    preview: (
+      <SwatchFrame className="gap-1">
+        <span className="flex w-2/3 flex-col gap-1">
+          <SwatchBlock className="h-2 w-full" />
+          <SwatchBlock className="h-2 w-full" />
+        </span>
+        <SwatchBlock className="h-full w-1/3" />
+      </SwatchFrame>
+    ),
+  },
+]
+
 export function CartEditor({ config, onChange }: SectionEditorProps<CartSectionConfig>) {
   return (
     <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={2}
+            value={config.layout ?? 'stacked'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={CART_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>
+          « Résumé à droite » place le total et le bouton de commande dans une colonne fixe sur ordinateur.
+        </p>
+      </div>
       <div>
         <label className={editorLabelClass}>Titre</label>
         <input
@@ -212,6 +262,8 @@ export function CartEditor({ config, onChange }: SectionEditorProps<CartSectionC
           onChange={(e) => onChange({ ...config, heading: e.target.value })}
           className={editorInputClass}
         />
+        <p className={`mt-1 ${editorHelpClass}`}>Vide = aucun titre affiché.</p>
+        <TextStyleField value={config.headingStyle} onChange={(headingStyle) => onChange({ ...config, headingStyle })} />
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input

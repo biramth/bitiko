@@ -30,6 +30,32 @@ export type TemplateSectionType = 'lookbook'
 
 export type SectionType = CoreSectionType | TemplateSectionType
 
+/** Per-text override of the shop's global typography (Réglages → Thème).
+ *  Every field is optional: unset = inherit the theme's value. Attached to
+ *  each text as a flat sibling `<field>Style` (never a nested map) because the
+ *  builder's inline-edit patches are a shallow merge of the section config. */
+export type TextWeight = 'normal' | 'medium' | 'semibold' | 'bold'
+
+export interface TextStyleOverride {
+  color?: string
+  font?: FontChoice
+  weight?: TextWeight
+  italic?: boolean
+}
+
+/** Structural layout presets, one union per section type. Unset = the
+ *  section's original arrangement, so existing shops render unchanged. */
+export type HeaderLayout = 'left-logo' | 'centered-logo' | 'split'
+export type AnnouncementLayout = 'bar' | 'pill'
+export type HeroLayout = 'image-full' | 'image-side' | 'text-only'
+export type GridLayout = 'grid' | 'carousel'
+export type PromoLayout = 'banner' | 'card'
+export type FaqLayout = 'accordion' | 'grid'
+export type LookbookLayout = 'grid' | 'masonry'
+export type ProductLayout = 'gallery-left' | 'gallery-right'
+export type CartLayout = 'stacked' | 'summary-aside'
+export type FooterLayout = 'columns' | 'centered' | 'minimal'
+
 /** An internal or external link in the header/footer menu. */
 export interface NavigationLink {
   label: string
@@ -48,6 +74,9 @@ export interface AnnouncementBarSectionConfig {
   dismissible: boolean
   backgroundColor?: string
   textColor?: string
+  messageStyle?: TextStyleOverride
+  linkLabelStyle?: TextStyleOverride
+  layout?: AnnouncementLayout
 }
 
 export interface HeaderSectionConfig {
@@ -58,6 +87,7 @@ export interface HeaderSectionConfig {
   /** Custom navigation links rendered between the logo and right-side actions.
    *  When non-empty, these replace the default Catalogue/Contact links. */
   menu: NavigationLink[]
+  layout?: HeaderLayout
 }
 
 export interface FooterSectionConfig {
@@ -76,6 +106,8 @@ export interface FooterSectionConfig {
   backgroundColor?: string
   buttonColor?: string
   textColor?: string
+  copyrightTextStyle?: TextStyleOverride
+  layout?: FooterLayout
 }
 
 export interface HeroSectionConfig {
@@ -97,18 +129,27 @@ export interface HeroSectionConfig {
    *  else. Undefined = the historical hardcoded French copy. */
   primaryButtonLabel?: string
   whatsappButtonLabel?: string
+  eyebrowStyle?: TextStyleOverride
+  headingStyle?: TextStyleOverride
+  subheadingStyle?: TextStyleOverride
+  primaryButtonLabelStyle?: TextStyleOverride
+  whatsappButtonLabelStyle?: TextStyleOverride
+  layout?: HeroLayout
 }
 
 export interface TextSectionConfig {
   heading: string
   body: string
   align: 'left' | 'center'
+  headingStyle?: TextStyleOverride
+  bodyStyle?: TextStyleOverride
 }
 
 export interface ImageSectionConfig {
   imageUrl: string | null
   caption: string
   linkUrl: string
+  captionStyle?: TextStyleOverride
   /** Where the image crops from when its aspect ratio doesn't match the
    *  container — 0-100 percentages, defaulting to center (50/50). */
   focalX?: number
@@ -120,10 +161,14 @@ export interface ImageSectionConfig {
 
 export interface CategoriesSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
 }
 
 export interface ProductsSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
   sort: 'recent' | 'price_asc' | 'price_desc'
   limit: number
   /** When true, the block adds the catalogue toolbar (search, category,
@@ -134,6 +179,8 @@ export interface ProductsSectionConfig {
 
 export interface FeaturedProductsSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
   productIds: string[]
 }
 
@@ -142,6 +189,8 @@ export interface FeaturedProductsSectionConfig {
  *  product being viewed via the route context. */
 export interface ProductSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
+  layout?: ProductLayout
   showGallery: boolean
   showTitle: boolean
   showPrice: boolean
@@ -161,6 +210,8 @@ export interface ProductSectionConfig {
 /** Dynamic cart block: the live cart contents + totals, plus a checkout CTA. */
 export interface CartSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
+  layout?: CartLayout
   /** Progress bar toward the shop's free-delivery threshold (no-op if the
    *  shop hasn't set one). Optional for the same backward-compat reason as
    *  the product section's new toggles. */
@@ -170,6 +221,7 @@ export interface CartSectionConfig {
 /** Dynamic checkout block: the full order form. */
 export interface CheckoutSectionConfig {
   heading: string
+  headingStyle?: TextStyleOverride
   /** Reassurance row above the submit button. */
   showTrustBadges?: boolean
 }
@@ -180,11 +232,21 @@ export interface PromoSectionConfig {
   buttonLabel: string
   buttonLink: string
   backgroundColor: string
+  headingStyle?: TextStyleOverride
+  bodyStyle?: TextStyleOverride
+  buttonLabelStyle?: TextStyleOverride
+  layout?: PromoLayout
 }
 
 export interface FaqSectionConfig {
   heading: string
   items: { question: string; answer: string }[]
+  headingStyle?: TextStyleOverride
+  /** One shared style for every question / every answer (a per-item style
+   *  would mean up to 16 popovers on one section). */
+  questionStyle?: TextStyleOverride
+  answerStyle?: TextStyleOverride
+  layout?: FaqLayout
 }
 
 export interface LookbookImage {
@@ -198,6 +260,9 @@ export interface LookbookImage {
 export interface LookbookSectionConfig {
   heading: string
   images: LookbookImage[]
+  headingStyle?: TextStyleOverride
+  captionStyle?: TextStyleOverride
+  layout?: LookbookLayout
 }
 
 /** The building blocks a "Section personnalisée" (flexible) can hold —
@@ -213,6 +278,8 @@ export interface FlexibleTextBlock {
   heading: string
   body: string
   align: 'left' | 'center'
+  headingStyle?: TextStyleOverride
+  bodyStyle?: TextStyleOverride
 }
 
 export interface FlexibleImageBlock {
@@ -230,6 +297,7 @@ export interface FlexibleButtonBlock {
   label: string
   url: string
   style: 'solid' | 'outline'
+  labelStyle?: TextStyleOverride
 }
 
 export interface FlexibleSpacerBlock {

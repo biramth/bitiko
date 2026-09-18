@@ -5,6 +5,10 @@ export const editorInputClass =
 
 export const editorLabelClass = 'block text-sm font-medium text-gray-700'
 
+/** Helper text under a field — gray-500 (not 400) so it stays legible on a
+ *  phone in daylight (WCAG AA contrast on white). */
+export const editorHelpClass = 'text-xs leading-relaxed text-gray-500'
+
 export interface SectionEditorProps<TConfig> {
   config: TConfig
   onChange: (config: TConfig) => void

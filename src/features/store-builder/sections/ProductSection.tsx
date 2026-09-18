@@ -26,9 +26,13 @@ import { formatCurrency } from '@/utils/format'
 import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBreadcrumbStructuredData'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import type { Product, ProductWithRelations, Shop } from '@/types'
-import type { ProductSectionConfig, ThemeConfig } from '@/types/builder'
+import type { ProductLayout, ProductSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
-import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { resolveTextStyle } from '@/config/textStyle'
+import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
+import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
 type ProductImage = { public_url: string; id: string }
 
@@ -157,6 +161,7 @@ function ProductDetails({
 }) {
   const { addItem } = useCart()
   const toast = useToast()
+  const galleryRight = (config.layout ?? 'gallery-left') === 'gallery-right'
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [added, setAdded] = useState(false)
@@ -267,9 +272,9 @@ function ProductDetails({
           )}
         </nav>
 
-        <div className="grid gap-10 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-14">
+        <div className={`grid gap-10 md:gap-14 ${galleryRight ? 'md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : 'md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'}`}>
           {config.showGallery && (
-            <div>
+            <div className={galleryRight ? 'md:order-2' : undefined}>
               <button
                 type="button"
                 onClick={() => galleryImages.length > 0 && setLightboxOpen(true)}
@@ -280,7 +285,7 @@ function ProductDetails({
               >
                 {galleryImages[activeImage] ? (
                   <>
-                    <img src={galleryImages[activeImage].public_url} alt={product.name} className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
+                    <img src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
                     <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
@@ -314,12 +319,17 @@ function ProductDetails({
             </div>
           )}
 
-          <div className="md:pt-2">
+          <div className={`md:pt-2 ${galleryRight ? 'md:order-1' : ''}`}>
             {product.category && config.showTitle && (
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/40">{product.category.name}</p>
             )}
             {config.showTitle && (
-              <h1 className={`mt-2 font-heading font-bold tracking-tight text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{product.name}</h1>
+              <h1
+                className={`mt-2 font-heading font-bold tracking-tight text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+                style={resolveTextStyle(config.headingStyle)}
+              >
+                {product.name}
+              </h1>
             )}
             {config.showPrice && (
               <p className="mt-4 text-xl font-semibold text-[var(--shop-text)]">
@@ -567,6 +577,35 @@ export function ProductRenderer({ shop, config, themeConfig }: { shop: Shop; con
   )
 }
 
+const PRODUCT_LAYOUTS: { value: ProductLayout; label: string; preview: React.ReactNode }[] = [
+  {
+    value: 'gallery-left',
+    label: 'Galerie à gauche',
+    preview: (
+      <SwatchFrame className="items-center gap-1">
+        <SwatchBlock className="h-full w-2/5" />
+        <span className="flex w-3/5 flex-col gap-1">
+          <SwatchBar />
+          <SwatchBar w="w-2/3" />
+        </span>
+      </SwatchFrame>
+    ),
+  },
+  {
+    value: 'gallery-right',
+    label: 'Galerie à droite',
+    preview: (
+      <SwatchFrame className="items-center gap-1">
+        <span className="flex w-3/5 flex-col gap-1">
+          <SwatchBar />
+          <SwatchBar w="w-2/3" />
+        </span>
+        <SwatchBlock className="h-full w-2/5" />
+      </SwatchFrame>
+    ),
+  },
+]
+
 export function ProductEditor({ config, onChange }: SectionEditorProps<ProductSectionConfig>) {
   // `=== false` (not `!config[key]`) so a field absent from an older saved
   // config — the three new optional toggles below — reads as "on" here too,
@@ -597,8 +636,22 @@ export function ProductEditor({ config, onChange }: SectionEditorProps<ProductSe
   return (
     <div className="space-y-4">
       <div>
+        <label className={editorLabelClass}>Disposition</label>
+        <div className="mt-1">
+          <VisualPicker
+            columns={2}
+            value={config.layout ?? 'gallery-left'}
+            onChange={(layout) => onChange({ ...config, layout })}
+            options={PRODUCT_LAYOUTS}
+          />
+        </div>
+        <p className={`mt-1.5 ${editorHelpClass}`}>Place la galerie à gauche ou à droite des informations (sur ordinateur).</p>
+      </div>
+      <div>
         <label className={editorLabelClass}>Titre (superposé)</label>
         <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} className={editorInputClass} />
+        <p className={`mt-1 ${editorHelpClass}`}>Le titre affiché est le nom du produit ; le style ci-dessous s'y applique.</p>
+        <TextStyleField value={config.headingStyle} onChange={(headingStyle) => onChange({ ...config, headingStyle })} />
       </div>
       {keys.map((key) => (
         <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
