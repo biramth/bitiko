@@ -34,7 +34,7 @@ async function handlePending(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseAdmin()
     const { data: payments, error } = await supabase
       .from('wave_payments')
-      .select('id, shop_id, plan, amount, currency, client_reference, created_at, shop:shops(name, slug, whatsapp_number, owner_id)')
+      .select('id, shop_id, plan, amount, currency, client_reference, created_at, proof_path, payer_phone, transaction_ref, proof_submitted_at, shop:shops(name, slug, whatsapp_number, owner_id)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
     if (error) throw error
@@ -52,7 +52,12 @@ async function handlePending(req: VercelRequest, res: VercelResponse) {
           const { data } = await supabase.auth.admin.getUserById(shop.owner_id)
           ownerEmail = data.user?.email ?? null
         }
-        return { ...payment, shop, ownerEmail }
+        let proofUrl: string | null = null
+        if (payment.proof_path) {
+          const { data: signed } = await supabase.storage.from('payment-proofs').createSignedUrl(payment.proof_path, 3600)
+          proofUrl = signed?.signedUrl ?? null
+        }
+        return { ...payment, shop, ownerEmail, proofUrl }
       }),
     )
 
@@ -117,7 +122,18 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const periodEnd = new Date(Date.now() + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    // Paying while the same plan is still running (e.g. a free promo month)
+    // adds the period on top instead of throwing the remaining days away.
+    const { data: currentSub } = await supabase
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', payment.shop_id)
+      .maybeSingle()
+    const runningUntil =
+      currentSub && currentSub.plan === plan && currentSub.current_period_end
+        ? new Date(currentSub.current_period_end).getTime()
+        : 0
+    const periodEnd = new Date(Math.max(Date.now(), runningUntil) + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
     const { error: updatePaymentError } = await supabase
       .from('wave_payments')
@@ -181,14 +197,19 @@ async function handleReject(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const { paymentId } = req.body ?? {}
+    const { paymentId, reason } = req.body ?? {}
     if (typeof paymentId !== 'string' || !paymentId) {
       res.status(400).json({ error: 'paymentId manquant.' })
       return
     }
+    const cleanReason = typeof reason === 'string' ? reason.trim().slice(0, 300) : ''
 
     const supabase = getSupabaseAdmin()
-    const { error } = await supabase.from('wave_payments').update({ status: 'failed' }).eq('id', paymentId)
+    const { error } = await supabase
+      .from('wave_payments')
+      .update({ status: 'failed', rejection_reason: cleanReason || null })
+      .eq('id', paymentId)
+      .eq('status', 'pending')
     if (error) throw error
 
     res.status(200).json({ status: 'failed' })

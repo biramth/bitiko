@@ -8,6 +8,7 @@ import {
 } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { campaignEmailHtml } from '../_lib/emailTemplates.js'
+import { can } from '../../src/features/platform/permissions.js'
 
 /**
  * Platform-team serverless endpoint (team management + campaign tool),
@@ -63,6 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleCampaignSend(req, res)
     case 'campaign-delete':
       return handleCampaignDelete(req, res)
+    case 'promo-list':
+      return handlePromoList(req, res)
+    case 'promo-save':
+      return handlePromoSave(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -741,6 +746,145 @@ async function handleCampaignDelete(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ ok: true })
   } catch (err) {
     console.error('platform campaign-delete failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Promotions (free months of a paid plan, redeemed through the
+// redeem_promo_code RPC). A code grants real value, so beyond "is a platform
+// member" the caller's role must hold the `send_campaigns` capability.
+// ---------------------------------------------------------------------------
+
+const PROMO_CODE_RE = /^[a-z0-9][a-z0-9-]{2,39}$/
+
+async function requirePromoMember(req: VercelRequest, res: VercelResponse): Promise<PlatformMember | null> {
+  const member = await requireMember(req, res)
+  if (!member) return null
+  if (!can(member.role, 'send_campaigns')) {
+    res.status(403).json({ error: 'Votre rôle ne permet pas de gérer les promotions.' })
+    return null
+  }
+  return member
+}
+
+async function handlePromoList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    if (!(await requirePromoMember(req, res))) return
+
+    const admin = getSupabaseAdmin()
+    const { data: promos, error } = await admin
+      .from('promo_codes')
+      .select('code, label, description, plan, days, max_redemptions, starts_at, expires_at, active, show_on_landing, created_at')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+
+    const { data: redemptions, error: redemptionsError } = await admin.from('promo_redemptions').select('code')
+    if (redemptionsError) throw redemptionsError
+    const counts = new Map<string, number>()
+    for (const r of redemptions ?? []) counts.set(r.code, (counts.get(r.code) ?? 0) + 1)
+
+    res.status(200).json({ promos: (promos ?? []).map((p) => ({ ...p, redemptions: counts.get(p.code) ?? 0 })) })
+  } catch (err) {
+    console.error('platform promo-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    if (!(await requirePromoMember(req, res))) return
+
+    const b = (req.body ?? {}) as Record<string, unknown>
+    const isNew = b.create === true
+    const code = typeof b.code === 'string' ? b.code.trim().toLowerCase() : ''
+    if (!PROMO_CODE_RE.test(code)) {
+      res.status(400).json({ error: 'Code invalide : 3 à 40 caractères, lettres minuscules, chiffres et tirets.' })
+      return
+    }
+    const label = typeof b.label === 'string' ? b.label.trim() : ''
+    if (label.length < 3 || label.length > 80) {
+      res.status(400).json({ error: 'Titre invalide (3 à 80 caractères).' })
+      return
+    }
+    const description = typeof b.description === 'string' ? b.description.trim() : ''
+    if (description.length > 200) {
+      res.status(400).json({ error: 'Description trop longue (200 caractères max).' })
+      return
+    }
+    if (b.plan !== 'essential' && b.plan !== 'pro') {
+      res.status(400).json({ error: 'Plan invalide.' })
+      return
+    }
+    const days = Number(b.days)
+    if (!Number.isInteger(days) || days < 1 || days > 366) {
+      res.status(400).json({ error: 'Durée invalide (1 à 366 jours).' })
+      return
+    }
+    let maxRedemptions: number | null = null
+    if (b.max_redemptions !== null && b.max_redemptions !== undefined && b.max_redemptions !== '') {
+      maxRedemptions = Number(b.max_redemptions)
+      if (!Number.isInteger(maxRedemptions) || maxRedemptions < 1 || maxRedemptions > 1_000_000) {
+        res.status(400).json({ error: "Nombre maximum d'utilisations invalide." })
+        return
+      }
+    }
+    const startsAt = typeof b.starts_at === 'string' && b.starts_at ? new Date(b.starts_at) : new Date()
+    if (Number.isNaN(startsAt.getTime())) {
+      res.status(400).json({ error: 'Date de début invalide.' })
+      return
+    }
+    let expiresAt: Date | null = null
+    if (typeof b.expires_at === 'string' && b.expires_at) {
+      expiresAt = new Date(b.expires_at)
+      if (Number.isNaN(expiresAt.getTime()) || expiresAt <= startsAt) {
+        res.status(400).json({ error: 'La date de fin doit être après la date de début.' })
+        return
+      }
+    }
+
+    const fields = {
+      label,
+      description: description || null,
+      plan: b.plan,
+      days,
+      max_redemptions: maxRedemptions,
+      starts_at: startsAt.toISOString(),
+      expires_at: expiresAt ? expiresAt.toISOString() : null,
+      active: b.active !== false,
+      show_on_landing: b.show_on_landing === true,
+    }
+
+    const admin = getSupabaseAdmin()
+    if (isNew) {
+      const { error } = await admin.from('promo_codes').insert({ code, ...fields })
+      if (error) {
+        if (error.code === '23505') {
+          res.status(409).json({ error: 'Ce code existe déjà.' })
+          return
+        }
+        throw error
+      }
+    } else {
+      const { data, error } = await admin.from('promo_codes').update(fields).eq('code', code).select('code')
+      if (error) throw error
+      if (!data || data.length === 0) {
+        res.status(404).json({ error: 'Promotion introuvable.' })
+        return
+      }
+    }
+
+    res.status(200).json({ saved: true, code })
+  } catch (err) {
+    console.error('platform promo-save failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

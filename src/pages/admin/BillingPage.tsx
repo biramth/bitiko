@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import QRCode from 'qrcode'
 import { Check, CheckCircle2, Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react'
-import { getShopSubscription, listPayments, requestPlanUpgrade, confirmPayment } from '@/services/billing.service'
+import { getShopSubscription, listPayments, confirmPayment } from '@/services/billing.service'
+import { PaymentProofDialog } from '@/features/billing/PaymentProofDialog'
+import { PromoOfferCard } from '@/features/billing/PromoOfferCard'
+import { useRedeemPromo } from '@/features/billing/useRedeemPromo'
 import { PLANS, WAVE_ESSENTIAL_PAYMENT_LINK, WAVE_PRO_PAYMENT_LINK, effectivePlan, effectivePlanKey } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
 import { formatCurrency } from '@/utils/format'
@@ -81,7 +84,7 @@ function WaveQrDialog({
           )}
         </div>
         <p className="text-xs text-gray-400">
-          Une fois le paiement effectué, reviens ici et clique sur « J'ai payé, activer ».
+          Une fois le paiement effectué, reviens ici et envoie la capture de ton reçu Wave avec « Envoyer ma preuve de paiement ».
         </p>
       </div>
     </Dialog>
@@ -138,15 +141,9 @@ export function BillingForShop({ shopId }: { shopId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference])
 
-  const upgradeRequestMutation = useMutation({
-    mutationFn: (planKey: Exclude<PlanKey, 'free'>) => requestPlanUpgrade(shopId, planKey),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wave-payments', shopId] })
-      toast.success('Demande envoyée. Votre upgrade sera activé après vérification.')
-    },
-    onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Impossible d'envoyer la demande. Réessayez."),
-  })
+  const [proofPlan, setProofPlan] = useState<Exclude<PlanKey, 'free'> | null>(null)
+  const [promoCode, setPromoCode] = useState('')
+  const redeemCode = useRedeemPromo(shopId, undefined, () => setPromoCode(''))
 
   const isTouchPrimary = useIsTouchPrimary()
   const [qrDialogPlan, setQrDialogPlan] = useState<Exclude<PlanKey, 'free'> | null>(null)
@@ -155,9 +152,12 @@ export function BillingForShop({ shopId }: { shopId: string }) {
 
   const planKey = effectivePlanKey(subscription)
   const plan = effectivePlan(subscription)
-  const pendingManualRequest = payments.find(
-    (p) => p.status === 'pending' && p.client_reference.startsWith('manual_'),
-  )
+  const manualPayments = payments
+    .filter((p) => p.client_reference.startsWith('manual_'))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const pendingManualRequest = manualPayments.find((p) => p.status === 'pending')
+  const latestManual = manualPayments[0]
+  const refusedProof = !pendingManualRequest && latestManual?.status === 'failed' ? latestManual : null
 
   return (
     <div className="mt-6 max-w-3xl">
@@ -176,6 +176,8 @@ export function BillingForShop({ shopId }: { shopId: string }) {
           <XCircle size={16} /> Le paiement a été annulé ou a échoué.
         </div>
       )}
+
+      <PromoOfferCard shopId={shopId} />
 
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
         <div className="flex items-center gap-3">
@@ -198,6 +200,16 @@ export function BillingForShop({ shopId }: { shopId: string }) {
           </p>
         )}
       </div>
+
+      {refusedProof && (
+        <div className="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <XCircle size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Votre dernière preuve de paiement a été refusée
+            {refusedProof.rejection_reason ? ` : ${refusedProof.rejection_reason}` : ''}. Vous pouvez en renvoyer une.
+          </span>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         {(['free', 'essential', 'pro'] as const).map((key) => {
@@ -238,7 +250,10 @@ export function BillingForShop({ shopId }: { shopId: string }) {
               ) : key === 'free' ? (
                 <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Disponible au démarrage</p>
               ) : pendingManualRequest ? (
-                <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700"><Clock size={14} /> Paiement en vérification</div>
+                <div className="mt-5 space-y-1 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700">
+                  <div className="flex items-center justify-center gap-2"><Clock size={14} /> Preuve envoyée — vérification en cours (sous 24 h)</div>
+                  <button type="button" onClick={() => setProofPlan(key)} className="py-1 text-xs font-medium text-amber-800 underline">Remplacer la preuve</button>
+                </div>
               ) : (
                 <div className="mt-5 space-y-2">
                   {isTouchPrimary ? (
@@ -250,13 +265,12 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                       <CreditCard size={15} /> Payer avec Wave
                     </button>
                   )}
-                  <button type="button" onClick={() => upgradeRequestMutation.mutate(key)} disabled={upgradeRequestMutation.isPending} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
-                    {upgradeRequestMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                    J'ai payé, activer
+                  <button type="button" onClick={() => setProofPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <CheckCircle2 size={14} />
+                    Envoyer ma preuve de paiement
                   </button>
                 </div>
               )}
-              {upgradeRequestMutation.isError && !isCurrent && <p className="mt-2 text-xs text-red-600">Impossible d'envoyer la demande.</p>}
             </div>
           )
         })}
@@ -269,6 +283,41 @@ export function BillingForShop({ shopId }: { shopId: string }) {
         planLabel={qrDialogPlan ? PLANS[qrDialogPlan].label : ''}
         amountLabel={qrDialogPlan ? formatCurrency(PLANS[qrDialogPlan].priceXof, 'XOF') : ''}
       />
+
+      <PaymentProofDialog
+        open={proofPlan !== null}
+        onClose={() => setProofPlan(null)}
+        shopId={shopId}
+        plan={proofPlan ?? 'essential'}
+      />
+
+      <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+        <p className="text-sm font-medium text-gray-700">J'ai un code promo</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (promoCode.trim()) redeemCode.mutate(promoCode)
+          }}
+          className="mt-2 flex gap-2"
+        >
+          <input
+            type="text"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            placeholder="Code promo"
+            aria-label="Code promo"
+            className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          />
+          <button
+            type="submit"
+            disabled={!promoCode.trim() || redeemCode.isPending}
+            className="flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          >
+            {redeemCode.isPending && <Loader2 size={14} className="animate-spin" aria-hidden />}
+            Appliquer
+          </button>
+        </form>
+      </div>
 
       {payments.length > 0 && (
         <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
