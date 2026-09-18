@@ -11,6 +11,7 @@ import {
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
+import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import type { CartItem, PaymentMethod } from '@/types'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
@@ -42,6 +43,7 @@ function CheckoutFlow({
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
   const [deliveryVilleId, setDeliveryVilleId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
@@ -76,10 +78,12 @@ function CheckoutFlow({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
+      const phone = normalizePhoneNumber(customerPhone)
+      if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
         customerName,
-        customerPhone,
+        customerPhone: phone.value,
         customerAddress,
         items,
         deliveryFee,
@@ -90,6 +94,7 @@ function CheckoutFlow({
     onSuccess: (result) => {
       trackEvent('purchase', { transaction_id: result.orderId, value: result.total, currency, item_count: result.items.length })
       if (!demo) clear()
+      const normalizedPhone = normalizePhoneNumber(customerPhone)
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
         items: result.items,
@@ -99,7 +104,7 @@ function CheckoutFlow({
         paymentInstructions: shop?.payment_instructions,
         total: result.total,
         customerName,
-        customerPhone,
+        customerPhone: normalizedPhone.value ? formatPhoneNumberForDisplay(normalizedPhone.value) : customerPhone,
         customerAddress,
         formatCurrency: (amount) => formatCurrency(amount, currency),
       })
@@ -147,6 +152,12 @@ function CheckoutFlow({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const phone = normalizePhoneNumber(customerPhone)
+    if (!phone.ok) {
+      setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
+      return
+    }
+    setPhoneError(null)
     trackEvent('begin_checkout', { value: estimate, currency, item_count: items.length })
     whatsappWindowRef.current = window.open('', '_blank')
     mutation.mutate()
@@ -204,7 +215,23 @@ function CheckoutFlow({
         </div>
         <div>
           <label htmlFor="customerPhone" className="block text-sm font-medium text-[var(--shop-text)]/80">Numéro de téléphone</label>
-          <input id="customerPhone" name="tel" type="tel" autoComplete="tel" inputMode="tel" required value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+221 XX XXX XX XX" className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+          <input
+            id="customerPhone"
+            name="tel"
+            type="tel"
+            autoComplete="tel"
+            inputMode="tel"
+            required
+            value={customerPhone}
+            onChange={(e) => {
+              setCustomerPhone(e.target.value)
+              if (phoneError) setPhoneError(null)
+            }}
+            aria-invalid={phoneError ? true : undefined}
+            placeholder="77 123 45 67"
+            className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+          />
+          {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
         </div>
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-[var(--shop-text)]/80">Adresse de livraison</label>
