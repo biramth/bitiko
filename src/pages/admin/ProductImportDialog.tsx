@@ -4,6 +4,7 @@ import { AlertTriangle, Check, Download, Loader2, Upload } from 'lucide-react'
 import { bulkCreateProducts, type BulkProductRow } from '@/services/product.service'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
+import { normalizePrice } from '@/utils/price'
 import type { Category } from '@/types'
 
 const TEMPLATE_HEADERS = ['nom', 'description', 'prix', 'stock', 'categorie']
@@ -29,16 +30,20 @@ function downloadTemplate() {
 
 function parseRow(raw: Record<string, string>, categories: Category[]): ParsedRow {
   const name = (raw.nom ?? '').trim()
-  const priceRaw = (raw.prix ?? '').trim().replace(',', '.')
   const stockRaw = (raw.stock ?? '').trim()
   const categoryName = (raw.categorie ?? '').trim()
 
   if (!name) return { raw, row: null, error: 'Nom manquant', categoryWarning: null }
 
-  const price = Number(priceRaw)
-  if (priceRaw === '' || Number.isNaN(price) || price < 0) {
-    return { raw, row: null, error: 'Prix invalide', categoryWarning: null }
+  const priceCheck = normalizePrice(raw.prix ?? '')
+  if (!priceCheck.ok || priceCheck.value === null) {
+    const message =
+      priceCheck.error === 'decimal_not_allowed'
+        ? 'Prix invalide (entier requis, sans centimes)'
+        : 'Prix invalide'
+    return { raw, row: null, error: message, categoryWarning: null }
   }
+  const price = priceCheck.value
 
   const stock = stockRaw === '' ? 0 : Number(stockRaw)
   if (Number.isNaN(stock) || stock < 0) {

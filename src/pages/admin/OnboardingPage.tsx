@@ -52,6 +52,7 @@ import {
 import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { slugify } from '@/utils/format'
+import { PHONE_ERROR_MESSAGES, normalizePhoneNumber, validatePhoneNumber } from '@/utils/phone'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -262,17 +263,25 @@ export function OnboardingPage() {
         throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
       }
       const ownerId = freshUserData.user.id
+      const personalPhoneCheck = normalizePhoneNumber(personalPhone)
+      if (!personalPhoneCheck.ok || !personalPhoneCheck.value) {
+        throw new Error(PHONE_ERROR_MESSAGES[personalPhoneCheck.error ?? 'invalid_length'])
+      }
+      const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+      if (!whatsappCheck.ok || !whatsappCheck.value) {
+        throw new Error(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
+      }
       await ensureProfile(ownerId, 'owner', {
         firstName,
         lastName,
-        phone: personalPhone,
+        phone: personalPhoneCheck.value,
         address: personalAddress,
       })
       let shop = await createShop({
         ownerId,
         name: name.trim(),
         slug,
-        whatsappNumber,
+        whatsappNumber: whatsappCheck.value,
         templateId,
         profile,
         palette: logoPalette,
@@ -313,13 +322,13 @@ export function OnboardingPage() {
         ? 'checking'
         : availability
 
-  const step1Valid = firstName.trim().length > 0 && lastName.trim().length > 0 && personalPhone.trim().length > 0
+  const step1Valid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone)
 
   const step2Valid =
     name.trim().length > 0 &&
     (slugStatus === 'available' || slugStatus === 'error') &&
     !!slug &&
-    whatsappNumber.trim().length > 0
+    validatePhoneNumber(whatsappNumber)
 
   const step3Valid = !!businessType && !!templateId
 
@@ -433,13 +442,19 @@ export function OnboardingPage() {
                     type="tel"
                     value={personalPhone}
                     onChange={(e) => setPersonalPhone(e.target.value)}
-                    placeholder="+221770000000"
+                    placeholder="77 123 45 67"
                     className={fieldClass}
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Un numéro pour te joindre, toi — différent du numéro de ta boutique.
-                </p>
+                {personalPhone.trim() && !normalizePhoneNumber(personalPhone).ok ? (
+                  <p className="mt-1 text-xs text-red-600">
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(personalPhone).error ?? 'invalid_length']}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Un numéro pour te joindre, toi — différent du numéro de ta boutique.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -565,13 +580,19 @@ export function OnboardingPage() {
                     type="tel"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="+221771234567"
+                    placeholder="77 123 45 67"
                     className={fieldClass}
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  C'est ce numéro qui recevra les commandes. Il peut être différent de ton numéro personnel.
-                </p>
+                {whatsappNumber.trim() && !normalizePhoneNumber(whatsappNumber).ok ? (
+                  <p className="mt-1 text-xs text-red-600">
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber).error ?? 'invalid_length']}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    C'est ce numéro qui recevra les commandes. Il peut être différent de ton numéro personnel.
+                  </p>
+                )}
               </div>
             </>
           )}

@@ -40,6 +40,8 @@ import {
   updateDeliveryVille,
 } from '@/services/deliverySecteur.service'
 import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } from '@/utils/format'
+import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
+import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -493,7 +495,11 @@ function SettingsForm({
   const invalidateVilles = () => queryClient.invalidateQueries({ queryKey: ['delivery-villes', shop.id] })
 
   const addZoneMutation = useMutation({
-    mutationFn: () => createDeliverySecteur({ shopId: shop.id, name: newZoneName, fee: Number(newZoneFee) || 0 }),
+    mutationFn: () => {
+      const fee = normalizePrice(newZoneFee.trim() || '0')
+      if (!fee.ok || fee.value === null) throw new Error(PRICE_ERROR_MESSAGES[fee.error ?? 'invalid'])
+      return createDeliverySecteur({ shopId: shop.id, name: newZoneName, fee: fee.value })
+    },
     onSuccess: () => {
       setNewZoneName('')
       setNewZoneFee('')
@@ -501,24 +507,29 @@ function SettingsForm({
       invalidateZones()
       toast.success('Zone de livraison ajoutée.')
     },
-    onError: () => {
-      setZoneError('Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.')
-      toast.error('Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.')
+    onError: (err) => {
+      const message = err instanceof Error && err.message ? err.message : 'Impossible d\'ajouter cette zone. Vérifiez que le nom n\'existe pas déjà.'
+      setZoneError(message)
+      toast.error(message)
     },
   })
 
   const saveZoneMutation = useMutation({
-    mutationFn: ({ zone }: { zone: DeliverySecteur }) =>
-      updateDeliverySecteur(zone.id, { name: editZoneName, fee: Number(editZoneFee) || 0 }),
+    mutationFn: ({ zone }: { zone: DeliverySecteur }) => {
+      const fee = normalizePrice(editZoneFee.trim() || '0')
+      if (!fee.ok || fee.value === null) throw new Error(PRICE_ERROR_MESSAGES[fee.error ?? 'invalid'])
+      return updateDeliverySecteur(zone.id, { name: editZoneName, fee: fee.value })
+    },
     onSuccess: () => {
       setEditingZoneId(null)
       setZoneError(null)
       invalidateZones()
       toast.success('Zone enregistrée.')
     },
-    onError: () => {
-      setZoneError('Impossible d\'enregistrer cette zone.')
-      toast.error('Impossible d\'enregistrer cette zone.')
+    onError: (err) => {
+      const message = err instanceof Error && err.message ? err.message : 'Impossible d\'enregistrer cette zone.'
+      setZoneError(message)
+      toast.error(message)
     },
   })
 
@@ -597,12 +608,24 @@ function SettingsForm({
   })
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      updateShop(shop.id, {
+    mutationFn: () => {
+      const phone = normalizePhoneNumber(whatsappNumber)
+      if (!phone.ok || !phone.value) {
+        throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
+      }
+      let threshold: number | null = null
+      if (freeDeliveryThreshold.trim()) {
+        const parsed = normalizePrice(freeDeliveryThreshold)
+        if (!parsed.ok || parsed.value === null) {
+          throw new Error(PRICE_ERROR_MESSAGES[parsed.error ?? 'invalid'])
+        }
+        threshold = parsed.value
+      }
+      return updateShop(shop.id, {
         name: name.trim(),
         description: description.trim() || null,
         business_type: businessType || null,
-        whatsapp_number: whatsappNumber.trim(),
+        whatsapp_number: phone.value,
         payment_instructions: paymentInstructions.trim() || null,
         currency: normalizeCurrency(currency),
         address: address.trim() || null,
@@ -614,9 +637,10 @@ function SettingsForm({
         logo_url: logoUrl,
         banner_url: bannerUrl,
         theme_color: themeColor,
-        free_delivery_threshold: freeDeliveryThreshold.trim() ? Number(freeDeliveryThreshold) : null,
+        free_delivery_threshold: threshold,
         low_stock_threshold: Number(lowStockThreshold) || 0,
-      }),
+      })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       queryClient.invalidateQueries({ queryKey: ['tenant-shop'] })
@@ -640,8 +664,9 @@ function SettingsForm({
       navigate('/admin/parametres/general')
       return
     }
-    if (!whatsappNumber.trim()) {
-      setError('Le numéro WhatsApp est requis pour recevoir les commandes.')
+    const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+    if (!whatsappCheck.ok) {
+      setError(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       navigate('/admin/parametres/contact')
       return
     }
@@ -649,6 +674,14 @@ function SettingsForm({
       setError('Code devise invalide. Utilisez un code ISO 4217 à 3 lettres (ex. XOF, EUR).')
       navigate('/admin/parametres/contact')
       return
+    }
+    if (freeDeliveryThreshold.trim()) {
+      const thresholdCheck = normalizePrice(freeDeliveryThreshold)
+      if (!thresholdCheck.ok) {
+        setError(PRICE_ERROR_MESSAGES[thresholdCheck.error ?? 'invalid'])
+        navigate('/admin/parametres/shipping')
+        return
+      }
     }
     if (!/^#[0-9a-fA-F]{6}$/.test(themeColor)) {
       setError('Couleur invalide.')
@@ -936,10 +969,12 @@ function SettingsForm({
                 <div className="mt-1 flex gap-2">
                   <input
                     id="whatsapp"
+                    type="tel"
+                    inputMode="tel"
                     required
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="+221771234567"
+                    placeholder="77 123 45 67"
                     className={inputClass}
                   />
                   {whatsappNumber.replace(/[^0-9]/g, '') && (
@@ -1054,7 +1089,7 @@ function SettingsForm({
                     id="freeDeliveryThreshold"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={freeDeliveryThreshold}
                     onChange={(e) => setFreeDeliveryThreshold(e.target.value)}
                     placeholder="Laisser vide = jamais"

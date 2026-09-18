@@ -23,6 +23,7 @@ import { createCategory } from '@/services/category.service'
 import { supabase } from '@/lib/supabaseClient'
 import { storefrontUrl } from '@/lib/tenant'
 import { formatCurrency, slugify } from '@/utils/format'
+import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
 import type { Category, ProductImage, ProductVariant, ProductWithRelations, Shop } from '@/types'
@@ -244,6 +245,26 @@ function ProductForm({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
+
+      // Validate every price up front, before touching the network — a bad
+      // variant price should never leave the product half-saved.
+      let basePrice = Number(price) || 0
+      if (!hasVariants) {
+        const priceCheck = normalizePrice(price)
+        if (!priceCheck.ok || priceCheck.value === null) {
+          throw new Error(PRICE_ERROR_MESSAGES[priceCheck.error ?? 'invalid'])
+        }
+        basePrice = priceCheck.value
+      }
+      const variantPrices = variants.map((v) => {
+        if (v.price.trim() === '') return null
+        const check = normalizePrice(v.price)
+        if (!check.ok || check.value === null) {
+          throw new Error(`Variante « ${v.name || 'sans nom'} » : ${PRICE_ERROR_MESSAGES[check.error ?? 'invalid']}`)
+        }
+        return check.value
+      })
+
       const baseSlug = slugify(name.trim())
       const slug = isEditing
         ? baseSlug === existingProduct?.slug
@@ -256,7 +277,7 @@ function ProductForm({
         name: name.trim(),
         slug,
         description: description.trim() || null,
-        price: Number(price),
+        price: basePrice,
         stock: Number(stock),
         active: effectiveActive,
       }
@@ -276,7 +297,7 @@ function ProductForm({
         const fields = {
           name: v.name.trim(),
           sku: v.sku.trim() || null,
-          price: v.price.trim() === '' ? null : Number(v.price),
+          price: variantPrices[i],
           stock: Number(v.stock) || 0,
           active: v.active,
           sort_order: i,
