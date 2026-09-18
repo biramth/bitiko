@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry'
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
+import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { StoreNotFoundPage } from './StoreNotFoundPage'
 import type { StorePage } from '@/types/pages'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
@@ -18,8 +19,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const { slug: routeSlug = '' } = useParams<{ slug: string }>()
   const slug = pageSlug ? pageSlug.replace(/^pages\//, '').replace(/\/+$/, '') : routeSlug
   const { shop } = useTenant()
-  const [searchParams] = useSearchParams()
-  const isDraftPreview = searchParams.get('preview') === 'draft'
+  const isDraftPreview = useIsDraftPreview()
 
   // Keyed by slug so "loading" can be derived during render (comparing the
   // last-resolved slug against the current one) instead of toggled with a
@@ -76,7 +76,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   // system templates already behave (see useEffectiveConfig). Outside
   // preview, the page must exist and be published to be visible.
   const sections = isDraftPreview && live ? live.sections : isDraftPreview ? (page?.draft_content ?? page?.content ?? []) : (page?.content ?? [])
-  if (!isDraftPreview && !page) return <NotFoundPage />
+  if (!isDraftPreview && !page) return <StoreNotFoundPage />
 
   const themeConfig = live?.themeConfig ?? shop.theme_config
 

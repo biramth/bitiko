@@ -58,5 +58,18 @@ export function buildDefaultSystemTemplate(key: SystemTemplateKey): LayoutSectio
           config: { heading: 'Finaliser la commande', showTrustBadges: true },
         },
       ]
+    case 'not_found':
+      return [
+        {
+          id: createSectionId('text'),
+          type: 'text',
+          visible: true,
+          config: {
+            heading: 'Page introuvable',
+            body: "Cette page n'existe pas ou n'est plus disponible.",
+            align: 'center',
+          },
+        },
+      ]
   }
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Maximize2, Monitor, ShieldClose, Smartphone, Tablet, X } from 'lucide-react'
 import { storefrontUrl } from '@/lib/tenant'
 import {
+  isPreviewInlineEditMessage,
   isPreviewNavMessage,
   isPreviewReadyMessage,
   isPreviewSelectMessage,
@@ -127,6 +128,7 @@ export function BuilderPreviewFrame({
   themeConfig,
   onSelectSection,
   onNavigate,
+  onInlineEdit,
 }: {
   slug: string
   pagePath?: string
@@ -139,6 +141,10 @@ export function BuilderPreviewFrame({
   /** Fired when the preview iframe navigates internally (product click, …)
    *  so the editor can switch to the matching template. */
   onNavigate?: (path: string) => void
+  /** Fired when the merchant edits a field directly inside the live preview
+   *  (inline text, image, button…). Omit to disable inline editing (e.g. while
+   *  previewing a not-yet-applied template — read-only until "Appliquer"). */
+  onInlineEdit?: (sectionId: string, patch: Record<string, unknown>) => void
 }) {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>('desktop')
   const [immersive, setImmersive] = useState(false)
@@ -148,7 +154,7 @@ export function BuilderPreviewFrame({
 
   const sendUpdate = () => {
     iframeRef.current?.contentWindow?.postMessage(
-      { type: PREVIEW_UPDATE, sections, themeColor, themeConfig, templateKey: templateKey ?? 'home' },
+      { type: PREVIEW_UPDATE, sections, themeColor, themeConfig, templateKey: templateKey ?? 'home', inlineEditable: !!onInlineEdit },
       targetOrigin,
     )
   }
@@ -158,7 +164,7 @@ export function BuilderPreviewFrame({
   useEffect(() => {
     sendUpdate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, themeColor, themeConfig])
+  }, [sections, themeColor, themeConfig, onInlineEdit])
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -166,11 +172,12 @@ export function BuilderPreviewFrame({
       if (isPreviewReadyMessage(event.data)) sendUpdate()
       else if (isPreviewSelectMessage(event.data)) onSelectSection(event.data.sectionId)
       else if (isPreviewNavMessage(event.data)) onNavigate?.(event.data.path)
+      else if (isPreviewInlineEditMessage(event.data)) onInlineEdit?.(event.data.sectionId, event.data.patch)
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetOrigin, sections, themeColor, themeConfig, templateKey, onSelectSection, onNavigate])
+  }, [targetOrigin, sections, themeColor, themeConfig, templateKey, onSelectSection, onNavigate, onInlineEdit])
 
   // Escape closes the immersive preview.
   useEffect(() => {

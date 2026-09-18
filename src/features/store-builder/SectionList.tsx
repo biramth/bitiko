@@ -11,11 +11,16 @@ export function SectionList({
   shop,
   themeConfig,
   isEmbeddedPreview,
+  inlineEditable = false,
 }: {
   sections: LayoutSection[]
   shop: Shop
   themeConfig: ThemeConfig
   isEmbeddedPreview: boolean
+  /** Whether Renderers should show their direct-edit affordances (text,
+   *  images, buttons…) — a Renderer that doesn't support inline editing
+   *  simply ignores these extra props. */
+  inlineEditable?: boolean
 }) {
   const registry = getEffectiveRegistry(shop.template_id)
   return (
@@ -24,7 +29,9 @@ export function SectionList({
         const def = registry[section.type]
         const Renderer = def?.Renderer
         if (!Renderer) return null
-        const content = <Renderer shop={shop} config={section.config} themeConfig={themeConfig} />
+        const content = (
+          <Renderer shop={shop} config={section.config} themeConfig={themeConfig} sectionId={section.id} editable={inlineEditable} />
+        )
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>
         return (
           <div

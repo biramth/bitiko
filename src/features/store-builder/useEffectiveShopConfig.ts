@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { DEFAULT_THEME_CONFIG } from '@/config/themeTokens'
 import { buildDefaultSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { isPreviewUpdateMessage, PREVIEW_READY, type PreviewUpdateMessage } from './previewBridge'
+import { useIsDraftPreview } from './useEmbeddedPreview'
 import type { Shop } from '@/types'
 import type { LayoutSection, SystemTemplateKey, ThemeConfig } from '@/types/builder'
 
@@ -13,10 +13,17 @@ interface EffectiveConfig {
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  announcementSection: LayoutSection | undefined
   headerSection: LayoutSection | undefined
   footerSection: LayoutSection | undefined
   bodySections: LayoutSection[]
   isDraftPreview: boolean
+  /** True only inside the builder's embedded preview iframe, and only once
+   *  the parent has confirmed inline editing is allowed (it's disabled while
+   *  previewing a not-yet-applied template). A standalone "Preview" tab
+   *  (draft mode, no parent window) never receives this, so it stays false
+   *  there — there'd be nowhere to send an inline edit anyway. */
+  inlineEditable: boolean
 }
 
 /**
@@ -35,8 +42,7 @@ export function useEffectiveConfig(
   shop: Shop | null | undefined,
   templateKey: EffectiveTemplateKey = 'home',
 ): EffectiveConfig {
-  const [searchParams] = useSearchParams()
-  const isDraftPreview = searchParams.get('preview') === 'draft'
+  const isDraftPreview = useIsDraftPreview()
   const [liveUpdate, setLiveUpdate] = useState<PreviewUpdateMessage | null>(null)
 
   useEffect(() => {
@@ -81,11 +87,16 @@ export function useEffectiveConfig(
     themeConfig = draftThemeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
   }
 
+  const announcementSection = sections.find((s) => s.type === 'announcement' && s.visible)
   const headerSection = sections.find((s) => s.type === 'header' && s.visible)
   const footerSection = sections.find((s) => s.type === 'footer' && s.visible)
-  const bodySections = sections.filter((s) => s.type !== 'header' && s.type !== 'footer' && s.visible)
+  const bodySections = sections.filter(
+    (s) => s.type !== 'announcement' && s.type !== 'header' && s.type !== 'footer' && s.visible,
+  )
 
-  return { sections, themeColor, themeConfig, headerSection, footerSection, bodySections, isDraftPreview }
+  const inlineEditable = isDraftPreview && liveUpdate?.inlineEditable === true
+
+  return { sections, themeColor, themeConfig, announcementSection, headerSection, footerSection, bodySections, isDraftPreview, inlineEditable }
 }
 
 /** Backwards-compatible alias used by the home storefront. */

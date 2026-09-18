@@ -166,3 +166,32 @@ textarea:focus-visible {
 .preview-section:hover {
   box-shadow: inset 0 0 0 2px var(--color-brand-500, #d9612e);
 }
+
+/* Store-builder live preview: field-level inline editing (text run inside a
+   heading, a button's label…) — a finer-grained affordance than
+   .preview-section's whole-block outline, so the merchant can tell exactly
+   which word/button is about to become editable before clicking into it. */
+.inline-editable {
+  cursor: text;
+  border-radius: 3px;
+  outline: 1px dashed transparent;
+  outline-offset: 3px;
+  transition: outline-color 0.12s ease, background-color 0.12s ease;
+}
+
+.inline-editable:hover {
+  outline-color: var(--color-brand-400, #e37e4b);
+  background-color: rgba(217, 97, 46, 0.06);
+}
+
+.inline-editable:focus {
+  outline: 2px solid var(--color-brand-600, #c2481c);
+  outline-offset: 3px;
+  background-color: rgba(217, 97, 46, 0.08);
+}
+
+.inline-editable:empty:before {
+  content: attr(data-placeholder);
+  color: rgba(23, 21, 46, 0.35);
+  pointer-events: none;
+}

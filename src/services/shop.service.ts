@@ -169,3 +169,9 @@ export function uploadShopBanner(shopId: string, file: File): Promise<string> {
 export function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
   return uploadShopAsset(shopId, file, itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
 }
+
+/** Background video for a builder block (image/hero sections) — same
+ *  one-file-per-section storage convention as `uploadShopSectionImage`. */
+export function uploadShopSectionVideo(shopId: string, sectionId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, file, `section-${sectionId}-video`)
+}

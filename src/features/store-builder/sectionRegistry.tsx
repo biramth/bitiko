@@ -1,4 +1,6 @@
 import {
+  BellRing,
+  Blocks,
   Image as ImageIcon,
   LayoutTemplate,
   Megaphone,
@@ -15,11 +17,13 @@ import {
 } from 'lucide-react'
 import { createSectionId } from '@/config/defaultLayout'
 import type {
+  AnnouncementBarSectionConfig,
   CategoriesSectionConfig,
   CartSectionConfig,
   CheckoutSectionConfig,
   CoreSectionType,
   FeaturedProductsSectionConfig,
+  FlexibleSectionConfig,
   FooterSectionConfig,
   HeaderSectionConfig,
   HeroSectionConfig,
@@ -32,8 +36,10 @@ import type {
   TextSectionConfig,
   FaqSectionConfig,
 } from '@/types/builder'
+import { AnnouncementBarEditor } from './sections/AnnouncementBarEditor'
 import { CategoriesEditor, CategoriesRenderer } from './sections/CategoriesSection'
 import { FeaturedProductsEditor, FeaturedProductsRenderer } from './sections/FeaturedProductsSection'
+import { FlexibleEditor, FlexibleRenderer } from './sections/FlexibleSection'
 import { FooterEditor, HeaderEditor } from './sections/HeaderFooterEditors'
 import { HeroEditor, HeroRenderer } from './sections/HeroSection'
 import { ImageEditor, ImageRenderer } from './sections/ImageSection'
@@ -81,6 +87,21 @@ export type SectionRegistry = Partial<Record<SectionType, SectionDefinition>>
  *  this via `getEffectiveRegistry` (see effectiveRegistry.ts); this object
  *  itself never varies by shop. */
 export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> = {
+  announcement: {
+    label: 'Barre d\'annonce',
+    description: 'Un message en haut de toutes les pages — promo, livraison offerte…',
+    icon: BellRing,
+    color: 'from-amber-500 to-amber-700',
+    category: 'content',
+    pinned: true,
+    createDefault: () => ({
+      id: createSectionId('announcement'),
+      type: 'announcement',
+      visible: true,
+      config: { message: '', linkLabel: '', linkUrl: '', dismissible: true } satisfies AnnouncementBarSectionConfig,
+    }),
+    Editor: AnnouncementBarEditor,
+  },
   header: {
     label: 'Header',
     description: 'Logo, navigation et panier — présent sur toutes les pages.',
@@ -232,6 +253,22 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     }),
     Editor: FaqEditor,
     Renderer: FaqRenderer,
+  },
+  flexible: {
+    label: 'Section personnalisée',
+    description: 'Composez librement avec des blocs texte, image, bouton et espacement.',
+    icon: Blocks,
+    color: 'from-violet-500 to-violet-700',
+    category: 'content',
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('flexible'),
+      type: 'flexible',
+      visible: true,
+      config: { blocks: [] } satisfies FlexibleSectionConfig,
+    }),
+    Editor: FlexibleEditor,
+    Renderer: FlexibleRenderer,
   },
   footer: {
     label: 'Footer',

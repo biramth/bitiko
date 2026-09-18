@@ -3,32 +3,133 @@ import { ChevronDown, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import type { FaqSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { useInlineEdit } from '../inline/useInlineEdit'
+import { InlineText } from '../inline/InlineText'
 
-export function FaqRenderer({ config, themeConfig }: { config: FaqSectionConfig; themeConfig: ThemeConfig }) {
-  const items = config.items.filter((item) => item.question.trim() && item.answer.trim())
-  if (items.length === 0) return null
+export function FaqRenderer({
+  config,
+  themeConfig,
+  sectionId,
+  editable = false,
+}: {
+  config: FaqSectionConfig
+  themeConfig: ThemeConfig
+  sectionId?: string
+  editable?: boolean
+}) {
+  const patch = useInlineEdit(sectionId)
+  const items = editable ? config.items : config.items.filter((item) => item.question.trim() && item.answer.trim())
+  if (items.length === 0 && !editable) return null
+
+  const updateItem = (index: number, field: 'question' | 'answer', value: string) => {
+    patch({ items: config.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)) })
+  }
 
   return (
     <section className="mx-auto max-w-[min(48rem,var(--shop-content-width))] px-4 py-10 sm:px-6 sm:py-14">
-      {config.heading.trim() && (
-        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>{config.heading}</h2>
+      {(config.heading.trim() || editable) && (
+        <InlineText
+          as="h2"
+          editable={editable}
+          value={config.heading}
+          onCommit={(heading) => patch({ heading })}
+          placeholder="Questions fréquentes"
+          className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+          label="Titre"
+        />
       )}
       <div className="mt-6 divide-y divide-ink-900/10 border-y border-ink-900/10">
-        {items.map((item, index) => <FaqItem key={`${item.question}-${index}`} question={item.question} answer={item.answer} />)}
+        {items.map((item, index) => (
+          <FaqItem
+            key={index}
+            question={item.question}
+            answer={item.answer}
+            editable={editable}
+            onQuestionChange={(value) => updateItem(index, 'question', value)}
+            onAnswerChange={(value) => updateItem(index, 'answer', value)}
+            onRemove={config.items.length > 1 ? () => patch({ items: config.items.filter((_, i) => i !== index) }) : undefined}
+          />
+        ))}
       </div>
+      {editable && (
+        <button
+          type="button"
+          onClick={() => patch({ items: [...config.items, { question: 'Nouvelle question', answer: 'Réponse…' }] })}
+          className="mt-4 flex items-center gap-1.5 text-sm font-medium text-[var(--shop-accent)] hover:opacity-80"
+        >
+          <Plus size={15} aria-hidden /> Ajouter une question
+        </button>
+      )}
     </section>
   )
 }
 
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false)
+function FaqItem({
+  question,
+  answer,
+  editable,
+  onQuestionChange,
+  onAnswerChange,
+  onRemove,
+}: {
+  question: string
+  answer: string
+  editable: boolean
+  onQuestionChange: (value: string) => void
+  onAnswerChange: (value: string) => void
+  onRemove?: () => void
+}) {
+  const [open, setOpen] = useState(editable)
   return (
-    <div>
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-[var(--shop-text)]">
-        <span>{question}</span>
-        <ChevronDown size={17} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+    <div className="group/faq relative">
+      <button
+        type="button"
+        onClick={(e) => {
+          if (editable) e.preventDefault()
+          else setOpen((value) => !value)
+        }}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-[var(--shop-text)]"
+      >
+        <InlineText
+          editable={editable}
+          value={question}
+          onCommit={onQuestionChange}
+          placeholder="Question"
+          className="flex-1"
+          label="Question"
+        />
+        {!editable && (
+          <ChevronDown size={17} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+        )}
+        {editable && onRemove && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              onRemove()
+            }}
+            aria-label="Supprimer cette question"
+            className="shrink-0 rounded p-1 text-[var(--shop-text)]/30 opacity-0 transition-opacity group-hover/faq:opacity-100 hover:text-red-600"
+          >
+            <Trash2 size={14} aria-hidden />
+          </span>
+        )}
       </button>
-      {open && <p className="pb-4 pr-8 text-sm leading-relaxed text-[var(--shop-text)]/65">{answer}</p>}
+      {open && (
+        <InlineText
+          as="p"
+          editable={editable}
+          value={answer}
+          onCommit={onAnswerChange}
+          placeholder="Réponse"
+          className="pb-4 pr-8 text-sm leading-relaxed text-[var(--shop-text)]/65"
+          multiline
+          label="Réponse"
+        />
+      )}
     </div>
   )
 }

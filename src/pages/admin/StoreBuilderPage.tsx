@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -22,7 +22,8 @@ import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFram
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
-import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
+import { TemplateLibraryPanel, isRestoredDesignKey } from '@/features/store-builder/TemplateLibraryPanel'
+import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { updateShop } from '@/services/shop.service'
@@ -37,6 +38,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
+import { SYSTEM_TEMPLATE_KEYS } from '@/types/builder'
 import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
 
 export function StoreBuilderPage() {
@@ -135,7 +137,7 @@ type PreparedContext =
 
 const HOME_CONTEXT: PreparedContext = { kind: 'home', label: 'Accueil' }
 
-const SYSTEM_LABELS: Record<SystemTemplateKey, string> = { catalogue: 'Catalogue', product: 'Fiche produit', cart: 'Panier', checkout: 'Commande' }
+const SYSTEM_LABELS: Record<SystemTemplateKey, string> = { catalogue: 'Catalogue', product: 'Fiche produit', cart: 'Panier', checkout: 'Commande', not_found: 'Page 404' }
 
 function resolveContext(key: ActiveKey, pages: StorePage[]): PreparedContext {
   if (key === 'home') return HOME_CONTEXT
@@ -163,13 +165,27 @@ function pathToKey(path: string, pages: StorePage[]): ActiveKey | null {
   return null
 }
 
-/** Addable section types per system template (keeps the commerce toolbox
- *  relevant on the page it belongs to). Home/pages keep everything. */
+/** Addable section types per system template. These pages now compose as
+ *  freely as the home page (marketing/content blocks alongside the page's
+ *  own commerce block) — curated per page so combinations stay sensible
+ *  (e.g. no second product grid on the checkout page). */
 const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
-  catalogue: ['products', 'text', 'categories'],
-  product: ['product', 'text', 'image'],
-  cart: ['cart', 'text'],
-  checkout: ['checkout', 'text'],
+  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
+  not_found: ['text', 'hero', 'image', 'promo', 'faq', 'flexible'],
+}
+
+/** The one section type each system template can't do without — removing it
+ *  would leave the page unable to do its job (no way to buy, no cart, no
+ *  checkout form). Content/marketing blocks around it stay fully removable.
+ *  The 404 page has no such requirement — it's pure content. */
+const SYSTEM_CORE_SECTION: Partial<Record<SystemTemplateKey, SectionType>> = {
+  catalogue: 'products',
+  product: 'product',
+  cart: 'cart',
+  checkout: 'checkout',
 }
 
 /** Persist an applied store-wide template as the shop's whole-store draft
@@ -187,8 +203,13 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
           product: template.layout.product,
           cart: template.layout.cart,
           checkout: template.layout.checkout,
+          not_found: template.layout.not_found ?? buildDefaultSystemTemplate('not_found'),
         },
-        templateId: template.key,
+        // A saved theme or a restored past publish is layered on top of the
+        // shop's existing vertical, not a vertical switch — never overwrite
+        // template_id for either (see publishStore, which only sets it when
+        // this is present).
+        ...(isRestoredDesignKey(template.key) ? {} : { templateId: template.key }),
       },
     })
 }
@@ -197,7 +218,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
  *  every system template's published layout (using the live snapshot for the
  *  active context, the store-wide draft — or what's already published — for
  *  the others). This is the "publish the template" action the merchant expects. */
-function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
+async function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
   const draft = shop.builder_draft
   const homeSections: LayoutSection[] =
     context.kind === 'home' ? snap.sections : draft?.sections ?? shop.layout_sections
@@ -212,6 +233,23 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
     )
   }
 
+  // Best-effort: archive the outgoing design before it's overwritten, so a
+  // publish can be rolled back from the Styles tab's "Historique" list.
+  // Never blocks the actual publish — e.g. if the migration adding
+  // shop_publish_history hasn't been applied to this project yet.
+  try {
+    await archivePublishedSnapshot(shop.id, {
+      themeColor: shop.theme_color,
+      themeConfig: shop.theme_config,
+      sections: shop.layout_sections,
+      templates: Object.fromEntries(
+        SYSTEM_TEMPLATE_KEYS.map((key) => [key, shop.page_templates?.[key]?.published ?? buildDefaultSystemTemplate(key)]),
+      ),
+    })
+  } catch {
+    // Ignored — see comment above.
+  }
+
   return updateShop(shop.id, {
     layout_sections: homeSections,
     theme_color: snap.themeColor,
@@ -221,6 +259,7 @@ function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapsho
       product: { published: systemPublished('product') },
       cart: { published: systemPublished('cart') },
       checkout: { published: systemPublished('checkout') },
+      not_found: { published: systemPublished('not_found') },
     },
     // Only set when the draft came from applying a whole-store template
     // (see storeApplyDraft) — a merchant tweaking colors/sections by hand
@@ -249,6 +288,11 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeConfig: shop.theme_config,
       },
       templateSections: (tpl) => {
+        // A saved theme or a restored past publish is the merchant's own
+        // exact design, already final — never run it through onboarding-
+        // profile personalization, which is only meant to fill in the
+        // built-in templates' placeholder copy.
+        if (isRestoredDesignKey(tpl.key)) return ensurePinnedSections(tpl.layout.home)
         const profile = profileFromShop(shop)
         return profile ? generateHomeLayout(tpl, profile) : ensurePinnedSections(tpl.layout.home)
       },
@@ -267,6 +311,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   if (context.kind === 'system') {
     return {
       ...shared,
+      protectedType: SYSTEM_CORE_SECTION[context.key],
       initialSections:
         shop.builder_draft?.templates?.[context.key] ??
         shop.page_templates?.[context.key]?.published ??
@@ -276,7 +321,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
         themeColor: shop.theme_color,
         themeConfig: shop.theme_config,
       },
-      templateSections: (tpl) => tpl.layout[context.key],
+      templateSections: (tpl) => tpl.layout[context.key] ?? buildDefaultSystemTemplate(context.key),
       saveDraft: (snap) =>
         updateShop(shop.id, {
           builder_draft: {
@@ -331,6 +376,9 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
       if (context.key === 'catalogue') return '/catalogue'
       if (context.key === 'cart') return '/panier'
       if (context.key === 'checkout') return '/commande'
+      // A path guaranteed to match no real route, so the iframe naturally
+      // hits the storefront's own not-found handler for a true preview.
+      if (context.key === 'not_found') return '/____apercu-404____'
       return productSlug ? `/produits/${productSlug}` : null
     case 'page':
       return `/pages/${context.page.slug}`
@@ -396,6 +444,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
   const previewPath = contextPreviewPath(context, productSlug)
   const previewTemplateKey = context.kind === 'system' ? context.key : undefined
   const availableTypes = context.kind === 'system' ? TEMPLATE_ADDABLE[context.key] : undefined
+  const protectedType = context.kind === 'system' ? SYSTEM_CORE_SECTION[context.key] : undefined
   const draftBadge = context.kind === 'page' && !context.page.is_published
   const publishesStore = context.kind !== 'page'
   // Whether there's a persisted draft to discard even with no unsaved local
@@ -418,6 +467,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
         previewPath={previewPath}
         previewTemplateKey={previewTemplateKey}
         availableTypes={availableTypes}
+        protectedType={protectedType}
         draftBadge={draftBadge}
         hasStoredDraft={hasStoredDraft}
         onContextChange={setActiveKey}
@@ -457,6 +507,7 @@ function BuilderEditor({
   previewPath,
   previewTemplateKey,
   availableTypes,
+  protectedType,
   draftBadge,
   hasStoredDraft,
   onContextChange,
@@ -476,6 +527,7 @@ function BuilderEditor({
   previewPath: string | null
   previewTemplateKey?: SystemTemplateKey
   availableTypes?: SectionType[]
+  protectedType?: SectionType
   draftBadge: boolean
   hasStoredDraft: boolean
   onContextChange: (key: ActiveKey) => void
@@ -515,10 +567,18 @@ function BuilderEditor({
   const previewThemeColor = previewTemplate ? previewTemplate.themeColor : builder.themeColor
   const previewThemeConfig = previewTemplate ? previewTemplate.themeConfig : builder.themeConfig
 
-  const handleRemoveSection = (id: string) => {
-    builder.removeSection(id)
-    toast.info('Section supprimée — Ctrl+Z pour annuler.')
-  }
+  const handleRemoveSection = useCallback(
+    (id: string) => {
+      const section = builder.sections.find((s) => s.id === id)
+      if (protectedType && section?.type === protectedType) {
+        toast.error('Ce bloc est indispensable à cette page et ne peut pas être supprimé.')
+        return
+      }
+      builder.removeSection(id)
+      toast.info('Section supprimée — Ctrl+Z pour annuler.')
+    },
+    [builder, protectedType, toast],
+  )
 
   // Mobile/tablet: only one of blocks/preview/settings is shown at a time
   // (see useIsDesktopBuilder above). Selecting a block or switching tabs
@@ -555,12 +615,12 @@ function BuilderEditor({
       }
       if (!isEditing && (e.key === 'Delete' || e.key === 'Backspace') && builder.selectedSectionId) {
         e.preventDefault()
-        builder.removeSection(builder.selectedSectionId)
+        handleRemoveSection(builder.selectedSectionId)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [builder])
+  }, [builder, handleRemoveSection])
 
   /* Warn before closing/refreshing the tab with unsaved changes — React
    * Router navigation isn't covered (would need a data router with a
@@ -679,6 +739,7 @@ function BuilderEditor({
             templateId={shop.template_id}
             allowTemplates={allowAdvancedBuilder}
             maxCustomSections={maxCustomSections}
+            protectedType={protectedType}
           />
         )
 
@@ -718,6 +779,14 @@ function BuilderEditor({
                   themeConfig={previewThemeConfig}
                   onSelectSection={previewTemplate ? () => {} : selectSectionAndFocus}
                   onNavigate={onNavigate}
+                  onInlineEdit={
+                    previewTemplate
+                      ? undefined
+                      : (id, patch) => {
+                          const section = builder.sections.find((s) => s.id === id)
+                          if (section) builder.updateSectionConfig(id, { ...section.config, ...patch })
+                        }
+                  }
                 />
               </div>
             </div>
@@ -736,6 +805,7 @@ function BuilderEditor({
             {builder.activeTab === 'blocks' && (
               <SectionEditorPanel
                 section={builder.selectedSection}
+                shop={shop}
                 shopId={shop.id}
                 templateId={shop.template_id}
                 removableBranding={removableBranding}

@@ -44,6 +44,7 @@ export function BuilderSidebar({
   templateId,
   allowTemplates = true,
   maxCustomSections,
+  protectedType,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
@@ -68,6 +69,10 @@ export function BuilderSidebar({
    *  `Plan.maxCustomSections`) — catalog-display and commerce blocks are
    *  never limited. `null`/absent = unlimited. */
   maxCustomSections?: number | null
+  /** The one section type this page can't do without (e.g. 'cart' on the cart
+   *  page) — hides its delete button rather than letting the merchant click
+   *  something that silently no-ops. */
+  protectedType?: SectionType
 }) {
   const registry = getEffectiveRegistry(templateId)
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -183,6 +188,9 @@ export function BuilderSidebar({
                         {def?.label ?? 'Bloc inconnu'}
                       </span>
                       {def?.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
+                      {!def?.pinned && section.type === protectedType && (
+                        <span className="block text-[10px] uppercase tracking-wide text-gray-400">Indispensable</span>
+                      )}
                     </span>
                   </button>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -195,7 +203,7 @@ export function BuilderSidebar({
                     >
                       {section.visible ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
-                    {!def?.pinned && (
+                    {!def?.pinned && !def?.singleton && (
                       <button
                         type="button"
                         onClick={() => onDuplicate(section.id)}
@@ -206,7 +214,7 @@ export function BuilderSidebar({
                         <Copy size={14} />
                       </button>
                     )}
-                    {!def?.pinned && (
+                    {!def?.pinned && section.type !== protectedType && (
                       <button
                         type="button"
                         onClick={() => onRemove(section.id)}

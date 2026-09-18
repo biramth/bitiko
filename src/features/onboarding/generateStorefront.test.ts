@@ -54,9 +54,10 @@ describe('generateHomeLayout', () => {
     expect(sections[footerIndex - 1].type).toBe('faq')
   })
 
-  it('keeps the template structure (header first, footer last)', () => {
+  it('keeps the template structure (announcement bar then header first, footer last)', () => {
     const sections = generateHomeLayout(recipeTemplate, buildAnswers())
-    expect(sections[0].type).toBe('header')
+    expect(sections[0].type).toBe('announcement')
+    expect(sections[1].type).toBe('header')
     expect(sections[sections.length - 1].type).toBe('footer')
   })
 })
