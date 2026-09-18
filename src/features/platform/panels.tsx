@@ -169,11 +169,6 @@ export function AnalyticsPanel({ stats }: { stats: Awaited<ReturnType<typeof get
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RankList
-          title="Pages les plus vues"
-          empty="Aucune visite enregistrée."
-          rows={(stats.top_pages ?? []).map((p) => ({ label: `${p.shop} · ${p.path}`, value: p.visits }))}
-        />
-        <RankList
           title="Boutiques les plus visitées"
           empty="Aucune visite enregistrée."
           rows={(stats.top_shops ?? []).map((s) => ({ label: s.name, value: s.visits }))}
