@@ -27,7 +27,7 @@ export const config = { maxDuration: 60 }
 
 /** Emails sent in parallel per batch — bounds memory without going so slow
  *  that a large audience hits the function timeout. */
-const SEND_CONCURRENCY = 5
+const SEND_CONCURRENCY = 2
 
 /** A 'sending' campaign older than this is assumed to be a killed run that can
  *  be safely taken over (already-delivered recipients are skipped). */
