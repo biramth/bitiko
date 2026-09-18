@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { PromoOfferCard } from '@/features/billing/PromoOfferCard'
 import { getDashboardStats } from '@/services/dashboard.service'
 import { listDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { updateOrderStatus } from '@/services/order.service'
@@ -212,6 +213,8 @@ export function DashboardPage() {
           </>
         }
       />
+
+      {shop && <PromoOfferCard shopId={shop.id} />}
 
       {shop && (
         <SetupChecklist

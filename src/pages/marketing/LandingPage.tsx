@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Clock,
   CreditCard,
+  Gift,
   MapPinned,
   Menu,
   MessageCircle,
@@ -28,6 +29,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
 
@@ -618,9 +620,30 @@ export function LandingPage() {
       "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
   })
   useFaqStructuredData(faq)
+  const promo = useLandingPromo()
+  const promoDate = formatPromoDate(promo?.expires_at ?? null)
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 font-sans text-ink-800">
+      {promo && (
+        <div className="bg-brand-600 px-4 py-2 text-center text-xs text-white sm:text-sm">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <Gift size={15} className="shrink-0" aria-hidden />
+              <strong className="font-semibold">{promo.label}</strong>
+            </span>
+            <span className="text-white/90">
+              Activez-le gratuitement à l’inscription{promoDate ? ` · jusqu’au ${promoDate}` : ''}
+            </span>
+            <Link
+              to="/admin/login"
+              className="rounded-full bg-white px-3 py-0.5 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50"
+            >
+              J’en profite
+            </Link>
+          </div>
+        </div>
+      )}
       <Nav />
 
       <main className="relative mx-auto w-full">
@@ -999,9 +1022,15 @@ export function LandingPage() {
               </Reveal>
               {/* Essentiel */}
               <Reveal delay={80}>
-                <div className="rounded-[20px] border border-brand-200 bg-brand-50/40 p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
+                <div className="relative rounded-[20px] border border-brand-200 bg-brand-50/40 p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
+                  {promo?.plan === 'essential' && (
+                    <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900"><Gift size={12} aria-hidden />{promo.days} jours offerts</span>
+                  )}
                   <p className="text-sm font-bold text-ink-900">Essentiel</p>
                   <div className="mt-3 flex items-baseline justify-center gap-1"><span className="text-4xl font-bold text-ink-900">3 000 F</span><span className="text-sm text-ink-700/60">/mois</span></div>
+                  {promo?.plan === 'essential' && (
+                    <p className="mt-1 text-center text-xs font-medium text-brand-700">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
+                  )}
                   <p className="mt-2 text-center text-sm text-ink-700/60">Pour structurer sa boutique.</p>
                   <div className="my-6 h-px w-full bg-brand-100" />
                   <ul className="space-y-3">
@@ -1015,12 +1044,17 @@ export function LandingPage() {
               {/* Pro */}
               <Reveal delay={160}>
                 <div className="relative rounded-[20px] border border-brand-600 bg-brand-600 p-8 text-white shadow-[0_0_60px_rgba(194,72,28,0.15)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_70px_rgba(194,72,28,0.25)]">
-                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900">Le plus populaire</span>
+                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900">
+                    {promo?.plan === 'pro' ? <><Gift size={12} aria-hidden />{promo.days} jours offerts</> : 'Le plus populaire'}
+                  </span>
                   <p className="text-sm font-bold text-white">Pro</p>
                   <div className="mt-3 flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold text-white">10 000 F</span>
                     <span className="text-sm text-white/70">/mois</span>
                   </div>
+                  {promo?.plan === 'pro' && (
+                    <p className="mt-1 text-center text-xs font-medium text-gold-300">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
+                  )}
                   <p className="mt-2 text-center text-sm text-white/70">Pour les boutiques qui tournent.</p>
                   <div className="my-6 h-px w-full bg-white/20" />
                   <ul className="space-y-3">

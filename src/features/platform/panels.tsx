@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3,
   CheckCircle2,
+  Copy,
   CreditCard,
   ExternalLink,
   Package,
@@ -235,8 +236,101 @@ export function ShopsPanel() {
   )
 }
 
+const REJECT_REASONS = [
+  'Paiement introuvable dans Wave',
+  'Montant incorrect',
+  'Capture illisible',
+  'Autre',
+]
+
+function CopyRefButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* presse-papiers indisponible */
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+      aria-label="Copier la référence"
+    >
+      <Copy size={12} aria-hidden /> {copied ? 'Copié' : 'Copier'}
+    </button>
+  )
+}
+
+function RejectForm({
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  pending: boolean
+  onConfirm: (reason: string) => void
+  onCancel: () => void
+}) {
+  const [quick, setQuick] = useState(REJECT_REASONS[0])
+  const [reason, setReason] = useState(REJECT_REASONS[0])
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <label className="block text-xs font-medium text-gray-700">
+        Motif du refus
+        <select
+          value={quick}
+          onChange={(e) => {
+            setQuick(e.target.value)
+            setReason(e.target.value)
+          }}
+          className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm"
+        >
+          {REJECT_REASONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block text-xs font-medium text-gray-700">
+        Message affiché au commerçant
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          maxLength={300}
+          rows={3}
+          className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm"
+        />
+      </label>
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={() => onConfirm(reason.trim())}
+          disabled={pending}
+          className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+        >
+          Confirmer le refus
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function PaymentsPanel() {
   const queryClient = useQueryClient()
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
   const { data: payments, isLoading, isError, error } = useQuery({
     queryKey: ['admin-pending-payments'],
     queryFn: listPendingPayments,
@@ -248,7 +342,13 @@ export function PaymentsPanel() {
     mutationFn: ({ paymentId, plan }: { paymentId: string; plan: 'essential' | 'pro' }) => approvePayment(paymentId, plan),
     onSuccess: invalidate,
   })
-  const reject = useMutation({ mutationFn: rejectPayment, onSuccess: invalidate })
+  const reject = useMutation({
+    mutationFn: ({ paymentId, reason }: { paymentId: string; reason?: string }) => rejectPayment(paymentId, reason),
+    onSuccess: () => {
+      setRejectingId(null)
+      return invalidate()
+    },
+  })
 
   if (isLoading) return <Spinner />
   if (isError) return <p className="text-sm text-red-600">{error instanceof Error ? error.message : 'Erreur.'}</p>
@@ -256,8 +356,9 @@ export function PaymentsPanel() {
   return (
     <div>
       <p className="text-sm text-gray-500">
-        Paiements Wave en attente de vérification manuelle. Contrôle le montant réellement reçu dans l'app Wave, puis
-        active le plan correspondant.
+        Paiements Wave en attente de vérification manuelle. Vérifie la capture d'écran, puis contrôle le montant et la
+        référence dans l'app Wave avant d'activer le plan correspondant. En cas de refus, le commerçant voit le motif
+        que tu indiques.
       </p>
 
       {payments && payments.length === 0 && (
@@ -269,8 +370,25 @@ export function PaymentsPanel() {
       {payments && payments.length > 0 && (
         <div className="mt-4 space-y-3">
           {payments.map((payment) => (
-            <div key={payment.id} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+            <div key={payment.id} className="rounded-xl border border-gray-200 bg-white p-4">
+             <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="shrink-0 sm:w-56">
+                {payment.proofUrl ? (
+                  <a href={payment.proofUrl} target="_blank" rel="noreferrer">
+                    <img
+                      src={payment.proofUrl}
+                      alt="Preuve de paiement Wave"
+                      loading="lazy"
+                      className="h-40 w-full rounded-lg border border-gray-200 object-cover"
+                    />
+                  </a>
+                ) : (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    Aucune preuve jointe (ancienne demande)
+                  </p>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-heading font-semibold text-gray-900">{payment.shop?.name ?? 'Boutique supprimée'}</p>
                   {payment.shop && (
@@ -288,13 +406,28 @@ export function PaymentsPanel() {
                 <p className="mt-1 text-xs text-gray-400">
                   WhatsApp : {payment.shop?.whatsapp_number ?? '—'} · Email : {payment.ownerEmail ?? '—'}
                 </p>
+                <div className="mt-2 space-y-1 text-sm text-gray-700">
+                  <p>
+                    Preuve envoyée le{' '}
+                    {payment.proof_submitted_at ? new Date(payment.proof_submitted_at).toLocaleString('fr-FR') : '—'}
+                  </p>
+                  <p>Numéro payeur : {payment.payer_phone ?? '—'}</p>
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span>
+                      Référence Wave :{' '}
+                      <span className="font-mono">{payment.transaction_ref ?? 'non fournie'}</span>
+                    </span>
+                    {payment.transaction_ref && <CopyRefButton value={payment.transaction_ref} />}
+                  </p>
+                </div>
               </div>
-              <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+             </div>
+              <div className="mt-4 flex flex-col gap-1.5 sm:items-end">
                 <p className="text-xs text-gray-400">Montant déclaré par le commerçant — à vérifier dans Wave.</p>
-                <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                   <button
                     type="button"
-                    onClick={() => reject.mutate(payment.id)}
+                    onClick={() => setRejectingId(payment.id)}
                     disabled={approve.isPending || reject.isPending}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
                   >
@@ -318,6 +451,13 @@ export function PaymentsPanel() {
                   </button>
                 </div>
               </div>
+              {rejectingId === payment.id && (
+                <RejectForm
+                  pending={reject.isPending}
+                  onCancel={() => setRejectingId(null)}
+                  onConfirm={(reason) => reject.mutate({ paymentId: payment.id, reason: reason || undefined })}
+                />
+              )}
             </div>
           ))}
         </div>

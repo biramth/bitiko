@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   BarChart3,
   CreditCard,
+  Gift,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -38,6 +39,7 @@ const TOOLS: Tool[] = [
   { to: '/plateforme/boutiques', label: 'Boutiques', icon: Store, capability: 'view_shops' },
   { to: '/plateforme/paiements', label: 'Paiements', icon: CreditCard, capability: 'manage_payments' },
   { to: '/plateforme/campagnes', label: 'Campagnes', icon: Mail, capability: 'send_campaigns' },
+  { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns' },
   { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team' },
 ]
 

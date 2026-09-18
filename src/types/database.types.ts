@@ -803,9 +803,14 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          payer_phone: string | null
           plan: string
+          proof_path: string | null
+          proof_submitted_at: string | null
+          rejection_reason: string | null
           shop_id: string
           status: string
+          transaction_ref: string | null
           wave_checkout_id: string | null
           wave_transaction_id: string | null
         }
@@ -816,9 +821,14 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          payer_phone?: string | null
           plan: string
+          proof_path?: string | null
+          proof_submitted_at?: string | null
+          rejection_reason?: string | null
           shop_id: string
           status?: string
+          transaction_ref?: string | null
           wave_checkout_id?: string | null
           wave_transaction_id?: string | null
         }
@@ -829,9 +839,14 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          payer_phone?: string | null
           plan?: string
+          proof_path?: string | null
+          proof_submitted_at?: string | null
+          rejection_reason?: string | null
           shop_id?: string
           status?: string
+          transaction_ref?: string | null
           wave_checkout_id?: string | null
           wave_transaction_id?: string | null
         }
@@ -895,6 +910,32 @@ export type Database = {
         }[]
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      get_promo_offer: {
+        Args: { p_shop_id: string }
+        Returns: {
+          code: string
+          days: number
+          description: string | null
+          expires_at: string | null
+          label: string
+          plan: string
+        }[]
+      }
+      get_landing_promo: {
+        Args: never
+        Returns: {
+          code: string
+          days: number
+          description: string | null
+          expires_at: string | null
+          label: string
+          plan: string
+        }[]
+      }
+      redeem_promo_code: {
+        Args: { p_code?: string; p_shop_id: string }
+        Returns: string
+      }
       create_order: {
         Args: {
           p_customer_address: string

@@ -149,6 +149,40 @@ async function handleRequestProUpgrade(req: VercelRequest, res: VercelResponse) 
       return
     }
 
+    // Proof of payment: a screenshot the merchant already uploaded to the private
+    // `payment-proofs` bucket under "<shopId>/" (storage RLS enforces ownership),
+    // plus optionally the Wave transaction reference and the paying number.
+    const { proofPath, payerPhone, transactionRef } = req.body ?? {}
+    if (
+      typeof proofPath !== 'string' ||
+      !proofPath.startsWith(`${shopId}/`) ||
+      proofPath.includes('..') ||
+      proofPath.length > 200
+    ) {
+      res.status(400).json({ error: 'Ajoutez la capture de votre paiement.' })
+      return
+    }
+    const proofFile = proofPath.slice(shopId.length + 1)
+    const { data: uploaded } = await admin.storage.from('payment-proofs').list(shopId, { search: proofFile })
+    if (!uploaded?.some((f) => f.name === proofFile)) {
+      res.status(400).json({ error: 'Capture introuvable — renvoyez-la.' })
+      return
+    }
+    const cleanRef = typeof transactionRef === 'string' ? transactionRef.trim() : ''
+    if (cleanRef && !/^[A-Za-z0-9_-]{4,64}$/.test(cleanRef)) {
+      res.status(400).json({ error: 'Référence de transaction invalide.' })
+      return
+    }
+    const cleanPhone = typeof payerPhone === 'string' ? payerPhone.trim().slice(0, 30) : ''
+
+    const proofFields = {
+      proof_path: proofPath,
+      transaction_ref: cleanRef || null,
+      payer_phone: cleanPhone || null,
+      proof_submitted_at: new Date().toISOString(),
+      rejection_reason: null,
+    }
+
     const { data: existingPending } = await admin
       .from('wave_payments')
       .select('id')
@@ -157,16 +191,23 @@ async function handleRequestProUpgrade(req: VercelRequest, res: VercelResponse) 
       .like('client_reference', 'manual_%')
       .maybeSingle()
 
-    if (!existingPending) {
-      const { error: insertError } = await admin.from('wave_payments').insert({
-        shop_id: shopId,
-        plan: plan.key,
-        amount: plan.priceXof,
-        currency: 'XOF',
-        client_reference: `manual_${shopId}_${Date.now()}`,
-        status: 'pending',
-      })
-      if (insertError) throw insertError
+    const { error: saveError } = existingPending
+      ? await admin.from('wave_payments').update({ ...proofFields, plan: plan.key, amount: plan.priceXof }).eq('id', existingPending.id)
+      : await admin.from('wave_payments').insert({
+          shop_id: shopId,
+          plan: plan.key,
+          amount: plan.priceXof,
+          currency: 'XOF',
+          client_reference: `manual_${shopId}_${Date.now()}`,
+          status: 'pending',
+          ...proofFields,
+        })
+    if (saveError) {
+      if (saveError.code === '23505') {
+        res.status(409).json({ error: 'Cette référence de transaction a déjà été utilisée.' })
+        return
+      }
+      throw saveError
     }
 
     try {
