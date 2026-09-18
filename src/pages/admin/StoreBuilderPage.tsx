@@ -769,6 +769,7 @@ function BuilderEditor({
             {builder.activeTab === 'blocks' && (
               <SectionEditorPanel
                 section={builder.selectedSection}
+                shop={shop}
                 shopId={shop.id}
                 templateId={shop.template_id}
                 removableBranding={removableBranding}

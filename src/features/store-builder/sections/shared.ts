@@ -1,3 +1,5 @@
+import type { Shop } from '@/types'
+
 export const editorInputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
@@ -12,4 +14,7 @@ export interface SectionEditorProps<TConfig> {
    *  branding — only FooterEditor uses this, but it's threaded through all
    *  editors like `shopId`/`sectionId` rather than special-cased. */
   removableBranding: boolean
+  /** Full shop record — only HeroEditor uses it today (to preview/focal-point
+   *  the shop-level banner image), threaded through all editors the same way. */
+  shop: Shop
 }

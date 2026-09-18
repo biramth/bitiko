@@ -82,6 +82,14 @@ export interface HeroSectionConfig {
   heading: string
   subheading: string
   showBanner: boolean
+  /** Where the banner crops from when its aspect ratio doesn't match the
+   *  screen — 0-100 percentages, defaulting to center (50/50). */
+  bannerFocalX?: number
+  bannerFocalY?: number
+  /** When set (and showBanner is on), replaces the static banner image with
+   *  a looping muted background video — the image and its focal point stay
+   *  configured as a fallback/poster-equivalent for browsers that can't play it. */
+  bannerVideoUrl?: string
 }
 
 export interface TextSectionConfig {
@@ -94,6 +102,13 @@ export interface ImageSectionConfig {
   imageUrl: string | null
   caption: string
   linkUrl: string
+  /** Where the image crops from when its aspect ratio doesn't match the
+   *  container — 0-100 percentages, defaulting to center (50/50). */
+  focalX?: number
+  focalY?: number
+  /** When set, replaces the image with a looping muted background video —
+   *  the image and its focal point stay configured as a fallback. */
+  videoUrl?: string
 }
 
 export interface CategoriesSectionConfig {

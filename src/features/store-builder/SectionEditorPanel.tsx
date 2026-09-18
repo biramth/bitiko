@@ -1,9 +1,11 @@
 import { MousePointerClick } from 'lucide-react'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import type { LayoutSection } from '@/types/builder'
+import type { Shop } from '@/types'
 
 export function SectionEditorPanel({
   section,
+  shop,
   shopId,
   templateId,
   removableBranding,
@@ -11,6 +13,7 @@ export function SectionEditorPanel({
   onChange,
 }: {
   section: LayoutSection | null
+  shop: Shop
   shopId: string
   /** The shop's current template — resolves which section types (core plus
    *  whatever that template contributes) this panel knows how to edit. */
@@ -68,7 +71,7 @@ export function SectionEditorPanel({
         </span>
         <h3 className="font-heading text-base font-semibold text-gray-900">{def.label}</h3>
       </div>
-      <Editor config={section.config} onChange={onChange} shopId={shopId} sectionId={section.id} removableBranding={removableBranding} />
+      <Editor config={section.config} onChange={onChange} shop={shop} shopId={shopId} sectionId={section.id} removableBranding={removableBranding} />
     </div>
   )
 }

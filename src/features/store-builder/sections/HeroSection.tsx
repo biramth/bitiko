@@ -5,6 +5,7 @@ import type { HeroSectionConfig } from '@/types/builder'
 import { HEADING_SCALE } from '@/config/themeTokens'
 import type { ThemeConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { FocalPointPicker } from './FocalPointPicker'
 
 export function HeroRenderer({
   shop,
@@ -23,7 +24,24 @@ export function HeroRenderer({
     <div>
       {showBanner && (
         <div className="aspect-[3/1] w-full overflow-hidden sm:aspect-[16/5]">
-          <img src={shop.banner_url!} alt="" className="h-full w-full object-cover" />
+          {config.bannerVideoUrl ? (
+            <video
+              src={config.bannerVideoUrl}
+              poster={shop.banner_url!}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <img
+              src={shop.banner_url!}
+              alt=""
+              className="h-full w-full object-cover"
+              style={{ objectPosition: `${config.bannerFocalX ?? 50}% ${config.bannerFocalY ?? 50}%` }}
+            />
+          )}
         </div>
       )}
       <section className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-6 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-8 sm:pt-12'}`}>
@@ -65,7 +83,7 @@ export function HeroRenderer({
   )
 }
 
-export function HeroEditor({ config, onChange }: SectionEditorProps<HeroSectionConfig>) {
+export function HeroEditor({ config, onChange, shop }: SectionEditorProps<HeroSectionConfig>) {
   return (
     <div className="space-y-4">
       <div>
@@ -104,6 +122,37 @@ export function HeroEditor({ config, onChange }: SectionEditorProps<HeroSectionC
         />
         Afficher la bannière de la boutique
       </label>
+      {config.showBanner && shop.banner_url && (
+        <div className="space-y-4 border-t border-gray-200 pt-4">
+          <div>
+            <label className={editorLabelClass}>Point focal de la bannière</label>
+            <div className="mt-1.5">
+              <FocalPointPicker
+                imageUrl={shop.banner_url}
+                focalX={config.bannerFocalX ?? 50}
+                focalY={config.bannerFocalY ?? 50}
+                aspectClassName="aspect-[3/1]"
+                onChange={(bannerFocalX, bannerFocalY) => onChange({ ...config, bannerFocalX, bannerFocalY })}
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              La bannière elle-même se change dans Réglages → Apparence.
+            </p>
+          </div>
+          <div>
+            <label className={editorLabelClass}>Vidéo de fond (optionnel)</label>
+            <input
+              value={config.bannerVideoUrl ?? ''}
+              onChange={(e) => onChange({ ...config, bannerVideoUrl: e.target.value || undefined })}
+              placeholder="https://…mp4"
+              className={editorInputClass}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Lien direct vers un fichier vidéo (.mp4). Remplace la bannière ci-dessus, qui reste utilisée en attendant que la vidéo charge.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { ImageOff, ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { uploadShopSectionImage } from '@/services/shop.service'
 import type { ImageSectionConfig } from '@/types/builder'
 import { editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
+import { FocalPointPicker } from './FocalPointPicker'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -12,7 +13,26 @@ export function ImageRenderer({ config }: { config: ImageSectionConfig }) {
 
   const content = (
     <div className="aspect-[21/9] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
-      <img src={config.imageUrl} alt={config.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+      {config.videoUrl ? (
+        <video
+          src={config.videoUrl}
+          poster={config.imageUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <img
+          src={config.imageUrl}
+          alt={config.caption}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          style={{ objectPosition: `${config.focalX ?? 50}% ${config.focalY ?? 50}%` }}
+        />
+      )}
     </div>
   )
 
@@ -61,15 +81,20 @@ export function ImageEditor({ config, onChange, shopId, sectionId }: SectionEdit
     <div className="space-y-4">
       <div>
         <span className={editorLabelClass}>Image</span>
-        <div className="mt-1.5 aspect-[21/9] w-full overflow-hidden rounded-xl border border-gray-200 bg-sand-50">
-          {config.imageUrl ? (
-            <img src={config.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-300">
-              <ImageOff size={28} aria-hidden />
-            </div>
-          )}
-        </div>
+        {config.imageUrl ? (
+          <div className="mt-1.5">
+            <FocalPointPicker
+              imageUrl={config.imageUrl}
+              focalX={config.focalX ?? 50}
+              focalY={config.focalY ?? 50}
+              onChange={(focalX, focalY) => onChange({ ...config, focalX, focalY })}
+            />
+          </div>
+        ) : (
+          <div className="mt-1.5 flex aspect-[21/9] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-sand-50 text-gray-300">
+            <ImageOff size={28} aria-hidden />
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2">
           <button
             type="button"
@@ -110,6 +135,18 @@ export function ImageEditor({ config, onChange, shopId, sectionId }: SectionEdit
           placeholder="/catalogue"
           className={editorInputClass}
         />
+      </div>
+      <div className="border-t border-gray-200 pt-3">
+        <label className={editorLabelClass}>Vidéo de fond (optionnel)</label>
+        <input
+          value={config.videoUrl ?? ''}
+          onChange={(e) => onChange({ ...config, videoUrl: e.target.value || undefined })}
+          placeholder="https://…mp4"
+          className={editorInputClass}
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          Lien direct vers un fichier vidéo (.mp4). Remplace l'image ci-dessus, qui reste utilisée en attendant que la vidéo charge.
+        </p>
       </div>
     </div>
   )
