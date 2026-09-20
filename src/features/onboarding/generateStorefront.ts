@@ -1,4 +1,4 @@
-import { createSectionId, ensurePinnedSections } from '@/config/defaultLayout'
+import { ensurePinnedSections } from '@/config/defaultLayout'
 import type { LayoutSection, StoreTemplate, SystemTemplateMap, ThemeConfig } from '@/types/builder'
 import { STORE_VIBE_BY_KEY, type StoreVibe, type StoreVibeKey } from '@/config/ambiances'
 import { ensureReadableAccent, softTint } from '@/utils/color'
@@ -89,28 +89,18 @@ function personalizeSection(section: LayoutSection, answers: StoreProfileAnswers
 /**
  * Builds the home page layout a shop starts with: the merchant's chosen genre
  * template structure, with the hero/promo/text copy personalized from their
- * onboarding answers and a FAQ section appended when they provided at least
- * one complete question/answer. Falls back to the template's own copy for
- * anything the merchant didn't answer.
+ * onboarding answers. Falls back to the template's own copy for anything the
+ * merchant didn't answer.
+ *
+ * No FAQ section is appended here on purpose: the generated layout must stay
+ * within the plan's content-block cap (free = 3) or the DB trigger
+ * `enforce_shop_section_limit` rejects the shop insert during onboarding with
+ * "plan_limit_exceeded". The merchant's FAQ answers stay saved in
+ * `shops.onboarding_responses`, and the FAQ block remains available in the
+ * store builder within the plan's budget.
  */
 export function generateHomeLayout(template: StoreTemplate, answers: StoreProfileAnswers): LayoutSection[] {
   const home = template.layout.home.map((section) => personalizeSection(section, answers))
-
-  const faqItems = answers.faq
-    .filter((item) => item.question.trim() && item.answer.trim())
-    .map((item) => ({ question: item.question.trim(), answer: item.answer.trim() }))
-
-  if (faqItems.length > 0) {
-    const faqSection: LayoutSection = {
-      id: createSectionId('faq'),
-      type: 'faq',
-      visible: true,
-      config: { heading: 'Questions fréquentes', items: faqItems },
-    }
-    const footerIndex = home.findIndex((section) => section.type === 'footer')
-    if (footerIndex === -1) home.push(faqSection)
-    else home.splice(footerIndex, 0, faqSection)
-  }
 
   return ensurePinnedSections(home)
 }

@@ -33,10 +33,13 @@ describe('generateHomeLayout', () => {
     expect(text.config.body).toContain('Sandaga')
   })
 
-  it('adds a FAQ section (before the footer) only when answers are complete', () => {
+  it('never appends a FAQ section, even when the merchant completes Q/A pairs', () => {
     const withoutFaq = generateHomeLayout(recipeTemplate, buildAnswers())
     expect(withoutFaq.some((s) => s.type === 'faq')).toBe(false)
 
+    // FAQ answers must not add a 4th content block: the generated layout has
+    // to fit the free plan's cap (3 content blocks) or the DB trigger
+    // `enforce_shop_section_limit` rejects the shop insert during onboarding.
     const answers = buildAnswers({
       faq: [
         { question: 'Livrez-vous partout ?', answer: 'Oui, à Dakar et alentours.' },
@@ -44,14 +47,7 @@ describe('generateHomeLayout', () => {
       ],
     })
     const sections = generateHomeLayout(recipeTemplate, answers)
-    const faq = sections.find((s) => s.type === 'faq')
-    expect(faq).toBeDefined()
-    if (faq?.type !== 'faq') return
-    expect(faq.config.items).toHaveLength(1)
-    expect(faq.config.items[0].question).toBe('Livrez-vous partout ?')
-    // FAQ sits right before the footer.
-    const footerIndex = sections.findIndex((s) => s.type === 'footer')
-    expect(sections[footerIndex - 1].type).toBe('faq')
+    expect(sections.some((s) => s.type === 'faq')).toBe(false)
   })
 
   it('keeps the template structure (announcement bar then header first, footer last)', () => {
