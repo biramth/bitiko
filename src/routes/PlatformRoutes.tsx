@@ -42,6 +42,9 @@ const OrdersPage = lazy(() => import('@/pages/admin/OrdersPage').then((m) => ({ 
 const OrderDetailPage = lazy(() =>
   import('@/pages/admin/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })),
 )
+const NewOrderPage = lazy(() =>
+  import('@/pages/admin/NewOrderPage').then((m) => ({ default: m.NewOrderPage })),
+)
 const SettingsPage = lazy(() =>
   import('@/pages/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -154,6 +157,7 @@ export function PlatformRoutes() {
               <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
               <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
               <Route path="commandes" element={standalone(<OrdersPage />)} />
+              <Route path="commandes/nouvelle" element={standalone(<NewOrderPage />)} />
               <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
               <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
               {/* Facturation moved into Paramètres (one less top-level nav
