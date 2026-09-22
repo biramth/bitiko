@@ -103,6 +103,7 @@ export function TeamTool() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-gray-100 text-gray-500">
             <tr>
@@ -130,6 +131,7 @@ export function TeamTool() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {remove.isError && <p className="text-sm text-red-600">{(remove.error as Error).message}</p>}
       {update.isError && <p className="text-sm text-red-600">{(update.error as Error).message}</p>}

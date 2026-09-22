@@ -426,6 +426,7 @@ export function CampaignsTool() {
 
           {campaigns.data && campaigns.data.length > 0 && (
             <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
@@ -540,6 +541,7 @@ export function CampaignsTool() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
           )}
         </section>
