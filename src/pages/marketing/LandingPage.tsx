@@ -66,7 +66,9 @@ function IconTile({
 /** Counts up from 0 to `target` once the element scrolls into view — the
  * small "alive" detail both reference sites use on their stat strips. */
 function CountUpValue({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [value, setValue] = useState(0)
+  const reduceMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [value, setValue] = useState(reduceMotion ? target : 0)
   const ref = useRef<HTMLSpanElement>(null)
   const started = useRef(false)
 
@@ -289,7 +291,7 @@ function Reveal({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'} ${className}`}
+      className={`transition-all duration-700 ease-out ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'} motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${className}`}
       style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
     >
       {children}
@@ -460,7 +462,7 @@ function PhoneMockup() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">B</div>
             <div>
               <p className="text-xs font-bold text-ink-900">Boutique Chez Fatou</p>
-              <p className="text-[10px] text-ink-700/50">fatou.bitiko.com</p>
+              <p className="text-[10px] text-ink-700/50">fatou.bitiko.shop</p>
             </div>
           </div>
         </div>
@@ -542,19 +544,20 @@ function HeroBackdrop() {
         <rect width="100%" height="100%" fill="url(#heroGrid)" mask="url(#heroGridMask)" />
       </svg>
 
-      {/* Frosted wing panels — narrow at the top corners, widening down to ~1/3 of the width at the bottom. */}
+      {/* Frosted wing panels — narrow at the top corners, widening down to ~1/3 of the width at the bottom.
+          Kept off small screens: full-width backdrop blur is costly above the fold on low-end phones. */}
       <div
-        className="absolute inset-0 bg-white/40 backdrop-blur-2xl"
+        className="absolute inset-0 hidden bg-white/40 backdrop-blur-2xl sm:block"
         style={{ clipPath: 'polygon(0% 0%, 0% 100%, 34% 100%)' }}
       />
       <div
-        className="absolute inset-0 bg-white/40 backdrop-blur-2xl"
+        className="absolute inset-0 hidden bg-white/40 backdrop-blur-2xl sm:block"
         style={{ clipPath: 'polygon(100% 0%, 100% 100%, 66% 100%)' }}
       />
 
       {/* The diagonal edge itself — a thin line that glows brightest mid-way and fades at both ends. */}
       <svg
-        className="absolute inset-0 h-full w-full"
+        className="absolute inset-0 hidden h-full w-full sm:block mix-blend-soft-light"
         viewBox="0 0 1440 520"
         preserveAspectRatio="none"
         fill="none"
@@ -577,7 +580,7 @@ function HeroBackdrop() {
       </svg>
 
       {/* Soft ambient glow — slow independent drift for a little extra depth in the open center channel. */}
-      <div className="absolute left-1/2 top-16 h-56 w-56 -translate-x-1/2 animate-blob rounded-full bg-gold-300/25 blur-3xl" />
+      <div className="absolute left-1/2 top-16 hidden h-56 w-56 -translate-x-1/2 animate-blob rounded-full bg-gold-300/25 blur-3xl sm:block" />
     </div>
   )
 }
@@ -693,16 +696,26 @@ export function LandingPage() {
         </section>
 
         {/* ── CATEGORY MARQUEE ── */}
-        <section className="overflow-hidden border-b border-sand-200 bg-white py-6">
+        <section className="overflow-hidden border-b border-sand-200 bg-white py-6" aria-label="Secteurs d'activité couverts par Bitiko">
           <div className="flex w-max animate-marquee gap-3 [animation-play-state:running] hover:[animation-play-state:paused]">
-            {[...shopCategories, ...shopCategories].map((category, i) => (
+            {shopCategories.map((category) => (
               <span
-                key={`${category}-${i}`}
+                key={category}
                 className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/60 transition-colors duration-300 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
               >
                 {category}
               </span>
             ))}
+            <div className="contents" aria-hidden="true">
+              {shopCategories.map((category) => (
+                <span
+                  key={`duplicate-${category}`}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/60"
+                >
+                  {category}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
