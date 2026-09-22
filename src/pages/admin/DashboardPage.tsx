@@ -356,7 +356,55 @@ export function DashboardPage() {
           </Link>
         </div>
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        {stats.recentOrders.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-gray-500">
+            Aucune commande pour le moment.
+          </div>
+        ) : (
+          <>
+            <ul className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white md:hidden">
+              {stats.recentOrders.map((order) => {
+                const next = getLinearNext(order.status)
+                return (
+                  <li key={order.id} className="flex flex-col gap-2 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link to={`/admin/commandes/${order.id}`} className="font-medium text-brand-700">
+                          {order.order_number}
+                        </Link>
+                        <p className="text-xs text-gray-400">
+                          {new Date(order.created_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <p className="shrink-0 font-medium text-gray-900">
+                        {formatCurrency(Number(order.total), currency)}
+                      </p>
+                    </div>
+                    <p className="truncate text-sm text-gray-700">{order.customer_name}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${ORDER_STATUS_COLORS[order.status]}`}
+                      >
+                        {ORDER_STATUS_LABELS[order.status]}
+                      </span>
+                      {next ? (
+                        <button
+                          onClick={() => statusMutation.mutate({ id: order.id, status: next })}
+                          disabled={statusMutation.isPending}
+                          className="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                        >
+                          {ORDER_STATUS_ACTION_LABELS[next]}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">Terminée</span>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <div className="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white md:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-100 text-gray-500">
               <tr>
@@ -368,13 +416,6 @@ export function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {stats.recentOrders.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
-                    Aucune commande pour le moment.
-                  </td>
-                </tr>
-              )}
               {stats.recentOrders.map((order) => {
                 const next = getLinearNext(order.status)
                 return (
@@ -411,7 +452,9 @@ export function DashboardPage() {
               })}
             </tbody>
           </table>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

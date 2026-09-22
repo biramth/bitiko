@@ -76,7 +76,7 @@ function WaveQrDialog({
           Ouvre l'app Wave sur ton téléphone et scanne ce code pour payer{' '}
           <strong className="text-gray-900">{amountLabel}</strong> et activer le plan {planLabel}.
         </p>
-        <div className="flex h-64 w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
+        <div className="flex h-64 w-full max-w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
           {qrDataUrl ? (
             <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
           ) : (
@@ -321,7 +321,8 @@ export function BillingForShop({ shopId }: { shopId: string }) {
 
       {payments.length > 0 && (
         <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-100 text-gray-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Date</th>
@@ -353,6 +354,7 @@ export function BillingForShop({ shopId }: { shopId: string }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

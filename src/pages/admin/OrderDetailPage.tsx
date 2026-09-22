@@ -64,7 +64,7 @@ function StatusStepper({ status }: { status: OrderStatus }) {
               </span>
             </div>
             <span
-              className={`mt-2 text-xs font-medium ${
+              className={`mt-2 whitespace-nowrap text-center text-xs font-medium ${
                 isCurrent ? 'text-brand-700' : reached ? 'text-gray-500' : 'text-gray-400'
               }`}
             >
@@ -255,7 +255,8 @@ export function OrderDetailPage() {
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
           <thead className="border-b border-gray-100 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Produit</th>
@@ -366,6 +367,7 @@ export function OrderDetailPage() {
           </tfoot>
         </table>
       </div>
+    </div>
 
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
         <h2 className="text-sm font-medium text-gray-500">Notes internes</h2>

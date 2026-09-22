@@ -16,6 +16,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Pagination } from '@/components/ui/Pagination'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { ProductImportDialog } from './ProductImportDialog'
@@ -383,9 +384,9 @@ export function ProductsPage() {
           <EmptyState icon={Package} title="Aucun produit" description="Ajoutez votre premier produit." />
         ) : (
           <>
-            {/* Cards below sm — a horizontally-scrolled table hides the price/stock
+            {/* Cards below md — a horizontally-scrolled table hides the price/stock
                 columns off-screen on a phone; a stacked card shows everything at once. */}
-            <ul className="divide-y divide-gray-100 sm:hidden">
+            <ul className="divide-y divide-gray-100 md:hidden">
               {products.map((product) => (
                 <li key={product.id} className="flex flex-col gap-3 px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -460,8 +461,8 @@ export function ProductsPage() {
               ))}
             </ul>
 
-            {/* Table from sm up. */}
-            <div className="hidden overflow-x-auto sm:block">
+            {/* Table from md up. */}
+            <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-100 text-gray-500">
                 <tr>
@@ -558,21 +559,7 @@ export function ProductsPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={`h-9 w-9 rounded-full text-sm font-medium ${
-                p === page ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
 
       <ConfirmDialog
         open={!!deleteTarget}

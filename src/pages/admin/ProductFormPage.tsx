@@ -684,7 +684,7 @@ function ProductForm({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700">
                     {hasVariants ? 'Prix de base' : 'Prix'}
@@ -984,7 +984,7 @@ function ProductForm({
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
                         <div>
                           <input
                             type="text"
