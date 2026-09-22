@@ -659,7 +659,7 @@ export function CategoriesPage() {
                       <button
                         type="button"
                         onClick={() => setEditingId(category.id)}
-                        className="group text-left"
+                        className="group block w-full truncate text-left"
                       >
                         <span className="text-sm font-medium text-gray-900 group-hover:underline">
                           {category.image_url ? (

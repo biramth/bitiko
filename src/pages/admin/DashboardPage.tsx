@@ -47,6 +47,7 @@ function StatCard({
   icon: Icon,
   to,
   tone = 'default',
+  className,
 }: {
   label: string
   value: string
@@ -54,9 +55,10 @@ function StatCard({
   icon: LucideIcon
   to?: string
   tone?: StatTone
+  className?: string
 }) {
   const inner = (
-    <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+    <div className={`flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 ${className ?? ''}`}>
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${STAT_TONE_STYLES[tone]}`}>
         <Icon size={17} aria-hidden />
       </span>
@@ -68,7 +70,7 @@ function StatCard({
     </div>
   )
   return to ? (
-    <Link to={to} className="block transition-shadow hover:shadow-md">
+    <Link to={to} className={`block transition-shadow hover:shadow-md ${className ?? ''}`}>
       {inner}
     </Link>
   ) : (
@@ -286,13 +288,14 @@ export function DashboardPage() {
           to="/admin/produits?stock=out"
           tone={stats.outOfStockProducts > 0 ? 'danger' : 'default'}
         />
-        <StatCard
-          icon={AlertTriangle}
-          label="Stock faible"
-          value={String(stats.lowStockProducts)}
-          to="/admin/produits?stock=low"
-          tone={stats.lowStockProducts > 0 ? 'warning' : 'default'}
-        />
+<StatCard
+  icon={AlertTriangle}
+  label="Stock faible"
+  value={String(stats.lowStockProducts)}
+  to="/admin/produits?stock=low"
+  tone={stats.lowStockProducts > 0 ? 'warning' : 'default'}
+  className="last:col-span-2 sm:last:col-span-1"
+/>
       </div>
 
       {plan.analytics === 'basic' ? (

@@ -227,7 +227,7 @@ export function ProductImportDialog({
 
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={reset}
