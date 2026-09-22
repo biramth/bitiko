@@ -137,6 +137,21 @@ L'application refuse de démarrer sans `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_K
 
 **Backend (Supabase)** : déjà en production dès que le projet Supabase existe — pas de serveur à déployer séparément pour les fonctionnalités actuelles.
 
+### Branches, preview et environnements
+
+Deux branches pilotent le déploiement Vercel, chacune branchée sur **sa propre base Supabase** (les refs de projet sont dans `AGENTS.md`) :
+
+- **`main`** → **Production** : le site `https://bitiko.shop` (et `www.`), contre la base **prod**.
+- **`develop`** → **Preview** : déploiement automatique à chaque push, URL de la forme `bitiko-git-develop-biramths-projects.vercel.app` (plus une URL unique `bitiko-<hash>-...vercel.app` par déploiement), contre la base **dev**.
+
+Règles à retenir :
+
+- Les bases dev/prod sont **strictement séparées** : les variables d'environnement Vercel de chaque environnement (Preview vs Production) pointent vers le projet Supabase correspondant. Une clé du mauvais environnement fait travailler le déploiement sur la mauvaise base.
+- Les `VITE_*` sont **inlinées au build** : après toute modification de variables d'environnement dans Vercel, faire un **Redeploy** de l'environnement concerné, sinon le changement est ignoré.
+- La preview est **protégée par défaut** (Vercel Deployment Protection) : un visiteur doit être connecté à un compte Vercel autorisé, sinon il reçoit une page de login (source classique d'« écrans blancs » au partage de liens). Si vous partagez des liens preview avec des prospects : ajouter leur compte Vercel, ou désactiver la protection dans **Project Settings → Deployment Protection**.
+- Sur la preview comme sur `localhost`, les hostnames ne sont pas des vrais sous-domaines : utiliser `?boutique=<slug>` pour prévisualiser une boutique.
+- Toute la dette reste à développer sur `develop` puis à merger dans `main` pour la production.
+
 ## Variables d'environnement
 
 Voir [`.env.example`](.env.example). Ne jamais commiter `.env` ou `.env.local` (déjà exclus via `.gitignore`).
@@ -165,13 +180,14 @@ Le plan Vercel Hobby plafonne à **12 fonctions serverless par déploiement**. C
 
 ## Tester les fonctions `api/` en local
 
-`npm run dev` ne sert **que** la SPA Vite : les routes `/api/*` répondent 404 et `middleware.ts` n'est pas exécuté. Pour tester les fonctions serverless (webhooks, cron, OG, sitemap, facturation) en local, utiliser le CLI Vercel :
+`npm run dev` ne sert **que** la SPA Vite : les routes `/api/*` répondent 404 et `middleware.ts` n'est pas exécuté. `vite.config.ts` proxifie `/api` vers `http://localhost:3001` ; pour tester les fonctions serverless (webhooks, cron, OG, sitemap, facturation), lancer le CLI Vercel **en parallèle**, sur ce port :
 
 ```bash
-vercel dev --listen 5173
+npm run dev                 # terminal 1 : Vite sur http://localhost:5173 (HMR)
+vercel dev --listen 3001    # terminal 2 : exécute les fonctions /api/*
 ```
 
-Le CLI reste sur `5173` : c'est l'origine autorisée dans Supabase (**Authentication → URL Configuration**). Les variables serveur doivent alors être présentes dans l'environnement **Development** du projet Vercel (voir ci-dessus).
+Le port `3001` est celui que le proxy Vite attend (le port par défaut du CLI est `3000`, souvent déjà pris par d'autres daemons locaux — on le force donc à `3001`). Les variables serveur (`SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, ...) doivent être présentes dans l'environnement **Development** du projet Vercel (voir ci-dessus). L'origine autorisée reste `http://localhost:5173` dans **Authentication → URL Configuration** : c'est le navigateur qui la voit, le proxy garde le volume de fonctions local de côté.
 
 ## Statuts de commande
 

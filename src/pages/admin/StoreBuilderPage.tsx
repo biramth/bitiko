@@ -660,7 +660,7 @@ function BuilderEditor({
     <div className="flex h-full flex-col">
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           <PageSwitcher
             activeKey={activeKey}
             pages={pages}

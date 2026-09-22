@@ -723,11 +723,11 @@ export function CategoriesPage() {
       {/* Bulk actions bar (#9) */}
       {selectedIds.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-6 py-3 shadow-lg">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <span className="text-sm font-medium text-gray-700">
               {selectedIds.size} catégorie{selectedIds.size > 1 ? 's' : ''} sélectionnée{selectedIds.size > 1 ? 's' : ''}
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => {

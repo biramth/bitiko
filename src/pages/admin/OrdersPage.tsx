@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import type { OrderStatus } from '@/types'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Pagination } from '@/components/ui/Pagination'
 
 const STATUS_FILTERS: (OrderStatus | 'all')[] = ['all', 'pending', 'confirmed', 'paid', 'delivered', 'cancelled']
 
@@ -158,9 +159,9 @@ export function OrdersPage() {
         )}
         {!isLoading && orders.length > 0 && (
           <>
-            {/* Cards below sm — a horizontally-scrolled table is easy to miss
+            {/* Cards below md — a horizontally-scrolled table is easy to miss
                 columns on on a phone; a stacked card shows everything at once. */}
-            <ul className="divide-y divide-gray-100 sm:hidden">
+            <ul className="divide-y divide-gray-100 md:hidden">
               {orders.map((order) => (
                 <li key={order.id} className="flex flex-col gap-2 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
@@ -202,8 +203,8 @@ export function OrdersPage() {
               ))}
             </ul>
 
-            {/* Table from sm up. */}
-            <div className="hidden overflow-x-auto sm:block">
+            {/* Table from md up. */}
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-gray-100 text-gray-500">
                   <tr>
@@ -263,21 +264,7 @@ export function OrdersPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={`h-9 w-9 rounded-full text-sm font-medium ${
-                p === page ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
     </div>
   )
 }
