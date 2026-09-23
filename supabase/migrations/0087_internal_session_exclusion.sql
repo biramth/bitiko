@@ -13,7 +13,7 @@
 
 alter table public.page_views add column if not exists user_id uuid references auth.users(id) on delete set null;
 create index if not exists page_views_user_id_idx on public.page_views (user_id);
-create index if not exists page_views_shop_session_day_idx on public.page_views (shop_id, (created_at::date), session_id);
+create index if not exists page_views_shop_session_day_idx on public.page_views (shop_id, created_at, session_id);
 
 -- RLS can no longer keep the loose "record anything" door while letting a
 -- client spoof someone else's user_id to dodge the counters: an anonymous
@@ -23,7 +23,7 @@ drop policy if exists "page_views: anyone can record" on public.page_views;
 create policy "page_views: record own or anonymous view"
   on public.page_views
   for insert to anon, authenticated
-  with check (user_id is null or user_id = (select auth.uid()));
+  with check (user_id is null or user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- Helper: is this user part of the platform's own staff (and thus their views
@@ -108,7 +108,7 @@ begin
                         where created_at >= now() - interval '30 days'
                           and path !~ '^/(admin|super-admin)(/|$)'
                           and (user_id is null or not public.is_internal_user(user_id))),
-    'visits_by_day',   (select jsonb_agg(jsonb_build_object('day', d, 'visits', v, 'visitors', u) order by d) from (
+    'visits_by_day',   (select coalesce(jsonb_agg(jsonb_build_object('day', t.d, 'visits', t.v, 'visitors', t.u) order by t.d), '[]'::jsonb) from (
                           select created_at::date as d,
                                  count(distinct session_id) as v,
                                  count(distinct session_id) as u
@@ -117,30 +117,36 @@ begin
                             and path !~ '^/(admin|super-admin)(/|$)'
                             and (user_id is null or not public.is_internal_user(user_id))
                           group by created_at::date) t),
-    'top_pages',       (select jsonb_agg(jsonb_build_object('shop', coalesce(s.slug, '(plateforme)'), 'path', p.path, 'visits', v) order by v desc) from (
+    'top_pages',       (select coalesce(jsonb_agg(jsonb_build_object('shop', coalesce(s.slug, '(plateforme)'), 'path', p.path, 'visits', p.v) order by p.v desc), '[]'::jsonb) from (
                           select pv.shop_id, pv.path, count(distinct pv.session_id) as v
                           from public.page_views pv
                           where pv.created_at >= now() - interval '30 days'
                             and (pv.user_id is null or not public.is_internal_user(pv.user_id))
-                          group by pv.shop_id, pv.path) p
-                        left join public.shops s on s.id = p.shop_id
-                        limit 15),
-    'top_shops',       (select jsonb_agg(jsonb_build_object('slug', s.slug, 'name', s.name, 'visits', v) order by v desc) from (
+                          group by pv.shop_id, pv.path
+                          order by v desc
+                          limit 15
+                        ) p
+                        left join public.shops s on s.id = p.shop_id),
+    'top_shops',       (select coalesce(jsonb_agg(jsonb_build_object('slug', s.slug, 'name', s.name, 'visits', t.v) order by t.v desc), '[]'::jsonb) from (
                           select pv.shop_id, count(distinct pv.session_id) as v
                           from public.page_views pv
                           where pv.created_at >= now() - interval '30 days' and pv.shop_id is not null
                             and (pv.user_id is null or not public.is_internal_user(pv.user_id))
-                          group by pv.shop_id) t
-                        join public.shops s on s.id = t.shop_id
-                        limit 15),
-    'top_referrers',   (select jsonb_agg(jsonb_build_object('referrer', r, 'visits', v) order by v desc) from (
+                          group by pv.shop_id
+                          order by v desc
+                          limit 15
+                        ) t
+                        join public.shops s on s.id = t.shop_id),
+    'top_referrers',   (select coalesce(jsonb_agg(jsonb_build_object('referrer', t.r, 'visits', t.v) order by t.v desc), '[]'::jsonb) from (
                           select nullif(referrer, '') as r, count(distinct session_id) as v
                           from public.page_views
                           where created_at >= now() - interval '30 days'
                             and referrer is not null and referrer <> ''
                             and (user_id is null or not public.is_internal_user(user_id))
-                          group by nullif(referrer, '')) t
-                        limit 10)
+                          group by nullif(referrer, '')
+                          order by v desc
+                          limit 10
+                        ) t)
   ) into result;
 
   return result;
@@ -170,17 +176,17 @@ as $$
        from public.page_views pv
       where pv.shop_id = p_shop_id
         and pv.created_at >= date_trunc('day', now())
-        and (pv.user_id is null or not public.is_internal_user(pv.user_id))),
+        and (pv.user_id is null or not public.is_internal_user(pv.user_id))) as visits_today,
     (select count(distinct pv.session_id)
        from public.page_views pv
       where pv.shop_id = p_shop_id
         and pv.created_at >= now() - interval '30 days'
-        and (pv.user_id is null or not public.is_internal_user(pv.user_id))),
+        and (pv.user_id is null or not public.is_internal_user(pv.user_id))) as visits_30d,
     (select count(distinct pv.session_id)
        from public.page_views pv
       where pv.shop_id = p_shop_id
         and pv.created_at >= now() - interval '30 days'
-        and (pv.user_id is null or not public.is_internal_user(pv.user_id)));
+        and (pv.user_id is null or not public.is_internal_user(pv.user_id))) as visitors_30d;
 $$;
 
 revoke all on function public.get_shop_visit_stats(uuid) from public, anon;
