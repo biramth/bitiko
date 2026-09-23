@@ -296,6 +296,7 @@ export type Database = {
           referrer: string | null
           session_id: string
           shop_id: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -305,6 +306,7 @@ export type Database = {
           referrer?: string | null
           session_id: string
           shop_id?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -314,6 +316,7 @@ export type Database = {
           referrer?: string | null
           session_id?: string
           shop_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -321,6 +324,13 @@ export type Database = {
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -898,6 +908,8 @@ export type Database = {
           revenue: number
           slug: string
           whatsapp_number: string
+          owner_id: string
+          owner_email: string | null
         }[]
       }
       get_platform_stats: { Args: never; Returns: Json }

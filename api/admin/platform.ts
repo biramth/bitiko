@@ -1,13 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
+  canDeleteUsers,
   canManageTeam,
+  canSupportAccess,
+  getPlatformMemberByUserId,
   getPlatformMemberFromAuthHeader,
   getSupabaseAdmin,
   type PlatformMember,
   type PlatformRole,
 } from '../_lib/supabaseAdmin.js'
+import { deleteUserCompletely } from '../_lib/userDeletion.js'
 import { sendEmail } from '../_lib/resendEmail.js'
-import { campaignEmailHtml } from '../_lib/emailTemplates.js'
+import { campaignEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { can } from '../../src/features/platform/permissions.js'
 
 /**
@@ -54,6 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleTeamUpdate(req, res)
     case 'team-remove':
       return handleTeamRemove(req, res)
+    case 'support-access':
+      return handleSupportAccess(req, res)
+    case 'user-delete':
+      return handleUserDelete(req, res)
     case 'campaign-list':
       return handleCampaignList(req, res)
     case 'campaign-save':
@@ -109,6 +117,38 @@ async function loadUserDirectory(): Promise<Map<string, { email: string; name: s
   return directory
 }
 
+/** Records a sensitive backoffice action in admin_audit_log (service-role
+ *  only, no FK — an audit row must never block the deletion it describes).
+ *  Fail-closed for the flows that need the trace first, best-effort for the
+ *  rest: the caller decides via `required`. */
+async function logAudit(
+  entry: {
+    actorUserId: string
+    actorEmail: string
+    action: 'support_access' | 'user_delete' | 'team_add'
+    targetUserId?: string
+    targetShopId?: string
+    details?: Record<string, unknown>
+  },
+  required = false,
+): Promise<void> {
+  try {
+    const admin = getSupabaseAdmin()
+    const { error } = await admin.from('admin_audit_log').insert({
+      actor_user_id: entry.actorUserId,
+      actor_email: entry.actorEmail,
+      action: entry.action,
+      target_user_id: entry.targetUserId ?? null,
+      target_shop_id: entry.targetShopId ?? null,
+      details: entry.details ?? {},
+    })
+    if (error) throw error
+  } catch (err) {
+    if (required) throw err
+    console.error('platform logAudit failed', err)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Team
 // ---------------------------------------------------------------------------
@@ -162,11 +202,17 @@ async function handleTeamAdd(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const { email, role } = (req.body ?? {}) as { email?: unknown; role?: unknown }
+    const { email, role, fullName } = (req.body ?? {}) as { email?: unknown; role?: unknown; fullName?: unknown }
     if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       res.status(400).json({ error: 'Email invalide.' })
       return
     }
+    const cleanEmail = email.trim().toLowerCase()
+    if (typeof fullName !== 'string' || fullName.trim().length < 2 || fullName.trim().length > 100) {
+      res.status(400).json({ error: 'Nom complet invalide (2 à 100 caractères).' })
+      return
+    }
+    const cleanName = fullName.trim()
     if (typeof role !== 'string' || !ROLES.includes(role as PlatformRole)) {
       res.status(400).json({ error: 'Rôle invalide.' })
       return
@@ -176,26 +222,96 @@ async function handleTeamAdd(req: VercelRequest, res: VercelResponse) {
       return
     }
 
+    const admin = getSupabaseAdmin()
+
+    // Link a pre-existing Bitiko account if there is one, else create the
+    // account right here: the invite no longer waits on the person signing up.
+    // The welcome email then doubles as the password-setup carrier (its own
+    // recovery link, so the invitee never has to go through onboarding).
     const directory = await loadUserDirectory()
-    const targetId = [...directory.entries()].find(
-      ([, value]) => value.email.toLowerCase() === email.trim().toLowerCase(),
+    let targetId = [...directory.entries()].find(
+      ([, value]) => value.email.toLowerCase() === cleanEmail,
     )?.[0]
+    const accountCreated = !targetId
     if (!targetId) {
-      res.status(404).json({ error: 'Aucun compte Bitiko avec cet email. La personne doit d’abord créer son compte.' })
-      return
+      const { data: createdUser, error: createError } = await admin.auth.admin.createUser({
+        email: cleanEmail,
+        email_confirm: true,
+        user_metadata: { full_name: cleanName },
+      })
+      if (createError) {
+        // Détail goûté SQL ou SDK — la plupart du temps un email déjà pris.
+        console.error('platform team-add createUser failed', createError)
+        res.status(409).json({ error: 'Impossible de créer ce compte — l’email est peut-être déjà utilisé.' })
+        return
+      }
+      targetId = createdUser.user.id
     }
 
-    const admin = getSupabaseAdmin()
     const { error } = await admin
       .from('platform_members')
       .upsert({ user_id: targetId, role, created_by: member.id }, { onConflict: 'user_id' })
     if (error) throw error
 
-    res.status(200).json({ ok: true, role })
+    // Setup link for a brand-new account: an untouched recovery token that
+    // lets the invitee choose a password. generateLink builds it without
+    // sending anything — the welcome email below is the only carrier.
+    let setupUrl: string | undefined
+    if (accountCreated) {
+      const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+        type: 'recovery',
+        email: cleanEmail,
+      })
+      if (linkError) {
+        console.error('platform team-add generateLink failed', linkError)
+      } else {
+        const origin = platformOrigin(req)
+        setupUrl = `${origin}/reinitialiser-mot-de-passe?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=${link.properties.verification_type ?? 'recovery'}`
+      }
+    }
+
+    const roleLabel = PLATFORM_ROLE_LABELS[role as PlatformRole] ?? role
+    try {
+      const origin = platformOrigin(req)
+      await sendEmail({
+        to: cleanEmail,
+        subject: accountCreated ? 'Bienvenue dans l’équipe Bitiko' : 'Ton rôle sur la plateforme Bitiko',
+        html: teamWelcomeEmailHtml({
+          origin,
+          email: cleanEmail,
+          fullName: cleanName,
+          roleLabel,
+          isNewAccount: accountCreated,
+          setupUrl,
+          platformUrl: `${origin}/plateforme`,
+        }),
+      })
+    } catch (emailErr) {
+      console.error('platform team-add welcome email failed', emailErr)
+    }
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'team_add',
+      targetUserId: targetId,
+      details: { role, createdAccount: accountCreated, memberName: cleanName },
+    })
+
+    res.status(200).json({ ok: true, role, accountCreated, emailSent: true })
   } catch (err) {
     console.error('platform team-add failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
+}
+
+/** Role labels mirrored from src/features/platform/permissions.ts so the
+ *  welcome email reads in French without importing browser-oriented code. */
+const PLATFORM_ROLE_LABELS: Record<PlatformRole, string> = {
+  owner: 'Propriétaire',
+  admin: 'Administrateur',
+  dev: 'Développeur',
+  marketing: 'Marketing',
 }
 
 async function handleTeamUpdate(req: VercelRequest, res: VercelResponse) {
@@ -310,6 +426,151 @@ async function handleTeamRemove(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ ok: true })
   } catch (err) {
     console.error('platform team-remove failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleSupportAccess(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canSupportAccess(member.role)) {
+      res.status(403).json({ error: 'Ton rôle ne permet pas d’ouvrir une session support.' })
+      return
+    }
+
+    const shopId = (req.body ?? {}).shopId
+    if (typeof shopId !== 'string' || !shopId) {
+      res.status(400).json({ error: 'Boutique manquante.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: shop, error: shopError } = await admin
+      .from('shops')
+      .select('id, name, slug, owner_id')
+      .eq('id', shopId)
+      .maybeSingle()
+    if (shopError) throw shopError
+    if (!shop) {
+      res.status(404).json({ error: 'Boutique introuvable.' })
+      return
+    }
+    if (!shop.owner_id) {
+      res.status(409).json({ error: 'Cette boutique n’a pas de propriétaire rattaché.' })
+      return
+    }
+
+    const { data: owner, error: ownerError } = await admin.auth.admin.getUserById(shop.owner_id)
+    if (ownerError || !owner.user?.email) {
+      res.status(404).json({ error: 'Compte du propriétaire introuvable.' })
+      return
+    }
+
+    // Audit FIRST, fail-closed: the token is only handed out once the trace
+    // exists. If the audit can't be written, the session must not open.
+    await logAudit(
+      {
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'support_access',
+        targetUserId: owner.user.id,
+        targetShopId: shop.id,
+        details: { shopName: shop.name, shopSlug: shop.slug },
+      },
+      true,
+    )
+
+    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: owner.user.email,
+    })
+    if (linkError) throw linkError
+
+    res.status(200).json({
+      tokenHash: link.properties.hashed_token,
+      type: link.properties.verification_type ?? 'magiclink',
+      shopName: shop.name,
+      shopSlug: shop.slug,
+    })
+  } catch (err) {
+    console.error('platform support-access failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleUserDelete(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canDeleteUsers(member.role)) {
+      res.status(403).json({ error: 'Ton rôle ne permet pas de supprimer des comptes.' })
+      return
+    }
+
+    const userId = (req.body ?? {}).userId
+    if (typeof userId !== 'string' || !userId) {
+      res.status(400).json({ error: 'Utilisateur manquant.' })
+      return
+    }
+    if (userId === member.id) {
+      res.status(400).json({ error: 'Tu ne peux pas supprimer ton propre compte.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: target, error: targetError } = await admin.auth.admin.getUserById(userId)
+    if (targetError || !target.user) {
+      res.status(404).json({ error: 'Compte introuvable.' })
+      return
+    }
+    const targetEmail = target.user.email ?? null
+
+    // Guardrail one: a platform member's account can only be deleted by an
+    // owner, and an owner can never delete the last owner.
+    const targetMember = await getPlatformMemberByUserId(admin, userId)
+    if (targetMember) {
+      if (targetMember.role === 'owner') {
+        if (member.role !== 'owner') {
+          res.status(403).json({ error: 'Seul un propriétaire peut supprimer le compte d’un propriétaire.' })
+          return
+        }
+        if (!(await hasOtherOwner(userId))) {
+          res.status(400).json({ error: 'Impossible de supprimer le dernier propriétaire de la plateforme.' })
+          return
+        }
+      } else if (member.role !== 'owner' && member.role !== 'admin') {
+        res.status(403).json({ error: 'Seuls un propriétaire ou un administrateur peuvent supprimer ce compte.' })
+        return
+      }
+    }
+
+    // Audit FIRST, fail-closed: the trace of intent must exist even if the
+    // deletion itself later hits a partial failure halfway through.
+    await logAudit(
+      {
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'user_delete',
+        targetUserId: userId,
+        details: { targetEmail: targetEmail ?? null },
+      },
+      true,
+    )
+
+    await deleteUserCompletely(admin, userId, targetEmail)
+
+    res.status(200).json({ deleted: true })
+  } catch (err) {
+    console.error('platform user-delete failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

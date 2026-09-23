@@ -50,8 +50,21 @@ function detectDevice(): 'mobile' | 'tablet' | 'desktop' {
 /**
  * Records one page view. Best-effort and silent: analytics must never affect
  * the storefront, so every failure path simply returns.
+ *
+ * `userId` is the signed-in visitor's own uid (null for anonymous). RLS forces
+ * user_id to be either null or the caller's own uid, and the aggregation RPCs
+ * (see migration 0087) then exclude internal traffic — owners and platform
+ * members — from every counter.
  */
-export function trackPageView({ path, shopId }: { path: string; shopId: string | null }): void {
+export function trackPageView({
+  path,
+  shopId,
+  userId,
+}: {
+  path: string
+  shopId: string | null
+  userId: string | null
+}): void {
   if (import.meta.env.DEV) return // local dev shares the same Supabase project as prod — never pollute real analytics
   if (window.parent !== window) return // embedded preview (store builder iframe)
   if (BOT_PATTERN.test(navigator.userAgent)) return
@@ -68,6 +81,7 @@ export function trackPageView({ path, shopId }: { path: string; shopId: string |
     .from('page_views')
     .insert({
       shop_id: shopId,
+      user_id: userId,
       path: path.slice(0, MAX_PATH_LENGTH),
       session_id: sessionId,
       referrer: document.referrer ? document.referrer.slice(0, MAX_REFERRER_LENGTH) : null,

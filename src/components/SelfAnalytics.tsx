@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
+import { useAuth } from '@/features/auth/AuthContext'
 import { trackPageView } from '@/lib/selfAnalytics'
 
 /**
@@ -18,6 +19,7 @@ import { trackPageView } from '@/lib/selfAnalytics'
 export function SelfAnalytics() {
   const location = useLocation()
   const { shop } = useTenant()
+  const { user } = useAuth()
   const shopId = shop?.id ?? null
   const isBackOffice =
     location.pathname === '/admin' ||
@@ -27,8 +29,8 @@ export function SelfAnalytics() {
 
   useEffect(() => {
     if (isBackOffice) return
-    trackPageView({ path: location.pathname + location.search, shopId })
-  }, [location.pathname, location.search, shopId, isBackOffice])
+    trackPageView({ path: location.pathname + location.search, shopId, userId: user?.id ?? null })
+  }, [location.pathname, location.search, shopId, isBackOffice, user?.id])
 
   return null
 }
