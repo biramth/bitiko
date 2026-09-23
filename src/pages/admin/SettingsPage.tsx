@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { getImpersonation } from '@/lib/supportSession'
 import { AmbianceSection } from '@/features/shop-settings/AmbianceSection'
 import { STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
@@ -98,6 +99,7 @@ function AccountSection() {
   const { user, updateFullName, updateEmail, updatePassword, signOut } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
+  const [impersonation] = useState(() => getImpersonation())
   // Google-only accounts have no 'email' identity — they've never set a
   // password, so this card offers to add one rather than "change" it.
   const hasPassword = user?.identities?.some((i) => i.provider === 'email') ?? true
@@ -208,6 +210,18 @@ function AccountSection() {
       setTimeout(() => setPasswordStatus('idle'), 2500)
       toast.success('Mot de passe mis à jour.')
     }
+  }
+
+  if (impersonation) {
+    return (
+      <div className="mt-6 rounded-xl border border-gold-300 bg-gold-400/15 px-5 py-6 text-center">
+        <p className="text-sm font-semibold text-ink-900">Actions de compte désactivées en mode support</p>
+        <p className="mt-1 text-sm text-ink-900/70">
+          Tu navigues avec le compte du commerçant « {impersonation.shopName} ». La modification du mot de passe, de
+          l’email ou la suppression de compte est bloquée : tu ne dois pas agir sur le compte d’autrui.
+        </p>
+      </div>
+    )
   }
 
   return (

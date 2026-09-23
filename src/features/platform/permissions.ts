@@ -15,6 +15,8 @@ export type PlatformCapability =
   | 'manage_payments'
   | 'send_campaigns'
   | 'manage_team'
+  | 'support_access'
+  | 'delete_users'
 
 export interface PlatformRoleInfo {
   key: PlatformRole
@@ -25,14 +27,14 @@ export interface PlatformRoleInfo {
 export const PLATFORM_ROLES: PlatformRoleInfo[] = [
   { key: 'owner', label: 'Propriétaire', description: 'Contrôle total, y compris qui possède la plateforme.' },
   { key: 'admin', label: 'Administrateur', description: 'Contrôle total, sauf la gestion des propriétaires.' },
-  { key: 'dev', label: 'Développeur', description: 'Analytiques, boutiques, paiements et campagnes. Pas d’équipe.' },
+  { key: 'dev', label: 'Développeur', description: 'Analytiques, boutiques, paiements, campagnes et support. Pas d’équipe.' },
   { key: 'marketing', label: 'Marketing', description: 'Analytiques, boutiques et campagnes uniquement.' },
 ]
 
 const CAPABILITIES: Record<PlatformRole, PlatformCapability[]> = {
-  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team'],
-  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team'],
-  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns'],
+  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
+  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
+  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access'],
   marketing: ['view_analytics', 'view_shops', 'send_campaigns'],
 }
 
@@ -42,6 +44,8 @@ export const CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   manage_payments: 'Gérer les paiements',
   send_campaigns: 'Envoyer des campagnes',
   manage_team: 'Gérer l’équipe',
+  support_access: 'Accès support aux boutiques',
+  delete_users: 'Supprimer des comptes utilisateurs',
 }
 
 export function roleLabel(role: PlatformRole | null | undefined): string {

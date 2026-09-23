@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
+import { endImpersonation, getImpersonation } from '@/lib/supportSession'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
@@ -54,6 +55,8 @@ export function AdminLayout() {
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
   const location = useLocation()
+  const [impersonation] = useState(() => getImpersonation())
+  const [quitting, setQuitting] = useState(false)
   const onSettings = location.pathname.startsWith('/admin/parametres')
   const [settingsOpen, setSettingsOpen] = useState(onSettings)
   // Navigate into/out of Paramètres → follow it (adjust during render rather
@@ -156,7 +159,23 @@ export function AdminLayout() {
     </div>
   )
 
-  const signOutButton = (
+  const signOutButton = impersonation ? (
+    <button
+      type="button"
+      onClick={() => {
+        setQuitting(true)
+        void endImpersonation()
+      }}
+      disabled={quitting}
+      title="Quitter le mode support et revenir à la plateforme"
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300 disabled:opacity-60 ${
+        collapsed ? 'justify-center' : ''
+      }`}
+    >
+      <LogOut size={18} aria-hidden />
+      {!collapsed && (quitting ? 'Retour…' : 'Quitter le mode support')}
+    </button>
+  ) : (
     <button
       onClick={() => signOut()}
       title="Déconnexion"
@@ -372,19 +391,56 @@ export function AdminLayout() {
                     </Link>
                   </div>
                 )}
-                <button
-                  onClick={() => signOut()}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
-                >
-                  <LogOut size={18} aria-hidden />
-                  Déconnexion
-                </button>
+                {impersonation ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuitting(true)
+                      void endImpersonation()
+                    }}
+                    disabled={quitting}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300 disabled:opacity-60"
+                  >
+                    <LogOut size={18} aria-hidden />
+                    {quitting ? 'Retour…' : 'Quitter le mode support'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <LogOut size={18} aria-hidden />
+                    Déconnexion
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {impersonation && (
+            <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gold-300 bg-gold-400/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-ink-900">Mode support actif</p>
+                <p className="text-xs text-ink-900/70">
+                  Tu es connecté·e avec le compte du commerçant de « {impersonation.shopName} » ({impersonation.shopSlug}.{DISPLAY_ROOT_DOMAIN}) — les modifications sont réelles sur sa boutique.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuitting(true)
+                  void endImpersonation()
+                }}
+                disabled={quitting}
+                className="flex items-center gap-1.5 self-start rounded-lg bg-ink-900 px-3 py-2 text-sm font-medium text-white hover:bg-ink-800 disabled:opacity-60 sm:self-center"
+              >
+                <LogOut size={14} aria-hidden />
+                {quitting ? 'Retour en cours…' : 'Quitter le mode support'}
+              </button>
+            </div>
+          )}
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>

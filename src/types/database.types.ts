@@ -898,6 +898,8 @@ export type Database = {
           revenue: number
           slug: string
           whatsapp_number: string
+          owner_id: string
+          owner_email: string | null
         }[]
       }
       get_platform_stats: { Args: never; Returns: Json }

@@ -58,6 +58,8 @@ export interface PlatformShop {
   revenue: number
   plan: string
   plan_status: string
+  owner_id: string
+  owner_email: string | null
 }
 
 export async function getPlatformShops(): Promise<PlatformShop[]> {
@@ -107,8 +109,15 @@ export function listPlatformMembers(): Promise<{ members: PlatformMemberRow[]; c
   return platformFetch('/api/admin/team')
 }
 
-export function addPlatformMember(email: string, role: PlatformRole): Promise<{ ok: true }> {
-  return platformFetch('/api/admin/team/add', { method: 'POST', body: JSON.stringify({ email, role }) })
+export interface AddPlatformMemberResult {
+  ok: true
+  role: PlatformRole
+  accountCreated: boolean
+  emailSent: boolean
+}
+
+export function addPlatformMember(email: string, role: PlatformRole, fullName: string): Promise<AddPlatformMemberResult> {
+  return platformFetch('/api/admin/team/add', { method: 'POST', body: JSON.stringify({ email, role, fullName }) })
 }
 
 export function updatePlatformMember(userId: string, role: PlatformRole): Promise<{ ok: true }> {
@@ -117,6 +126,24 @@ export function updatePlatformMember(userId: string, role: PlatformRole): Promis
 
 export function removePlatformMember(userId: string): Promise<{ ok: true }> {
   return platformFetch('/api/admin/team/remove', { method: 'POST', body: JSON.stringify({ userId }) })
+}
+
+export interface SupportAccessResult {
+  tokenHash: string
+  type: string
+  shopName: string
+  shopSlug: string
+}
+
+/** Opens an impersonation session on the shop: returns a verification token that
+ *  the caller bounces through /auth/callback to adopt the merchant's session. */
+export function requestSupportAccess(shopId: string): Promise<SupportAccessResult> {
+  return platformFetch('/api/admin/support-access', { method: 'POST', body: JSON.stringify({ shopId }) })
+}
+
+/** Permanently deletes a merchant's account (account, shops, images, data). */
+export function deletePlatformUser(userId: string): Promise<{ deleted: true }> {
+  return platformFetch('/api/admin/user/delete', { method: 'POST', body: JSON.stringify({ userId }) })
 }
 
 export interface CampaignAudience {

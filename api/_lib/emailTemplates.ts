@@ -332,3 +332,59 @@ export function campaignEmailHtml({
     footnote: 'Tu reçois cet email car tu as une boutique sur Bitiko. Réponds directement à cet email pour toute question.',
   })
 }
+
+/**
+ * Sent when the platform team adds a member (or promotes existing ones).
+ * Two flavors controlled by `isNewAccount`:
+ *  - existing user: announce their new role and point to the platform space;
+ *  - brand-new account (created by the invitation): the button is the
+ *    password-recovery link (`token_hash` + `type=recovery`) that lets the
+ *    invitee choose a password. The token was generated but never emailed, so
+ *    this Resend mail is the only carrier.
+ */
+export function teamWelcomeEmailHtml({
+  origin,
+  email,
+  fullName,
+  roleLabel,
+  isNewAccount,
+  setupUrl,
+  platformUrl,
+}: {
+  origin: string
+  email: string
+  fullName?: string | null
+  roleLabel: string
+  isNewAccount: boolean
+  /** Password-recovery token link (/reinitialiser-mot-de-passe?token_hash=…&type=recovery). */
+  setupUrl?: string
+  platformUrl: string
+}): string {
+  const greeting = fullName?.trim() ? `Bonjour ${fullName.trim()},` : 'Bonjour,'
+  const heading = isNewAccount ? 'Bienvenue dans l’équipe Bitiko !' : 'Ton rôle sur la plateforme a changé'
+
+  const body = isNewAccount
+    ? `Ton compte Bitiko vient d’être créé par l’équipe plateforme. Voici la marche à suivre :<br><br>` +
+      `1. Clique sur le bouton ci-dessous pour <strong>choisir le mot de passe</strong> de ton compte (<strong>${escapeHtml(email)}</strong>).<br>` +
+      `2. Une fois connecté·e, tu pourras accéder à la plateforme Bitiko avec le rôle <strong>${escapeHtml(roleLabel)}</strong>.`
+    : `L’équipe plateforme t’a donné le rôle <strong>${escapeHtml(roleLabel)}</strong> sur ton compte Bitiko (<strong>${escapeHtml(email)}</strong>).<br><br>` +
+      `Tu peux dès maintenant te connecter et accéder à tes nouveaux outils.`
+
+  const buttonLabel = isNewAccount ? 'Choisir mon mot de passe' : 'Ouvrir la plateforme'
+  const buttonUrl = isNewAccount && setupUrl ? setupUrl : platformUrl
+
+  return shell({
+    origin,
+    preheader: isNewAccount
+      ? 'Ton compte Bitiko a été créé — choisis ton mot de passe pour rejoindre l’équipe.'
+      : `Ton rôle sur la plateforme Bitiko : ${roleLabel}.`,
+    eyebrow: 'Plateforme Bitiko',
+    heading,
+    body: `${greeting}<br><br>${body}`,
+    buttonLabel,
+    buttonUrl,
+    footnote: isNewAccount
+      ? 'Ce lien est valide 24h. Il est généré par l’équipe Bitiko : si tu n’attendais pas cette invitation, ignore cet email.'
+      : 'Une question sur tes nouveaux accès ? Réponds directement à cet email.',
+  })
+}

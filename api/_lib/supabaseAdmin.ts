@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Service-role client — bypasses RLS. Only ever used from these server
@@ -31,6 +31,42 @@ export async function assertShopOwner(shopId: string, userId: string): Promise<b
   const { data, error } = await admin.from('shops').select('id').eq('id', shopId).eq('owner_id', userId).maybeSingle()
   if (error) throw error
   return !!data
+}
+
+/**
+ * Platform-operator gate: a member may impersonate a merchant shop so the
+ * support team can reproduce a merchant's bug from inside their dashboard.
+ * Owner/admin have it out of the box; `dev` got it because a pre-existing
+ * deployment gave devs `support_access` — keep this in sync with
+ * src/features/platform/permissions.ts.
+ */
+const SUPPORT_ACCESS_ROLES: PlatformRole[] = ['owner', 'admin', 'dev']
+
+/** Platform-operator gate: only owners/admins may permanently delete merchant
+ *  accounts (shops, products, images, the auth account). `dev` can reproduce a
+ *  bug but must not be able to destroy a merchant's business. Mirror of
+ *  src/features/platform/permissions.ts `delete_users`. */
+const DELETE_USER_ROLES: PlatformRole[] = ['owner', 'admin']
+
+export function canSupportAccess(role: PlatformRole): boolean {
+  return SUPPORT_ACCESS_ROLES.includes(role)
+}
+
+export function canDeleteUsers(role: PlatformRole): boolean {
+  return DELETE_USER_ROLES.includes(role)
+}
+
+/** Service-role check that a target auth user is itself a platform member
+ *  (used to refuse deleting a support-ticket's own account / last owner). */
+export async function getPlatformMemberByUserId(admin: SupabaseClient, userId: string): Promise<PlatformMember | null> {
+  const { data, error } = await admin
+    .from('platform_members')
+    .select('user_id, role')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return { id: data.user_id as string, email: '', role: data.role as PlatformRole }
 }
 
 /**

@@ -26,6 +26,8 @@
     { "source": "/api/admin/team/add", "destination": "/api/admin/platform?action=team-add" },
     { "source": "/api/admin/team/update", "destination": "/api/admin/platform?action=team-update" },
     { "source": "/api/admin/team/remove", "destination": "/api/admin/platform?action=team-remove" },
+    { "source": "/api/admin/support-access", "destination": "/api/admin/platform?action=support-access" },
+    { "source": "/api/admin/user/delete", "destination": "/api/admin/platform?action=user-delete" },
     { "source": "/api/admin/campaigns", "destination": "/api/admin/platform?action=campaign-list" },
     { "source": "/api/admin/campaigns/save", "destination": "/api/admin/platform?action=campaign-save" },
     { "source": "/api/admin/campaigns/audience", "destination": "/api/admin/platform?action=campaign-audience" },
