@@ -12,6 +12,8 @@ export interface Plan {
   storeBuilderAccess: boolean
   advancedBuilder: boolean
   removableBranding: boolean
+  /** Invite collaborators (manager/vendeur) per shop — Classe Pro. */
+  teamAccess: boolean
   analytics: 'basic' | 'standard' | 'advanced'
   maxCustomPages: number | null
   /**
@@ -49,6 +51,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     storeBuilderAccess: true,
     advancedBuilder: false,
     removableBranding: false,
+    teamAccess: false,
     analytics: 'basic',
     maxCustomPages: 1,
     maxCustomSections: 3,
@@ -63,6 +66,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     storeBuilderAccess: true,
     advancedBuilder: true,
     removableBranding: false,
+    teamAccess: false,
     analytics: 'standard',
     maxCustomPages: 5,
     maxCustomSections: 10,
@@ -77,6 +81,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     storeBuilderAccess: true,
     advancedBuilder: true,
     removableBranding: true,
+    teamAccess: true,
     analytics: 'advanced',
     maxCustomPages: null,
     maxCustomSections: null,

@@ -20,6 +20,7 @@ import {
   Trash2,
   Truck,
   User,
+  Users,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -30,6 +31,7 @@ import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
 import { BillingForShop } from './BillingPage'
+import { TeamSection } from '@/features/shop-settings/TeamSection'
 import {
   createDeliverySecteur,
   createDeliveryVille,
@@ -57,7 +59,7 @@ const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'facturation' | 'compte'
+type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'facturation' | 'compte' | 'equipe'
 
 const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'general', label: 'Général', icon: Store },
@@ -65,6 +67,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { key: 'facturation', label: 'Facturation', icon: CreditCard },
+  { key: 'equipe', label: 'Équipe', icon: Users },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -777,6 +780,8 @@ function SettingsForm({
         <AccountSection />
       ) : section === 'facturation' ? (
         <BillingForShop shopId={shop.id} />
+      ) : section === 'equipe' ? (
+        <TeamSection shop={shop} />
       ) : (
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="space-y-6">

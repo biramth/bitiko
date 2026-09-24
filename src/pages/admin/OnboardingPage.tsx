@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
@@ -31,7 +31,7 @@ import {
 import { Logo } from '@/components/ui/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useMyShop, selectShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
@@ -159,6 +159,10 @@ export function OnboardingPage() {
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+  // Second (or third…) shop: reachable from the shop switcher's
+  // "Nouvelle boutique" — otherwise an existing shop always bounces home.
+  const creatingAdditional = searchParams.get('new') === '1' && !!existingShop
 
   const [step, setStep] = useState(1)
 
@@ -282,6 +286,9 @@ export function OnboardingPage() {
     },
     onSuccess: (shop) => {
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
+      // A new shop becomes the workspace scope immediately — otherwise the
+      // admin would keep showing the previous shop after creating this one.
+      selectShop(shop.id, queryClient)
       trackEvent('shop_created', { shop_slug: shop.slug })
       void sendWelcomeEmail(shop.id)
       // The `tour` param makes the admin open the welcome guided tour once.
@@ -291,7 +298,7 @@ export function OnboardingPage() {
   })
 
   if (shopLoading) return <PageLoader />
-  if (existingShop) return <Navigate to="/admin" replace />
+  if (existingShop && !creatingAdditional) return <Navigate to="/admin" replace />
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
   const selectedVertical = VERTICAL_BY_KEY[businessType]

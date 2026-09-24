@@ -242,6 +242,13 @@ export function HeaderRenderer({
               </Link>
             ),
           )}
+          <Link
+            to="/compte"
+            onClick={() => setMobileMenuOpen(false)}
+            className="mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)]/70 hover:border-ink-900/40"
+          >
+            Mon compte
+          </Link>
         </nav>
       )}
     </header>

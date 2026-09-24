@@ -84,6 +84,59 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          first_order_at: string | null
+          id: string
+          last_order_at: string | null
+          name: string
+          orders_count: number
+          phone: string
+          shop_id: string
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          first_order_at?: string | null
+          id?: string
+          last_order_at?: string | null
+          name?: string
+          orders_count?: number
+          phone: string
+          shop_id: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          first_order_at?: string | null
+          id?: string
+          last_order_at?: string | null
+          name?: string
+          orders_count?: number
+          phone?: string
+          shop_id?: string
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_secteurs: {
         Row: {
           created_at: string
@@ -232,6 +285,7 @@ export type Database = {
         Row: {
           created_at: string
           customer_address: string | null
+          customer_email: string | null
           customer_name: string
           customer_phone: string
           delivery_fee: number
@@ -248,6 +302,7 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_address?: string | null
+          customer_email?: string | null
           customer_name: string
           customer_phone: string
           delivery_fee?: number
@@ -264,6 +319,7 @@ export type Database = {
         Update: {
           created_at?: string
           customer_address?: string | null
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string
           delivery_fee?: number
@@ -723,6 +779,47 @@ export type Database = {
           },
         ]
       }
+      shop_members: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          role: string
+          shop_id: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          shop_id: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          shop_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_members_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_publish_history: {
         Row: {
           id: string
@@ -948,6 +1045,10 @@ export type Database = {
         Args: { p_code?: string; p_shop_id: string }
         Returns: string
       }
+      claim_shop_invites: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       create_order: {
         Args: {
           p_customer_address: string
@@ -970,6 +1071,10 @@ export type Database = {
           unit_price: number
           variant_name: string | null
         }[]
+      }
+      set_order_customer_email: {
+        Args: { p_email: string; p_order_id: string }
+        Returns: undefined
       }
       set_order_delivery_fee: {
         Args: { p_fee: number; p_order_id: string }

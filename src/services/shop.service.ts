@@ -17,13 +17,28 @@ export async function getShopByTenant(tenant: TenantContext): Promise<Shop | nul
 
 /** The shop owned by the currently authenticated merchant (admin dashboard). */
 export async function getMyShop(userId: string): Promise<Shop | null> {
+  const shops = await getMyShops(userId)
+  return shops[0] ?? null
+}
+
+/** Every shop the merchant can work in — owned plus team access (see
+ *  shop_members), oldest first. The admin workspace scopes to one of these
+ *  (see shop-settings/useMyShop). */
+export async function getMyShops(userId: string): Promise<Shop[]> {
+  const { data: memberships } = await supabase
+    .from('shop_members')
+    .select('shop_id')
+    .eq('user_id', userId)
+  const memberIds = (memberships ?? []).map((m) => m.shop_id)
+  const ors = [`owner_id.eq.${userId}`]
+  if (memberIds.length > 0) ors.push(`id.in.(${memberIds.join(',')})`)
   const { data, error } = await supabase
     .from('shops')
     .select('*')
-    .eq('owner_id', userId)
-    .maybeSingle()
+    .or(ors.join(','))
+    .order('created_at', { ascending: true })
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export async function isSlugAvailable(slug: string): Promise<boolean> {

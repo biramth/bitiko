@@ -16,6 +16,7 @@ const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ defa
 const CheckoutPage = lazy(() => import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const OrderConfirmationPage = lazy(() => import('@/pages/store/OrderConfirmationPage').then((m) => ({ default: m.OrderConfirmationPage })))
 const StorePageView = lazy(() => import('@/pages/store/StorePageView').then((m) => ({ default: m.StorePageView })))
+const AccountPage = lazy(() => import('@/pages/store/AccountPage').then((m) => ({ default: m.AccountPage })))
 
 /** Root storefront route. On subdomains a custom page has a real path
  * (/pages/:slug); in the query-param preview fallback the page comes via
@@ -46,6 +47,7 @@ export function StoreApp() {
           <Route path="commande" element={<CheckoutPage />} />
           <Route path="commande/confirmation/:id" element={<OrderConfirmationPage />} />
           <Route path="pages/:slug" element={<StorePageView />} />
+          <Route path="compte" element={<AccountPage />} />
           <Route path="*" element={<StoreNotFoundPage />} />
         </Route>
       </Routes>

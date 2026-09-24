@@ -8,6 +8,7 @@ import {
   createOrder,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
+  setOrderCustomerEmail,
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
@@ -48,6 +49,7 @@ function CheckoutFlow({
   const [customerPhone, setCustomerPhone] = useState('')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const [deliveryVilleId, setDeliveryVilleId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const whatsappWindowRef = useRef<Window | null>(null)
@@ -97,6 +99,9 @@ function CheckoutFlow({
     onSuccess: (result) => {
       trackEvent('purchase', { transaction_id: result.orderId, value: result.total, currency, item_count: result.items.length })
       if (!demo) clear()
+      // Optional account hook: links this order to the buyer's email for
+      // their future order history. Best-effort, never blocks the flow.
+      if (customerEmail.trim()) void setOrderCustomerEmail(result.orderId, customerEmail)
       const normalizedPhone = normalizePhoneNumber(customerPhone)
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
@@ -242,6 +247,10 @@ function CheckoutFlow({
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-[var(--shop-text)]/80">Adresse de livraison</label>
           <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+        </div>
+        <div>
+          <label htmlFor="customerEmail" className="block text-sm font-medium text-[var(--shop-text)]/80">Email <span className="font-normal text-[var(--shop-text)]/50">(optionnel)</span></label>
+          <input id="customerEmail" name="email" type="email" autoComplete="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="Pour retrouver vos commandes" className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
         </div>
 
         {groupes.length > 0 && (

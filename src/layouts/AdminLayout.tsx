@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
@@ -17,11 +18,14 @@ import {
   Store,
   Truck,
   User,
+  Users,
   Wand2,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useMyShop, useMyShops } from '@/features/shop-settings/useMyShop'
+import { ShopSwitcher } from '@/features/shop-settings/ShopSwitcher'
+import { claimShopInvites } from '@/services/team.service'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { endImpersonation, getImpersonation } from '@/lib/supportSession'
 import { PageLoader } from '@/components/ui/PageLoader'
@@ -35,6 +39,7 @@ import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 const visibleNavItems = [
   { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard' },
   { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, guide: 'guide-nav-commandes' },
+  { to: '/admin/clients', label: 'Clients', icon: Users },
   { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
   { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
 ]
@@ -45,6 +50,7 @@ const settingsSections = [
   { to: '/admin/parametres/contact', label: 'Contact & devise', icon: Phone },
   { to: '/admin/parametres/shipping', label: 'Livraison & stock', icon: Truck },
   { to: '/admin/parametres/facturation', label: 'Facturation', icon: CreditCard },
+  { to: '/admin/parametres/equipe', label: 'Équipe', icon: Users },
   { to: '/admin/parametres/compte', label: 'Mon compte', icon: User },
 ]
 
@@ -53,6 +59,22 @@ const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
 export function AdminLayout() {
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
+  const { data: shops } = useMyShops()
+  const multiShop = (shops?.length ?? 0) > 1
+  const queryClient = useQueryClient()
+  // Claim team invites sent to the signed-in user's email (idempotent) —
+  // once per admin session, then refresh the workspace scope.
+  useEffect(() => {
+    let cancelled = false
+    claimShopInvites()
+      .then((shopIds) => {
+        if (!cancelled && shopIds.length > 0) void queryClient.invalidateQueries({ queryKey: ['my-shop'] })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [queryClient])
   const location = useLocation()
   const [impersonation] = useState(() => getImpersonation())
   const [quitting, setQuitting] = useState(false)
@@ -247,7 +269,7 @@ export function AdminLayout() {
         </nav>
 
         <div className={collapsed ? 'px-3 pb-2' : 'px-3 pb-4'}>
-          {shopIdentity}
+          {multiShop && !collapsed ? <ShopSwitcher /> : shopIdentity}
           {signOutButton}
         </div>
 
@@ -365,7 +387,10 @@ export function AdminLayout() {
               </nav>
 
               <div className="px-3 pb-4">
-                {shop && (
+                {multiShop ? (
+                  <ShopSwitcher onSelect={() => setMobileMenuOpen(false)} />
+                ) : (
+                  shop && (
                   <div className="mb-2 rounded-xl bg-white/5 p-3">
                     <div className="flex items-center gap-2.5">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
@@ -389,6 +414,7 @@ export function AdminLayout() {
                       <ExternalLink size={13} aria-hidden /> Voir la boutique
                     </Link>
                   </div>
+                  )
                 )}
                 {impersonation ? (
                   <button
