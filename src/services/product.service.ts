@@ -190,7 +190,7 @@ export async function countActiveProducts(shopId: string): Promise<number> {
 
 export type ProductInput = Pick<
   Product,
-  'shop_id' | 'category_id' | 'name' | 'slug' | 'description' | 'price' | 'stock' | 'active'
+  'shop_id' | 'category_id' | 'name' | 'slug' | 'description' | 'price' | 'stock' | 'active' | 'badge'
 > & { option_fields?: Product['option_fields'] }
 
 export async function createProduct(input: ProductInput): Promise<Product> {
@@ -240,6 +240,7 @@ export async function bulkCreateProducts(
       description: row.description,
       price: row.price,
       stock: row.stock,
+      badge: null,
       active: canActivate,
     })
     created += 1

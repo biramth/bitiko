@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabaseClient'
+import { compressImageFile } from '@/utils/image'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
-import type { StoreVibeKey } from '@/config/ambiances'
 import type { Shop, TenantContext } from '@/types'
 import type { SystemTemplateMap } from '@/types/builder'
 import { generateStorefront, type StoreBrandPalette } from '@/features/onboarding/generateStorefront'
@@ -17,13 +17,28 @@ export async function getShopByTenant(tenant: TenantContext): Promise<Shop | nul
 
 /** The shop owned by the currently authenticated merchant (admin dashboard). */
 export async function getMyShop(userId: string): Promise<Shop | null> {
+  const shops = await getMyShops(userId)
+  return shops[0] ?? null
+}
+
+/** Every shop the merchant can work in — owned plus team access (see
+ *  shop_members), oldest first. The admin workspace scopes to one of these
+ *  (see shop-settings/useMyShop). */
+export async function getMyShops(userId: string): Promise<Shop[]> {
+  const { data: memberships } = await supabase
+    .from('shop_members')
+    .select('shop_id')
+    .eq('user_id', userId)
+  const memberIds = (memberships ?? []).map((m) => m.shop_id)
+  const ors = [`owner_id.eq.${userId}`]
+  if (memberIds.length > 0) ors.push(`id.in.(${memberIds.join(',')})`)
   const { data, error } = await supabase
     .from('shops')
     .select('*')
-    .eq('owner_id', userId)
-    .maybeSingle()
+    .or(ors.join(','))
+    .order('created_at', { ascending: true })
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export async function isSlugAvailable(slug: string): Promise<boolean> {
@@ -49,9 +64,6 @@ export interface CreateShopInput {
   profile?: StoreProfileAnswers
   /** Palette suggested from the merchant's logo, used to set the theme colors. */
   palette?: StoreBrandPalette | null
-  /** The ambiance picked during onboarding ("Épuré", "Cosy"…), which styles
-   *  the generated theme on top of the template + logo colors. */
-  vibe?: StoreVibeKey | null
 }
 
 /** Flattens a selected genre template into the shop record so the storefront
@@ -79,7 +91,7 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
   const template = input.templateId ? STORE_TEMPLATE_BY_KEY[input.templateId] : undefined
   const generatedSource = template ?? STORE_TEMPLATES[0]
   const generated = input.profile
-    ? generateStorefront({ template: generatedSource, answers: input.profile, palette: input.palette, vibe: input.vibe })
+    ? generateStorefront({ template: generatedSource, answers: input.profile, palette: input.palette })
     : null
 
   const { data, error } = await supabase
@@ -90,7 +102,6 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
       currency: input.currency ?? 'XOF',
-      vibe: input.vibe ?? null,
       ...(generated
         ? {
             onboarding_responses: input.profile,
@@ -154,20 +165,22 @@ async function uploadShopAsset(shopId: string, file: File, baseName: string): Pr
   return `${data.publicUrl}?v=${Date.now()}`
 }
 
-export function uploadShopLogo(shopId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, file, 'logo')
+export async function uploadShopLogo(shopId: string, file: File): Promise<string> {
+  // Free plan: no server-side transforms — shrink at the source (the video
+  // uploader below shares the pipe and must stay untouched).
+  return uploadShopAsset(shopId, await compressImageFile(file), 'logo')
 }
 
-export function uploadShopBanner(shopId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, file, 'banner')
+export async function uploadShopBanner(shopId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, await compressImageFile(file), 'banner')
 }
 
 /** Image for a builder block (image/promo sections) — one file per section id,
  *  or per `itemId` for a block holding several images (e.g. a Lookbook's
  *  photo grid), so each slot gets its own storage path instead of
  *  overwriting the same one. */
-export function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
-  return uploadShopAsset(shopId, file, itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
+export async function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
+  return uploadShopAsset(shopId, await compressImageFile(file), itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
 }
 
 /** Background video for a builder block (image/hero sections) — same

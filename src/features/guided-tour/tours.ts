@@ -77,28 +77,29 @@ export const GUIDED_TOURS: GuidedTour[] = [
     id: 'customize',
     pages: ['/admin/personnaliser'],
     title: 'Personnaliser ma boutique',
-    description: 'Blocs, textes, styles et publication : le tour du builder.',
+    description: 'Couleurs, blocs, textes et publication : le tour de la personnalisation.',
     steps: [
       {
         prepare: 'builder-tab:preview',
         title: 'Personnaliser ta boutique',
-        body: 'Chaque page de ta boutique se modifie ici, en direct, sans toucher au code.',
+        body: 'Deux outils pour donner ton style à ta boutique, en direct et sans toucher au code.',
+      },
+      {
+        target: '[data-guide="guide-mode-switch"]',
+        title: 'Apparence ou Mise en page',
+        body: 'Apparence : couleurs, polices, arrondis et designs complets, pour toute la boutique d’un coup. Mise en page : ajoute, réorganise ou masque les blocs de chaque page.',
+      },
+      {
+        target: '[data-guide="guide-appearance-settings"]',
+        prepare: 'builder-tab:settings',
+        title: 'Couleurs et boutons',
+        body: 'Déplie « Couleurs » pour la couleur de ta marque, le fond et les textes, puis « Boutons » pour le principal, le secondaire et le tertiaire — avec leur texte. L’aperçu s’actualise en direct.',
       },
       {
         target: '[data-guide="guide-page-switcher"]',
-        title: 'Choisir une page',
-        body: 'Accueil, Catalogue, Fiche produit, Panier, Commande… et tes pages personnalisées si tu en crées. Quand tu cliques sur un lien dans l’aperçu, l’éditeur suit la page.',
-      },
-      {
-        target: '[data-guide="guide-builder-sidebar"]',
-        prepare: 'builder-tab:blocks',
-        title: 'Blocs, thème et styles',
-        body: 'Blocs : ajoute, réorganise, duplique ou masque une section (barre d’annonce, section personnalisée…). Thème : couleurs, polices, arrondis. Styles : designs prêts à l’emploi et tes propres thèmes sauvegardés.',
-      },
-      {
         prepare: 'builder-tab:preview',
-        title: 'Modifier directement dans l’aperçu',
-        body: 'Clique sur un texte, une image ou un bouton de l’aperçu pour le modifier sur place. Chaque texte peut avoir sa propre couleur, police et graisse, et les sections comme le footer proposent plusieurs mises en page.',
+        title: 'Vérifier chaque page',
+        body: 'Accueil, Catalogue, Fiche produit, Panier, Commande : ton thème s’applique partout. Clique une page pour la vérifier avant de publier.',
       },
       {
         target: '[data-guide="guide-publier"]',

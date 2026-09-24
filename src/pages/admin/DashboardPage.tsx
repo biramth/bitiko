@@ -224,6 +224,9 @@ export function DashboardPage() {
             { done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' },
             { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/contact' },
             { done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' },
+            { done: !!shop.logo_url, label: 'Ajoutez votre logo (favicon et aperçus partagés)', to: '/admin/parametres/appearance' },
+            { done: !!shop.description, label: 'Décrivez votre boutique (référencement Google)', to: '/admin/parametres/general' },
+            { done: !!shop.banner_url, label: 'Ajoutez une bannière (aperçus WhatsApp)', to: '/admin/parametres/appearance' },
             { done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' },
           ]}
         />

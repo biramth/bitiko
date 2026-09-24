@@ -321,7 +321,30 @@ export function BillingForShop({ shopId }: { shopId: string }) {
 
       {payments.length > 0 && (
         <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <div className="overflow-x-auto">
+          <ul className="divide-y divide-gray-100 md:hidden">
+            {payments.map((payment) => (
+              <li key={payment.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">
+                    {new Date(payment.created_at).toLocaleDateString('fr-FR')} · <span className="capitalize">{payment.plan}</span>
+                  </p>
+                  <p className="mt-0.5 text-sm text-gray-500">{formatCurrency(Number(payment.amount), payment.currency)}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    payment.status === 'succeeded'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : payment.status === 'failed'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {payment.status === 'succeeded' ? 'Payé' : payment.status === 'failed' ? 'Échoué' : 'En attente'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-100 text-gray-500">
               <tr>

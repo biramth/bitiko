@@ -161,9 +161,9 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                 <div className="flex items-center gap-4">
                   {!isDemo ? (
                     <>
-                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
                       <span className="w-4 text-center text-sm font-medium text-[var(--shop-text)]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
                     </>
                   ) : (
                     <span className="text-sm text-[var(--shop-text)]/60">Qté : {item.quantity}</span>
@@ -193,7 +193,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         <Link
           to="/commande"
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90"
+          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90"
         >
           Passer la commande
           <ArrowRight size={16} aria-hidden />
@@ -203,7 +203,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         <Link
           to="/commande"
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-white opacity-50 pointer-events-none"
+          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] opacity-50 pointer-events-none"
         >
           Passer la commande
           <ArrowRight size={16} aria-hidden />

@@ -40,18 +40,52 @@ export function whatsappHref(whatsappNumber: string): string {
   return `https://wa.me/${digitsOnly}`
 }
 
-/** WCAG relative-luminance contrast ratio of a "#rrggbb" color against white text. */
-export function contrastWithWhite(hex: string): number {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex)
-  if (!match) return 21 // unknown/invalid input: don't warn
+/** Parses `#rrggbb` or `#rrggbbaa`, composing any alpha over `backdrop` so the
+ *  returned channels are always opaque (alpha is only meaningful against a
+ *  known background, and contrast ignores it once composited). */
+function parseOpaque(hex: string, backdrop: string): [number, number, number] | null {
+  const match = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(hex)
+  const back = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(backdrop)
+  if (!match || !back) return null
+  const channels = (m: RegExpExecArray) =>
+    [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) as [number, number, number]
+  const alpha = match[2] != null ? parseInt(match[2], 16) / 255 : 1
+  if (alpha >= 1) return channels(match)
+  const a = channels(match)
+  const d = channels(back)
+  return [
+    Math.round(a[0] * alpha + d[0] * (1 - alpha)),
+    Math.round(a[1] * alpha + d[1] * (1 - alpha)),
+    Math.round(a[2] * alpha + d[2] * (1 - alpha)),
+  ]
+}
 
+/** WCAG relative-luminance contrast ratio between two colors, each `#rrggbb`
+ *  or `#rrggbbaa` (an 8-digit color is composited over `backdropA`/`backdropB`
+ *  — both default white — before the ratio, so transparency can't void it).
+ *  Unknown/invalid input returns 21 (best possible — never warns). */
+export function contrastRatio(
+  hexA: string,
+  hexB: string,
+  options: { backdropA?: string; backdropB?: string } = {},
+): number {
+  const a = parseOpaque(hexA, options.backdropA ?? '#ffffff')
+  const b = parseOpaque(hexB, options.backdropB ?? '#ffffff')
+  if (!a || !b) return 21
   const channel = (value: number) => {
     const c = value / 255
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
   }
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(match[1].slice(i, i + 2), 16))
-  const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
-  return (1 + 0.05) / (luminance + 0.05)
+  const luminance = (channels: [number, number, number]) =>
+    0.2126 * channel(channels[0]) + 0.7152 * channel(channels[1]) + 0.0722 * channel(channels[2])
+  const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (l1 + 0.05) / (l2 + 0.05)
+}
+
+/** WCAG relative-luminance contrast ratio of a color against white text.
+ *  `#rrggbbaa` is composited over `backdrop` (default white) first. */
+export function contrastWithWhite(hex: string, backdrop: string = '#ffffff'): number {
+  return contrastRatio(hex, '#ffffff', { backdropA: backdrop, backdropB: '#ffffff' })
 }
 
 /** Delivery fee applied for a subtotal, honoring the shop's free-delivery threshold. */

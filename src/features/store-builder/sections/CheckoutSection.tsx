@@ -8,6 +8,7 @@ import {
   createOrder,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
+  setOrderCustomerEmail,
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
@@ -48,6 +49,7 @@ function CheckoutFlow({
   const [customerPhone, setCustomerPhone] = useState('')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const [deliveryVilleId, setDeliveryVilleId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const whatsappWindowRef = useRef<Window | null>(null)
@@ -97,6 +99,9 @@ function CheckoutFlow({
     onSuccess: (result) => {
       trackEvent('purchase', { transaction_id: result.orderId, value: result.total, currency, item_count: result.items.length })
       if (!demo) clear()
+      // Optional account hook: links this order to the buyer's email for
+      // their future order history. Best-effort, never blocks the flow.
+      if (customerEmail.trim()) void setOrderCustomerEmail(result.orderId, customerEmail)
       const normalizedPhone = normalizePhoneNumber(customerPhone)
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
@@ -217,7 +222,7 @@ function CheckoutFlow({
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-[var(--shop-text)]/80">Nom complet</label>
-          <input id="customerName" name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+          <input id="customerName" name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
         </div>
         <div>
           <label htmlFor="customerPhone" className="block text-sm font-medium text-[var(--shop-text)]/80">Numéro de téléphone</label>
@@ -235,19 +240,23 @@ function CheckoutFlow({
             }}
             aria-invalid={phoneError ? true : undefined}
             placeholder="77 123 45 67"
-            className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+            className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
           />
           {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
         </div>
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-[var(--shop-text)]/80">Adresse de livraison</label>
-          <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+          <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+        </div>
+        <div>
+          <label htmlFor="customerEmail" className="block text-sm font-medium text-[var(--shop-text)]/80">Email <span className="font-normal text-[var(--shop-text)]/50">(optionnel)</span></label>
+          <input id="customerEmail" name="email" type="email" autoComplete="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="Pour retrouver vos commandes" className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
         </div>
 
         {groupes.length > 0 && (
           <div>
             <label htmlFor="deliveryVille" className="block text-sm font-medium text-[var(--shop-text)]/80">Ville de livraison</label>
-            <select id="deliveryVille" value={selectedVille?.id ?? ''} onChange={(e) => setDeliveryVilleId(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none">
+            <select id="deliveryVille" value={selectedVille?.id ?? ''} onChange={(e) => setDeliveryVilleId(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none">
               {groupes.map(({ secteur, villes }) => (
                 <optgroup key={secteur.id} label={`${secteur.name} — ${Number(secteur.fee) > 0 ? formatCurrency(Number(secteur.fee), currency) : 'gratuite'}`}>
                   {villes.map((ville) => (
@@ -287,7 +296,7 @@ function CheckoutFlow({
           type="submit"
           disabled={mutation.isPending || demo}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : 'Commander via WhatsApp'}
         </button>

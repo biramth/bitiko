@@ -68,10 +68,19 @@ describe('buildGeneratedTheme', () => {
     const theme = buildGeneratedTheme(recipeTemplate, { primary: '#fde047', secondary: '#1d4ed8' })
     expect(theme.themeConfig.secondaryColor).toMatch(/^#[0-9a-f]{6}$/i)
     expect(theme.themeConfig.buttonColor).toBe('')
+    expect(theme.themeConfig.secondaryColor).not.toBe(recipeTemplate.themeConfig.secondaryColor)
     // Dark text on the secondary tint stays readable (tint is light).
     const channels = theme.themeConfig.secondaryColor.slice(1)
     const r = parseInt(channels.slice(0, 2), 16)
     expect(r).toBeGreaterThan(200)
+  })
+
+  it('keeps the template theme untouched when the logo has no accent', () => {
+    const theme = buildGeneratedTheme(recipeTemplate, { primary: null, secondary: null })
+    expect(theme.themeColor).toBe(recipeTemplate.themeColor)
+    expect(theme.themeConfig.secondaryColor).toBe(recipeTemplate.themeConfig.secondaryColor)
+    // Buttons reset to "auto" so they always follow the themeColor, palette or not.
+    expect(theme.themeConfig.buttonColor).toBe('')
   })
 })
 

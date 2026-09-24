@@ -179,4 +179,30 @@ export async function updateOrderDeliveryFee(id: string, fee: number): Promise<O
   return data as Order
 }
 
+/** Attaches the buyer's (optional) email to a just-placed order so it can
+ *  later appear in their account history. Best-effort: throws never — the
+ *  order itself is already safely stored. */
+export async function setOrderCustomerEmail(orderId: string, email: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('set_order_customer_email', {
+      p_order_id: orderId,
+      p_email: email.trim(),
+    })
+    if (error) throw error
+  } catch {
+    // Non-blocking — email linking must never fail a completed purchase.
+  }
+}
+
+/** The signed-in buyer's own orders on this shop (RLS self-read) with items. */
+export async function listMyOrders(shopId: string): Promise<OrderWithItems[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, items:order_items(*)')
+    .eq('shop_id', shopId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as OrderWithItems[]
+}
+
 export { buildWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'

@@ -39,7 +39,6 @@ const SEND_CONCURRENCY = 2
 const STALE_SENDING_MS = 10 * 60 * 1000
 
 interface Audience {
-  vibe?: 'any' | 'missing' | 'set'
   plan?: 'any' | 'free' | 'paid' | 'essential' | 'pro'
   logo?: 'any' | 'has' | 'none'
   products?: 'any' | 'has' | 'none'
@@ -597,8 +596,6 @@ function sanitizeAudience(raw: unknown): Audience {
   const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined =>
     typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : undefined
 
-  const vibe = pick(input.vibe, ['any', 'missing', 'set'] as const)
-  if (vibe) audience.vibe = vibe
   const plan = pick(input.plan, ['any', 'free', 'paid', 'essential', 'pro'] as const)
   if (plan) audience.plan = plan
   const logo = pick(input.logo, ['any', 'has', 'none'] as const)
@@ -745,7 +742,6 @@ async function handleCampaignAudience(req: VercelRequest, res: VercelResponse) {
       shop_name: string
       slug: string
       plan: string
-      vibe: string | null
     }[]
     const directory = await loadUserDirectory()
     const withEmail = rows.filter((row) => directory.get(row.owner_id)?.email).length
@@ -757,7 +753,6 @@ async function handleCampaignAudience(req: VercelRequest, res: VercelResponse) {
         name: row.shop_name,
         slug: row.slug,
         plan: row.plan,
-        vibe: row.vibe,
       })),
     })
   } catch (err) {

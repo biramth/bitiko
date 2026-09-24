@@ -16,8 +16,8 @@ export function ButtonBlockRenderer({ block, editable = false, onChange }: Block
   if (!block.label.trim() && !editable) return null
   const className =
     block.style === 'outline'
-      ? 'inline-flex items-center gap-2 border border-[var(--shop-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)]/50'
-      : 'inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90'
+      ? 'inline-flex items-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50'
+      : 'inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90'
   const style = { borderRadius: 'var(--shop-radius)' }
   const url = block.url.trim() || '/catalogue'
   const labelStyle = resolveTextStyle(block.labelStyle)

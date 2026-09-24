@@ -16,6 +16,69 @@ export function hexChannels(hex: string): [number, number, number] | null {
   ]
 }
 
+/** Parses a `#RRGGBB` or `#RRGGBBAA` color (the 8-digit form carries its own
+ *  alpha between `00` — fully transparent — and `ff` — fully opaque). */
+export function hexWithAlpha(hex: string): { channels: [number, number, number]; alpha: number } | null {
+  const match = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(hex)
+  if (!match) return null
+  const channels = hexChannels(`#${match[1]}`)
+  if (!channels) return null
+  const alpha = match[2] != null ? parseInt(match[2], 16) / 255 : 1
+  return { channels, alpha }
+}
+
+/** The alpha of a color as a 0–1 float; `#RRGGBB` (and auto/empty) = 1. */
+export function alphaOf(hex: string): number {
+  return hexWithAlpha(hex)?.alpha ?? 1
+}
+
+/** True when the color is explicitly fully transparent (`#RRGGBB00`). */
+export function isFullyTransparent(hex: string): boolean {
+  const parsed = hexWithAlpha(hex)
+  return parsed != null && parsed.alpha === 0
+}
+
+/** The 6-digit `#RRGGBB` of a color, alpha dropped; falls back to `hex` when
+ *  the input isn't a color at all. */
+export function baseOf(hex: string): string {
+  const parsed = hexWithAlpha(hex)
+  return parsed ? `#${hex.slice(1, 7)}` : hex
+}
+
+export function hexToRgba(hex: string): string {
+  const parsed = hexWithAlpha(hex)
+  if (!parsed) return 'transparent'
+  const [r, g, b] = parsed.channels
+  return `rgba(${r}, ${g}, ${b}, ${parsed.alpha.toFixed(3)})`
+}
+
+/** Adds (or replaces) the alpha on a color, returning `#RRGGBBAA` while the
+ *  alpha is below `ff` and plain `#RRGGBB` when it's fully opaque. */
+export function hexWithNewAlpha(hex: string, alpha: number): string {
+  const base = baseOf(hex)
+  const clamped = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1
+  if (clamped >= 1) return base
+  const hexAlpha = Math.round(clamped * 255).toString(16).padStart(2, '0')
+  return `${base}${hexAlpha}`
+}
+
+/** Composites a possibly-transparent color over a solid backdrop and returns
+ *  the resulting opaque color (`backdrop` defaults to white). Handy for
+ *  previews and contrast checks against a known background. */
+export function compositeHex(hex: string, backdrop: string = '#ffffff'): string {
+  const parsed = hexWithAlpha(hex)
+  const back = hexWithAlpha(backdrop)
+  if (!parsed || !back) return hex
+  const a = parsed.alpha
+  const mix = (c: number, d: number) => Math.round(c * a + d * (1 - a))
+  const [r, g, b] = [
+    mix(parsed.channels[0], back.channels[0]),
+    mix(parsed.channels[1], back.channels[1]),
+    mix(parsed.channels[2], back.channels[2]),
+  ]
+  return toHexColor(r, g, b)
+}
+
 export function toHexColor(r: number, g: number, b: number): string {
   return `#${[r, g, b]
     .map((c) => Math.max(0, Math.min(255, Math.round(c))))

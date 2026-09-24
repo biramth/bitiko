@@ -380,8 +380,8 @@ function ProductDetails({
                         style={{ borderRadius: 'var(--shop-radius)' }}
                         className={`border px-4 py-2 text-sm transition-colors ${
                           isSelected
-                            ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-white'
-                            : 'border-[var(--shop-text)]/20 text-[var(--shop-text)] hover:border-[var(--shop-text)]/50'
+                            ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-[var(--shop-button-text)]'
+                            : 'border-[var(--shop-secondary-button-text)]/20 text-[var(--shop-secondary-button-text)] hover:border-[var(--shop-secondary-button-text)]/50'
                         } ${soldOut ? 'cursor-not-allowed opacity-40' : ''}`}
                       >
                         <span className="block">{v.name}</span>
@@ -420,8 +420,8 @@ function ProductDetails({
                                 style={{ borderRadius: 'var(--shop-radius)' }}
                                 className={`border px-4 py-2 text-sm transition-colors ${
                                   isSelected
-                                    ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-white'
-                                    : 'border-[var(--shop-text)]/20 text-[var(--shop-text)] hover:border-[var(--shop-text)]/50'
+                                    ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-[var(--shop-button-text)]'
+                                    : 'border-[var(--shop-secondary-button-text)]/20 text-[var(--shop-secondary-button-text)] hover:border-[var(--shop-secondary-button-text)]/50'
                                 }`}
                               >
                                 {choice}
@@ -471,7 +471,7 @@ function ProductDetails({
                   onClick={handleAddToCart}
                   disabled={outOfStock}
                   style={{ borderRadius: 'var(--shop-radius)' }}
-                  className="mt-4 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
+                  className="mt-4 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-6 py-4 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
                 >
                   {outOfStock ? 'Rupture de stock' : added ? <><Check size={16} aria-hidden /> Ajouté</> : 'Ajouter au panier'}
                 </button>
@@ -481,7 +481,7 @@ function ProductDetails({
               type="button"
               onClick={handleShare}
               style={{ borderRadius: 'var(--shop-radius)' }}
-              className="mt-3 flex w-full items-center justify-center gap-2 border border-[var(--shop-text)]/15 px-6 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)] hover:bg-[var(--shop-text)]/5"
+              className="mt-3 flex w-full items-center justify-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-6 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)] hover:bg-[var(--shop-secondary-button)]"
             >
               <Share2 size={16} aria-hidden /> Partager ce produit
             </button>
@@ -510,7 +510,7 @@ function ProductDetails({
       </div>
 
       {config.showAddToCart && !ctaVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-[var(--shop-text)]/60">{product.name}</p>
             <p className="text-sm font-bold text-[var(--shop-text)]">{formatCurrency(displayPrice, currency)}</p>
@@ -519,7 +519,7 @@ function ProductDetails({
             onClick={handleAddToCart}
             disabled={outOfStock}
             style={{ borderRadius: 'var(--shop-radius)' }}
-            className="shrink-0 bg-[var(--shop-button)] px-5 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
+            className="shrink-0 bg-[var(--shop-button)] px-5 py-3 text-xs font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-sand-200 disabled:text-ink-700/40"
           >
             {outOfStock ? 'Rupture' : added ? 'Ajouté ✓' : 'Ajouter'}
           </button>

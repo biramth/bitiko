@@ -1,6 +1,7 @@
 import type { AnnouncementBarSectionConfig } from '@/types/builder'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { TextStyleField } from '../components/TextStyleControls'
+import { ColorField } from '../components/ColorField'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchFrame } from '../components/LayoutSwatch'
 import type { AnnouncementLayout } from '@/types/builder'
@@ -93,38 +94,20 @@ export function AnnouncementBarEditor({ config, onChange }: SectionEditorProps<A
         <p className={`mb-2 ${editorHelpClass}`}>
           Sans réglage, la barre reprend la couleur principale de la boutique.
         </p>
-        <label className={editorLabelClass}>Couleur de fond</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.backgroundColor || '#d9612e'}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.backgroundColor ?? ''}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            placeholder="Laisser vide = couleur principale"
-            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur de fond"
+          value={config.backgroundColor ?? ''}
+          placeholder="Laisser vide = couleur principale"
+          onChange={(backgroundColor) => onChange({ ...config, backgroundColor })}
+        />
       </div>
       <div>
-        <label className={editorLabelClass}>Couleur du texte</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.textColor || '#ffffff'}
-            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.textColor ?? ''}
-            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
-            placeholder="Laisser vide = blanc"
-            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur du texte"
+          value={config.textColor ?? ''}
+          placeholder="Laisser vide = blanc"
+          onChange={(textColor) => onChange({ ...config, textColor })}
+        />
       </div>
       <p className="text-xs text-gray-500">
         La barre s'affiche en haut de toutes les pages, au-dessus du header.

@@ -29,6 +29,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { SocialIcon } from '@/components/ui/SocialIcon'
 import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
@@ -494,7 +495,7 @@ function PhoneMockup() {
         </div>
       </div>
       {/* WhatsApp bubble floating — independent drift timing so it doesn't move in lockstep with the phone. */}
-      <div className="absolute -right-4 top-[55%] z-10 w-[190px] rotate-2 animate-float-slow rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 shadow-lg [animation-delay:-3s] sm:right-[-20px] lg:right-[-30px]">
+      <div className="absolute right-2 top-[55%] z-10 w-[190px] rotate-2 animate-float-slow rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 shadow-lg [animation-delay:-3s] sm:right-[-20px] lg:right-[-30px]">
         <div className="flex items-center gap-1.5 mb-1.5">
           <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[8px] text-white">
             <MessageCircle size={8} />
@@ -1135,7 +1136,7 @@ export function LandingPage() {
 
       {/* ── FOOTER ── */}
       <footer className="border-t border-sand-200 py-16">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 px-4 text-sm sm:px-6 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 text-sm min-[480px]:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="hidden lg:block">
             <Logo size={20} />
             <p className="mt-6 text-xs text-ink-700/40">&copy; {new Date().getFullYear()} Bitiko</p>
@@ -1156,6 +1157,26 @@ export function LandingPage() {
               <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
               <li><a href="#tarifs" className="text-ink-700/50 transition-colors hover:text-ink-900">Tarifs</a></li>
               <li><a href="#faq" className="text-ink-700/50 transition-colors hover:text-ink-900">FAQ</a></li>
+              <li>
+                <a
+                  href="https://www.instagram.com/bitiko.shop/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                >
+                  <SocialIcon platform="instagram" size={14} /> Instagram
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.tiktok.com/@bitiko.shop"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                >
+                  <SocialIcon platform="tiktok" size={14} /> TikTok
+                </a>
+              </li>
             </ul>
           </div>
           <div>

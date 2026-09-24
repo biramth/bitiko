@@ -4,8 +4,6 @@ import { createSectionId } from '@/config/defaultLayout'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import type { LayoutSection, SectionType, StoreTemplate, ThemeConfig } from '@/types/builder'
 
-export type BuilderTab = 'blocks' | 'theme' | 'templates'
-
 /** An immutable snapshot of everything the builder can edit. Every mutation
  * commits a new snapshot, which is what makes undo/redo trivial. */
 export interface BuilderSnapshot {
@@ -62,7 +60,6 @@ export function useBuilderState(target: BuilderTarget) {
   const [past, setPast] = useState<BuilderSnapshot[]>([])
   const [future, setFuture] = useState<BuilderSnapshot[]>([])
   const [dirty, setDirty] = useState(false)
-  const [activeTab, setActiveTab] = useState<BuilderTab>('blocks')
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
 
   const { sections, themeColor, themeConfig } = snapshot
@@ -79,7 +76,6 @@ export function useBuilderState(target: BuilderTarget) {
 
   const selectSection = (id: string) => {
     setSelectedSectionId(id)
-    setActiveTab('blocks')
   }
 
   const addSection = (type: SectionType) => {
@@ -239,8 +235,6 @@ export function useBuilderState(target: BuilderTarget) {
     themeColor,
     themeConfig,
     dirty,
-    activeTab,
-    setActiveTab,
     selectedSection,
     selectedSectionId,
     selectSection,

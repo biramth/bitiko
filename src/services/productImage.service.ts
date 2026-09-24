@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { compressImageFile } from '@/utils/image'
 import type { ProductImage } from '@/types'
 
 const BUCKET = 'product-images'
@@ -8,10 +9,13 @@ export async function uploadProductImage(
   file: File,
   sortOrder: number,
 ): Promise<ProductImage> {
-  const ext = file.name.split('.').pop()
+  // Free plan has no server-side transforms: shrink at the source so every
+  // storefront (grids, lightbox) serves a light file from day one.
+  const optimized = await compressImageFile(file)
+  const ext = optimized.name.split('.').pop()
   const path = `${productId}/${crypto.randomUUID()}.${ext}`
 
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, optimized, {
     cacheControl: '3600',
     upsert: false,
   })
