@@ -1,6 +1,5 @@
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import type { LayoutSection, StoreTemplate, SystemTemplateMap, ThemeConfig } from '@/types/builder'
-import { STORE_VIBE_BY_KEY, type StoreVibe, type StoreVibeKey } from '@/config/ambiances'
 import { ensureReadableAccent, softTint } from '@/utils/color'
 import type { StoreProfileAnswers } from './storeProfile'
 
@@ -111,20 +110,15 @@ export function generateHomeLayout(template: StoreTemplate, answers: StoreProfil
  * color is softened into a light pastel for backgrounds (dark text readable on
  * top). Buttons always follow the accent. Without a palette, the template's own
  * (already contrast-checked) theme is used unchanged.
- *
- * The chosen ambiance is applied last (see `StoreVibe.theme`), so it wins over
- * both the template and the logo tint for the fields it sets.
  */
 export function buildGeneratedTheme(
   template: StoreTemplate,
   palette: StoreBrandPalette | null | undefined,
-  vibe?: StoreVibe | StoreVibeKey | null | undefined,
 ): { themeColor: string; themeConfig: ThemeConfig } {
   const accent = palette?.primary ?? template.themeColor
   const readableAccent = ensureReadableAccent(accent)
   const rawSecondary = palette?.secondary ?? palette?.primary
   const secondaryColor = rawSecondary ? softTint(rawSecondary) : template.themeConfig.secondaryColor
-  const resolvedVibe = typeof vibe === 'string' ? STORE_VIBE_BY_KEY[vibe] : vibe
 
   return {
     themeColor: readableAccent,
@@ -132,7 +126,6 @@ export function buildGeneratedTheme(
       ...template.themeConfig,
       secondaryColor,
       buttonColor: '',
-      ...(resolvedVibe?.theme ?? {}),
     },
   }
 }
@@ -142,10 +135,9 @@ export function generateStorefront(input: {
   template: StoreTemplate
   answers: StoreProfileAnswers
   palette?: StoreBrandPalette | null
-  vibe?: StoreVibeKey | null
 }): GeneratedStorefront {
-  const { template, answers, palette, vibe } = input
-  const theme = buildGeneratedTheme(template, palette, vibe)
+  const { template, answers, palette } = input
+  const theme = buildGeneratedTheme(template, palette)
   return {
     description: compact(answers.description) || null,
     layoutSections: generateHomeLayout(template, answers),

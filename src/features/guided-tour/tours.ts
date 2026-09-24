@@ -93,7 +93,7 @@ export const GUIDED_TOURS: GuidedTour[] = [
         target: '[data-guide="guide-appearance-settings"]',
         prepare: 'builder-tab:settings',
         title: 'Couleurs et boutons',
-        body: 'Choisis la couleur de ta marque puis celle de tes boutons — principal, secondaire, tertiaire — avec leur texte. Essaie les palettes suggérées d’un clic, l’aperçu s’actualise en direct.',
+        body: 'Déplie « Couleurs » pour la couleur de ta marque, le fond et les textes, puis « Boutons » pour le principal, le secondaire et le tertiaire — avec leur texte. L’aperçu s’actualise en direct.',
       },
       {
         target: '[data-guide="guide-page-switcher"]',

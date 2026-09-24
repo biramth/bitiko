@@ -1,39 +1,37 @@
-import { AlertTriangle, ChevronDown } from 'lucide-react'
+import { AlertTriangle, ChevronDown, LayoutTemplate, MousePointerClick, Palette, Type, type LucideIcon } from 'lucide-react'
 import { contrastRatio, contrastWithWhite } from '@/utils/format'
 import { RADIUS_CSS } from '@/config/themeTokens'
-import { STORE_VIBES, type StoreVibe } from '@/config/ambiances'
-import { readableTextColor } from '@/features/categories/categoryTile'
 import { ColorField } from './components/ColorField'
 import { VisualPicker } from './components/VisualPicker'
 import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } from '@/types/builder'
-
-const HEX6 = /^#[0-9a-fA-F]{6}$/
 
 const labelClass = 'block text-sm font-medium text-gray-700'
 const selectClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none'
 
-/** Groups related settings under a small uppercase heading with a divider —
- *  turns the panel into readable sections instead of one long flat list. */
-function ThemeGroup({ title, children }: { title: string; children: React.ReactNode }) {
+/** Every panel group is a collapsible accordion — the merchant unfolds exactly
+ *  what they want to tweak. Nothing that shapes the shop lives in a hidden
+ *  "Réglages avancés" catch-all anymore; that slot is reserved in code for
+ *  future, genuinely advanced options (effects, animations…). */
+function AccordionGroup({
+  icon: Icon,
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  icon: LucideIcon
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
   return (
-    <div className="border-t border-gray-100 pt-5 first:mt-0 first:border-t-0 first:pt-0">
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{title}</p>
-      <div className="space-y-4">{children}</div>
-    </div>
-  )
-}
-
-/** Collapsed-by-default section holding the less-often-used theme knobs, so the
- *  panel opens on the three button roles the merchant cares about most. */
-function AdvancedSettings({ children }: { children: React.ReactNode }) {
-  return (
-    <details className="group border-t border-gray-100 pt-5">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-600 [&::-webkit-details-marker]:hidden">
-        <ChevronDown size={13} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden />
-        Réglages avancés
+    <details className="group rounded-lg border border-gray-200 bg-gray-50/40" open={defaultOpen}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-semibold text-gray-800 transition-colors hover:text-gray-950 [&::-webkit-details-marker]:hidden">
+        <Icon size={15} className="shrink-0 text-gray-400" aria-hidden />
+        {title}
+        <ChevronDown size={15} className="ml-auto shrink-0 text-gray-400 transition-transform group-open:rotate-180" aria-hidden />
       </summary>
-      <div className="mt-4 space-y-4">{children}</div>
+      <div className="space-y-4 border-t border-gray-200 p-4">{children}</div>
     </details>
   )
 }
@@ -63,7 +61,9 @@ function ButtonPreview({
 }
 
 /** One rounded role card: title, the colors for this role (fond + texte) and a
- *  live button preview, plus a contrast warning when the pair is unreadable. */
+ *  live button preview, plus a contrast warning when the pair is unreadable.
+ *  `allowTransparentBackground` turns the Fond picker into an explicit
+ *  "Transparent" toggle (the secondary/outline role by default). */
 function ButtonRoleRow({
   title,
   description,
@@ -77,6 +77,7 @@ function ButtonRoleRow({
   onText,
   radius,
   outline = false,
+  allowTransparentBackground = false,
 }: {
   title: string
   description: string
@@ -85,24 +86,31 @@ function ButtonRoleRow({
   backgroundPlaceholder: string
   textPlaceholder: string
   /** Resolved colors (fallbacks applied) used by the preview and the contrast
-   *  check — raw values above are what the hex fields actually edit. */
+   *  check — raw values above are what the color fields actually edit. */
   previewBackground: string
   previewText: string
   onBackground: (value: string) => void
   onText: (value: string) => void
   radius: RadiusScale
   outline?: boolean
+  allowTransparentBackground?: boolean
 }) {
   const contrastSafe = /^#[0-9a-fA-F]{6}$/.test(previewBackground) && /^#[0-9a-fA-F]{6}$/.test(previewText)
   const lowContrast = !outline && contrastSafe && contrastRatio(previewBackground, previewText) < 3
   return (
-    <div className="rounded-xl border border-gray-200 p-3">
+    <div className="rounded-xl border border-gray-200 bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="mt-0.5 text-xs leading-snug text-gray-500">{description}</p>
           <div className="mt-3 space-y-3">
-            <ColorField label="Fond" value={background} placeholder={backgroundPlaceholder} onChange={onBackground} />
+            <ColorField
+              label="Fond"
+              value={background}
+              placeholder={backgroundPlaceholder}
+              onChange={onBackground}
+              allowTransparent={allowTransparentBackground}
+            />
             <ColorField label="Texte" value={text} placeholder={textPlaceholder} onChange={onText} />
           </div>
           {lowContrast && (
@@ -113,39 +121,6 @@ function ButtonRoleRow({
         </div>
         <ButtonPreview background={previewBackground} text={previewText} radius={radius} outline={outline} />
       </div>
-    </div>
-  )
-}
-
-/** One-click palettes (the onboarding ambiances): applying a swatch restyles
- *  the brand accent, the page background and the button roles in one go, with
- *  a readable text color derived from the accent — a coherent look without
- *  picking six hex codes by hand. */
-function ColorPresetRow({ activeKey, onApply }: { activeKey?: string; onApply: (vibe: StoreVibe) => void }) {
-  return (
-    <div className="grid grid-cols-4 gap-2">
-      {STORE_VIBES.map((vibe) => {
-        const [accent, background] = vibe.swatch
-        const isActive = activeKey === vibe.key
-        return (
-          <button
-            key={vibe.key}
-            type="button"
-            onClick={() => onApply(vibe)}
-            title={`${vibe.label} — ${vibe.description}`}
-            aria-pressed={isActive}
-            className={`group flex flex-col items-center gap-1.5 rounded-lg border p-1.5 transition-colors ${
-              isActive ? 'border-brand-500 bg-brand-50/60' : 'border-gray-200 hover:border-brand-300 hover:bg-brand-50/40'
-            }`}
-          >
-            <span className="flex h-7 w-full overflow-hidden rounded-md border border-gray-200" aria-hidden>
-              <span className="h-full w-1/2" style={{ backgroundColor: accent }} />
-              <span className="h-full w-1/2" style={{ backgroundColor: background }} />
-            </span>
-            <span className="w-full truncate text-center text-[10px] font-medium text-gray-500">{vibe.label.split(' ')[0]}</span>
-          </button>
-        )
-      })}
     </div>
   )
 }
@@ -181,57 +156,42 @@ export function ThemeEditorPanel({
 
   const set = (patch: Partial<ThemeConfig>) => onThemeConfigChange({ ...themeConfig, ...patch })
 
-  /** Picking a role's background also picks its text color when the merchant
-   *  hasn't chosen one yet — a legible button without a second picker. */
-  const handleRoleBackground = (
-    bgKey: 'buttonColor' | 'secondaryButtonColor' | 'tertiaryButtonColor',
-    textKey: 'buttonTextColor' | 'secondaryButtonTextColor' | 'tertiaryButtonTextColor',
-    value: string,
-  ) => {
-    const patch: Partial<ThemeConfig> = { [bgKey]: value }
-    if (!themeConfig[textKey] && HEX6.test(value)) patch[textKey] = readableTextColor(value)
-    set(patch)
-  }
-
-  /** One coherent design in a click: brand accent, page background and button
-   *  roles tuned on the preset's accent (the merchant's custom secondary
-   *  outline is left untouched — it follows the text color automatically). */
-  const applyPreset = (vibe: StoreVibe) => {
-    const accent = vibe.swatch[0]
-    const readable = readableTextColor(accent)
-    onThemeColorChange(accent)
-    onThemeConfigChange({
-      ...themeConfig,
-      ...vibe.theme,
-      buttonColor: accent,
-      buttonTextColor: readable,
-      tertiaryButtonColor: accent,
-      tertiaryButtonTextColor: readable,
-    })
-  }
-
-  const activeVibeKey = STORE_VIBES.find(
-    (v) => v.swatch[0] === themeColor && v.swatch[1] === themeConfig.backgroundColor,
-  )?.key
-
   return (
-    <div className="space-y-5">
-      <ThemeGroup title="Couleurs de la boutique">
-        <ColorPresetRow activeKey={activeVibeKey} onApply={applyPreset} />
-        <div>
-          <ColorField label="Couleur de la boutique" value={themeColor} placeholder="#d9612e" onChange={onThemeColorChange} />
-          {lowContrast && (
-            <p className="-mt-2 flex items-center gap-1.5 text-xs text-amber-600">
+    <div className="space-y-4">
+      <AccordionGroup icon={Palette} title="Couleurs" defaultOpen>
+        <div className="space-y-1">
+          <ColorField label="Couleur de la boutique" value={themeColor} placeholder="Auto" onChange={onThemeColorChange} />
+          {lowContrast ? (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600">
               <AlertTriangle size={13} aria-hidden /> Trop claire pour un texte blanc lisible.
             </p>
+          ) : (
+            <p className="text-xs text-gray-400">
+              L'accent de la marque : boutons principaux, liens et repères de la boutique.
+            </p>
           )}
-          <p className="mt-1 text-xs text-gray-400">
-            L'accent de la marque : boutons principaux, liens et repères de la boutique.
-          </p>
         </div>
-      </ThemeGroup>
+        <ColorField
+          label="Couleur de fond"
+          value={themeConfig.backgroundColor}
+          placeholder="Auto"
+          onChange={(v) => set({ backgroundColor: v })}
+        />
+        <ColorField
+          label="Couleur du texte"
+          value={themeConfig.textColor}
+          placeholder="Auto"
+          onChange={(v) => set({ textColor: v })}
+        />
+        <ColorField
+          label="Couleur secondaire"
+          value={themeConfig.secondaryColor}
+          placeholder="Auto"
+          onChange={(v) => set({ secondaryColor: v })}
+        />
+      </AccordionGroup>
 
-      <ThemeGroup title="Boutons">
+      <AccordionGroup icon={MousePointerClick} title="Boutons" defaultOpen>
         <ButtonRoleRow
           title="Bouton principal"
           description="Les CTA de la boutique : « Ajouter au panier », « Payer », « Voir le catalogue »…"
@@ -239,9 +199,9 @@ export function ThemeEditorPanel({
           text={themeConfig.buttonTextColor ?? ''}
           previewBackground={themeConfig.buttonColor || accent}
           previewText={themeConfig.buttonTextColor || '#ffffff'}
-          backgroundPlaceholder={accent}
-          textPlaceholder="#ffffff"
-          onBackground={(v) => handleRoleBackground('buttonColor', 'buttonTextColor', v)}
+          backgroundPlaceholder="Auto"
+          textPlaceholder="Auto"
+          onBackground={(v) => set({ buttonColor: v })}
           onText={(v) => set({ buttonTextColor: v })}
           radius={themeConfig.radius}
         />
@@ -252,12 +212,13 @@ export function ThemeEditorPanel({
           text={themeConfig.secondaryButtonTextColor ?? ''}
           previewBackground={themeConfig.secondaryButtonColor || 'transparent'}
           previewText={themeConfig.secondaryButtonTextColor || textColor}
-          backgroundPlaceholder="transparent"
-          textPlaceholder={textColor}
-          onBackground={(v) => handleRoleBackground('secondaryButtonColor', 'secondaryButtonTextColor', v)}
+          backgroundPlaceholder="Transparent"
+          textPlaceholder="Auto"
+          onBackground={(v) => set({ secondaryButtonColor: v })}
           onText={(v) => set({ secondaryButtonTextColor: v })}
           radius={themeConfig.radius}
           outline={!themeConfig.secondaryButtonColor}
+          allowTransparentBackground
         />
         <ButtonRoleRow
           title="Bouton tertiaire"
@@ -266,94 +227,75 @@ export function ThemeEditorPanel({
           text={themeConfig.tertiaryButtonTextColor ?? ''}
           previewBackground={themeConfig.tertiaryButtonColor || accent}
           previewText={themeConfig.tertiaryButtonTextColor || '#ffffff'}
-          backgroundPlaceholder={accent}
-          textPlaceholder="#ffffff"
-          onBackground={(v) => handleRoleBackground('tertiaryButtonColor', 'tertiaryButtonTextColor', v)}
+          backgroundPlaceholder="Auto"
+          textPlaceholder="Auto"
+          onBackground={(v) => set({ tertiaryButtonColor: v })}
           onText={(v) => set({ tertiaryButtonTextColor: v })}
           radius={themeConfig.radius}
         />
-      </ThemeGroup>
+      </AccordionGroup>
 
-      <AdvancedSettings>
-        <ThemeGroup title="Couleurs de la page">
-          <ColorField
-            label="Couleur secondaire"
-            value={themeConfig.secondaryColor}
-            placeholder="#f7e6d0"
-            onChange={(v) => set({ secondaryColor: v })}
-          />
-          <ColorField
-            label="Couleur du texte"
-            value={themeConfig.textColor}
-            placeholder="#17152e"
-            onChange={(v) => set({ textColor: v })}
-          />
-          <ColorField
-            label="Couleur de fond"
-            value={themeConfig.backgroundColor}
-            placeholder="#ffffff"
-            onChange={(v) => set({ backgroundColor: v })}
-          />
-        </ThemeGroup>
+      <AccordionGroup icon={Type} title="Typographie">
+        <div>
+          <label className={labelClass}>Police</label>
+          <select
+            value={themeConfig.font}
+            onChange={(e) => set({ font: e.target.value as FontChoice })}
+            className={selectClass}
+          >
+            <option value="sora-inter">Sora + Inter (par défaut)</option>
+            <option value="inter">Inter partout</option>
+            <option value="sora">Sora partout</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Taille des textes</label>
+          <div className="mt-1">
+            <VisualPicker
+              value={themeConfig.textScale}
+              onChange={(v) => set({ textScale: v })}
+              options={TEXT_SCALE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+                preview: <span className={`font-heading font-bold ${o.size}`}>Aa</span>,
+              }))}
+            />
+          </div>
+        </div>
+      </AccordionGroup>
 
-        <ThemeGroup title="Typographie">
-          <div>
-            <label className={labelClass}>Police</label>
-            <select
-              value={themeConfig.font}
-              onChange={(e) => set({ font: e.target.value as FontChoice })}
-              className={selectClass}
-            >
-              <option value="sora-inter">Sora + Inter (par défaut)</option>
-              <option value="inter">Inter partout</option>
-              <option value="sora">Sora partout</option>
-            </select>
+      <AccordionGroup icon={LayoutTemplate} title="Mise en page">
+        <div>
+          <label className={labelClass}>Arrondis</label>
+          <div className="mt-1">
+            <VisualPicker
+              value={themeConfig.radius}
+              onChange={(v) => set({ radius: v })}
+              options={RADIUS_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+                preview: <span className={`h-5 w-5 border-2 border-current ${o.rounded}`} aria-hidden />,
+              }))}
+            />
           </div>
-          <div>
-            <label className={labelClass}>Taille des textes</label>
-            <div className="mt-1">
-              <VisualPicker
-                value={themeConfig.textScale}
-                onChange={(v) => set({ textScale: v })}
-                options={TEXT_SCALE_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: o.label,
-                  preview: <span className={`font-heading font-bold ${o.size}`}>Aa</span>,
-                }))}
-              />
-            </div>
-          </div>
-        </ThemeGroup>
+        </div>
+        <div>
+          <label className={labelClass}>Largeur du contenu</label>
+          <select
+            value={themeConfig.contentWidth}
+            onChange={(e) => set({ contentWidth: e.target.value as ContentWidth })}
+            className={selectClass}
+          >
+            <option value="narrow">Étroite</option>
+            <option value="normal">Normale</option>
+            <option value="wide">Large</option>
+          </select>
+        </div>
+      </AccordionGroup>
 
-        <ThemeGroup title="Mise en page">
-          <div>
-            <label className={labelClass}>Arrondis</label>
-            <div className="mt-1">
-              <VisualPicker
-                value={themeConfig.radius}
-                onChange={(v) => set({ radius: v })}
-                options={RADIUS_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: o.label,
-                  preview: <span className={`h-5 w-5 border-2 border-current ${o.rounded}`} aria-hidden />,
-                }))}
-              />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>Largeur du contenu</label>
-            <select
-              value={themeConfig.contentWidth}
-              onChange={(e) => set({ contentWidth: e.target.value as ContentWidth })}
-              className={selectClass}
-            >
-              <option value="narrow">Étroite</option>
-              <option value="normal">Normale</option>
-              <option value="wide">Large</option>
-            </select>
-          </div>
-        </ThemeGroup>
-      </AdvancedSettings>
+      {/* Réglages avancés (réservé) : les effets & animations viendront ici
+          quand ils existeront — aucun réglage de base n'a vocation à y être
+          rangé, le look complet est accessible d'emblée ci-dessus. */}
     </div>
   )
 }

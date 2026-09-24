@@ -28,7 +28,6 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
-import { AmbianceMigrationDialog } from '@/features/shop-settings/AmbianceMigrationDialog'
 
 // Flat list, not grouped — Catégories now lives as a tab of Produits and
 // Facturation moved under Paramètres (see settingsSections below), so there
@@ -447,7 +446,6 @@ export function AdminLayout() {
         </main>
       </div>
       </div>
-      {shop && <AmbianceMigrationDialog shop={shop} />}
       <GuidedTourButton />
     </GuidedTourProvider>
   )

@@ -55,7 +55,7 @@ const PRESETS: Preset[] = [
     name: '',
     subject: '',
     body: '',
-    audience: { vibe: 'any', plan: 'any', logo: 'any', products: 'any', created_within_days: null },
+    audience: { plan: 'any', logo: 'any', products: 'any', created_within_days: null },
   },
 ]
 
@@ -147,10 +147,6 @@ function useDebounced<T>(value: T, delay = 400): T {
   return debounced
 }
 
-const VIBE_LABELS: Record<Exclude<CampaignAudience['vibe'], 'any' | undefined>, string> = {
-  missing: 'Sans ambiance',
-  set: 'Avec ambiance',
-}
 const PLAN_LABELS: Record<Exclude<CampaignAudience['plan'], 'any' | undefined>, string> = {
   free: 'Plan gratuit',
   paid: 'Offres payantes',
@@ -169,7 +165,6 @@ const PRODUCTS_LABELS: Record<Exclude<CampaignAudience['products'], 'any' | unde
 /** Human-readable summary of the effective audience filters, discarding 'any'. */
 function audienceSummary(audience: CampaignAudience): string[] {
   const parts: string[] = []
-  if (audience.vibe && audience.vibe !== 'any') parts.push(VIBE_LABELS[audience.vibe])
   if (audience.plan && audience.plan !== 'any') parts.push(PLAN_LABELS[audience.plan])
   if (audience.logo && audience.logo !== 'any') parts.push(LOGO_LABELS[audience.logo])
   if (audience.products && audience.products !== 'any') parts.push(PRODUCTS_LABELS[audience.products])
@@ -651,13 +646,6 @@ export function CampaignsTool() {
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <h3 className="text-sm font-semibold text-gray-900">Audience</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Field label="Ambiance">
-                <select value={audience.vibe ?? 'any'} onChange={(e) => setAudience({ ...audience, vibe: e.target.value as CampaignAudience['vibe'] })} className={selectClass}>
-                  <option value="any">Toutes</option>
-                  <option value="missing">Sans ambiance (anciennes boutiques)</option>
-                  <option value="set">Avec ambiance</option>
-                </select>
-              </Field>
               <Field label="Offre">
                 <select value={audience.plan ?? 'any'} onChange={(e) => setAudience({ ...audience, plan: e.target.value as CampaignAudience['plan'] })} className={selectClass}>
                   <option value="any">Toutes</option>

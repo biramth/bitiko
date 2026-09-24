@@ -147,7 +147,6 @@ export function deletePlatformUser(userId: string): Promise<{ deleted: true }> {
 }
 
 export interface CampaignAudience {
-  vibe?: 'any' | 'missing' | 'set'
   plan?: 'any' | 'free' | 'paid' | 'essential' | 'pro'
   logo?: 'any' | 'has' | 'none'
   products?: 'any' | 'has' | 'none'
@@ -173,7 +172,7 @@ export interface CampaignRow {
 export interface CampaignAudiencePreview {
   count: number
   withEmail: number
-  sample: { name: string; slug: string; plan: string; vibe: string | null }[]
+  sample: { name: string; slug: string; plan: string }[]
 }
 
 export interface CampaignInput {

@@ -16,7 +16,6 @@ import {
   MapPin,
   MessageCircle,
   Package,
-  Palette,
   Pencil,
   Phone,
   Scissors,
@@ -36,7 +35,6 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
-import { STORE_VIBES, STORE_VIBE_BY_KEY, type StoreVibeKey } from '@/config/ambiances'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
 import { ensureReadableAccent } from '@/utils/color'
 import {
@@ -85,15 +83,6 @@ const PRICE_OPTIONS: { key: StorePriceRange; label: string; icon: LucideIcon }[]
   { key: 'milieu', label: 'Milieu de gamme', icon: Store },
   { key: 'haut', label: 'Haut de gamme', icon: Sparkles },
 ]
-
-/** Rounded-corner preview per vibe so the "Aa" tile hints at each ambiance's
- *  geometry (radii aren't exposed as pixel values elsewhere). */
-const VIBE_RADIUS_PREVIEW: Record<StoreVibeKey, string> = {
-  epure: '6px',
-  cosy: '16px',
-  colorful: '16px',
-  premium: '6px',
-}
 
 function ChoicePills<T extends string>({
   options,
@@ -184,7 +173,6 @@ export function OnboardingPage() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
   const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
-  const [ambiance, setAmbiance] = useState<StoreVibeKey>(STORE_VIBES[0].key)
 
   const handleSelectVertical = (vertical: string) => {
     setBusinessType(vertical)
@@ -285,7 +273,6 @@ export function OnboardingPage() {
         templateId,
         profile,
         palette: logoPalette,
-        vibe: ambiance,
       })
       if (logoFile) {
         const logoUrl = await uploadShopLogo(shop.id, logoFile)
@@ -629,60 +616,6 @@ export function OnboardingPage() {
                   Le type de commerce définit la structure de ta boutique. Modifiable plus tard dans « Personnaliser ».
                 </p>
               </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Palette size={15} className="text-gray-400" aria-hidden /> Quelle ambiance pour ta boutique ?
-                </label>
-                <div className="mt-2 grid grid-cols-2 gap-2.5">
-                  {STORE_VIBES.map((vibe) => {
-                    const selected = ambiance === vibe.key
-                    return (
-                      <button
-                        key={vibe.key}
-                        type="button"
-                        onClick={() => setAmbiance(vibe.key)}
-                        aria-pressed={selected}
-                        className={`rounded-xl border p-3 text-left transition-colors ${
-                          selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <span className="flex items-center justify-between">
-                          <span
-                            className="flex h-9 w-14 items-center justify-center text-lg font-bold"
-                            style={{
-                              backgroundColor: vibe.theme.backgroundColor,
-                              color: vibe.swatch[0],
-                              borderRadius: VIBE_RADIUS_PREVIEW[vibe.key],
-                            }}
-                            aria-hidden
-                          >
-                            Aa
-                          </span>
-                          {selected && <Check size={14} className="text-brand-700" aria-hidden />}
-                        </span>
-                        <span className="mt-2 flex items-center gap-1.5">
-                          <span className="block text-sm font-semibold text-ink-900">{vibe.label}</span>
-                          <span
-                            className="h-3.5 w-3.5 rounded-full border border-black/10"
-                            style={{ backgroundColor: vibe.swatch[0] }}
-                            aria-hidden
-                          />
-                          <span
-                            className="h-3.5 w-3.5 rounded-full border border-black/10"
-                            style={{ backgroundColor: vibe.swatch[1] }}
-                            aria-hidden
-                          />
-                        </span>
-                        <span className="mt-0.5 block text-xs leading-snug text-gray-500">{vibe.description}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  L'ambiance adapte les couleurs, polices et arrondis de ta boutique. Tu pourras tout modifier plus tard dans « Personnaliser ».
-                </p>
-              </div>
             </div>
           )}
 
@@ -931,18 +864,6 @@ export function OnboardingPage() {
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500">Type de commerce</span>
                     <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Ambiance</span>
-                    <span className="flex items-center justify-end gap-1.5 font-medium text-ink-900">
-                      <Palette size={14} className="text-gray-400" aria-hidden />
-                      <span>{STORE_VIBE_BY_KEY[ambiance]?.label ?? '—'}</span>
-                      <span
-                        className="inline-block h-3.5 w-3.5 rounded-full border border-black/10"
-                        style={{ backgroundColor: STORE_VIBE_BY_KEY[ambiance]?.swatch[0] }}
-                        aria-hidden
-                      />
-                    </span>
                   </div>
                   {logoPalette?.primary && (
                     <div className="flex justify-between gap-4">

@@ -25,8 +25,8 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { getImpersonation } from '@/lib/supportSession'
-import { AmbianceSection } from '@/features/shop-settings/AmbianceSection'
-import { STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
+import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
+import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
 import { BillingForShop } from './BillingPage'
@@ -43,7 +43,7 @@ import {
 import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
-import { extractDominantColorFromFile } from '@/utils/extractColorFromImage'
+import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -711,18 +711,25 @@ function SettingsForm({
     setUploadingLogo(true)
     setError(null)
     try {
-      const [url, suggestedColor] = await Promise.all([
-        uploadShopLogo(shop.id, file),
-        extractDominantColorFromFile(file),
-      ])
+      const url = await uploadShopLogo(shop.id, file)
       setLogoUrl(url)
-      // Best-effort brand-color suggestion from the new logo — still just a
-      // starting point, the picker right below stays fully editable. Left
-      // untouched when the logo has no clear accent color (e.g. black &
-      // white), rather than forcing an arbitrary one.
-      if (suggestedColor) {
-        setThemeColor(suggestedColor)
-        toast.info('Couleur de la boutique mise à jour à partir de votre logo — modifiable ci-dessous.')
+      // Recalcul silencieux des couleurs depuis le logo : un accent lisible
+      // (assombri jusqu'à ce qu'un texte blanc tienne dessus) et une teinte
+      // secondaire pastel, en préservant les choix déjà faits dans
+      // « Personnaliser ». Ignoré quand le logo n'a pas d'accent net (ex. noir
+      // & blanc) plutôt que d'imposer une couleur arbitraire.
+      const palette = await extractPaletteFromFile(file)
+      const primary = palette?.primary
+      if (primary) {
+        const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : STORE_TEMPLATES[0]
+        const { themeColor: newAccent, themeConfig: generated } = buildGeneratedTheme(template, palette)
+        await updateShop(shop.id, {
+          theme_color: newAccent,
+          theme_config: { ...(shop.theme_config ?? generated), secondaryColor: generated.secondaryColor },
+        })
+        setThemeColor(newAccent)
+        queryClient.invalidateQueries({ queryKey: ['my-shop'] })
+        toast.info('Couleurs mises à jour depuis votre logo — modifiables dans « Personnaliser ».')
       }
     } catch {
       setError("Échec de l'envoi du logo.")
@@ -826,8 +833,7 @@ function SettingsForm({
           )}
 
           {section === 'appearance' && (
-            <Card icon={ImagePlus} title="Apparence" description="Ambiance, logo, bannière et couleur affichés sur la boutique.">
-              <AmbianceSection shop={shop} />
+            <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleurs affichés sur la boutique.">
               {(() => {
                 const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : undefined
                 if (!template) return null

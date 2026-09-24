@@ -652,7 +652,6 @@ export type Database = {
           theme_color: string
           theme_config: ThemeConfig
           updated_at: string
-          vibe: string | null
           whatsapp_number: string
         }
         Insert: {
@@ -681,7 +680,6 @@ export type Database = {
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string
-          vibe?: string | null
           whatsapp_number: string
         }
         Update: {
@@ -710,7 +708,6 @@ export type Database = {
           theme_color?: string
           theme_config?: ThemeConfig
           updated_at?: string
-          vibe?: string | null
           whatsapp_number?: string
         }
         Relationships: [

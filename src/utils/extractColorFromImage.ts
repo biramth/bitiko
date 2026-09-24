@@ -161,8 +161,3 @@ export function extractPaletteFromFile(file: File): Promise<{ primary: string | 
     img.src = url
   })
 }
-
-/** Backwards-compatible single-color suggestion (primary accent only). */
-export function extractDominantColorFromFile(file: File): Promise<string | null> {
-  return extractPaletteFromFile(file).then((palette) => palette.primary)
-}
