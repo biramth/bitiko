@@ -1,7 +1,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { Home, LayoutGrid, MessageCircle, ShoppingCart, X } from 'lucide-react'
 import { useTenant } from '@/features/tenant/TenantContext'
+import { useCart } from '@/features/cart/CartContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
 import { CORE_SECTION_REGISTRY } from '@/features/store-builder/sectionRegistry'
 import { PREVIEW_NAV, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
@@ -200,6 +201,66 @@ function AnnouncementBar({
   )
 }
 
+/** Bottom tab bar (mobile only): Accueil / Catalogue / Panier (+ badge) /
+ *  WhatsApp — the thumb-reach navigation fashion storefronts rely on, since
+ *  the header burger alone buries the catalogue on a phone. Inherits the
+ *  shop theme (rendered inside the themed root) and respects the notch. */
+function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
+  const { itemCount } = useCart()
+  const { pathname } = useLocation()
+  const digits = whatsappNumber?.replace(/\D/g, '') ?? ''
+  const tab = (active: boolean) =>
+    `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+      active ? 'text-[var(--shop-accent)]' : 'text-[var(--shop-text)]/55'
+    }`
+  return (
+    <>
+      <div className="h-[calc(3.75rem+env(safe-area-inset-bottom))] sm:hidden" aria-hidden />
+      <nav
+        aria-label="Navigation principale"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)]/95 backdrop-blur sm:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-stretch px-2">
+          <Link to="/" className={tab(pathname === '/')} aria-current={pathname === '/' ? 'page' : undefined}>
+            <Home size={22} aria-hidden strokeWidth={pathname === '/' ? 2.25 : 1.75} />
+            Accueil
+          </Link>
+          <Link
+            to="/catalogue"
+            className={tab(pathname.startsWith('/catalogue'))}
+            aria-current={pathname.startsWith('/catalogue') ? 'page' : undefined}
+          >
+            <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith('/catalogue') ? 2.25 : 1.75} />
+            Catalogue
+          </Link>
+          <Link
+            to="/panier"
+            className={tab(pathname.startsWith('/panier'))}
+            aria-current={pathname.startsWith('/panier') ? 'page' : undefined}
+          >
+            <span className="relative">
+              <ShoppingCart size={22} aria-hidden strokeWidth={pathname.startsWith('/panier') ? 2.25 : 1.75} />
+              {itemCount > 0 && (
+                <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--shop-accent)] px-1 text-[9px] font-bold text-[var(--shop-button-text)]">
+                  {itemCount}
+                </span>
+              )}
+            </span>
+            Panier
+          </Link>
+          {digits && (
+            <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className={tab(false)} aria-label="Contacter sur WhatsApp">
+              <MessageCircle size={22} aria-hidden strokeWidth={1.75} />
+              WhatsApp
+            </a>
+          )}
+        </div>
+      </nav>
+    </>
+  )
+}
+
 export function StoreLayout() {
   const { shop } = useTenant()
   const { themeColor, themeConfig, announcementSection, headerSection, footerSection, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
@@ -241,6 +302,7 @@ export function StoreLayout() {
           editable={inlineEditable}
         />
       </PreviewClickTarget>
+      <MobileTabBar whatsappNumber={shop?.whatsapp_number} />
     </div>
   )
 }

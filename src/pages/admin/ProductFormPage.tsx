@@ -246,6 +246,7 @@ function ProductForm({
   const [price, setPrice] = useState(existingProduct ? String(existingProduct.price) : '')
   const [stock, setStock] = useState(existingProduct ? String(existingProduct.stock) : '')
   const [categoryId, setCategoryId] = useState(existingProduct?.category_id ?? '')
+  const [badge, setBadge] = useState(existingProduct?.badge ?? '')
   const [active, setActive] = useState(existingProduct?.active ?? true)
   const effectiveActive = active && !limitReached
   const [images, setImages] = useState<ProductImage[]>(existingProduct?.images ?? [])
@@ -384,6 +385,7 @@ function ProductForm({
         description: description.trim() || null,
         price: basePrice,
         stock: Number(stock),
+        badge: badge.trim() || null,
         active: effectiveActive,
         option_fields: normalizeOptionFields(optionFields) as unknown as Json,
       }
@@ -682,6 +684,48 @@ function ProductForm({
                   placeholder="Décrivez votre produit…"
                   className={inputClass}
                 />
+              </div>
+
+              <div>
+                <label htmlFor="badge" className="block text-sm font-medium text-gray-700">
+                  Pastille (optionnel)
+                </label>
+                <input
+                  id="badge"
+                  value={badge}
+                  onChange={(e) => setBadge(e.target.value)}
+                  maxLength={24}
+                  placeholder="ex. Nouveau"
+                  className={inputClass}
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {['Nouveau', 'Tendance', 'Promo'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setBadge(preset)}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        badge === preset
+                          ? 'border-brand-400 bg-brand-50 text-brand-700'
+                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  {badge && (
+                    <button
+                      type="button"
+                      onClick={() => setBadge('')}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-400 hover:text-gray-600"
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Affichée en haut à gauche de la photo sur la boutique. Vide = aucune pastille.
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

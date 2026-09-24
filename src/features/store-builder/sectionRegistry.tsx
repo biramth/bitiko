@@ -11,6 +11,7 @@ import {
   PackageSearch,
   CreditCard,
   HelpCircle,
+  Quote,
   Star,
   Tags,
   Type,
@@ -34,6 +35,7 @@ import type {
   ProductsSectionConfig,
   SectionType,
   TextSectionConfig,
+  TestimonialsSectionConfig,
   FaqSectionConfig,
 } from '@/types/builder'
 import { AnnouncementBarEditor } from './sections/AnnouncementBarEditor'
@@ -50,6 +52,7 @@ import { ProductEditor, ProductRenderer } from './sections/ProductSection'
 import { CartEditor, CartRenderer } from './sections/CartSection'
 import { CheckoutEditor, CheckoutRenderer } from './sections/CheckoutSection'
 import { FaqEditor, FaqRenderer } from './sections/FaqSection'
+import { TestimonialsEditor, TestimonialsRenderer } from './sections/TestimonialsSection'
 import type { SectionEditorProps } from './sections/shared'
 
 export interface SectionDefinition {
@@ -253,6 +256,22 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     }),
     Editor: FaqEditor,
     Renderer: FaqRenderer,
+  },
+  testimonials: {
+    label: 'Témoignages',
+    description: 'Les avis de vos clientes — la preuve qui fait vendre.',
+    icon: Quote,
+    color: 'from-amber-400 to-amber-600',
+    category: 'content',
+    pinned: false,
+    createDefault: () => ({
+      id: createSectionId('testimonials'),
+      type: 'testimonials',
+      visible: true,
+      config: { heading: 'Elles parlent de nous', items: [{ name: '', text: '' }] } satisfies TestimonialsSectionConfig,
+    }),
+    Editor: TestimonialsEditor,
+    Renderer: TestimonialsRenderer,
   },
   flexible: {
     label: 'Section personnalisée',

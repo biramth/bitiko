@@ -21,6 +21,10 @@ export function ProductCard({
   const cover = product.images[0]?.public_url
   const outOfStock = product.stock <= 0
   const hasVariants = product.variants.length > 0
+  const variantNames = product.variants
+    .filter((v) => v.active && v.name.trim())
+    .map((v) => v.name.trim())
+  const shownVariantNames = variantNames.slice(0, 4).join(' · ') + (variantNames.length > 4 ? ' …' : '')
   const { min, hasRange } = priceRange(product)
   const { addItem } = useCart()
   const toast = useToast()
@@ -64,6 +68,11 @@ export function ProductCard({
               Rupture
             </span>
           )}
+          {!outOfStock && product.badge && (
+            <span className="absolute left-3 top-3 bg-[var(--shop-accent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
+              {product.badge}
+            </span>
+          )}
         </div>
         <div className="mt-3 flex flex-col gap-0.5">
           {product.category && (
@@ -76,6 +85,9 @@ export function ProductCard({
             {hasRange && <span className="mr-1 text-xs font-normal opacity-70">À partir de</span>}
             {formatCurrency(min, currency)}
           </p>
+          {hasVariants && shownVariantNames && (
+            <p className="text-xs text-[var(--shop-text)]/55">{shownVariantNames}</p>
+          )}
           <StockBadge stock={product.stock} lowStockThreshold={lowStockThreshold} compact />
         </div>
       </Link>

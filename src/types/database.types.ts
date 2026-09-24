@@ -470,6 +470,7 @@ export type Database = {
       products: {
         Row: {
           active: boolean
+          badge: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -484,6 +485,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          badge?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -498,6 +500,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          badge?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null

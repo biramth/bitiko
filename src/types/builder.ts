@@ -21,6 +21,7 @@ export type CoreSectionType =
   | 'cart'
   | 'checkout'
   | 'flexible'
+  | 'testimonials'
 
 /** Section types a specific template contributes on top of the core set
  *  (see `TEMPLATE_EXTRA_SECTIONS` in `features/store-builder/templateSections.ts`).
@@ -49,6 +50,10 @@ export type HeaderLayout = 'left-logo' | 'centered-logo' | 'split'
 export type AnnouncementLayout = 'bar' | 'pill'
 export type HeroLayout = 'image-full' | 'image-side' | 'text-only'
 export type GridLayout = 'grid' | 'carousel'
+/** Categories add a compact horizontal "chips" row (the fashion-shop
+ *  pattern: Femme / Homme / Nouveautés… under the header) to the shared
+ *  grid/carousel pair — kept separate so product grids can't select it. */
+export type CategoriesLayout = 'grid' | 'carousel' | 'chips'
 export type PromoLayout = 'banner' | 'card'
 export type FaqLayout = 'accordion' | 'grid'
 export type LookbookLayout = 'grid' | 'masonry'
@@ -162,7 +167,7 @@ export interface ImageSectionConfig {
 export interface CategoriesSectionConfig {
   heading: string
   headingStyle?: TextStyleOverride
-  layout?: GridLayout
+  layout?: CategoriesLayout
 }
 
 export interface ProductsSectionConfig {
@@ -312,6 +317,21 @@ export interface FlexibleSectionConfig {
   blocks: FlexibleBlock[]
 }
 
+/** Customer reviews ("Elles parlent de nous") — the social proof fashion
+ *  storefronts close with. Mobile-first snap carousel, 3-column grid from
+ *  `sm` up. Items without a quote are hidden on the storefront (same
+ *  "empty = hidden" convention as FAQ). */
+export interface TestimonialItem {
+  name: string
+  text: string
+}
+
+export interface TestimonialsSectionConfig {
+  heading: string
+  items: TestimonialItem[]
+  headingStyle?: TextStyleOverride
+}
+
 export type SectionConfigMap = {
   announcement: AnnouncementBarSectionConfig
   header: HeaderSectionConfig
@@ -329,6 +349,7 @@ export type SectionConfigMap = {
   checkout: CheckoutSectionConfig
   lookbook: LookbookSectionConfig
   flexible: FlexibleSectionConfig
+  testimonials: TestimonialsSectionConfig
 }
 
 export type LayoutSection = {
