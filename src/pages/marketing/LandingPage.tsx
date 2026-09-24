@@ -29,6 +29,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { SocialIcon } from '@/components/ui/SocialIcon'
 import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
@@ -1156,6 +1157,26 @@ export function LandingPage() {
               <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
               <li><a href="#tarifs" className="text-ink-700/50 transition-colors hover:text-ink-900">Tarifs</a></li>
               <li><a href="#faq" className="text-ink-700/50 transition-colors hover:text-ink-900">FAQ</a></li>
+              <li>
+                <a
+                  href="https://www.instagram.com/bitiko.shop/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                >
+                  <SocialIcon platform="instagram" size={14} /> Instagram
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.tiktok.com/@bitiko.shop"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                >
+                  <SocialIcon platform="tiktok" size={14} /> TikTok
+                </a>
+              </li>
             </ul>
           </div>
           <div>

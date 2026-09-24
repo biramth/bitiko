@@ -77,8 +77,10 @@ function ButtonPreview({
 
 /** One rounded role card: title, the colors for this role (fond + texte) and a
  *  live button preview, plus a contrast warning when the pair is unreadable.
- *  Transparency needs no toggle: the Fond picker carries an opacity slider,
- *  and an empty value means "auto" (transparent outline for the secondary). */
+ *  Collapsible per role (closed by default): three expanded role cards made
+ *  the Boutons group runaway-long. Transparency needs no toggle: the Fond
+ *  picker carries an opacity slider, and an empty value means "auto"
+ *  (transparent outline for the secondary). */
 function ButtonRoleRow({
   title,
   description,
@@ -108,26 +110,44 @@ function ButtonRoleRow({
   radius: RadiusScale
   outline?: boolean
 }) {
+  const [open, setOpen] = useState(false)
   const contrastSafe = HEX_WITH_ALPHA.test(previewBackground) && HEX_WITH_ALPHA.test(previewText)
   const lowContrast = !outline && contrastSafe && contrastRatio(previewBackground, previewText) < 3
+  const dotStyle: React.CSSProperties =
+    outline || !HEX_WITH_ALPHA.test(previewBackground) || alphaOf(previewBackground) < 1
+      ? { borderRadius: RADIUS_CSS[radius], border: `2px solid ${previewText}`, background: 'transparent' }
+      : { borderRadius: RADIUS_CSS[radius], backgroundColor: previewBackground }
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
-      <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-gray-900">{title}</p>
-          <p className="mt-0.5 text-xs leading-snug text-gray-500">{description}</p>
-          <div className="mt-3 space-y-3">
-            <ColorField label="Fond" value={background} placeholder={backgroundPlaceholder} onChange={onBackground} />
-            <ColorField label="Texte" value={text} placeholder={textPlaceholder} onChange={onText} />
+    <div className="rounded-xl border border-gray-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 p-3 text-left"
+      >
+        <span aria-hidden className="h-6 w-6 shrink-0 border border-gray-200" style={dotStyle} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-gray-900">{title}</span>
+        </span>
+        <ChevronDown size={15} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="space-y-3 border-t border-gray-200 p-3">
+          <p className="text-xs leading-snug text-gray-500">{description}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-3">
+              <ColorField label="Fond" value={background} placeholder={backgroundPlaceholder} onChange={onBackground} />
+              <ColorField label="Texte" value={text} placeholder={textPlaceholder} onChange={onText} />
+            </div>
+            <ButtonPreview background={previewBackground} text={previewText} radius={radius} outline={outline} />
           </div>
           {lowContrast && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
+            <p className="flex items-center gap-1.5 text-xs text-amber-600">
               <AlertTriangle size={13} aria-hidden /> Contraste faible : le texte risque d'être difficile à lire.
             </p>
           )}
         </div>
-        <ButtonPreview background={previewBackground} text={previewText} radius={radius} outline={outline} />
-      </div>
+      )}
     </div>
   )
 }
