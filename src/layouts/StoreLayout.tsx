@@ -215,7 +215,7 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
     }`
   return (
     <>
-      <div className="h-[calc(3.75rem+env(safe-area-inset-bottom))] sm:hidden" aria-hidden />
+      <div className="h-[calc(3.75rem+env(safe-area-inset-bottom))] bg-[var(--shop-bg)] sm:hidden" aria-hidden />
       <nav
         aria-label="Navigation principale"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)]/95 backdrop-blur sm:hidden"

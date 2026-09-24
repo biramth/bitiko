@@ -870,7 +870,7 @@ function BuilderEditor({
         )
 
         return isDesktop ? (
-          <div className="grid min-h-[600px] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
+          <div className="grid min-h-[min(600px,100%)] flex-1 grid-cols-[16rem_minmax(0,1fr)_20rem] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
             {sidebarPane}
             {previewPane}
             {settingsPane}
@@ -1213,7 +1213,7 @@ function AppearanceTool({
 
       {/* ── Settings / preview panes ───────────────────────── */}
       {isDesktop ? (
-        <div className="grid min-h-[600px] flex-1 grid-cols-[20rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
+        <div className="grid min-h-[min(600px,100%)] flex-1 grid-cols-[20rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
           {settingsPane}
           {previewPane}
         </div>
