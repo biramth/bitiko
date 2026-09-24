@@ -134,7 +134,7 @@ export function PageSwitcher({
                   }}
                   aria-label={`Supprimer « ${page.title} »`}
                   title="Supprimer cette page"
-                  className="shrink-0 rounded p-1.5 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                  className="shrink-0 rounded p-1.5 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
                 >
                   <Trash2 size={13} aria-hidden />
                 </button>

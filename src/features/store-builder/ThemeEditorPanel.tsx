@@ -8,7 +8,7 @@ import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } fr
 
 const labelClass = 'block text-sm font-medium text-gray-700'
 const selectClass =
-  'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none'
+  'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-900 focus:border-brand-400 focus:outline-none sm:text-sm'
 
 /** `#RRGGBB` or `#RRGGBBAA` — the two forms `ColorField` can produce. */
 const HEX_WITH_ALPHA = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/

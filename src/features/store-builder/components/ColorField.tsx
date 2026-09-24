@@ -51,7 +51,7 @@ export function ColorField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder || '#rrggbb'}
           spellCheck={false}
-          className={`h-10 w-32 flex-1 rounded-lg border bg-white px-3 py-2 font-mono text-sm lowercase text-gray-900 focus:border-brand-400 focus:outline-none placeholder:normal-case placeholder:italic placeholder:text-gray-400 ${
+          className={`h-10 w-32 flex-1 rounded-lg border bg-white px-3 py-2 font-mono text-base lowercase text-gray-900 focus:border-brand-400 focus:outline-none placeholder:normal-case placeholder:italic placeholder:text-gray-400 sm:text-sm ${
             empty ? 'border-dashed border-gray-300' : 'border-gray-200'
           }`}
         />

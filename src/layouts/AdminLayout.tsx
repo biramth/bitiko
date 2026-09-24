@@ -189,7 +189,7 @@ export function AdminLayout() {
 
   return (
     <GuidedTourProvider>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-gray-50">
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
           collapsed ? 'w-[4.5rem]' : 'w-64'
@@ -262,7 +262,7 @@ export function AdminLayout() {
         </button>
       </aside>
 
-      <div className="flex h-screen flex-1 flex-col overflow-hidden">
+      <div className="flex h-screen supports-[height:100dvh]:h-dvh flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-ink-900/10 bg-white px-4 py-3 md:hidden">
           <div className="flex min-w-0 items-center gap-2">
             <button

@@ -217,7 +217,7 @@ function CheckoutFlow({
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <div>
           <label htmlFor="customerName" className="block text-sm font-medium text-[var(--shop-text)]/80">Nom complet</label>
-          <input id="customerName" name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+          <input id="customerName" name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
         </div>
         <div>
           <label htmlFor="customerPhone" className="block text-sm font-medium text-[var(--shop-text)]/80">Numéro de téléphone</label>
@@ -235,19 +235,19 @@ function CheckoutFlow({
             }}
             aria-invalid={phoneError ? true : undefined}
             placeholder="77 123 45 67"
-            className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+            className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
           />
           {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
         </div>
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-[var(--shop-text)]/80">Adresse de livraison</label>
-          <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
+          <textarea id="customerAddress" name="street-address" autoComplete="street-address" required rows={2} value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Quartier, ville, point de repère…" className="mt-1 w-full resize-none border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none" />
         </div>
 
         {groupes.length > 0 && (
           <div>
             <label htmlFor="deliveryVille" className="block text-sm font-medium text-[var(--shop-text)]/80">Ville de livraison</label>
-            <select id="deliveryVille" value={selectedVille?.id ?? ''} onChange={(e) => setDeliveryVilleId(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none">
+            <select id="deliveryVille" value={selectedVille?.id ?? ''} onChange={(e) => setDeliveryVilleId(e.target.value)} className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none">
               {groupes.map(({ secteur, villes }) => (
                 <optgroup key={secteur.id} label={`${secteur.name} — ${Number(secteur.fee) > 0 ? formatCurrency(Number(secteur.fee), currency) : 'gratuite'}`}>
                   {villes.map((ville) => (
