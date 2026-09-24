@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronDown, LayoutTemplate, MousePointerClick, Palette, Type, type LucideIcon } from 'lucide-react'
 import { contrastRatio, contrastWithWhite } from '@/utils/format'
+import { alphaOf } from '@/utils/color'
 import { RADIUS_CSS } from '@/config/themeTokens'
 import { ColorField } from './components/ColorField'
 import { VisualPicker } from './components/VisualPicker'
@@ -8,6 +9,9 @@ import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } fr
 const labelClass = 'block text-sm font-medium text-gray-700'
 const selectClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none'
+
+/** `#RRGGBB` or `#RRGGBBAA` — the two forms `ColorField` can produce. */
+const HEX_WITH_ALPHA = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/
 
 /** Every panel group is a collapsible accordion — the merchant unfolds exactly
  *  what they want to tweak. Nothing that shapes the shop lives in a hidden
@@ -49,7 +53,7 @@ function ButtonPreview({
   radius: RadiusScale
   outline?: boolean
 }) {
-  const filled = !outline && /^#[0-9a-fA-F]{6}$/.test(background)
+  const filled = !outline && HEX_WITH_ALPHA.test(background) && alphaOf(background) >= 1
   const style: React.CSSProperties = filled
     ? { borderRadius: RADIUS_CSS[radius], backgroundColor: background, color: text }
     : { borderRadius: RADIUS_CSS[radius], border: `1px solid ${text}`, color: text, background: 'transparent' }
@@ -62,8 +66,8 @@ function ButtonPreview({
 
 /** One rounded role card: title, the colors for this role (fond + texte) and a
  *  live button preview, plus a contrast warning when the pair is unreadable.
- *  `allowTransparentBackground` turns the Fond picker into an explicit
- *  "Transparent" toggle (the secondary/outline role by default). */
+ *  Transparency needs no toggle: the Fond picker carries an opacity slider,
+ *  and an empty value means "auto" (transparent outline for the secondary). */
 function ButtonRoleRow({
   title,
   description,
@@ -77,7 +81,6 @@ function ButtonRoleRow({
   onText,
   radius,
   outline = false,
-  allowTransparentBackground = false,
 }: {
   title: string
   description: string
@@ -93,24 +96,17 @@ function ButtonRoleRow({
   onText: (value: string) => void
   radius: RadiusScale
   outline?: boolean
-  allowTransparentBackground?: boolean
 }) {
-  const contrastSafe = /^#[0-9a-fA-F]{6}$/.test(previewBackground) && /^#[0-9a-fA-F]{6}$/.test(previewText)
+  const contrastSafe = HEX_WITH_ALPHA.test(previewBackground) && HEX_WITH_ALPHA.test(previewText)
   const lowContrast = !outline && contrastSafe && contrastRatio(previewBackground, previewText) < 3
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="mt-0.5 text-xs leading-snug text-gray-500">{description}</p>
           <div className="mt-3 space-y-3">
-            <ColorField
-              label="Fond"
-              value={background}
-              placeholder={backgroundPlaceholder}
-              onChange={onBackground}
-              allowTransparent={allowTransparentBackground}
-            />
+            <ColorField label="Fond" value={background} placeholder={backgroundPlaceholder} onChange={onBackground} />
             <ColorField label="Texte" value={text} placeholder={textPlaceholder} onChange={onText} />
           </div>
           {lowContrast && (
@@ -149,7 +145,7 @@ export function ThemeEditorPanel({
   onThemeColorChange: (color: string) => void
   onThemeConfigChange: (config: ThemeConfig) => void
 }) {
-  const isValidColor = /^#[0-9a-fA-F]{6}$/.test(themeColor)
+  const isValidColor = HEX_WITH_ALPHA.test(themeColor)
   const lowContrast = isValidColor && contrastWithWhite(themeColor) < 3
   const accent = themeColor || '#d9612e'
   const textColor = themeConfig.textColor || '#17152e'
@@ -217,8 +213,7 @@ export function ThemeEditorPanel({
           onBackground={(v) => set({ secondaryButtonColor: v })}
           onText={(v) => set({ secondaryButtonTextColor: v })}
           radius={themeConfig.radius}
-          outline={!themeConfig.secondaryButtonColor}
-          allowTransparentBackground
+          outline={!themeConfig.secondaryButtonColor || alphaOf(themeConfig.secondaryButtonColor) < 1}
         />
         <ButtonRoleRow
           title="Bouton tertiaire"

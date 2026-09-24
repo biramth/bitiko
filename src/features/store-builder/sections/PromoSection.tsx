@@ -8,6 +8,7 @@ import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
+import { ColorField } from '../components/ColorField'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
@@ -190,21 +191,12 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
         </div>
       </div>
       <div>
-        <label className={editorLabelClass}>Couleur de fond</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.backgroundColor || '#d9612e'}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.backgroundColor}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            placeholder="Laisser vide = couleur principale"
-            className={`${editorInputClass} mt-0 max-w-[12rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur de fond"
+          value={config.backgroundColor ?? ''}
+          placeholder="Laisser vide = couleur principale"
+          onChange={(backgroundColor) => onChange({ ...config, backgroundColor })}
+        />
       </div>
     </div>
   )

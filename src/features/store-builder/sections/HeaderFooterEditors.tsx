@@ -3,6 +3,7 @@ import { Lock, Plus, Trash2 } from 'lucide-react'
 import type { FooterLayout, FooterSectionConfig, HeaderLayout, HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { TextStyleField } from '../components/TextStyleControls'
+import { ColorField } from '../components/ColorField'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
@@ -258,55 +259,28 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
         <p className={`mb-2 ${editorHelpClass}`}>
           Sans réglage, le footer reprend automatiquement la couleur principale de la boutique (celle suggérée par votre logo), assombrie pour rester lisible — vous pouvez la remplacer ici.
         </p>
-        <label className={editorLabelClass}>Couleur de fond</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.backgroundColor || '#17152e'}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.backgroundColor ?? ''}
-            onChange={(e) => onChange({ ...config, backgroundColor: e.target.value })}
-            placeholder="Laisser vide = couleur principale assombrie"
-            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur de fond"
+          value={config.backgroundColor ?? ''}
+          placeholder="Laisser vide = couleur principale assombrie"
+          onChange={(backgroundColor) => onChange({ ...config, backgroundColor })}
+        />
       </div>
       <div>
-        <label className={editorLabelClass}>Couleur du bouton</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.buttonColor || '#d9612e'}
-            onChange={(e) => onChange({ ...config, buttonColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.buttonColor ?? ''}
-            onChange={(e) => onChange({ ...config, buttonColor: e.target.value })}
-            placeholder="Laisser vide = couleur des boutons du thème"
-            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur du bouton"
+          value={config.buttonColor ?? ''}
+          placeholder="Laisser vide = couleur des boutons du thème"
+          onChange={(buttonColor) => onChange({ ...config, buttonColor })}
+        />
       </div>
       <div>
-        <label className={editorLabelClass}>Couleur du texte</label>
-        <div className="mt-1 flex items-center gap-3">
-          <input
-            type="color"
-            value={config.textColor || '#fffbf5'}
-            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
-            className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-1"
-          />
-          <input
-            value={config.textColor ?? ''}
-            onChange={(e) => onChange({ ...config, textColor: e.target.value })}
-            placeholder="Laisser vide = blanc cassé (par défaut)"
-            className={`${editorInputClass} mt-0 max-w-[14rem] font-mono`}
-          />
-        </div>
+        <ColorField
+          label="Couleur du texte"
+          value={config.textColor ?? ''}
+          placeholder="Laisser vide = blanc cassé (par défaut)"
+          onChange={(textColor) => onChange({ ...config, textColor })}
+        />
       </div>
       {removableBranding ? (
         <label className={checkboxRow}>
