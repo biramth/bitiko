@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Blocks,
   Check,
   Eye,
   ExternalLink,
+  LayoutGrid,
   Loader2,
   Lock,
+  Palette,
   Redo2,
   RotateCcw,
   SlidersHorizontal,
@@ -17,7 +19,8 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { useBuilderState, type BuilderSnapshot, type BuilderTab, type BuilderTarget } from '@/features/store-builder/useBuilderState'
+import type { Plan } from '@/config/plans'
+import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
@@ -121,6 +124,42 @@ function MobileViewSwitcher({ value, onChange }: { value: MobileView; onChange: 
           {label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** The two customization tools offered from the same "Personnaliser" page:
+ *  Apparence (look & feel — colors, typography, whole designs) and Mise en
+ *  page (the per-page block editor). */
+export type BuilderMode = 'appearance' | 'layout'
+
+const BUILDING_MODES: { key: BuilderMode; label: string; description: string; icon: typeof Palette }[] = [
+  { key: 'appearance', label: 'Apparence', description: 'Couleurs, polices et styles', icon: Palette },
+  { key: 'layout', label: 'Mise en page', description: 'Blocs et contenu de chaque page', icon: LayoutGrid },
+]
+
+function BuilderModeSwitch({ value, onChange }: { value: BuilderMode; onChange: (m: BuilderMode) => void }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3" data-guide="guide-mode-switch">
+      <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+        {BUILDING_MODES.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            aria-pressed={value === key}
+            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              value === key ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Icon size={15} aria-hidden />
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="hidden text-xs text-gray-400 md:block">
+        {BUILDING_MODES.find((m) => m.key === value)?.description}
+      </p>
     </div>
   )
 }
@@ -390,6 +429,44 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useShopPlan>['plan'] }) {
   const toast = useToast()
+  const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [mode, setMode] = useState<BuilderMode>(() => (searchParams.get('mode') === 'layout' ? 'layout' : 'appearance'))
+
+  // The currently-mounted tool (Apparence or Mise en page) registers the
+  // saver for its in-progress draft; switching tools auto-saves first so no
+  // local edit is silently lost.
+  const saverRef = useRef<(() => Promise<unknown>) | null>(null)
+  const registerSaver = useCallback((saver: (() => Promise<unknown>) | null) => {
+    saverRef.current = saver
+  }, [])
+
+  const changeMode = async (next: BuilderMode) => {
+    if (next === mode) return
+    const saver = saverRef.current
+    saverRef.current = null
+    if (saver) {
+      try {
+        await saver()
+      } catch {
+        // Un échec de sauvegarde ne doit pas piéger le commerçant sur l'outil.
+      }
+    }
+    // Force a fresh read of the shop so the next tool mounts with the draft
+    // the previous one just saved (React Query serves the stale cache otherwise).
+    try {
+      await queryClient.refetchQueries({ queryKey: ['my-shop'] })
+    } catch {
+      // Ignoré — le remontage fonctionnera avec les données en cache.
+    }
+    const params = new URLSearchParams(searchParams)
+    if (next === 'layout') params.set('mode', 'layout')
+    else params.delete('mode')
+    setSearchParams(params, { replace: true })
+    setMode(next)
+    setActiveKey('home')
+  }
+
   const { data: pages = [] } = useQuery({
     queryKey: ['shop-pages', shop.id],
     queryFn: () => listShopPages(shop.id),
@@ -459,41 +536,48 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
 
   return (
     <>
-      <BuilderEditor
-        key={activeKey}
-        shop={shop}
-        removableBranding={plan.removableBranding}
-        target={target}
-        label={context.label}
-        previewPath={previewPath}
-        previewTemplateKey={previewTemplateKey}
-        availableTypes={availableTypes}
-        protectedType={protectedType}
-        draftBadge={draftBadge}
-        hasStoredDraft={hasStoredDraft}
-        onContextChange={setActiveKey}
-        onCreatePage={() => setCreateOpen(true)}
-        onDeletePage={setPageToDelete}
-        onNavigate={handleNavigate}
-        pages={pages}
-        activeKey={activeKey}
-        publishesStore={publishesStore}
-        allowAdvancedBuilder={plan.advancedBuilder}
-        maxCustomSections={plan.maxCustomSections}
-      />
+      <BuilderModeSwitch value={mode} onChange={(next) => void changeMode(next)} />
+      {mode === 'appearance' ? (
+        <AppearanceTool shop={shop} plan={plan} onRegisterSaver={registerSaver} />
+      ) : (
+        <>
+          <BuilderEditor
+            key={activeKey}
+            shop={shop}
+            removableBranding={plan.removableBranding}
+            target={target}
+            label={context.label}
+            previewPath={previewPath}
+            previewTemplateKey={previewTemplateKey}
+            availableTypes={availableTypes}
+            protectedType={protectedType}
+            draftBadge={draftBadge}
+            hasStoredDraft={hasStoredDraft}
+            onContextChange={setActiveKey}
+            onCreatePage={() => setCreateOpen(true)}
+            onDeletePage={setPageToDelete}
+            onNavigate={handleNavigate}
+            pages={pages}
+            activeKey={activeKey}
+            publishesStore={publishesStore}
+            maxCustomSections={plan.maxCustomSections}
+            onRegisterSaver={registerSaver}
+          />
 
-      <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
-      <ConfirmDialog
-        open={pageToDelete !== null}
-        title={`Supprimer « ${pageToDelete?.title ?? ''} » ?`}
-        description="Cette action est irréversible. La page et son contenu seront définitivement supprimés."
-        confirmLabel="Supprimer"
-        pendingLabel="Suppression…"
-        pending={false}
-        tone="danger"
-        onConfirm={handleDeletePage}
-        onClose={() => setPageToDelete(null)}
-      />
+          <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
+          <ConfirmDialog
+            open={pageToDelete !== null}
+            title={`Supprimer « ${pageToDelete?.title ?? ''} » ?`}
+            description="Cette action est irréversible. La page et son contenu seront définitivement supprimés."
+            confirmLabel="Supprimer"
+            pendingLabel="Suppression…"
+            pending={false}
+            tone="danger"
+            onConfirm={handleDeletePage}
+            onClose={() => setPageToDelete(null)}
+          />
+        </>
+      )}
     </>
   )
 }
@@ -518,8 +602,8 @@ function BuilderEditor({
   pages,
   activeKey,
   publishesStore,
-  allowAdvancedBuilder,
   maxCustomSections,
+  onRegisterSaver,
 }: {
   shop: Shop
   removableBranding: boolean
@@ -538,35 +622,28 @@ function BuilderEditor({
   pages: StorePage[]
   activeKey: ActiveKey
   publishesStore: boolean
-  allowAdvancedBuilder: boolean
   maxCustomSections: number | null
+  onRegisterSaver: (saver: (() => Promise<unknown>) | null) => void
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
-  const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
   const canDiscard = builder.dirty || hasStoredDraft
 
-  // Previewing a candidate style (Styles tab): shows it live in the same
-  // iframe, with the shop's real data, without writing anything — only
-  // "Appliquer ce style" below commits it as a draft. Scoped to the Styles
-  // tab — dropped the moment the merchant leaves it, adjusted during render
-  // (this codebase's pattern for resetting state when a prop/value changes)
-  // rather than in an effect, so "Blocs"/"Thème" never flash the previewed
-  // template before the reset commits.
-  const [previewTemplate, setPreviewTemplate] = useState<StoreTemplate | null>(null)
-  const [lastActiveTab, setLastActiveTab] = useState(builder.activeTab)
-  if (builder.activeTab !== lastActiveTab) {
-    setLastActiveTab(builder.activeTab)
-    if (previewTemplate) setPreviewTemplate(null)
-  }
-
-  const previewSections = previewTemplate
-    ? (target.templateSections?.(previewTemplate, builder.sections) ?? previewTemplate.layout.home)
-    : builder.sections
-  const previewThemeColor = previewTemplate ? previewTemplate.themeColor : builder.themeColor
-  const previewThemeConfig = previewTemplate ? previewTemplate.themeConfig : builder.themeConfig
+  // Auto-save on switching away to Apparence (see StoreBuilder.changeMode).
+  const dirtyRef = useRef(builder.dirty)
+  useEffect(() => {
+    dirtyRef.current = builder.dirty
+  }, [builder.dirty])
+  useEffect(() => {
+    onRegisterSaver(() => {
+      if (!dirtyRef.current) return Promise.resolve()
+      return builder.saveDraftMutation.mutateAsync()
+    })
+    return () => onRegisterSaver(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRegisterSaver])
 
   const handleRemoveSection = useCallback(
     (id: string) => {
@@ -602,10 +679,6 @@ function BuilderEditor({
   const selectSectionAndFocus = (id: string) => {
     builder.selectSection(id)
     setMobileView('settings')
-  }
-  const handleTabChange = (tab: BuilderTab) => {
-    builder.setActiveTab(tab)
-    setMobileView(tab === 'blocks' ? 'blocks' : 'settings')
   }
 
   /* Keyboard shortcuts */
@@ -740,8 +813,6 @@ function BuilderEditor({
           <BuilderSidebar
             sections={builder.sections}
             selectedSectionId={builder.selectedSectionId}
-            activeTab={builder.activeTab}
-            onTabChange={handleTabChange}
             onSelect={selectSectionAndFocus}
             onToggleVisible={builder.toggleVisible}
             onRemove={handleRemoveSection}
@@ -750,7 +821,6 @@ function BuilderEditor({
             onAdd={builder.addSection}
             availableTypes={availableTypes}
             templateId={shop.template_id}
-            allowTemplates={allowAdvancedBuilder}
             maxCustomSections={maxCustomSections}
             protectedType={protectedType}
           />
@@ -759,47 +829,20 @@ function BuilderEditor({
         const previewPane =
           previewPath && previewUrl ? (
             <div className="flex h-full min-w-0 flex-col">
-              {previewTemplate && (
-                <div className="flex items-center justify-between gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
-                  <p className="text-sm font-medium text-brand-800">
-                    Aperçu avec vos données : <span className="font-semibold">{previewTemplate.label}</span>
-                  </p>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTemplate(null)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100"
-                    >
-                      Annuler l'aperçu
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setApplyConfirmOpen(true)}
-                      className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
-                    >
-                      Appliquer ce style
-                    </button>
-                  </div>
-                </div>
-              )}
               <div className="min-h-0 flex-1">
                 <BuilderPreviewFrame
                   slug={shop.slug}
                   pagePath={previewPath}
                   templateKey={previewTemplateKey}
-                  sections={previewSections}
-                  themeColor={previewThemeColor}
-                  themeConfig={previewThemeConfig}
-                  onSelectSection={previewTemplate ? () => {} : selectSectionAndFocus}
+                  sections={builder.sections}
+                  themeColor={builder.themeColor}
+                  themeConfig={builder.themeConfig}
+                  onSelectSection={selectSectionAndFocus}
                   onNavigate={onNavigate}
-                  onInlineEdit={
-                    previewTemplate
-                      ? undefined
-                      : (id, patch) => {
-                          const section = builder.sections.find((s) => s.id === id)
-                          if (section) builder.updateSectionConfig(id, { ...section.config, ...patch })
-                        }
-                  }
+                  onInlineEdit={(id, patch) => {
+                    const section = builder.sections.find((s) => s.id === id)
+                    if (section) builder.updateSectionConfig(id, { ...section.config, ...patch })
+                  }}
                 />
               </div>
             </div>
@@ -815,27 +858,14 @@ function BuilderEditor({
 
         const settingsPane = (
           <div className={`h-full overflow-y-auto bg-white p-4 ${isDesktop ? 'border-l border-gray-200' : ''}`}>
-            {builder.activeTab === 'blocks' && (
-              <SectionEditorPanel
-                section={builder.selectedSection}
-                shop={shop}
-                shopId={shop.id}
-                templateId={shop.template_id}
-                removableBranding={removableBranding}
-                onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
-              />
-            )}
-            {builder.activeTab === 'theme' && (
-              <ThemeEditorPanel
-                themeColor={builder.themeColor}
-                themeConfig={builder.themeConfig}
-                onThemeColorChange={builder.setThemeColor}
-                onThemeConfigChange={builder.setThemeConfig}
-              />
-            )}
-            {builder.activeTab === 'templates' && (
-              <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
-            )}
+            <SectionEditorPanel
+              section={builder.selectedSection}
+              shop={shop}
+              shopId={shop.id}
+              templateId={shop.template_id}
+              removableBranding={removableBranding}
+              onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
+            />
           </div>
         )
 
@@ -899,6 +929,315 @@ function BuilderEditor({
           })
         }
         onClose={() => setDiscardConfirmOpen(false)}
+      />
+    </div>
+  )
+}
+
+/* ─────────────────────── Appearance tool ─────────────────────── */
+
+type AppearanceTab = 'appearance' | 'styles'
+type AppearanceMobileView = 'settings' | 'preview'
+type AppearancePreviewPage = 'home' | 'catalogue' | 'product' | 'cart' | 'checkout'
+
+const APPEARANCE_PAGES: { key: AppearancePreviewPage; label: string }[] = [
+  { key: 'home', label: 'Accueil' },
+  { key: 'catalogue', label: 'Catalogue' },
+  { key: 'product', label: 'Fiche produit' },
+  { key: 'cart', label: 'Panier' },
+  { key: 'checkout', label: 'Commande' },
+]
+
+function AppearanceMobileSwitcher({ value, onChange }: { value: AppearanceMobileView; onChange: (v: AppearanceMobileView) => void }) {
+  const options: { key: AppearanceMobileView; label: string; icon: typeof SlidersHorizontal }[] = [
+    { key: 'settings', label: 'Réglages', icon: SlidersHorizontal },
+    { key: 'preview', label: 'Aperçu', icon: Eye },
+  ]
+  return (
+    <div className="flex gap-1 border-b border-gray-200 bg-white p-2">
+      {options.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-colors ${
+            value === key ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <Icon size={14} aria-hidden />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The simplified look & feel tool: colors, typography, finitions and whole
+ *  designs (Styles). One column of settings, one live preview across every
+ *  page — no block list, no undo/redo, just "Prévisualiser" and "Publier".
+ *  Edits the store-wide theme through the same home target/state as the
+ *  block editor, so both tools share the same draft. */
+function AppearanceTool({
+  shop,
+  plan,
+  onRegisterSaver,
+}: {
+  shop: Shop
+  plan: Plan
+  onRegisterSaver: (saver: (() => Promise<unknown>) | null) => void
+}) {
+  const toast = useToast()
+  const { data: activeProducts } = useActiveProducts({ shopId: shop.id, sort: 'recent', page: 1 })
+  const firstProductSlug = useMemo(() => activeProducts?.products[0]?.slug ?? null, [activeProducts])
+
+  const target = useMemo<BuilderTarget>(() => buildTarget(HOME_CONTEXT, shop), [shop])
+  const builder = useBuilderState(target)
+
+  const [tab, setTab] = useState<AppearanceTab>('appearance')
+  const [previewPage, setPreviewPage] = useState<AppearancePreviewPage>('home')
+  const [previewTemplate, setPreviewTemplate] = useState<StoreTemplate | null>(null)
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
+  const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
+
+  // Dropping the previewed style the moment the merchant leaves the Styles
+  // tab — same render-time reset pattern as the block editor, so the
+  // "Personnaliser" tab never flashes the candidate template.
+  const [lastTab, setLastTab] = useState(tab)
+  if (tab !== lastTab) {
+    setLastTab(tab)
+    if (previewTemplate) setPreviewTemplate(null)
+  }
+
+  // Auto-save on switching away to Mise en page (see StoreBuilder.changeMode).
+  const dirtyRef = useRef(builder.dirty)
+  useEffect(() => {
+    dirtyRef.current = builder.dirty
+  }, [builder.dirty])
+  useEffect(() => {
+    onRegisterSaver(() => {
+      if (!dirtyRef.current) return Promise.resolve()
+      return builder.saveDraftMutation.mutateAsync()
+    })
+    return () => onRegisterSaver(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRegisterSaver])
+
+  const isDesktop = useIsDesktopBuilder()
+  const [mobileView, setMobileView] = useState<AppearanceMobileView>('preview')
+  useEffect(() => {
+    const onPrepare = (e: Event) => {
+      const detail = String((e as CustomEvent<string>).detail)
+      if (!detail.startsWith('builder-tab:')) return
+      if (window.matchMedia('(min-width: 1024px)').matches) return
+      const key = detail.slice('builder-tab:'.length)
+      if (key === 'preview' || key === 'settings') setMobileView(key)
+    }
+    window.addEventListener(TOUR_PREPARE_EVENT, onPrepare)
+    return () => window.removeEventListener(TOUR_PREPARE_EVENT, onPrepare)
+  }, [])
+
+  const context: PreparedContext =
+    previewPage === 'home' ? HOME_CONTEXT : { kind: 'system', key: previewPage, label: SYSTEM_LABELS[previewPage] }
+  const previewPath = contextPreviewPath(context, firstProductSlug)
+  const previewUrl = previewPath ? storefrontUrl(shop.slug, previewPath) : null
+  const previewTemplateKey = previewPage === 'home' ? undefined : previewPage
+
+  const previewSections: LayoutSection[] = previewTemplate
+    ? previewPage === 'home'
+      ? (target.templateSections?.(previewTemplate, builder.sections) ?? previewTemplate.layout.home)
+      : (previewTemplate.layout[previewPage] ?? buildDefaultSystemTemplate(previewPage))
+    : previewPage === 'home'
+      ? builder.sections
+      : (shop.builder_draft?.templates?.[previewPage] ??
+        shop.page_templates?.[previewPage]?.published ??
+        buildDefaultSystemTemplate(previewPage))
+  const previewThemeColor = previewTemplate ? previewTemplate.themeColor : builder.themeColor
+  const previewThemeConfig = previewTemplate ? previewTemplate.themeConfig : builder.themeConfig
+
+  const handlePreview = async () => {
+    if (!previewUrl) return
+    await builder.saveDraftMutation.mutateAsync()
+    window.open(`${previewUrl}${previewUrl.includes('?') ? '&' : '?'}preview=draft`, '_blank')
+  }
+
+  const handlePublish = () =>
+    builder.publishMutation.mutate(undefined, {
+      onSuccess: () => {
+        setPublishConfirmOpen(false)
+        toast.success('Design publié. Il est en ligne.')
+      },
+      onError: () => toast.error('La publication a échoué. Réessayez.'),
+    })
+
+  const settingsPane = (
+    <div className={`flex h-full flex-col ${isDesktop ? 'border-r border-gray-200' : ''}`}>
+      {plan.advancedBuilder && (
+        <div className="p-2 pb-0">
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+            <button
+              type="button"
+              onClick={() => setTab('appearance')}
+              aria-pressed={tab === 'appearance'}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-all ${
+                tab === 'appearance' ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <SlidersHorizontal size={14} aria-hidden /> Personnaliser
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('styles')}
+              aria-pressed={tab === 'styles'}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-all ${
+                tab === 'styles' ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Wand2 size={14} aria-hidden /> Styles
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex-1 overflow-y-auto p-4" data-guide="guide-appearance-settings">
+        {tab === 'appearance' ? (
+          <ThemeEditorPanel
+            themeColor={builder.themeColor}
+            themeConfig={builder.themeConfig}
+            onThemeColorChange={builder.setThemeColor}
+            onThemeConfigChange={builder.setThemeConfig}
+          />
+        ) : (
+          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
+        )}
+      </div>
+    </div>
+  )
+
+  const previewPane = previewUrl && previewPath ? (
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2" data-guide="guide-page-switcher">
+        <span className="mr-1 hidden text-xs font-medium text-gray-500 sm:block">Aperçu :</span>
+        {APPEARANCE_PAGES.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setPreviewPage(key)}
+            className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              previewPage === key ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {previewTemplate && (
+        <div className="flex items-center justify-between gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5">
+          <p className="text-sm font-medium text-brand-800">
+            Aperçu avec vos données : <span className="font-semibold">{previewTemplate.label}</span>
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPreviewTemplate(null)}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100"
+            >
+              Annuler l'aperçu
+            </button>
+            <button
+              type="button"
+              onClick={() => setApplyConfirmOpen(true)}
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Appliquer ce style
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        <BuilderPreviewFrame
+          slug={shop.slug}
+          pagePath={previewPath}
+          templateKey={previewTemplateKey}
+          sections={previewSections}
+          themeColor={previewThemeColor}
+          themeConfig={previewThemeConfig}
+          onSelectSection={() => {}}
+        />
+      </div>
+    </div>
+  ) : (
+    <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-50 p-8 text-center">
+      <p className="text-sm font-medium text-gray-700">Aucun produit actif pour prévisualiser la fiche produit.</p>
+      <p className="text-xs text-gray-500">Ajoutez un produit : l'aperçu affichera la fiche produit.</p>
+      <Link to="/admin/produits" className="mt-1 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+        Gérer les produits
+      </Link>
+    </div>
+  )
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* ── Toolbar ─────────────────────────────────────────── */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+            <Palette size={20} className="text-brand-600" aria-hidden />
+            Apparence
+          </h1>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${builder.dirty ? 'bg-amber-400' : 'bg-emerald-500'}`} aria-hidden />
+            {builder.dirty ? 'Modifications non enregistrées' : 'Tout est enregistré'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={builder.saveDraftMutation.isPending || !previewUrl}
+            aria-label="Prévisualiser"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 sm:px-3"
+          >
+            <ExternalLink size={14} aria-hidden /> <span className="hidden sm:inline">Prévisualiser</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPublishConfirmOpen(true)}
+            disabled={builder.publishMutation.isPending}
+            data-guide="guide-publier"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-brand-900/10 transition-colors hover:bg-brand-700 disabled:opacity-60 sm:px-4"
+          >
+            {builder.publishMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+            Publier
+          </button>
+        </div>
+      </div>
+
+      {/* ── Settings / preview panes ───────────────────────── */}
+      {isDesktop ? (
+        <div className="grid min-h-[600px] flex-1 grid-cols-[20rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200">
+          {settingsPane}
+          {previewPane}
+        </div>
+      ) : (
+        <div className="flex min-h-[70vh] flex-1 flex-col overflow-hidden rounded-xl border border-gray-200">
+          <AppearanceMobileSwitcher value={mobileView} onChange={setMobileView} />
+          <div className="min-h-0 flex-1">
+            {mobileView === 'settings' && settingsPane}
+            {mobileView === 'preview' && previewPane}
+          </div>
+        </div>
+      )}
+
+      {/* ── Dialogs ─────────────────────────────────────────── */}
+      <ConfirmDialog
+        open={publishConfirmOpen}
+        title="Publier le design de toute la boutique ?"
+        description="Le thème et la mise en page de l’accueil, du catalogue, de la fiche produit, du panier et de la commande seront publiés et immédiatement visibles par vos clients."
+        confirmLabel="Publier"
+        pendingLabel="Publication…"
+        pending={builder.publishMutation.isPending}
+        tone="default"
+        onConfirm={handlePublish}
+        onClose={() => setPublishConfirmOpen(false)}
       />
       <ConfirmDialog
         open={applyConfirmOpen}

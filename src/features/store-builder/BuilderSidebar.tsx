@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Palette, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Plus, Trash2 } from 'lucide-react'
 import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
 import { getEffectiveRegistry } from './effectiveRegistry'
-import type { BuilderTab } from './useBuilderState'
 import type { LayoutSection, SectionType } from '@/types/builder'
-
-const TABS: { key: BuilderTab; label: string; icon: typeof Palette }[] = [
-  { key: 'blocks', label: 'Blocs', icon: GripVertical },
-  { key: 'theme', label: 'Thème', icon: Palette },
-  { key: 'templates', label: 'Styles', icon: Sparkles },
-]
 
 /** Small colored square with the section's icon — gives every block type a
  *  distinct, recognizable identity instead of one flat gray icon for all. */
@@ -32,8 +25,6 @@ const CATEGORY_LABELS = { content: 'Contenu', commerce: 'Commerce' } as const
 export function BuilderSidebar({
   sections,
   selectedSectionId,
-  activeTab,
-  onTabChange,
   onSelect,
   onToggleVisible,
   onRemove,
@@ -42,14 +33,11 @@ export function BuilderSidebar({
   onAdd,
   availableTypes,
   templateId,
-  allowTemplates = true,
   maxCustomSections,
   protectedType,
 }: {
   sections: LayoutSection[]
   selectedSectionId: string | null
-  activeTab: BuilderTab
-  onTabChange: (tab: BuilderTab) => void
   onSelect: (id: string) => void
   onToggleVisible: (id: string) => void
   onRemove: (id: string) => void
@@ -62,9 +50,6 @@ export function BuilderSidebar({
   /** The shop's current template — resolves which section types (core plus
    *  whatever that template contributes) show up here. */
   templateId?: string | null
-  /** Whether the plan allows switching templates at all (see `Plan.advancedBuilder`).
-   *  Hides the "Styles" tab entirely rather than showing an empty/locked one. */
-  allowTemplates?: boolean
   /** Plan cap on freely-addable content blocks on this page (see
    *  `Plan.maxCustomSections`) — catalog-display and commerce blocks are
    *  never limited. `null`/absent = unlimited. */
@@ -115,28 +100,8 @@ export function BuilderSidebar({
 
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white" data-guide="guide-builder-sidebar">
-      {/* Segmented pill tab bar */}
-      <div className="p-2">
-        <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
-          {TABS.filter(({ key }) => key !== 'templates' || allowTemplates).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onTabChange(key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-all ${
-                activeTab === key ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon size={14} aria-hidden />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeTab === 'blocks' && (
-        <div className="flex-1 overflow-y-auto px-2 pb-2">
-          <ul ref={listRef} className="space-y-1">
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
+        <ul ref={listRef} className="space-y-1">
             {sections.map((section) => {
               const def = registry[section.type]
               const isDraggable = !def?.pinned
@@ -298,13 +263,6 @@ export function BuilderSidebar({
             )}
           </div>
         </div>
-      )}
-
-      {activeTab !== 'blocks' && (
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-gray-400">
-          Les réglages s'affichent dans le panneau de droite →
-        </div>
-      )}
     </div>
   )
 }

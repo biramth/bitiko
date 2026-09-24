@@ -1,9 +1,13 @@
 import { AlertTriangle, ChevronDown } from 'lucide-react'
 import { contrastRatio, contrastWithWhite } from '@/utils/format'
 import { RADIUS_CSS } from '@/config/themeTokens'
+import { STORE_VIBES, type StoreVibe } from '@/config/ambiances'
+import { readableTextColor } from '@/features/categories/categoryTile'
 import { ColorField } from './components/ColorField'
 import { VisualPicker } from './components/VisualPicker'
 import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } from '@/types/builder'
+
+const HEX6 = /^#[0-9a-fA-F]{6}$/
 
 const labelClass = 'block text-sm font-medium text-gray-700'
 const selectClass =
@@ -113,6 +117,39 @@ function ButtonRoleRow({
   )
 }
 
+/** One-click palettes (the onboarding ambiances): applying a swatch restyles
+ *  the brand accent, the page background and the button roles in one go, with
+ *  a readable text color derived from the accent — a coherent look without
+ *  picking six hex codes by hand. */
+function ColorPresetRow({ activeKey, onApply }: { activeKey?: string; onApply: (vibe: StoreVibe) => void }) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {STORE_VIBES.map((vibe) => {
+        const [accent, background] = vibe.swatch
+        const isActive = activeKey === vibe.key
+        return (
+          <button
+            key={vibe.key}
+            type="button"
+            onClick={() => onApply(vibe)}
+            title={`${vibe.label} — ${vibe.description}`}
+            aria-pressed={isActive}
+            className={`group flex flex-col items-center gap-1.5 rounded-lg border p-1.5 transition-colors ${
+              isActive ? 'border-brand-500 bg-brand-50/60' : 'border-gray-200 hover:border-brand-300 hover:bg-brand-50/40'
+            }`}
+          >
+            <span className="flex h-7 w-full overflow-hidden rounded-md border border-gray-200" aria-hidden>
+              <span className="h-full w-1/2" style={{ backgroundColor: accent }} />
+              <span className="h-full w-1/2" style={{ backgroundColor: background }} />
+            </span>
+            <span className="w-full truncate text-center text-[10px] font-medium text-gray-500">{vibe.label.split(' ')[0]}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 const RADIUS_OPTIONS: { value: RadiusScale; label: string; rounded: string }[] = [
   { value: 'none', label: 'Aucun', rounded: 'rounded-none' },
   { value: 'md', label: 'Moyen', rounded: 'rounded-md' },
@@ -144,8 +181,56 @@ export function ThemeEditorPanel({
 
   const set = (patch: Partial<ThemeConfig>) => onThemeConfigChange({ ...themeConfig, ...patch })
 
+  /** Picking a role's background also picks its text color when the merchant
+   *  hasn't chosen one yet — a legible button without a second picker. */
+  const handleRoleBackground = (
+    bgKey: 'buttonColor' | 'secondaryButtonColor' | 'tertiaryButtonColor',
+    textKey: 'buttonTextColor' | 'secondaryButtonTextColor' | 'tertiaryButtonTextColor',
+    value: string,
+  ) => {
+    const patch: Partial<ThemeConfig> = { [bgKey]: value }
+    if (!themeConfig[textKey] && HEX6.test(value)) patch[textKey] = readableTextColor(value)
+    set(patch)
+  }
+
+  /** One coherent design in a click: brand accent, page background and button
+   *  roles tuned on the preset's accent (the merchant's custom secondary
+   *  outline is left untouched — it follows the text color automatically). */
+  const applyPreset = (vibe: StoreVibe) => {
+    const accent = vibe.swatch[0]
+    const readable = readableTextColor(accent)
+    onThemeColorChange(accent)
+    onThemeConfigChange({
+      ...themeConfig,
+      ...vibe.theme,
+      buttonColor: accent,
+      buttonTextColor: readable,
+      tertiaryButtonColor: accent,
+      tertiaryButtonTextColor: readable,
+    })
+  }
+
+  const activeVibeKey = STORE_VIBES.find(
+    (v) => v.swatch[0] === themeColor && v.swatch[1] === themeConfig.backgroundColor,
+  )?.key
+
   return (
     <div className="space-y-5">
+      <ThemeGroup title="Couleurs de la boutique">
+        <ColorPresetRow activeKey={activeVibeKey} onApply={applyPreset} />
+        <div>
+          <ColorField label="Couleur de la boutique" value={themeColor} placeholder="#d9612e" onChange={onThemeColorChange} />
+          {lowContrast && (
+            <p className="-mt-2 flex items-center gap-1.5 text-xs text-amber-600">
+              <AlertTriangle size={13} aria-hidden /> Trop claire pour un texte blanc lisible.
+            </p>
+          )}
+          <p className="mt-1 text-xs text-gray-400">
+            L'accent de la marque : boutons principaux, liens et repères de la boutique.
+          </p>
+        </div>
+      </ThemeGroup>
+
       <ThemeGroup title="Boutons">
         <ButtonRoleRow
           title="Bouton principal"
@@ -156,7 +241,7 @@ export function ThemeEditorPanel({
           previewText={themeConfig.buttonTextColor || '#ffffff'}
           backgroundPlaceholder={accent}
           textPlaceholder="#ffffff"
-          onBackground={(v) => set({ buttonColor: v })}
+          onBackground={(v) => handleRoleBackground('buttonColor', 'buttonTextColor', v)}
           onText={(v) => set({ buttonTextColor: v })}
           radius={themeConfig.radius}
         />
@@ -169,7 +254,7 @@ export function ThemeEditorPanel({
           previewText={themeConfig.secondaryButtonTextColor || textColor}
           backgroundPlaceholder="transparent"
           textPlaceholder={textColor}
-          onBackground={(v) => set({ secondaryButtonColor: v })}
+          onBackground={(v) => handleRoleBackground('secondaryButtonColor', 'secondaryButtonTextColor', v)}
           onText={(v) => set({ secondaryButtonTextColor: v })}
           radius={themeConfig.radius}
           outline={!themeConfig.secondaryButtonColor}
@@ -183,22 +268,13 @@ export function ThemeEditorPanel({
           previewText={themeConfig.tertiaryButtonTextColor || '#ffffff'}
           backgroundPlaceholder={accent}
           textPlaceholder="#ffffff"
-          onBackground={(v) => set({ tertiaryButtonColor: v })}
+          onBackground={(v) => handleRoleBackground('tertiaryButtonColor', 'tertiaryButtonTextColor', v)}
           onText={(v) => set({ tertiaryButtonTextColor: v })}
           radius={themeConfig.radius}
         />
       </ThemeGroup>
 
       <AdvancedSettings>
-        <ThemeGroup title="Couleur principale">
-          <ColorField label="Couleur principale" value={themeColor} placeholder="#d9612e" onChange={onThemeColorChange} />
-          {lowContrast && (
-            <p className="-mt-2 flex items-center gap-1.5 text-xs text-amber-600">
-              <AlertTriangle size={13} aria-hidden /> Trop claire pour un texte blanc lisible.
-            </p>
-          )}
-        </ThemeGroup>
-
         <ThemeGroup title="Couleurs de la page">
           <ColorField
             label="Couleur secondaire"

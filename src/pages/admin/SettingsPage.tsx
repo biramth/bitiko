@@ -819,7 +819,7 @@ function SettingsForm({
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-gray-500">
-                  Détermine les styles proposés dans l'onglet « Personnaliser ma boutique » → Styles.
+                  Détermine les styles proposés dans « Personnaliser » → Apparence → Styles.
                 </p>
               </div>
             </Card>
