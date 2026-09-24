@@ -391,7 +391,7 @@ function Nav() {
                   {produitLinks.map(({ label, href, description }) => (
                     <a key={label} href={href} onClick={() => setProduitOpen(false)} className="block rounded-xl px-3 py-2.5 hover:bg-sand-50">
                       <span className="block text-sm font-medium text-ink-900">{label}</span>
-                      <span className="block text-xs text-ink-700/60">{description}</span>
+                      <span className="block text-xs text-ink-700/75">{description}</span>
                     </a>
                   ))}
                 </div>
@@ -463,7 +463,7 @@ function PhoneMockup() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">B</div>
             <div>
               <p className="text-xs font-bold text-ink-900">Boutique Chez Fatou</p>
-              <p className="text-[10px] text-ink-700/50">fatou.bitiko.shop</p>
+              <p className="text-[10px] text-ink-700/65">fatou.bitiko.shop</p>
             </div>
           </div>
         </div>
@@ -491,7 +491,7 @@ function PhoneMockup() {
           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white">
             <ShoppingBag size={12} /> Panier
           </div>
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white">2 items</span>
+          <span className="rounded-full bg-white/30 px-2 py-0.5 text-[10px] font-bold text-white">2 items</span>
         </div>
       </div>
       {/* WhatsApp bubble floating — independent drift timing so it doesn't move in lockstep with the phone. */}
@@ -624,19 +624,19 @@ export function LandingPage() {
       "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
   })
   useFaqStructuredData(faq)
-  const promo = useLandingPromo()
+  const { promo, isLoading: promoLoading } = useLandingPromo()
   const promoDate = formatPromoDate(promo?.expires_at ?? null)
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 font-sans text-ink-800">
-      {promo && (
+      {promo ? (
         <div className="bg-brand-600 px-4 py-2 text-center text-xs text-white sm:text-sm">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1.5">
               <Gift size={15} className="shrink-0" aria-hidden />
               <strong className="font-semibold">{promo.label}</strong>
             </span>
-            <span className="text-white/90">
+            <span>
               Activez-le gratuitement à l’inscription{promoDate ? ` · jusqu’au ${promoDate}` : ''}
             </span>
             <Link
@@ -647,7 +647,11 @@ export function LandingPage() {
             </Link>
           </div>
         </div>
-      )}
+      ) : promoLoading ? (
+        // Reserved slot while the promo resolves — the bar popping in late
+        // was this page's layout shift (and its LCP element).
+        <div className="min-h-[33px] sm:min-h-[37px]" aria-hidden />
+      ) : null}
       <Nav />
 
       <main className="relative mx-auto w-full">
@@ -661,7 +665,7 @@ export function LandingPage() {
             >
               <Zap size={13} className="text-brand-500" aria-hidden />
               Pour les commerçants d'Afrique de l'Ouest
-              <ArrowRight size={12} className="text-ink-700/50" aria-hidden />
+              <ArrowRight size={12} className="text-ink-700/65" aria-hidden />
             </a>
             <h1 className="mx-auto max-w-[600px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.4rem]">
               Ton commerce mérite mieux qu'un{' '}
@@ -683,7 +687,7 @@ export function LandingPage() {
                 Comment ça marche
               </a>
             </div>
-            <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/60 [animation-delay:400ms] lg:justify-start">
+            <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/75 [animation-delay:400ms] lg:justify-start">
               {['0 F pour lancer', 'Zéro commission', '15 produits offerts', 'Sans carte bancaire'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} className="text-brand-500" aria-hidden /> {t}
@@ -702,7 +706,7 @@ export function LandingPage() {
             {shopCategories.map((category) => (
               <span
                 key={category}
-                className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/60 transition-colors duration-300 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/75 transition-colors duration-300 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
               >
                 {category}
               </span>
@@ -711,7 +715,7 @@ export function LandingPage() {
               {shopCategories.map((category) => (
                 <span
                   key={`duplicate-${category}`}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/60"
+                  className="shrink-0 whitespace-nowrap rounded-full border border-sand-200 bg-sand-50 px-4 py-2 text-sm font-medium text-ink-700/75"
                 >
                   {category}
                 </span>
@@ -734,7 +738,7 @@ export function LandingPage() {
                 <p className="mt-3 font-heading text-xl font-bold text-ink-900">
                   <CountUpValue target={target} suffix={suffix} />
                 </p>
-                <p className="text-xs text-ink-700/60">{label}</p>
+                <p className="text-xs text-ink-700/75">{label}</p>
               </div>
             ))}
           </div>
@@ -748,7 +752,7 @@ export function LandingPage() {
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Pendant que tu gères tes commandes à la main, tes clients sont en ligne.
               </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/60">
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Chaque matin tu reçois des dizaines de messages. Tu dois tout noter, calculer les totaux, garder en mémoire qui a payé. Il y a mieux.
               </p>
             </Reveal>
@@ -803,7 +807,7 @@ export function LandingPage() {
                 Tout ce qu'il faut pour vendre en ligne.
                 <span className="block mt-1 text-brand-600">Rien de plus.</span>
               </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/60">
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Chaque fonctionnalité existe parce qu'un commerçant en avait besoin. Pas de superflu, pas de compliqué.
               </p>
             </Reveal>
@@ -829,7 +833,7 @@ export function LandingPage() {
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Le client commande en ligne. Tu reçois tout sur WhatsApp.
               </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/60">
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Zéro appli à télécharger, zéro dashboard à apprendre. Si tu sais lire un message WhatsApp, tu sais gérer tes commandes Bitiko.
               </p>
             </Reveal>
@@ -881,7 +885,7 @@ export function LandingPage() {
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Bitiko s'adapte à ton activité, pas l'inverse.
             </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/60">
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Que tu vendes des vêtements, des plats, des cosmétiques ou de l'artisanat — la structure est la même, le résultat aussi.
               </p>
             </Reveal>
@@ -956,7 +960,7 @@ export function LandingPage() {
                     <p className="mt-4 text-sm leading-relaxed text-ink-700/80">"{quote}"</p>
                     <div className="mt-5 border-t border-sand-100 pt-4">
                       <p className="text-sm font-semibold text-ink-900">{name}</p>
-                      <p className="text-xs text-ink-700/50">{role}</p>
+                      <p className="text-xs text-ink-700/65">{role}</p>
                       <span className="mt-2 inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700">Plan {plan}</span>
                     </div>
                   </div>
@@ -1000,7 +1004,7 @@ export function LandingPage() {
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Investis dans ton commerce.
               </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/60">
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Zéro commission. Zéro frais cachés. Tu gardes 100% de tes revenus.
               </p>
             </Reveal>
@@ -1012,7 +1016,7 @@ export function LandingPage() {
                   <div className="mt-3 flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold text-ink-900">0 F</span>
                   </div>
-                  <p className="mt-2 text-center text-sm text-ink-700/60">Pour démarrer et tester.</p>
+                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour démarrer et tester.</p>
                   <div className="my-6 h-px w-full bg-sand-100" />
                   <ul className="space-y-3">
                     {[
@@ -1041,11 +1045,11 @@ export function LandingPage() {
                     <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900"><Gift size={12} aria-hidden />{promo.days} jours offerts</span>
                   )}
                   <p className="text-sm font-bold text-ink-900">Essentiel</p>
-                  <div className="mt-3 flex items-baseline justify-center gap-1"><span className="text-4xl font-bold text-ink-900">3 000 F</span><span className="text-sm text-ink-700/60">/mois</span></div>
+                  <div className="mt-3 flex items-baseline justify-center gap-1"><span className="text-4xl font-bold text-ink-900">3 000 F</span><span className="text-sm text-ink-700/75">/mois</span></div>
                   {promo?.plan === 'essential' && (
                     <p className="mt-1 text-center text-xs font-medium text-brand-700">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
                   )}
-                  <p className="mt-2 text-center text-sm text-ink-700/60">Pour structurer sa boutique.</p>
+                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour structurer sa boutique.</p>
                   <div className="my-6 h-px w-full bg-brand-100" />
                   <ul className="space-y-3">
                     {['Tout le plan Découverte, plus :', 'Jusqu’à 50 produits actifs', 'Builder complet et pages personnalisées', 'Images de catégories et promotions', 'Analytics standard et import CSV'].map((f, i) => (
@@ -1092,7 +1096,7 @@ export function LandingPage() {
                 </div>
               </Reveal>
             </div>
-            <p className="mt-8 text-center text-xs text-ink-700/50">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente.</p>
+            <p className="mt-8 text-center text-xs text-ink-700/65">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente.</p>
           </div>
         </section>
 
@@ -1124,7 +1128,7 @@ export function LandingPage() {
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
                 Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />
               </Link>
-              <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/50">
+              <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/65">
                 {['0 F pour lancer', 'Zéro commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (
                   <span key={t} className="flex items-center gap-1"><Check size={11} aria-hidden />{t}</span>
                 ))}
@@ -1139,30 +1143,30 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 text-sm min-[480px]:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="hidden lg:block">
             <Logo size={20} />
-            <p className="mt-6 text-xs text-ink-700/40">&copy; {new Date().getFullYear()} Bitiko</p>
+            <p className="mt-6 text-xs text-ink-700/60">&copy; {new Date().getFullYear()} Bitiko</p>
           </div>
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Solution</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#fonctionnalites" className="text-ink-700/50 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/50 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/50 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/50 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
             </ul>
           </div>
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Bitiko</p>
             <ul className="flex flex-col gap-2.5">
-              <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Connexion</Link></li>
-              <li><Link to="/admin/login" className="text-ink-700/50 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
-              <li><a href="#tarifs" className="text-ink-700/50 transition-colors hover:text-ink-900">Tarifs</a></li>
-              <li><a href="#faq" className="text-ink-700/50 transition-colors hover:text-ink-900">FAQ</a></li>
+              <li><Link to="/admin/login" className="text-ink-700/65 transition-colors hover:text-ink-900">Connexion</Link></li>
+              <li><Link to="/admin/login" className="text-ink-700/65 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
+              <li><a href="#tarifs" className="text-ink-700/65 transition-colors hover:text-ink-900">Tarifs</a></li>
+              <li><a href="#faq" className="text-ink-700/65 transition-colors hover:text-ink-900">FAQ</a></li>
               <li>
                 <a
                   href="https://www.instagram.com/bitiko.shop/"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                  className="inline-flex items-center gap-1.5 text-ink-700/65 transition-colors hover:text-ink-900"
                 >
                   <SocialIcon platform="instagram" size={14} /> Instagram
                 </a>
@@ -1172,7 +1176,7 @@ export function LandingPage() {
                   href="https://www.tiktok.com/@bitiko.shop"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700/50 transition-colors hover:text-ink-900"
+                  className="inline-flex items-center gap-1.5 text-ink-700/65 transition-colors hover:text-ink-900"
                 >
                   <SocialIcon platform="tiktok" size={14} /> TikTok
                 </a>
@@ -1182,15 +1186,15 @@ export function LandingPage() {
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Ressources</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#solutions" className="text-ink-700/50 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
-              <li><a href="#marche" className="text-ink-700/50 transition-colors hover:text-ink-900">Comment ça marche</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/50 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
+              <li><a href="#solutions" className="text-ink-700/65 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
+              <li><a href="#marche" className="text-ink-700/65 transition-colors hover:text-ink-900">Comment ça marche</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
             </ul>
           </div>
         </div>
         <div className="mt-10 flex flex-col items-center gap-1 text-center lg:hidden">
           <Logo size={18} />
-          <p className="text-xs text-ink-700/40">&copy; {new Date().getFullYear()} Bitiko</p>
+          <p className="text-xs text-ink-700/60">&copy; {new Date().getFullYear()} Bitiko</p>
         </div>
       </footer>
     </div>

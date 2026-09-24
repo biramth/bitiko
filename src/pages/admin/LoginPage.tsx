@@ -8,6 +8,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Turnstile } from '@/components/ui/Turnstile'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { trackEvent } from '@/lib/analytics'
+import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
 import { PlatformAwareRedirect } from '@/features/platform/PlatformAwareRedirect'
 
 const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
@@ -118,6 +119,13 @@ export function LoginPage() {
     }
     setLoading(true)
     setError(null)
+    // Free-tier HaveIBeenPwned check (Supabase's server-side protection is
+    // Pro-only) — fail-open, never blocks signup on network issues.
+    if (await isPasswordBreached(password)) {
+      setLoading(false)
+      setError(BREACHED_PASSWORD_MESSAGE)
+      return
+    }
     const result = await signUp(email, password)
     setLoading(false)
     if (result.error) {
