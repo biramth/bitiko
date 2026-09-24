@@ -38,23 +38,43 @@ function setCanonical(href: string) {
 /**
  * Swaps the tab favicon to a shop's own logo. Not part of usePageSeo's
  * per-page effect since a favicon belongs to the whole shop, not a single
- * page — call once from the storefront layout and restore the default
- * (index.html's own <link rel="icon">, set once on module load) on unmount.
+ * page — call once from the storefront layout and restore the defaults on
+ * unmount. Swaps EVERY icon link (the page declares ico + svg + png plus an
+ * apple-touch-icon, and browsers pick freely among them — swapping only the
+ * first left Chrome on the SVG, i.e. still our logo).
  */
-const DEFAULT_FAVICON = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? null
+const DEFAULT_ICON_HREFS = new Map<HTMLLinkElement, string>()
+if (typeof document !== 'undefined') {
+  document.head
+    .querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .forEach((link) => DEFAULT_ICON_HREFS.set(link, link.getAttribute('href') ?? ''))
+}
+
+function iconLinks(): HTMLLinkElement[] {
+  const links = Array.from(
+    document.head.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]'),
+  )
+  if (links.length === 0) {
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+    DEFAULT_ICON_HREFS.set(link, '')
+    return [link]
+  }
+  return links
+}
 
 export function useShopFavicon(logoUrl: string | null | undefined) {
   useEffect(() => {
-    let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
-    if (!link) {
-      link = document.createElement('link')
-      link.rel = 'icon'
-      document.head.appendChild(link)
-    }
-    link.href = logoUrl || DEFAULT_FAVICON || ''
+    const links = iconLinks()
+    links.forEach((link) => {
+      link.href = logoUrl || DEFAULT_ICON_HREFS.get(link) || ''
+    })
 
     return () => {
-      if (link && DEFAULT_FAVICON) link.href = DEFAULT_FAVICON
+      links.forEach((link) => {
+        link.href = DEFAULT_ICON_HREFS.get(link) || ''
+      })
     }
   }, [logoUrl])
 }
@@ -74,6 +94,8 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl, s
 
     const { origin, pathname } = window.location
     const canonical = canonicalUrl || (origin + pathname)
+    // Draft previews (?preview=draft) share live URLs — never index them.
+    const isDraftPreview = new URLSearchParams(window.location.search).has('preview')
 
     setCanonical(canonical)
     setMetaTag('property', 'og:url', canonical)
@@ -82,10 +104,16 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl, s
     if (description) {
       setMetaTag('name', 'description', description)
       setMetaTag('property', 'og:description', description)
+      setMetaTag('name', 'twitter:description', description)
     }
     setMetaTag('property', 'og:title', title)
-    if (image) setMetaTag('property', 'og:image', image)
-    setMetaTag('name', 'robots', noindex ? 'noindex, nofollow' : 'index, follow')
+    setMetaTag('name', 'twitter:title', title)
+    setMetaTag('name', 'twitter:card', image ? 'summary_large_image' : 'summary')
+    if (image) {
+      setMetaTag('property', 'og:image', image)
+      setMetaTag('name', 'twitter:image', image)
+    }
+    setMetaTag('name', 'robots', noindex || isDraftPreview ? 'noindex, nofollow' : 'index, follow')
 
     return () => {
       document.title = previousTitle

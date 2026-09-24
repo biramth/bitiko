@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AlertTriangle, ChevronDown, LayoutTemplate, MousePointerClick, Palette, Type, type LucideIcon } from 'lucide-react'
 import { contrastRatio, contrastWithWhite } from '@/utils/format'
 import { alphaOf } from '@/utils/color'
@@ -14,29 +15,39 @@ const selectClass =
 const HEX_WITH_ALPHA = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/
 
 /** Every panel group is a collapsible accordion — the merchant unfolds exactly
- *  what they want to tweak. Nothing that shapes the shop lives in a hidden
- *  "Réglages avancés" catch-all anymore; that slot is reserved in code for
- *  future, genuinely advanced options (effects, animations…). */
+ *  what they want to tweak. Controlled + exclusive: all groups start closed,
+ *  opening one closes the other (native <details> elements stack open and
+ *  pushed the panel into runaway lengths that broke the surrounding layout).
+ *  Nothing that shapes the shop lives in a hidden "Réglages avancés"
+ *  catch-all anymore; that slot is reserved in code for future, genuinely
+ *  advanced options (effects, animations…). */
 function AccordionGroup({
   icon: Icon,
   title,
-  defaultOpen = false,
+  open,
+  onToggle,
   children,
 }: {
   icon: LucideIcon
   title: string
-  defaultOpen?: boolean
+  open: boolean
+  onToggle: () => void
   children: React.ReactNode
 }) {
   return (
-    <details className="group rounded-lg border border-gray-200 bg-gray-50/40" open={defaultOpen}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm font-semibold text-gray-800 transition-colors hover:text-gray-950 [&::-webkit-details-marker]:hidden">
+    <div className="rounded-lg border border-gray-200 bg-gray-50/40">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 text-sm font-semibold text-gray-800 transition-colors hover:text-gray-950"
+      >
         <Icon size={15} className="shrink-0 text-gray-400" aria-hidden />
         {title}
-        <ChevronDown size={15} className="ml-auto shrink-0 text-gray-400 transition-transform group-open:rotate-180" aria-hidden />
-      </summary>
-      <div className="space-y-4 border-t border-gray-200 p-4">{children}</div>
-    </details>
+        <ChevronDown size={15} className={`ml-auto shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && <div className="space-y-4 border-t border-gray-200 p-4">{children}</div>}
+    </div>
   )
 }
 
@@ -152,9 +163,15 @@ export function ThemeEditorPanel({
 
   const set = (patch: Partial<ThemeConfig>) => onThemeConfigChange({ ...themeConfig, ...patch })
 
+  // Exclusive accordion: everything starts closed, opening a group closes
+  // the others — stacked-open panels pushed this panel (and its scroll
+  // container) into runaway lengths.
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const toggleGroup = (id: string) => setOpenGroup((current) => (current === id ? null : id))
+
   return (
     <div className="space-y-4">
-      <AccordionGroup icon={Palette} title="Couleurs" defaultOpen>
+      <AccordionGroup icon={Palette} title="Couleurs" open={openGroup === 'couleurs'} onToggle={() => toggleGroup('couleurs')}>
         <div className="space-y-1">
           <ColorField label="Couleur de la boutique" value={themeColor} placeholder="Auto" onChange={onThemeColorChange} />
           {lowContrast ? (
@@ -187,7 +204,7 @@ export function ThemeEditorPanel({
         />
       </AccordionGroup>
 
-      <AccordionGroup icon={MousePointerClick} title="Boutons" defaultOpen>
+      <AccordionGroup icon={MousePointerClick} title="Boutons" open={openGroup === 'boutons'} onToggle={() => toggleGroup('boutons')}>
         <ButtonRoleRow
           title="Bouton principal"
           description="Les CTA de la boutique : « Ajouter au panier », « Payer », « Voir le catalogue »…"
@@ -230,7 +247,7 @@ export function ThemeEditorPanel({
         />
       </AccordionGroup>
 
-      <AccordionGroup icon={Type} title="Typographie">
+      <AccordionGroup icon={Type} title="Typographie" open={openGroup === 'typo'} onToggle={() => toggleGroup('typo')}>
         <div>
           <label className={labelClass}>Police</label>
           <select
@@ -259,7 +276,7 @@ export function ThemeEditorPanel({
         </div>
       </AccordionGroup>
 
-      <AccordionGroup icon={LayoutTemplate} title="Mise en page">
+      <AccordionGroup icon={LayoutTemplate} title="Mise en page" open={openGroup === 'layout'} onToggle={() => toggleGroup('layout')}>
         <div>
           <label className={labelClass}>Arrondis</label>
           <div className="mt-1">

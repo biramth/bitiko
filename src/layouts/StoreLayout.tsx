@@ -273,6 +273,17 @@ export function StoreLayout() {
 
   useShopFavicon(shop?.logo_url)
 
+  // Mobile browser chrome follows the shop's own background, not ours.
+  useEffect(() => {
+    const meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (!meta) return
+    const previous = meta.getAttribute('content')
+    meta.setAttribute('content', themeConfig.backgroundColor || '#ffffff')
+    return () => {
+      if (previous) meta.setAttribute('content', previous)
+    }
+  }, [themeConfig.backgroundColor])
+
   return (
     <div
       className="flex min-h-screen flex-col bg-[var(--shop-bg)] text-[var(--shop-text)]"
