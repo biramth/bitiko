@@ -39,8 +39,8 @@ export async function listCustomers(
 
   let query = supabase.from('customers').select('*', { count: 'exact' }).eq('shop_id', shopId)
 
-  if (search) {
-    const term = `%${search}%`
+  if (search?.trim()) {
+    const term = `%${search.trim().replace(/[%,]/g, '')}%`
     query = query.or(`name.ilike.${term},phone.ilike.${term}`)
   }
 

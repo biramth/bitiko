@@ -31,7 +31,7 @@ import {
 import { Logo } from '@/components/ui/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
-import { useMyShop, selectShop } from '@/features/shop-settings/useMyShop'
+import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
@@ -157,6 +157,7 @@ export function OnboardingPage() {
   usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
   const { user } = useAuth()
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
+  const { data: allShops } = useMyShops()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
@@ -298,6 +299,9 @@ export function OnboardingPage() {
   })
 
   if (shopLoading) return <PageLoader />
+  // Server cap is 5 shops per account (0097) — bounce instead of letting
+  // the save fail at the end of the form.
+  if ((allShops?.length ?? 0) >= 5) return <Navigate to="/admin" replace />
   if (existingShop && !creatingAdditional) return <Navigate to="/admin" replace />
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]

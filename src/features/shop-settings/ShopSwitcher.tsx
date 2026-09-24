@@ -18,6 +18,9 @@ export function ShopSwitcher({ onSelect }: { onSelect?: () => void }) {
 
   if (!shop || !shops || shops.length < 2) return null
 
+  // Mirrors the server-side cap (0097): no dead-end link once full.
+  const atCap = shops.length >= 5
+
   const choose = (id: string) => {
     if (id === shop.id) {
       setOpen(false)
@@ -73,16 +76,22 @@ export function ShopSwitcher({ onSelect }: { onSelect?: () => void }) {
               {s.id === shop.id && <Check size={14} aria-hidden className="shrink-0 text-emerald-400" />}
             </button>
           ))}
-          <Link
-            to="/admin/onboarding?new=1"
-            onClick={() => {
-              setOpen(false)
-              onSelect?.()
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300"
-          >
-            <Plus size={14} aria-hidden /> Nouvelle boutique
-          </Link>
+          {atCap ? (
+            <p className="rounded-lg px-2 py-1.5 text-xs text-white/40">
+              Maximum de 5 boutiques atteint
+            </p>
+          ) : (
+            <Link
+              to="/admin/onboarding?new=1"
+              onClick={() => {
+                setOpen(false)
+                onSelect?.()
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300"
+            >
+              <Plus size={14} aria-hidden /> Nouvelle boutique
+            </Link>
+          )}
         </div>
       )}
       <Link
