@@ -130,7 +130,7 @@ export function HeroRenderer({
         <Link
           to="/catalogue"
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90"
         >
           <InlineStyleToolbar editable={editable} display="inline" style={config.primaryButtonLabelStyle} onCommit={(primaryButtonLabelStyle) => patch({ primaryButtonLabelStyle })} label="Style du bouton principal">
             <InlineText
@@ -150,7 +150,7 @@ export function HeroRenderer({
             target="_blank"
             rel="noreferrer"
             style={{ borderRadius: 'var(--shop-radius)' }}
-            className="inline-flex items-center gap-2 border border-[var(--shop-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-text)] transition-colors hover:border-[var(--shop-text)]/50"
+            className="inline-flex items-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50"
           >
             <MessageCircle size={16} aria-hidden />
             <InlineStyleToolbar editable={editable} display="inline" style={config.whatsappButtonLabelStyle} onCommit={(whatsappButtonLabelStyle) => patch({ whatsappButtonLabelStyle })} label="Style du bouton WhatsApp">

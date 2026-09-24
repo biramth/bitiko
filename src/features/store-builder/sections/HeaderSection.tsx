@@ -33,8 +33,8 @@ function resolveHeaderNavLinks(
 }
 
 const nativeLinkClass = 'text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60'
-const ctaLinkClass = 'inline-flex items-center rounded-lg bg-[var(--shop-button)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90'
-const ghostLinkClass = 'inline-flex items-center rounded-lg border border-ink-900/15 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-ink-900/40'
+const ctaLinkClass = 'inline-flex items-center rounded-lg bg-[var(--shop-button)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90'
+const ghostLinkClass = 'inline-flex items-center rounded-lg border border-[var(--shop-secondary-button-text)]/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50'
 
 /** The storefront header. Layout presets: `left-logo` (original: logo left,
  *  links + cart right), `centered-logo` (logo centered, links in a row below)
@@ -170,7 +170,7 @@ export function HeaderRenderer({
     >
       <ShoppingCart size={22} aria-hidden strokeWidth={1.5} />
       {itemCount > 0 && (
-        <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--shop-accent)] px-1 text-[10px] font-bold text-white">
+        <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--shop-accent)] px-1 text-[10px] font-bold text-[var(--shop-tertiary-button-text)]">
           {itemCount}
         </span>
       )}
@@ -236,7 +236,7 @@ export function HeaderRenderer({
                 key={link.key}
                 to={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-white'}
+                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]'}
               >
                 {link.label}
               </Link>

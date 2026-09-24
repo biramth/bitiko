@@ -84,7 +84,7 @@ export function ProductCard({
           type="button"
           onClick={handleQuickAdd}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-3 flex w-full items-center justify-center gap-1.5 border border-[var(--shop-text)]/15 py-2.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-white"
+          className="mt-3 flex w-full items-center justify-center gap-1.5 border border-[var(--shop-secondary-button-text)]/20 py-2.5 text-xs font-semibold uppercase tracking-widest text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-[var(--shop-button-text)]"
         >
           {added ? <><Check size={14} aria-hidden /> Ajouté</> : <><Plus size={14} aria-hidden /> Ajouter</>}
         </button>
@@ -93,7 +93,7 @@ export function ProductCard({
         <Link
           to={`/produits/${product.slug}`}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-3 block border border-[var(--shop-text)]/15 py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-white"
+          className="mt-3 block border border-[var(--shop-secondary-button-text)]/20 py-2.5 text-center text-xs font-semibold uppercase tracking-widest text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-button)] hover:bg-[var(--shop-button)] hover:text-[var(--shop-button-text)]"
         >
           Choisir une option
         </Link>

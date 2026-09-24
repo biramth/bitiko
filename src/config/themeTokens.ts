@@ -5,13 +5,18 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   textColor: '#17152e',
   backgroundColor: '#ffffff',
   buttonColor: '',
+  buttonTextColor: '#ffffff',
+  secondaryButtonColor: '',
+  secondaryButtonTextColor: '',
+  tertiaryButtonColor: '',
+  tertiaryButtonTextColor: '',
   font: 'sora-inter',
   textScale: 'base',
   radius: 'none',
   contentWidth: 'normal',
 }
 
-const RADIUS_CSS: Record<RadiusScale, string> = {
+export const RADIUS_CSS: Record<RadiusScale, string> = {
   none: '0px',
   md: '0.5rem',
   lg: '1rem',
@@ -33,12 +38,19 @@ export const FONT_CSS: Record<FontChoice, { heading: string; body: string }> = {
 /** Builds the inline CSS custom properties a shop's theme resolves to. */
 export function themeConfigToCssVars(themeColor: string, config: ThemeConfig): Record<string, string> {
   const font = FONT_CSS[config.font] ?? FONT_CSS['sora-inter']
+  const textColor = config.textColor || DEFAULT_THEME_CONFIG.textColor
+  const accent = themeColor || '#d9612e'
   return {
-    '--shop-accent': themeColor || '#d9612e',
+    '--shop-accent': accent,
     '--shop-secondary': config.secondaryColor || DEFAULT_THEME_CONFIG.secondaryColor,
-    '--shop-text': config.textColor || DEFAULT_THEME_CONFIG.textColor,
+    '--shop-text': textColor,
     '--shop-bg': config.backgroundColor || DEFAULT_THEME_CONFIG.backgroundColor,
-    '--shop-button': config.buttonColor || themeColor || '#d9612e',
+    '--shop-button': config.buttonColor || accent,
+    '--shop-button-text': config.buttonTextColor || '#ffffff',
+    '--shop-secondary-button': config.secondaryButtonColor || 'transparent',
+    '--shop-secondary-button-text': config.secondaryButtonTextColor || textColor,
+    '--shop-tertiary-button': config.tertiaryButtonColor || accent,
+    '--shop-tertiary-button-text': config.tertiaryButtonTextColor || '#ffffff',
     '--shop-radius': RADIUS_CSS[config.radius] ?? RADIUS_CSS.none,
     '--shop-content-width': CONTENT_WIDTH_CSS[config.contentWidth] ?? CONTENT_WIDTH_CSS.normal,
     '--shop-font-heading': font.heading,

@@ -59,10 +59,10 @@ export function PromoRenderer({
       <div
         className={
           card
-            ? 'flex flex-col items-center px-6 py-12 text-center text-white sm:px-14 sm:py-16'
-            : 'flex flex-col items-start px-6 py-10 text-white sm:px-10'
+            ? 'flex flex-col items-center px-6 py-12 text-center text-[var(--shop-tertiary-button-text)] sm:px-14 sm:py-16'
+            : 'flex flex-col items-start px-6 py-10 text-[var(--shop-tertiary-button-text)] sm:px-10'
         }
-        style={{ backgroundColor: config.backgroundColor || 'var(--shop-accent)', borderRadius: 'var(--shop-radius)' }}
+        style={{ backgroundColor: config.backgroundColor || 'var(--shop-tertiary-button)', borderRadius: 'var(--shop-radius)' }}
       >
         <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
@@ -84,7 +84,7 @@ export function PromoRenderer({
               value={config.body}
               onCommit={(body) => patch({ body })}
               placeholder="Texte"
-              className="mt-2 max-w-md text-white/80"
+              className="mt-2 max-w-md text-[var(--shop-tertiary-button-text)]/80"
               style={resolveTextStyle(config.bodyStyle)}
               multiline
               label="Texte"

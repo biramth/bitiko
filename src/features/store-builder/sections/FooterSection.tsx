@@ -101,7 +101,7 @@ export function FooterRenderer({
     <Link
       to="/catalogue"
       style={{ borderRadius: 'var(--shop-radius)' }}
-      className="inline-flex items-center gap-1.5 bg-[var(--footer-button)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+      className="inline-flex items-center gap-1.5 bg-[var(--footer-button)] px-4 py-2 text-sm font-semibold text-[var(--footer-button-text)] transition-opacity hover:opacity-90"
     >
       Voir tout le catalogue →
     </Link>
@@ -210,6 +210,7 @@ export function FooterRenderer({
         backgroundColor: footerBackground,
         '--footer-text': footer.textColor || '#fffbf5',
         '--footer-button': footer.buttonColor || 'var(--shop-button)',
+        '--footer-button-text': 'var(--shop-button-text)',
       } as React.CSSProperties}
     >
       {body}

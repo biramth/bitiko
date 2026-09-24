@@ -175,7 +175,7 @@ function AnnouncementBar({
     </>
   )
 
-  const colors = { backgroundColor: config.backgroundColor || 'var(--shop-accent)', color: config.textColor || '#ffffff' }
+  const colors = { backgroundColor: config.backgroundColor || 'var(--shop-tertiary-button)', color: config.textColor || 'var(--shop-tertiary-button-text)' }
 
   if (pill) {
     return (

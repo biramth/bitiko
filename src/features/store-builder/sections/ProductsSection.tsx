@@ -199,7 +199,7 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
                     return next
                   }, { replace: true })}
                   style={{ borderRadius: 'var(--shop-radius)' }}
-                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-[var(--shop-button)] text-white' : 'text-[var(--shop-text)]/70 hover:bg-[var(--shop-text)]/10'}`}
+                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-[var(--shop-button)] text-[var(--shop-button-text)]' : 'text-[var(--shop-text)]/70 hover:bg-[var(--shop-text)]/10'}`}
                 >
                   {p}
                 </button>

@@ -15,10 +15,10 @@ import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
 const TILE_THEMES = [
-  'bg-[var(--shop-text)] text-white',
-  'bg-[var(--shop-accent)] text-white',
-  'bg-[var(--shop-secondary)] text-ink-900',
-  'bg-[var(--shop-button)] text-white',
+  'bg-[var(--shop-tertiary-button)] text-[var(--shop-tertiary-button-text)]',
+  'bg-[var(--shop-secondary)] text-[var(--shop-secondary-button-text)]',
+  'bg-[var(--shop-button)] text-[var(--shop-button-text)]',
+  'bg-[var(--shop-text)] text-[var(--shop-tertiary-button-text)]',
 ]
 
 export function CategoriesRenderer({ shop, config, themeConfig, sectionId, editable = false }: { shop: Shop; config: CategoriesSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {

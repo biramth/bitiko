@@ -287,7 +287,7 @@ function CheckoutFlow({
           type="submit"
           disabled={mutation.isPending || demo}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : 'Commander via WhatsApp'}
         </button>

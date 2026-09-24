@@ -193,7 +193,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         <Link
           to="/commande"
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90"
+          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90"
         >
           Passer la commande
           <ArrowRight size={16} aria-hidden />
@@ -203,7 +203,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         <Link
           to="/commande"
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-white opacity-50 pointer-events-none"
+          className="mt-6 flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] py-4 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] opacity-50 pointer-events-none"
         >
           Passer la commande
           <ArrowRight size={16} aria-hidden />

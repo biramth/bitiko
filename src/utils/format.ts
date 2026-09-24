@@ -40,18 +40,31 @@ export function whatsappHref(whatsappNumber: string): string {
   return `https://wa.me/${digitsOnly}`
 }
 
+/** WCAG relative-luminance contrast ratio between two "#rrggbb" colors.
+ *  Unknown/invalid input returns 21 (best possible — never warns). */
+export function contrastRatio(hexA: string, hexB: string): number {
+  const parse = (hex: string): [number, number, number] | null => {
+    const match = /^#([0-9a-f]{6})$/i.exec(hex)
+    if (!match) return null
+    const channel = (value: number) => {
+      const c = value / 255
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    }
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(match[1].slice(i, i + 2), 16))
+    return [channel(r), channel(g), channel(b)] as [number, number, number]
+  }
+  const a = parse(hexA)
+  const b = parse(hexB)
+  if (!a || !b) return 21
+  const luminance = (channels: [number, number, number]) =>
+    0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+  const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (l1 + 0.05) / (l2 + 0.05)
+}
+
 /** WCAG relative-luminance contrast ratio of a "#rrggbb" color against white text. */
 export function contrastWithWhite(hex: string): number {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex)
-  if (!match) return 21 // unknown/invalid input: don't warn
-
-  const channel = (value: number) => {
-    const c = value / 255
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-  }
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(match[1].slice(i, i + 2), 16))
-  const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
-  return (1 + 0.05) / (luminance + 0.05)
+  return contrastRatio(hex, '#ffffff')
 }
 
 /** Delivery fee applied for a subtotal, honoring the shop's free-delivery threshold. */

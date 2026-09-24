@@ -349,6 +349,18 @@ export interface ThemeConfig {
   textScale: TextScale
   radius: RadiusScale
   contentWidth: ContentWidth
+  /** Couleur du texte sur les boutons principaux (CTA pleins). Vide = blanc,
+   *  historique du storefront — champ optionnel pour rester compatible avec
+   *  les shops déjà configurés. */
+  buttonTextColor?: string
+  /** Boutons secondaires (actions « outline ») : fond + texte. Vide = fond
+   *  transparent et texte égal à la couleur de texte globale. */
+  secondaryButtonColor?: string
+  secondaryButtonTextColor?: string
+  /** Boutons/plaques tertiaires (tuiles catégories…) : fond + texte.
+   *  Vide = accent principal / blanc. */
+  tertiaryButtonColor?: string
+  tertiaryButtonTextColor?: string
 }
 
 /** A store-wide WIP snapshot: the global theme, the home page sections and
