@@ -161,9 +161,9 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                 <div className="flex items-center gap-4">
                   {!isDemo ? (
                     <>
-                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
                       <span className="w-4 text-center text-sm font-medium text-[var(--shop-text)]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
                     </>
                   ) : (
                     <span className="text-sm text-[var(--shop-text)]/60">Qté : {item.quantity}</span>

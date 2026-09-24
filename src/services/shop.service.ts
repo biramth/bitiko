@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { compressImageFile } from '@/utils/image'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import type { Shop, TenantContext } from '@/types'
@@ -149,20 +150,22 @@ async function uploadShopAsset(shopId: string, file: File, baseName: string): Pr
   return `${data.publicUrl}?v=${Date.now()}`
 }
 
-export function uploadShopLogo(shopId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, file, 'logo')
+export async function uploadShopLogo(shopId: string, file: File): Promise<string> {
+  // Free plan: no server-side transforms — shrink at the source (the video
+  // uploader below shares the pipe and must stay untouched).
+  return uploadShopAsset(shopId, await compressImageFile(file), 'logo')
 }
 
-export function uploadShopBanner(shopId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, file, 'banner')
+export async function uploadShopBanner(shopId: string, file: File): Promise<string> {
+  return uploadShopAsset(shopId, await compressImageFile(file), 'banner')
 }
 
 /** Image for a builder block (image/promo sections) — one file per section id,
  *  or per `itemId` for a block holding several images (e.g. a Lookbook's
  *  photo grid), so each slot gets its own storage path instead of
  *  overwriting the same one. */
-export function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
-  return uploadShopAsset(shopId, file, itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
+export async function uploadShopSectionImage(shopId: string, sectionId: string, file: File, itemId?: string): Promise<string> {
+  return uploadShopAsset(shopId, await compressImageFile(file), itemId ? `section-${sectionId}-${itemId}` : `section-${sectionId}`)
 }
 
 /** Background video for a builder block (image/hero sections) — same

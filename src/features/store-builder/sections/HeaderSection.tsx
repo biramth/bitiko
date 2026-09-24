@@ -156,7 +156,7 @@ export function HeaderRenderer({
         onClick={() => setMobileMenuOpen((open) => !open)}
         aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
         aria-expanded={mobileMenuOpen}
-        className="flex items-center text-[var(--shop-text)] sm:hidden"
+        className="flex items-center -m-2 p-2 text-[var(--shop-text)] sm:hidden"
       >
         {mobileMenuOpen ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
       </button>
@@ -165,7 +165,7 @@ export function HeaderRenderer({
   const cart = (
     <Link
       to="/panier"
-      className="relative flex items-center text-[var(--shop-text)] transition-opacity hover:opacity-60"
+      className="relative -m-2 flex items-center p-2 text-[var(--shop-text)] transition-opacity hover:opacity-60"
       aria-label={`Panier, ${itemCount} article${itemCount > 1 ? 's' : ''}`}
     >
       <ShoppingCart size={22} aria-hidden strokeWidth={1.5} />

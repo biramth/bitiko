@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { compressImageFile } from '@/utils/image'
 import type { ProductVariant } from '@/types'
 
 export type VariantInput = Pick<
@@ -63,12 +64,13 @@ export async function uploadVariantImage(
   variantId: string,
   file: File,
 ): Promise<ProductVariant> {
-  const ext = file.name.split('.').pop()
+  const optimized = await compressImageFile(file)
+  const ext = optimized.name.split('.').pop()
   const path = `${productId}/variants/${crypto.randomUUID()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from(VARIANT_IMAGE_BUCKET)
-    .upload(path, file, { cacheControl: '3600', upsert: false })
+    .upload(path, optimized, { cacheControl: '3600', upsert: false })
   if (uploadError) throw uploadError
 
   const { data: publicUrlData } = supabase.storage

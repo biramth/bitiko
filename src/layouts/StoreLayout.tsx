@@ -167,7 +167,7 @@ function AnnouncementBar({
           type="button"
           onClick={dismiss}
           aria-label="Fermer"
-          className={`absolute top-1/2 -translate-y-1/2 opacity-70 hover:opacity-100 ${pill ? 'right-3' : 'right-3'}`}
+          className={`absolute top-1/2 -translate-y-1/2 -m-1 p-2 opacity-70 hover:opacity-100 ${pill ? 'right-3' : 'right-3'}`}
         >
           <X size={14} />
         </button>

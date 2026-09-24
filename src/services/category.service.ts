@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { compressImageFile } from '@/utils/image'
 import type { Category } from '@/types'
 
 export async function listCategories(shopId: string): Promise<Category[]> {
@@ -67,9 +68,10 @@ export async function deleteCategory(id: string): Promise<void> {
 
 /** Uploads a cover image for a category and returns its public URL (caller stores it in image_url). */
 export async function uploadCategoryImage(categoryId: string, file: File): Promise<string> {
-  const ext = file.name.split('.').pop()
+  const optimized = await compressImageFile(file)
+  const ext = optimized.name.split('.').pop()
   const path = `${categoryId}/${crypto.randomUUID()}.${ext}`
-  const { error: uploadError } = await supabase.storage.from('category-images').upload(path, file, {
+  const { error: uploadError } = await supabase.storage.from('category-images').upload(path, optimized, {
     cacheControl: '3600',
     upsert: false,
   })
