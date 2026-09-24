@@ -94,6 +94,8 @@ function ButtonRoleRow({
   onText,
   radius,
   outline = false,
+  accent,
+  ink,
 }: {
   title: string
   description: string
@@ -109,10 +111,25 @@ function ButtonRoleRow({
   onText: (value: string) => void
   radius: RadiusScale
   outline?: boolean
+  /** Shop accent + ink, feeding the one-click presets below. */
+  accent: string
+  ink: string
 }) {
   const [open, setOpen] = useState(false)
   const contrastSafe = HEX_WITH_ALPHA.test(previewBackground) && HEX_WITH_ALPHA.test(previewText)
   const lowContrast = !outline && contrastSafe && contrastRatio(previewBackground, previewText) < 3
+  // One click, guaranteed readable: white or ink, whichever contrasts more.
+  const readableTextOn = (bg: string) =>
+    contrastRatio(bg, '#ffffff') >= contrastRatio(bg, ink) ? '#ffffff' : ink
+  const applyPreset = (bg: string) => {
+    if (!bg) {
+      onBackground('')
+      onText('')
+      return
+    }
+    onBackground(bg)
+    onText(readableTextOn(bg))
+  }
   const dotStyle: React.CSSProperties =
     outline || !HEX_WITH_ALPHA.test(previewBackground) || alphaOf(previewBackground) < 1
       ? { borderRadius: RADIUS_CSS[radius], border: `2px solid ${previewText}`, background: 'transparent' }
@@ -129,11 +146,28 @@ function ButtonRoleRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-gray-900">{title}</span>
         </span>
+        {lowContrast && <AlertTriangle size={13} aria-hidden className="shrink-0 text-amber-500" />}
         <ChevronDown size={15} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
       {open && (
         <div className="space-y-3 border-t border-gray-200 p-3">
           <p className="text-xs leading-snug text-gray-500">{description}</p>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={`${title} : styles rapides`}>
+            {[
+              { label: 'Accent', bg: accent },
+              { label: 'Encre', bg: ink },
+              { label: 'Auto', bg: '' },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => applyPreset(preset.bg)}
+                className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-700"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-3">
               <ColorField label="Fond" value={background} placeholder={backgroundPlaceholder} onChange={onBackground} />
@@ -237,6 +271,8 @@ export function ThemeEditorPanel({
           onBackground={(v) => set({ buttonColor: v })}
           onText={(v) => set({ buttonTextColor: v })}
           radius={themeConfig.radius}
+          accent={accent}
+          ink={textColor}
         />
         <ButtonRoleRow
           title="Bouton secondaire"
@@ -250,6 +286,8 @@ export function ThemeEditorPanel({
           onBackground={(v) => set({ secondaryButtonColor: v })}
           onText={(v) => set({ secondaryButtonTextColor: v })}
           radius={themeConfig.radius}
+          accent={accent}
+          ink={textColor}
           outline={!themeConfig.secondaryButtonColor || alphaOf(themeConfig.secondaryButtonColor) < 1}
         />
         <ButtonRoleRow
@@ -264,6 +302,8 @@ export function ThemeEditorPanel({
           onBackground={(v) => set({ tertiaryButtonColor: v })}
           onText={(v) => set({ tertiaryButtonTextColor: v })}
           radius={themeConfig.radius}
+          accent={accent}
+          ink={textColor}
         />
       </AccordionGroup>
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
+import { useShopRole } from '@/features/shop-settings/useShopRole'
 import { getImpersonation } from '@/lib/supportSession'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
 import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
@@ -418,11 +419,26 @@ export function SettingsPage() {
   usePageSeo({ title: 'Paramètres — Bitiko', noindex: true })
   const { data: shop, isLoading } = useMyShop()
   const { section: sectionParam } = useParams<{ section: string }>()
+  const { role: shopRole, isLoading: roleLoading } = useShopRole()
 
-  if (isLoading) return <PageLoader />
+  if (isLoading || roleLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!SECTIONS.some((s) => s.key === sectionParam)) {
     return <Navigate to="/admin/parametres/general" replace />
+  }
+  // Billing + team are owner-only (also hidden from the nav for staff).
+  if ((sectionParam === 'facturation' || sectionParam === 'equipe') && shopRole !== 'owner') {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white px-6 py-12 text-center">
+        <p className="font-heading text-lg font-bold text-gray-900">Réservé au propriétaire</p>
+        <p className="text-sm text-gray-500">
+          Seul le propriétaire de la boutique peut voir cette section.
+        </p>
+        <Link to="/admin" className="mt-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+          Retour au tableau de bord
+        </Link>
+      </div>
+    )
   }
 
   return <SettingsForm key={shop.id} shop={shop} section={sectionParam as SectionKey} />

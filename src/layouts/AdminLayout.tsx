@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { Fragment, Suspense, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
@@ -21,9 +21,12 @@ import {
   Users,
   Wand2,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop, useMyShops } from '@/features/shop-settings/useMyShop'
+import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { getOrderStatusCounts } from '@/services/order.service'
 import { ShopSwitcher } from '@/features/shop-settings/ShopSwitcher'
 import { claimShopInvites } from '@/services/team.service'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
@@ -33,15 +36,39 @@ import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 
-// Flat list, not grouped — Catégories now lives as a tab of Produits and
-// Facturation moved under Paramètres (see settingsSections below), so there
-// are too few top-level items left to justify collapsible groups.
-const visibleNavItems = [
-  { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard' },
-  { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, guide: 'guide-nav-commandes' },
-  { to: '/admin/clients', label: 'Clients', icon: Users },
-  { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
-  { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
+// One "Ventes" group (Commandes + Clients, the daily sales workflow) —
+// everything else stays top-level: with this few items, more groups would
+// just be chrome. Catégories lives as a tab of Produits and Facturation
+// under Paramètres (see settingsSections below).
+interface NavEntry {
+  to: string
+  label: string
+  icon: LucideIcon
+  end?: boolean
+  guide?: string
+  /** Shows the pending+confirmed orders count as a pill (Commandes only). */
+  ordersBadge?: boolean
+}
+
+const NAV_GROUPS: { label?: string; items: NavEntry[] }[] = [
+  {
+    items: [
+      { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard' },
+    ],
+  },
+  {
+    label: 'Ventes',
+    items: [
+      { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, guide: 'guide-nav-commandes', ordersBadge: true },
+      { to: '/admin/clients', label: 'Clients', icon: Users },
+    ],
+  },
+  {
+    items: [
+      { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
+      { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
+    ],
+  },
 ]
 
 const settingsSections = [
@@ -61,6 +88,23 @@ export function AdminLayout() {
   const { data: shop } = useMyShop()
   const { data: shops } = useMyShops()
   const multiShop = (shops?.length ?? 0) > 1
+  // Shared with OrdersPage's own query (same key): the sidebar pill costs
+  // no extra fetch once Commandes has been visited, and vice versa.
+  const { data: orderCounts } = useQuery({
+    queryKey: ['orders-counts', shop?.id],
+    queryFn: () => getOrderStatusCounts(shop!.id),
+    enabled: !!shop?.id,
+  })
+  const ordersToTreat =
+    (orderCounts?.counts.pending ?? 0) + (orderCounts?.counts.confirmed ?? 0)
+  // Billing + team stay owner-only: hide them from managers/vendeurs (RLS
+  // blocks the data anyway; this just avoids dead-end pages). Unknown role
+  // (still loading) keeps everything visible to avoid flicker for owners.
+  const { role: shopRole } = useShopRole()
+  const visibleSettingsSections =
+    shopRole && shopRole !== 'owner'
+      ? settingsSections.filter((s) => s.to !== '/admin/parametres/facturation' && s.to !== '/admin/parametres/equipe')
+      : settingsSections
   const queryClient = useQueryClient()
   // Claim team invites sent to the signed-in user's email (idempotent) —
   // once per admin session, then refresh the workspace scope.
@@ -223,11 +267,25 @@ export function AdminLayout() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {visibleNavItems.map(({ to, label, icon: Icon, end, guide }) => (
-            <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
-              <Icon size={18} aria-hidden />
-              {!collapsed && label}
-            </NavLink>
+          {NAV_GROUPS.map((group) => (
+            <Fragment key={group.label ?? 'main'}>
+              {group.label && !collapsed && (
+                <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                  {group.label}
+                </p>
+              )}
+              {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+                <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
+                  <Icon size={18} aria-hidden />
+                  {!collapsed && label}
+                  {!collapsed && ordersBadge && ordersToTreat > 0 && (
+                    <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                      {ordersToTreat}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </Fragment>
           ))}
 
           <button
@@ -258,7 +316,7 @@ export function AdminLayout() {
           </button>
           {!collapsed && settingsExpanded && (
             <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-              {settingsSections.map(({ to, label, icon: Icon }) => (
+              {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} className={settingsSubLinkClass}>
                   <Icon size={15} aria-hidden />
                   {label}
@@ -332,21 +390,35 @@ export function AdminLayout() {
               </div>
 
               <nav className="flex flex-1 flex-col gap-1 px-3">
-                {visibleNavItems.map(({ to, label, icon: Icon, end, guide }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={end}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                        isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
-                      }`
-                    }
-                    data-guide={guide}
-                  >
-                    <Icon size={18} aria-hidden />
-                    {label}
-                  </NavLink>
+                {NAV_GROUPS.map((group) => (
+                  <Fragment key={group.label ?? 'main'}>
+                    {group.label && (
+                      <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                        {group.label}
+                      </p>
+                    )}
+                    {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                            isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+                          }`
+                        }
+                        data-guide={guide}
+                      >
+                        <Icon size={18} aria-hidden />
+                        {label}
+                        {ordersBadge && ordersToTreat > 0 && (
+                          <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                            {ordersToTreat}
+                          </span>
+                        )}
+                      </NavLink>
+                    ))}
+                  </Fragment>
                 ))}
 
                 <button
@@ -368,7 +440,7 @@ export function AdminLayout() {
                 </button>
                 {settingsExpanded && (
                   <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                    {settingsSections.map(({ to, label, icon: Icon }) => (
+                    {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
                       <NavLink
                         key={to}
                         to={to}

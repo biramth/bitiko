@@ -49,3 +49,23 @@ export async function claimShopInvites(): Promise<string[]> {
   if (error) throw error
   return (data ?? []) as string[]
 }
+
+export type ShopRole = 'owner' | ShopMemberRole
+
+/** The caller's role on a shop (null when signed out). Owner is derived
+ *  from the shop row itself; staff from their claimed membership. */
+export async function getMyShopRole(
+  shop: { id: string; owner_id: string } | null | undefined,
+  userId: string | undefined,
+): Promise<ShopRole | null> {
+  if (!shop || !userId) return null
+  if (shop.owner_id === userId) return 'owner'
+  const { data, error } = await supabase
+    .from('shop_members')
+    .select('role')
+    .eq('shop_id', shop.id)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error || !data) return null
+  return data.role === 'manager' ? 'manager' : 'vendeur'
+}
