@@ -29,7 +29,14 @@ export function SelfAnalytics() {
 
   useEffect(() => {
     if (isBackOffice) return
-    trackPageView({ path: location.pathname + location.search, shopId, userId: user?.id ?? null })
+    // Analytics must never contend with first paint: record once idle.
+    const record = () => trackPageView({ path: location.pathname + location.search, shopId, userId: user?.id ?? null })
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(record, { timeout: 5000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const t = window.setTimeout(record, 2000)
+    return () => window.clearTimeout(t)
   }, [location.pathname, location.search, shopId, isBackOffice, user?.id])
 
   return null

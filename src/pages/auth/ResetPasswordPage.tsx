@@ -8,6 +8,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Lock } from 'lucide-react'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
 
 /**
  * Landing point for the "reset password" email link, which carries a
@@ -81,6 +82,11 @@ export function ResetPasswordPage() {
     }
     setSubmitting(true)
     setError(null)
+    if (await isPasswordBreached(password)) {
+      setSubmitting(false)
+      setError(BREACHED_PASSWORD_MESSAGE)
+      return
+    }
     const { error: updateError } = await updatePassword(password)
     setSubmitting(false)
     if (updateError) {

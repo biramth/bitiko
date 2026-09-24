@@ -1,0 +1,17 @@
+# Bitiko
+
+Bitiko crée des boutiques en ligne pour les commerçants d'Afrique de l'Ouest :
+catalogue, panier, commandes relayées sur WhatsApp, paiement à la livraison
+ou mobile money. Gratuit pour commencer.
+
+- Accueil : https://bitiko.shop/
+- Créer une boutique : https://bitiko.shop/admin/login
+- Tarifs : https://bitiko.shop/#tarifs
+- Fonctionnement : https://bitiko.shop/#marche
+- FAQ : https://bitiko.shop/#faq
+- CGU : https://bitiko.shop/legal/cgu
+- Confidentialité : https://bitiko.shop/legal/confidentialite
+
+Chaque boutique cliente vit sur `<slug>.bitiko.shop` (catalogue, produit,
+panier, commande). Les pages `/admin/*`, `/plateforme/*`, `/panier`,
+`/commande` et `/compte` ne sont pas indexées.

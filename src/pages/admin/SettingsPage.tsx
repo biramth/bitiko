@@ -47,6 +47,7 @@ import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } fr
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
+import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -202,6 +203,12 @@ function AccountSection() {
       return
     }
     setPasswordStatus('saving')
+    if (await isPasswordBreached(newPassword)) {
+      setPasswordStatus('error')
+      setPasswordError(BREACHED_PASSWORD_MESSAGE)
+      toast.error(BREACHED_PASSWORD_MESSAGE)
+      return
+    }
     const { error } = await updatePassword(newPassword)
     if (error) {
       setPasswordStatus('error')
