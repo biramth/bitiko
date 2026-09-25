@@ -81,25 +81,25 @@ function CountUpValue({ target, suffix = '' }: { target: number; suffix?: string
 const features = [
   {
     icon: Store,
-    title: 'Un vrai catalogue qui vend 24h/24',
+    title: 'Catalogue produits & services',
     description:
-      'Photos, prix, catégories, stock — tout est organisé, beau et accessible depuis n\'importe quel téléphone. Tes clients regardent, comparent et commandent la nuit.',
+      'Photos, prix, catégories, stock pour tes produits ; créneaux, tarifs, durée pour tes services. Tout est organisé, beau et accessible depuis n\'importe quel téléphone.',
   },
   {
     icon: MessageCircleMore,
-    title: 'Chaque commande arrive sur ton WhatsApp',
+    title: 'Commandes & réservations sur WhatsApp',
     description:
-      'Pas besoin de downloader une appli. Le client commande en ligne, tu reçois un message formaté avec le nom, les produits, le total, la ville. Tu confirmes en 2 secondes.',
+      'Pas besoin de downloader une appli. Le client commande ou réserve en ligne, tu reçois un message formaté avec le nom, les détails, le total, la ville. Tu confirmes en 2 secondes.',
   },
   {
     icon: Package,
-    title: 'Fini de vendre du stock épuisé',
+    title: 'Stock & planning synchronisés',
     description:
-      'La commande passe → le stock baisse automatiquement. Zéro risque de vendre deux fois le même article. Alerte quand le stock est bas.',
+      'La commande passe → le stock baisse. La réservation se confirme → le créneau se bloque. Zéro risque de vendre deux fois le même article ou de doubler un rendez-vous. Alertes quand le stock est bas.',
   },
   {
     icon: MapPinned,
-    title: 'Livraison selon tes règles',
+    title: 'Livraison & secteurs selon tes règles',
     description:
       'Crée tes secteurs (Dakar, Rufisque, Thiès…) avec tes tarifs. Le client choisit sa ville, le prix s\'applique. Livraison offerte au-dessus d\'un montant — c\'est toi qui décides.',
   },
@@ -111,9 +111,9 @@ const features = [
   },
   {
     icon: Wand2,
-    title: 'Une boutique qui te ressemble',
+    title: 'Une vitrine qui te ressemble',
     description:
-      'Thème, bannière, mise en page — personnalise ta boutique en quelques clics avec l\'éditeur visuel. Aucune compétence technique requise.',
+      'Thème, bannière, mise en page — personnalise ta page publique en quelques clics avec l\'éditeur visuel. Aucune compétence technique requise.',
   },
 ]
 
@@ -183,29 +183,29 @@ const testimonials = [
   {
     quote: 'Je ne note plus rien sur un carnet. La commande arrive sur mon WhatsApp avec tout — nom, produits, total, quartier. Je n\'ai plus qu\'à confirmer.',
     name: 'Fatou Diop',
-    role: 'Boutique de vêtements, Dakar',
+    role: 'Mode & textiles, Dakar',
     plan: 'Pro',
   },
   {
-    quote: 'J\'avais peur que ce soit compliqué. En 20 minutes ma boutique était en ligne avec mes 8 produits. Le lendemain, j\'avais déjà ma première commande.',
+    quote: 'J\'avais peur que ce soit compliqué. En 20 minutes mon espace était en ligne avec mes 8 produits. Le lendemain, j\'avais déjà ma première commande.',
     name: 'Aïssatou Ndiaye',
     role: 'Cosmétiques, Thiès',
     plan: 'Découverte',
   },
   {
-    quote: 'Mes clients me trouvent en ligne, commandent la nuit, et je reçois tout le matin. Ma sœur s\'occupe de la livraison, moi du stock.',
+    quote: 'Mes clientes réservent en ligne, je reçois tout le matin sur WhatsApp. Ma sœur s\'occupe de la livraison, moi du planning.',
     name: 'Modou Fall',
-    role: 'Boutique de quartier, Rufisque',
+    role: 'Coiffure & beauté, Rufisque',
     plan: 'Pro',
   },
 ]
 
 const comparisonRows = [
-  { before: 'Envoyer des photos une par une sur WhatsApp', after: 'Catalogue en ligne avec photos HD, prix et stock' },
-  { before: 'Tenir un carnet de commandes à la main', after: 'Chaque commande est enregistrée et numérotée automatiquement' },
-  { before: 'Vendre du stock épuisé sans le savoir', after: 'Stock synchronisé en temps réel + alertes' },
+  { before: 'Envoyer des photos une par une sur WhatsApp', after: 'Catalogue produits/services en ligne avec photos HD, prix, stock, créneaux' },
+  { before: 'Tenir un carnet de commandes et rendez-vous à la main', after: 'Chaque commande et réservation est enregistrée et numérotée automatiquement' },
+  { before: 'Vendre du stock épuisé / doubler des rendez-vous sans le savoir', after: 'Stock et planning synchronisés en temps réel + alertes' },
   { before: 'Calculer les totaux et frais de livraison à la main', after: 'Total recalculé automatiquement — zéro erreur' },
-  { before: 'Perdre des commandes dans les DMs WhatsApp', after: 'Toutes les commandes triées par statut, claires et archivées' },
+  { before: 'Perdre des commandes et réservations dans les DMs WhatsApp', after: 'Toutes les opérations triées par statut, claires et archivées' },
   { before: 'Demander « t\'es dans quel quartier ? » à chaque client', after: 'Le client choisit sa ville, le tarif s\'applique' },
 ]
 
@@ -213,7 +213,7 @@ const faq = [
   {
     question: 'Est-ce que Bitiko est vraiment gratuit ?',
     answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
+      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir un espace en ligne fonctionnel avec 8 éléments (produits ou services), commandes et réservations sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 éléments ; Pro à 10 000 F débloque les outils avancés et les éléments illimités.',
   },
   {
     question: 'Comment les clients paient-ils ?',
@@ -230,10 +230,10 @@ const faq = [
     answer:
       'Tu définis tes secteurs (par exemple Dakar, Rufisque, Thiès) et le tarif par secteur. À l\'intérieur de chaque secteur, tu listes les villes. Au checkout, le client choisit sa ville et le tarif s\'applique automatiquement. Tu peux aussi activer la livraison gratuite au-delà d\'un certain montant.',
   },
-  {
-    question: 'Qui peut voir ma boutique ?',
+{
+    question: 'Qui peut voir mon espace ?',
     answer:
-      'Avec tous les plans, ta boutique est publique sur son sous-domaine bitiko.shop. La personnalisation de base est disponible gratuitement ; les images de catégories sont disponibles avec Essentiel et Pro, et la marque Bitiko se retire avec Pro.',
+      'Avec tous les plans, ton espace est public sur son sous-domaine bitiko.shop. La personnalisation de base est disponible gratuitement ; les images de catégories sont disponibles avec Essentiel et Pro, et la marque Bitiko se retire avec Pro.',
   },
   {
     question: 'Mes données sont-elles sécurisées ?',
@@ -323,10 +323,10 @@ function SectionEyebrow({ children, light }: { children: string; light?: boolean
 }
 
 const produitLinks = [
-  { label: 'Boutique en ligne', href: '#fonctionnalites', description: 'Catalogue, panier, checkout' },
-  { label: 'Commandes WhatsApp', href: '#fonctionnalites', description: 'Chaque vente arrive sur ton WhatsApp' },
+  { label: 'Espace en ligne', href: '#fonctionnalites', description: 'Catalogue, panier, réservation, checkout' },
+  { label: 'Commandes & réservations WhatsApp', href: '#fonctionnalites', description: 'Chaque vente et résa arrive sur ton WhatsApp' },
   { label: 'Zones de livraison', href: '#fonctionnalites', description: 'Secteurs, villes, tarifs automatiques' },
-  { label: 'Tableau de bord', href: '#fonctionnalites', description: 'Suivi des ventes et du stock' },
+  { label: 'Tableau de bord', href: '#fonctionnalites', description: 'Suivi des ventes, réservations, stock' },
 ]
 
 /* ─────────────────────── Nav ─────────────────────────────── */
@@ -449,23 +449,23 @@ function PhoneMockup() {
             <span className="h-2 w-2 rounded-full bg-white/60" />
           </div>
         </div>
-        {/* Shop header */}
+        {/* Activity header */}
         <div className="border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">B</div>
             <div>
-              <p className="text-xs font-bold text-ink-900">Boutique Chez Fatou</p>
-              <p className="text-[10px] text-ink-700">fatou.bitiko.shop</p>
+              <p className="text-xs font-bold text-ink-900">Salon Awa</p>
+              <p className="text-[10px] text-ink-700">awa.bitiko.shop</p>
             </div>
           </div>
         </div>
         {/* Products */}
         <div className="grid grid-cols-2 gap-2 p-3">
           {[
-            { name: 'Robe wax', price: '12 500 F', color: 'bg-brand-100' },
-            { name: 'Pagne bazin', price: '8 000 F', color: 'bg-ink-100' },
-            { name: 'Sandales', price: '5 500 F', color: 'bg-gold-300' },
-            { name: 'Sac à main', price: '7 000 F', color: 'bg-sand-200' },
+            { name: 'Coupe + Soin', price: '15 000 F', color: 'bg-brand-100' },
+            { name: 'Coloration', price: '12 000 F', color: 'bg-ink-100' },
+            { name: 'Barbe', price: '5 000 F', color: 'bg-gold-300' },
+            { name: 'Soin visage', price: '8 000 F', color: 'bg-sand-200' },
           ].map((p) => (
             <div key={p.name} className="overflow-hidden rounded-xl border border-gray-100">
               <div className={`flex h-20 items-center justify-center ${p.color}`}>
@@ -724,7 +724,7 @@ export function LandingPage() {
               { icon: Clock, target: 2, suffix: ' min', label: 'Mise en ligne' },
               { icon: ShoppingCart, target: 3, suffix: ' clics', label: 'Pour commander' },
               { icon: Wallet, target: 0, suffix: ' F', label: 'Pour commencer' },
-              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Votre boutique vend' },
+              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Votre activité vend' },
             ].map(({ icon: Icon, target, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center">
                 <IconTile icon={Icon} tone="gold" />
@@ -743,7 +743,7 @@ export function LandingPage() {
             <Reveal className="text-center">
               <SectionEyebrow>Le problème</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Pendant que tu gères tes commandes à la main, tes clients sont en ligne.
+                Pendant que tu gères ton activité à la main, tes clients sont en ligne.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Chaque matin tu reçois des dizaines de messages. Tu dois tout noter, calculer les totaux, garder en mémoire qui a payé. Il y a mieux.
@@ -751,14 +751,14 @@ export function LandingPage() {
             </Reveal>
             <div className="grid gap-8 lg:grid-cols-2">
               <Reveal className="rounded-2xl border border-red-200 bg-red-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-red-500">Vendre sans Bitiko</p>
+                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-red-500">Gérer sans Bitiko</p>
                 <ul className="space-y-3.5">
                   {[
                     'Envoyer des photos un par un sur WhatsApp — le client perd patience',
-                    'Noter les commandes sur un carnet — des erreurs, des oublis',
+                    'Noter les commandes et rendez-vous sur un carnet — des erreurs, des oublis',
                     'Calculer les totaux à la main — tu te trompes, le client se plaint',
-                    'Vendre un article que tu n\'as plus en stock',
-                    'Perdre des commandes dans la masse de messages',
+                    'Vendre un article que tu n\'as plus en stock / doubler un rendez-vous',
+                    'Perdre des commandes et réservations dans la masse de messages',
                     'Demander « tu es dans quel quartier ? » à chaque client',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3 text-sm font-medium text-ink-700/80">
@@ -768,15 +768,15 @@ export function LandingPage() {
                 </ul>
               </Reveal>
               <Reveal delay={120} className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-emerald-600">Vendre avec Bitiko</p>
+                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-emerald-600">Gérer avec Bitiko</p>
                 <ul className="space-y-3.5">
                   {[
-                    'Un vrai catalogue en ligne — ton client voit, compare, commande à 23h',
-                    'La commande arrive sur ton WhatsApp formatée : nom, produits, total',
-                    'Stock mis à jour automatiquement — plus de vente d\'articles épuisés',
+                    'Un vrai catalogue en ligne — ton client voit, compare, commande ou réserve à 23h',
+                    'La commande ou la réservation arrive sur ton WhatsApp formatée : nom, détails, total',
+                    'Stock et planning mis à jour automatiquement — plus de double réservation ni rupture',
                     'Secteurs et villes avec tarifs — le client choisit, le prix s\'applique',
-                    'Dashboard des ventes — tu vois tout sans ouvrir un carnet',
-                    'Lien à partager sur WhatsApp, Facebook, Instagram — la boutique vit 24h/24',
+                    'Dashboard unifié — tu vois ventes, rendez-vous, stock sans ouvrir un carnet',
+                    'Lien à partager sur WhatsApp, Facebook, Instagram — ton activité vit 24h/24',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
@@ -797,11 +797,11 @@ export function LandingPage() {
             <Reveal className="text-center">
               <SectionEyebrow>Fonctionnalités</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Tout ce qu'il faut pour vendre en ligne.
+                Tout ce qu'il faut pour ton activité.
                 <span className="block mt-1 text-brand-600">Rien de plus.</span>
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Chaque fonctionnalité existe parce qu'un commerçant en avait besoin. Pas de superflu, pas de compliqué.
+                Chaque fonctionnalité existe parce qu'un commerçant ou un prestataire en avait besoin. Pas de superflu, pas de compliqué.
               </p>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -822,19 +822,19 @@ export function LandingPage() {
         <section className="border-b border-sand-200 bg-white">
           <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Commande sur WhatsApp</SectionEyebrow>
+              <SectionEyebrow>Commandes & réservations sur WhatsApp</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Le client commande en ligne. Tu reçois tout sur WhatsApp.
+                Le client commande ou réserve en ligne. Tu reçois tout sur WhatsApp.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Zéro appli à télécharger, zéro dashboard à apprendre. Si tu sais lire un message WhatsApp, tu sais gérer tes commandes Bitiko.
+                Zéro appli à télécharger, zéro dashboard à apprendre. Si tu sais lire un message WhatsApp, tu sais gérer ton activité Bitiko.
               </p>
             </Reveal>
             <div className="grid gap-8 sm:grid-cols-3 sm:items-start">
               {[
-                { step: '1', title: 'Le client choisit ses produits', desc: 'Il parcourt ton catalogue, ajoute au panier, choisit sa ville et son mode de paiement.' },
-                { step: '2', title: 'La commande est enregistrée', desc: 'Stock décrémenté, frais de livraison calculés, total validé — tout se passe côté serveur en 1 seconde.' },
-                { step: '3', title: 'Tu reçois le message', desc: 'Un message formaté sur WhatsApp avec le nom, les produits, le total, la ville. Tu confirmes en répondant "OK".' },
+                { step: '1', title: 'Le client choisit', desc: 'Il parcourt ton catalogue, ajoute au panier ou réserve un créneau, choisit sa ville et son mode de paiement.' },
+                { step: '2', title: 'L\'opération est enregistrée', desc: 'Stock décrémenté ou créneau bloqué, frais calculés, total validé — tout côté serveur en 1 seconde.' },
+                { step: '3', title: 'Tu reçois le message', desc: 'Un message formaté sur WhatsApp avec le nom, les détails, le total, la ville. Tu confirmes en répondant "OK".' },
               ].map(({ step, title, desc }, i) => (
                 <Reveal key={step} delay={i * 120} className="relative text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-lg font-bold text-white shadow-md">{step}</div>
@@ -847,24 +847,23 @@ export function LandingPage() {
             <Reveal delay={200} className="mx-auto mt-12 max-w-sm overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50 shadow-md">
               <div className="flex items-center gap-2 bg-emerald-600 px-4 py-2.5">
                 <Phone size={14} className="text-white" />
-                <span className="text-xs font-bold text-white">Nouvelle commande — Boutique Chez Fatou</span>
+                <span className="text-xs font-bold text-white">Nouvelle activité — Salon Awa</span>
               </div>
               <div className="p-4">
                 <div className="rounded-xl bg-white p-3 shadow-sm">
                   <p className="text-xs leading-relaxed text-ink-900">
-                    🛒 <strong>Nouvelle commande #0017</strong><br />
+                    📅 <strong>Nouvelle réservation #0042</strong><br />
                     👤 Awa Mbaye — 77 123 45 67<br />
                     📍 Parcelles Assainies, Dakar<br />
                     ━━━━━━━━━━━━━━<br />
-                    2× Robe wax dentelle — 25 000 F<br />
-                    1× Sandales cuir — 5 500 F<br />
+                    Coupe + Soin — 15 000 F<br />
+                    Samedi 14h30 — 45 min<br />
                     ━━━━━━━━━━━━━━<br />
-                    📦 Livraison (Rufisque) — 2 000 F<br />
-                    💰 <strong>Total — 32 500 F</strong><br />
-                    💳 Paiement — Espèces à la livraison
+                    💰 <strong>Total — 15 000 F</strong><br />
+                    💳 Paiement — Wave
                   </p>
                 </div>
-                <p className="mt-2 text-[10px] text-emerald-700/60">Message reçu par le commerçant sur WhatsApp</p>
+                <p className="mt-2 text-[10px] text-emerald-700/60">Message reçu par le prestataire sur WhatsApp</p>
               </div>
             </Reveal>
           </div>
@@ -1014,9 +1013,9 @@ export function LandingPage() {
                   <div className="my-6 h-px w-full bg-sand-100" />
                   <ul className="space-y-3">
                     {[
-                      'Boutique en ligne complète',
+                      'Vitrine en ligne complète',
                       'Commandes et réservations sur WhatsApp',
-                      'Jusqu’à 8 produits actifs',
+                      'Jusqu\'à 8 éléments actifs (produits ou services)',
                       'Livraison par secteurs & villes',
                       'Espace client mobile-first',
                       '1 utilisateur',
@@ -1043,7 +1042,7 @@ export function LandingPage() {
                   {promo?.plan === 'essential' && (
                     <p className="mt-1 text-center text-xs font-medium text-brand-700">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
                   )}
-                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour structurer sa boutique.</p>
+                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour structurer son activité.</p>
                   <div className="my-6 h-px w-full bg-brand-100" />
                   <ul className="space-y-3">
                     {['Tout le plan Découverte, plus :', 'Jusqu’à 50 produits actifs', 'Builder complet et pages personnalisées', 'Images de catégories et promotions', 'Analytics standard et import CSV'].map((f, i) => (
@@ -1067,7 +1066,7 @@ export function LandingPage() {
                   {promo?.plan === 'pro' && (
                     <p className="mt-1 text-center text-xs font-medium text-gold-300">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
                   )}
-                  <p className="mt-2 text-center text-sm text-white/70">Pour les boutiques qui tournent.</p>
+                  <p className="mt-2 text-center text-sm text-white/70">Pour les activités qui tournent.</p>
                   <div className="my-6 h-px w-full bg-white/20" />
                   <ul className="space-y-3">
                     {[
@@ -1142,17 +1141,17 @@ export function LandingPage() {
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Solution</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Catalogue & services</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Commandes & réservations WhatsApp</a></li>
               <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Dashboard d'activité</a></li>
             </ul>
           </div>
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Bitiko</p>
             <ul className="flex flex-col gap-2.5">
               <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Connexion</Link></li>
-              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
+              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Créer mon espace</Link></li>
               <li><a href="#tarifs" className="text-ink-700 transition-colors hover:text-ink-900">Tarifs</a></li>
               <li><a href="#faq" className="text-ink-700 transition-colors hover:text-ink-900">FAQ</a></li>
               <li>
@@ -1180,7 +1179,7 @@ export function LandingPage() {
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Ressources</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#solutions" className="text-ink-700 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
+              <li><a href="#solutions" className="text-ink-700 transition-colors hover:text-ink-900">Pour chaque activité</a></li>
               <li><a href="#marche" className="text-ink-700 transition-colors hover:text-ink-900">Comment ça marche</a></li>
               <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
             </ul>
