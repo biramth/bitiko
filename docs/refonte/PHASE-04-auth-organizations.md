@@ -1,9 +1,9 @@
 # PHASE 04 — Auth + Organizations + Memberships
 
-> État : 🟨 EN COURS — design rédigé, en attente de validation décideur ; migrations NON exécutées.
-> Dossier de validation : [PHASE-04-DESIGN.md](PHASE-04-DESIGN.md) (état actuel A, cible B,
-> migration prévue C, risques/tests D).
-> Journal : 2026-09-25 — état des lieux (lecteurs `owner_id`/`shop_members`, drift dev) + design rédigé.
+> État : ✅ TERMINÉ — 2026-09-25 (DEV uniquement, prod non touchée).
+> Dossier de validation : [PHASE-04-DESIGN.md](PHASE-04-DESIGN.md).
+> Journal : 2026-09-25 — design validé en continu (mode automatique) ; migrations 0099+0100
+> appliquées sur dev ; livrable ci-dessous.
 
 ## Objectif
 
@@ -29,10 +29,34 @@ en **cohabitation** avec `shops`/`shop_members` (décision de nommage et de lien
    `Authentication → Organization Context → Permission` avant toute logique (convention PHASE-02).
 4. Séparer permissions Business vs Platform Admin (jamais de rôle mixte implicite).
 
-## Interdits
+## Livrable PHASE 4 COMPLETE (2026-09-25, DEV `tlqgcmbdethmhqrablcy`)
 
-- Pas de suppression de `shop_members`/`shops.owner_id`, pas de réécriture des RLS existantes :
-  ajout de policies pour les nouvelles relations uniquement, tests ALLOW/DENY comme en PHASE-03.
+1. Tables créées : `organizations`, `organization_members`, `permissions`, `role_permissions`
+   (+ trigger `updated_at` sur organizations). Zéro table existante modifiée.
+2. Migrations effectuées : `0099_organizations_foundation.sql` + `0100_cleanup_duplicate_org_index.sql`
+   appliquées sur DEV (historique `0099|0099`, `0100|0100` ✅). Prod non touchée.
+3. Relations : FK cascade (membres→orga, mappings→permissions), `shops.organization_id` FK RESTRICT
+   + index `shops_organization_id_idx` ; index `user_id`/`organization_id` sur membres.
+4. Index : voir §3 ; doublon prototype (`shops_organization_idx`) supprimé via 0100.
+5. RLS : activée sur les 4 tables (vérifié effectif).
+6. Policies : `organizations: member read`, `organization_members: member read`
+   (via `organization_role()`, sans récursion), `permissions`/`role_permissions: public read`
+   (vérifié effectif) ; **zéro écriture client** (refus par défaut-deny).
+7. Fonctions ajoutées : `organization_role(uuid)` (DEFINER, `search_path` fixe, grants
+   anon+authenticated **volontaires et load-bearing** — comme `shop_role()`, ne retourne que le
+   rôle du caller). Supprimées (validé) : 4 fonctions pirates + 2 triggers pirates sur `shops`
+   (dont un BEFORE INSERT qui aurait cassé toute création de boutique).
+8. Compatibilité legacy : `shops.owner_id`, `shop_members`, toutes policies/fonctions existantes
+   intacts (`db diff` prospectif : ajouts seuls) ; vitest 138/138 + `tsc` verts ; dev : 0 orga
+   (0 shop → backfill no-op vérifié).
+9. Tests créés : vérifications catalogue (requêtes) ; industrialisation en PHASE-16.
+10. Tests exécutés : tables/RLS/policies/grants/seed (14 permissions, 28 mappings owner+admin),
+    backfill, advisors (plus aucun finding nouveau : reste `organization_role`, documenté accepté).
+11. Résultats : tous verts.
+12. Risques restants : création/invitation d'orga sans flux (RPC en P06) ; rôles custom reportés ;
+    mappings manager/staff en P06 ; colonnes publiques sensibles (`payment_instructions`) en P06/P15.
+13. Fichiers modifiés : `supabase/migrations/0099*`, `0100*` (créés) + `docs/refonte/`. Zéro code applicatif.
+14. Prochaine phase recommandée : PHASE-05 (activation types/capabilities + compat `business_type`).
 
 ## Critères de sortie
 

@@ -49,7 +49,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 01 | [Audit validé contre le code réel](PHASE-01-audit.md) | Confronter l'audit au réel : migrations, tables, RLS, `shop_id`, `business_type`, plans, Wave, routes, frontend | — | ✅ TERMINÉ — 2026-09-25 |
 | 02 | [Architecture cible](PHASE-02-architecture.md) | Figer l'architecture cible et les décisions (docs `/architecture`, `/security`, …) | 01 | ✅ TERMINÉ — 2026-09-25 |
 | 03 | [Database Foundation](PHASE-03-database-foundation.md) | Créer `business_types`, `capabilities`, `business_type_capabilities` (+ audit-logging minimal), sans casser l'existant | 01, 02 | ✅ TERMINÉ — 2026-09-25 (DEV) |
-| 04 | [Auth + Organizations + Memberships](PHASE-04-auth-organizations.md) | Modèle `USER → ORGANIZATION → MEMBERSHIP → ROLES`, coexistence avec `shops`/`shop_members` | 03 | 🟨 EN COURS — design en validation, migrations non exécutées |
+| 04 | [Auth + Organizations + Memberships](PHASE-04-auth-organizations.md) | Modèle `USER → ORGANIZATION → MEMBERSHIP → ROLES`, coexistence avec `shops`/`shop_members` | 03 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 05 | [Business Types + Capabilities (activation)](PHASE-05-business-types.md) | Seed des types/capabilities, couche de compat avec `shops.business_type`, exposition Platform | 03, 04 | ⬜ NON DÉMARRÉ |
 | 06 | [Business Workspace](PHASE-06-workspace.md) | Dashboard généré depuis `Business Type + Capabilities + Entitlements + Modules` | 05 | ⬜ NON DÉMARRÉ |
 | 07 | [Storefront engine](PHASE-07-storefront.md) | Moteur `Store → Pages → Sections → Blocks`, storefront allégé séparé du workspace | 04, 05 | ⬜ NON DÉMARRÉ |
