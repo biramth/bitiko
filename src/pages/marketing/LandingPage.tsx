@@ -128,7 +128,7 @@ const shopCategories = [
 const solutions = [
   {
     icon: Shirt,
-    gradient: 'from-rose-400 to-rose-600 shadow-rose-900/15',
+    gradient: 'bg-rose-500/[0.08] text-rose-600 ring-rose-600/15',
     title: 'Mode & textiles',
     description:
       'Robes, pagnes, chaussures — chaque produit a ses photos, son prix, sa taille. Le client ne te pose plus 10 fois les mêmes questions sur WhatsApp.',
@@ -136,7 +136,7 @@ const solutions = [
   },
   {
     icon: ChefHat,
-    gradient: 'from-amber-400 to-orange-600 shadow-orange-900/15',
+    gradient: 'bg-orange-500/[0.08] text-orange-600 ring-orange-600/15',
     title: 'Restauration & livraison',
     description:
       'Le client choisit son quartier, sa ville, valide son menu. Tu reçois la commande formatée, tu prépares, tu livres. Simple.',
@@ -144,7 +144,7 @@ const solutions = [
   },
   {
     icon: Sparkles,
-    gradient: 'from-fuchsia-400 to-purple-600 shadow-purple-900/15',
+    gradient: 'bg-fuchsia-500/[0.08] text-fuchsia-700 ring-fuchsia-600/15',
     title: 'Beauté & cosmétiques',
     description:
       'Tes produits se vendent la nuit — toi tu dors. Le matin, tu lis tes commandes et tu organises les livraisons. Stock toujours à jour.',
@@ -152,7 +152,7 @@ const solutions = [
   },
   {
     icon: Palette,
-    gradient: 'from-teal-400 to-emerald-600 shadow-emerald-900/15',
+    gradient: 'bg-teal-600/[0.08] text-teal-700 ring-teal-600/15',
     title: 'Artisanat & créations',
     description:
       'Chaque pièce est unique. Bitiko lui donne une vitrine à la hauteur — photos HD, description, stock. Paiement à la livraison pour les pièces de confiance.',
