@@ -1,8 +1,9 @@
 # PHASE 03 — Database Foundation (business_types + capabilities)
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : —
-> Pré-requis : PHASE-01 ✅, PHASE-02 ✅. **Objectif immédiat après ces deux phases.**
+> État : 🟨 EN COURS — design rédigé, en attente de validation décideur ; migrations NON exécutées.
+> Dossier de validation : [PHASE-03-DESIGN.md](PHASE-03-DESIGN.md) (modèle actuel A, cible B,
+> migrations prévues C, risques/tests D).
+> Journal : 2026-09-25 — design A/B/C/D rédigé après audit colonnes `shops` et dépendances.
 
 ## Objectif
 
