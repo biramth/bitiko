@@ -22,6 +22,13 @@ export type CoreSectionType =
   | 'checkout'
   | 'flexible'
   | 'testimonials'
+  // Service sections
+  | 'services'
+  | 'featured_services'
+  | 'appointments'
+  | 'team'
+  | 'reservations'
+  | 'menu'
 
 /** Section types a specific template contributes on top of the core set
  *  (see `TEMPLATE_EXTRA_SECTIONS` in `features/store-builder/templateSections.ts`).
@@ -332,6 +339,53 @@ export interface TestimonialsSectionConfig {
   headingStyle?: TextStyleOverride
 }
 
+// ── Service section configs (PHASE-07+) ──
+
+export interface ServicesSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
+  sort: 'manual' | 'price_asc' | 'price_desc' | 'duration_asc' | 'duration_desc'
+  limit: number
+  enableFilters?: boolean
+}
+
+export interface FeaturedServicesSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
+  serviceIds: string[]
+}
+
+export interface AppointmentsSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showTeam: boolean
+  defaultDuration: number // minutes
+}
+
+export interface TeamSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout: 'grid' | 'list' | 'carousel'
+}
+
+export interface ReservationsSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showAvailability: boolean
+}
+
+export interface MenuSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showPrices: boolean
+  showAllergens: boolean
+  layout?: GridLayout
+  limit?: number
+  sort?: 'manual' | 'price_asc' | 'price_desc' | 'recent'
+}
+
 export type SectionConfigMap = {
   announcement: AnnouncementBarSectionConfig
   header: HeaderSectionConfig
@@ -350,6 +404,13 @@ export type SectionConfigMap = {
   lookbook: LookbookSectionConfig
   flexible: FlexibleSectionConfig
   testimonials: TestimonialsSectionConfig
+  // Service sections
+  services: ServicesSectionConfig
+  featured_services: FeaturedServicesSectionConfig
+  appointments: AppointmentsSectionConfig
+  team: TeamSectionConfig
+  reservations: ReservationsSectionConfig
+  menu: MenuSectionConfig
 }
 
 export type LayoutSection = {

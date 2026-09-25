@@ -1,52 +1,69 @@
 import {
   BellRing,
   Blocks,
+  BookOpen,
+  Calendar,
+  CreditCard,
+  HelpCircle,
   Image as ImageIcon,
   LayoutTemplate,
   Megaphone,
+  PackageSearch,
   PanelBottom,
   PanelTop,
+  Quote,
+  Scissors,
   ShoppingBag,
   ShoppingCart,
-  PackageSearch,
-  CreditCard,
-  HelpCircle,
-  Quote,
   Star,
   Tags,
   Type,
+  Users,
+  UtensilsCrossed,
 } from 'lucide-react'
 import { createSectionId } from '@/config/defaultLayout'
 import type {
   AnnouncementBarSectionConfig,
+  AppointmentsSectionConfig,
   CategoriesSectionConfig,
   CartSectionConfig,
   CheckoutSectionConfig,
   CoreSectionType,
   FeaturedProductsSectionConfig,
+  FeaturedServicesSectionConfig,
   FlexibleSectionConfig,
   FooterSectionConfig,
   HeaderSectionConfig,
   HeroSectionConfig,
   ImageSectionConfig,
   LayoutSection,
+  MenuSectionConfig,
   ProductSectionConfig,
   PromoSectionConfig,
   ProductsSectionConfig,
+  ReservationsSectionConfig,
   SectionType,
+  ServicesSectionConfig,
+  TeamSectionConfig,
   TextSectionConfig,
   TestimonialsSectionConfig,
   FaqSectionConfig,
 } from '@/types/builder'
 import { AnnouncementBarEditor } from './sections/AnnouncementBarEditor'
+import { AppointmentsEditor, AppointmentsRenderer } from './sections/AppointmentsSection'
 import { CategoriesEditor, CategoriesRenderer } from './sections/CategoriesSection'
 import { FeaturedProductsEditor, FeaturedProductsRenderer } from './sections/FeaturedProductsSection'
+import { FeaturedServicesEditor, FeaturedServicesRenderer } from './sections/FeaturedServicesSection'
 import { FlexibleEditor, FlexibleRenderer } from './sections/FlexibleSection'
 import { FooterEditor, HeaderEditor } from './sections/HeaderFooterEditors'
 import { HeroEditor, HeroRenderer } from './sections/HeroSection'
 import { ImageEditor, ImageRenderer } from './sections/ImageSection'
+import { MenuEditor, MenuRenderer } from './sections/MenuSection'
 import { PromoEditor, PromoRenderer } from './sections/PromoSection'
 import { ProductsEditor, ProductsRenderer } from './sections/ProductsSection'
+import { ReservationsEditor, ReservationsRenderer } from './sections/ReservationsSection'
+import { ServicesEditor, ServicesRenderer } from './sections/ServicesSection'
+import { TeamEditor, TeamRenderer } from './sections/TeamSection'
 import { TextEditor, TextRenderer } from './sections/TextSection'
 import { ProductEditor, ProductRenderer } from './sections/ProductSection'
 import { CartEditor, CartRenderer } from './sections/CartSection'
@@ -64,12 +81,14 @@ export interface SectionDefinition {
    *  distinct identity at a glance instead of one flat gray icon for everything. */
   color: string
   /** Groups blocks in the "add block" picker (Shopify-style categories). */
-  category: 'content' | 'commerce'
+  category: 'content' | 'commerce' | 'services'
   /** Body sections can be added freely by the merchant; header/footer are fixed, one-per-shop. */
   pinned: boolean
   /** At most one instance per page — adding a second (e.g. two "Fiche produit"
    *  blocks) would just duplicate the same dynamic content, not add variety. */
   singleton?: boolean
+  /** Capabilities required to display this section (PHASE-07+). Empty = always visible. */
+  capabilities?: string[]
   createDefault: () => LayoutSection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Editor: React.ComponentType<SectionEditorProps<any>>
@@ -97,6 +116,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-amber-500 to-amber-700',
     category: 'content',
     pinned: true,
+    capabilities: [],
     createDefault: () => ({
       id: createSectionId('announcement'),
       type: 'announcement',
@@ -112,6 +132,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-slate-500 to-slate-700',
     category: 'content',
     pinned: true,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('header'),
       type: 'header',
@@ -127,6 +148,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-brand-500 to-brand-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('hero'),
       type: 'hero',
@@ -143,6 +165,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-blue-500 to-blue-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('text'),
       type: 'text',
@@ -159,6 +182,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-purple-500 to-purple-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('image'),
       type: 'image',
@@ -175,6 +199,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-teal-500 to-teal-700',
     category: 'commerce',
     pinned: false,
+    capabilities: ['HAS_PRODUCTS'],
     createDefault: () => ({
       id: createSectionId('categories'),
       type: 'categories',
@@ -191,6 +216,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-gold-400 to-gold-600',
     category: 'commerce',
     pinned: false,
+    capabilities: ['HAS_PRODUCTS'],
     createDefault: () => ({
       id: createSectionId('products'),
       type: 'products',
@@ -207,6 +233,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-rose-400 to-rose-600',
     category: 'commerce',
     pinned: false,
+    capabilities: ['HAS_PRODUCTS'],
     createDefault: () => ({
       id: createSectionId('featured_products'),
       type: 'featured_products',
@@ -223,6 +250,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-red-500 to-red-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_PROMOTIONS'],
     createDefault: () => ({
       id: createSectionId('promo'),
       type: 'promo',
@@ -245,6 +273,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-cyan-500 to-cyan-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('faq'),
       type: 'faq',
@@ -264,6 +293,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-amber-400 to-amber-600',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_REVIEWS'],
     createDefault: () => ({
       id: createSectionId('testimonials'),
       type: 'testimonials',
@@ -280,6 +310,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-violet-500 to-violet-700',
     category: 'content',
     pinned: false,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('flexible'),
       type: 'flexible',
@@ -296,6 +327,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     color: 'from-slate-500 to-slate-700',
     category: 'content',
     pinned: true,
+    capabilities: ['HAS_SHOP'],
     createDefault: () => ({
       id: createSectionId('footer'),
       type: 'footer',
@@ -318,6 +350,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     category: 'commerce',
     pinned: false,
     singleton: true,
+    capabilities: ['HAS_PRODUCTS'],
     createDefault: () => ({
       id: createSectionId('product'),
       type: 'product',
@@ -346,6 +379,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     category: 'commerce',
     pinned: false,
     singleton: true,
+    capabilities: ['HAS_PRODUCTS', 'HAS_ORDERS'],
     createDefault: () => ({
       id: createSectionId('cart'),
       type: 'cart',
@@ -363,6 +397,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     category: 'commerce',
     pinned: false,
     singleton: true,
+    capabilities: ['HAS_PRODUCTS', 'HAS_ORDERS'],
     createDefault: () => ({
       id: createSectionId('checkout'),
       type: 'checkout',
@@ -371,6 +406,111 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     }),
     Editor: CheckoutEditor,
     Renderer: CheckoutRenderer,
+  },
+  // ── Service sections (require HAS_SERVICES / HAS_APPOINTMENTS etc.) ──
+  services: {
+    label: 'Services / Prestations',
+    description: 'Vos prestations avec durée, tarif et description — pour coiffeurs, artisans, consultants.',
+    icon: Scissors,
+    color: 'from-sky-500 to-sky-700',
+    category: 'services',
+    pinned: false,
+    capabilities: ['HAS_SERVICES'],
+    createDefault: () => ({
+      id: createSectionId('services'),
+      type: 'services',
+      visible: true,
+      config: { heading: 'Nos prestations', sort: 'manual', limit: 12 } satisfies ServicesSectionConfig,
+    }),
+    Editor: ServicesEditor,
+    Renderer: ServicesRenderer,
+  },
+  featured_services: {
+    label: 'Services mis en avant',
+    description: 'Une sélection de vos meilleures prestations — coupes signature, forfaits…',
+    icon: Star,
+    color: 'from-rose-400 to-rose-600',
+    category: 'services',
+    pinned: false,
+    capabilities: ['HAS_SERVICES'],
+    createDefault: () => ({
+      id: createSectionId('featured_services'),
+      type: 'featured_services',
+      visible: true,
+      config: { heading: 'Nos coups de cœur', serviceIds: [] } satisfies FeaturedServicesSectionConfig,
+    }),
+    Editor: FeaturedServicesEditor,
+    Renderer: FeaturedServicesRenderer,
+  },
+  appointments: {
+    label: 'Prise de rendez-vous',
+    description: 'Calendrier interactif pour que vos clientes réservent leurs créneaux (coiffure, soins, consultations).',
+    icon: Calendar,
+    color: 'from-emerald-500 to-emerald-700',
+    category: 'services',
+    pinned: false,
+    singleton: true,
+    capabilities: ['HAS_APPOINTMENTS', 'HAS_CALENDAR'],
+    createDefault: () => ({
+      id: createSectionId('appointments'),
+      type: 'appointments',
+      visible: true,
+      config: { heading: 'Réserver', showTeam: true, defaultDuration: 30 } satisfies AppointmentsSectionConfig,
+    }),
+    Editor: AppointmentsEditor,
+    Renderer: AppointmentsRenderer,
+  },
+  team: {
+    label: 'Équipe',
+    description: 'Présentez vos collaborateurs — coiffeurs, serveurs, artisans — avec photo, spécialité et disponibilités.',
+    icon: Users,
+    color: 'from-amber-500 to-amber-700',
+    category: 'services',
+    pinned: false,
+    capabilities: ['HAS_TEAM'],
+    createDefault: () => ({
+      id: createSectionId('team'),
+      type: 'team',
+      visible: true,
+      config: { heading: 'Notre équipe', layout: 'grid' } satisfies TeamSectionConfig,
+    }),
+    Editor: TeamEditor,
+    Renderer: TeamRenderer,
+  },
+  reservations: {
+    label: 'Réservations',
+    description: 'Réservation de tables, places ou créneaux (restaurant, atelier, événement).',
+    icon: BookOpen,
+    color: 'from-orange-500 to-orange-700',
+    category: 'services',
+    pinned: false,
+    singleton: true,
+    capabilities: ['HAS_RESERVATIONS'],
+    createDefault: () => ({
+      id: createSectionId('reservations'),
+      type: 'reservations',
+      visible: true,
+      config: { heading: 'Réserver une table', showAvailability: true } satisfies ReservationsSectionConfig,
+    }),
+    Editor: ReservationsEditor,
+    Renderer: ReservationsRenderer,
+  },
+  menu: {
+    label: 'Menu / Carte',
+    description: 'Votre carte restaurant ou menu de prestations — plats, boissons, formules, allergènes.',
+    icon: UtensilsCrossed,
+    color: 'from-lime-500 to-lime-700',
+    category: 'services',
+    pinned: false,
+    capabilities: ['HAS_SERVICES', 'HAS_PRODUCTS'],
+    createDefault: () => ({
+      id: createSectionId('menu'),
+      type: 'menu',
+      visible: true,
+      config: { heading: 'Notre carte', showPrices: true, showAllergens: true } satisfies MenuSectionConfig,
+    }),
+    Editor: MenuEditor,
+    Renderer: MenuRenderer,
   },
 }
 

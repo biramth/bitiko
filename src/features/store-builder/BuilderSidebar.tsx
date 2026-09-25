@@ -20,7 +20,7 @@ function SectionIcon({ type, registry, size = 'sm' }: { type: SectionType; regis
   )
 }
 
-const CATEGORY_LABELS = { content: 'Contenu', commerce: 'Commerce' } as const
+const CATEGORY_LABELS = { content: 'Contenu', commerce: 'Commerce', services: 'Services' } as const
 
 export function BuilderSidebar({
   sections,
@@ -86,7 +86,7 @@ export function BuilderSidebar({
     const def = registry[type]
     return !!def && !(def.singleton && presentTypes.has(type))
   })
-  const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
+  const groupedAddable: Record<'content' | 'commerce' | 'services', SectionType[]> = { content: [], commerce: [], services: [] }
   for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
 
   // Content blocks (Bannière, Texte, Image, Promotion, FAQ…) are the
@@ -212,7 +212,7 @@ export function BuilderSidebar({
             </button>
             {addMenuOpen && (
               <div className="absolute left-0 right-0 z-20 mt-1.5 max-h-[22rem] overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
-                {(['commerce', 'content'] as const).map((cat) =>
+                {(['commerce', 'content', 'services'] as const).map((cat) =>
                   groupedAddable[cat].length === 0 ? null : (
                     <div key={cat} className="mb-1 last:mb-0">
                       <div className="flex items-center justify-between gap-2 px-2 pb-1 pt-1.5">
