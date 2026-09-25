@@ -36,7 +36,6 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
-import { IconTile } from '@/components/ui/IconTile'
 import { TemplateThumbnail } from '@/features/store-builder/TemplateThumbnail'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -75,14 +74,6 @@ const STEPS: { number: number; label: string; icon: LucideIcon }[] = [
   { number: 5, label: 'Récap', icon: ClipboardCheck },
 ]
 
-const STEP_TONES: Record<number, 'brand' | 'dark' | 'gold'> = {
-  1: 'brand',
-  2: 'dark',
-  3: 'gold',
-  4: 'brand',
-  5: 'dark',
-}
-
 const STEP_SUBTITLES: Record<number, string> = {
   1: 'Nom, adresse et WhatsApp — l’essentiel pour exister.',
   2: 'Ce que tu vends et comment tu vends.',
@@ -91,18 +82,18 @@ const STEP_SUBTITLES: Record<number, string> = {
   5: 'Un dernier coup d’œil avant le lancement.',
 }
 
-/** Icon-led step header reusing the landing's gradient tile treatment. */
+/** Compact step title: the step icon inline with the step name. */
 function StepHeader({ step }: { step: number }) {
   const meta = STEPS[step - 1]
   if (!meta) return null
   const StepIcon = meta.icon
   return (
-    <div className="flex items-center gap-3">
-      <IconTile icon={StepIcon} tone={STEP_TONES[step] ?? 'brand'} />
-      <div>
-        <p className="font-heading text-base font-bold text-ink-900">{meta.label}</p>
-        <p className="text-xs text-gray-500">{STEP_SUBTITLES[step]}</p>
-      </div>
+    <div>
+      <p className="flex items-center gap-2 font-heading text-base font-bold text-ink-900">
+        <StepIcon size={17} className="shrink-0 text-brand-600" aria-hidden />
+        {meta.label}
+      </p>
+      <p className="mt-0.5 text-xs text-gray-500">{STEP_SUBTITLES[step]}</p>
     </div>
   )
 }
@@ -412,32 +403,38 @@ export function OnboardingPage() {
           </p>
         </div>
 
-        <div className="mb-3 flex items-center justify-center">
+        <div className="mb-2 flex items-start justify-center">
           {STEPS.map((s, i) => {
             const StepIcon = s.icon
             const done = step > s.number
             const active = step === s.number
             return (
-              <div key={s.number} className="flex items-center" title={s.label}>
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    active
-                      ? 'bg-brand-600 text-white'
-                      : done
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gray-100 text-gray-400'
-                  }`}
-                >
-                  {done ? <Check size={14} className="text-white" /> : <StepIcon size={14} aria-hidden />}
+              <div key={s.number} className="flex items-start">
+                <div className="flex w-12 flex-col items-center gap-1 sm:w-16">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      active
+                        ? 'bg-brand-600 text-white'
+                        : done
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {done ? <Check size={14} className="text-white" /> : <StepIcon size={14} aria-hidden />}
+                  </div>
+                  <span
+                    className={`text-center text-[10px] font-medium leading-tight ${
+                      active ? 'text-ink-900' : done ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
+                    {s.label}
+                  </span>
                 </div>
-                {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 shrink-0 bg-gray-200 sm:w-6" />}
+                {i < STEPS.length - 1 && <span className="mx-0.5 mt-4 h-px w-4 shrink-0 bg-gray-200 sm:w-8" />}
               </div>
             )
           })}
         </div>
-        <p className="mb-8 text-center text-xs font-medium text-gray-400">
-          Étape {step} sur {STEPS.length} — <span className="text-ink-900">{STEPS[step - 1]?.label}</span>
-        </p>
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
