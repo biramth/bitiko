@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabaseAdmin.js'
 import { sendEmail } from './resendEmail.js'
 import { proActivatedEmailHtml } from './emailTemplates.js'
+import { mirrorStatus } from './payments/engine.js'
 import { PLANS } from '../../src/config/plans.js'
 import type { WaveCheckoutSession } from './wave.js'
 
@@ -42,6 +43,9 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
       .eq('id', payment.id)
     if (updatePaymentError) throw updatePaymentError
 
+    // Engine mirror (best-effort, never blocks the money path).
+    await mirrorStatus(clientReference, 'succeeded', session.transaction_id ?? null)
+
     const { error: upsertSubError } = await admin
       .from('shop_subscriptions')
       .upsert(
@@ -79,6 +83,8 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
       .update({ status: 'failed' })
       .eq('id', payment.id)
     if (updateFailedError) throw updateFailedError
+    // Engine mirror (best-effort, never blocks the money path).
+    await mirrorStatus(clientReference, 'failed', null)
     return 'failed'
   }
 

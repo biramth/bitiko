@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { assertShopOwner, getSupabaseAdmin, getUserIdFromAuthHeader } from '../_lib/supabaseAdmin.js'
-import { createWaveCheckoutSession } from '../_lib/wave.js'
+import { getDefaultProvider } from '../_lib/payments/registry.js'
+import { recordTransaction } from '../_lib/payments/engine.js'
 import { PLANS, type PlanKey } from '../../src/config/plans.js'
 
 /**
@@ -45,11 +46,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const proto = (req.headers['x-forwarded-proto'] as string) ?? 'https'
     const origin = `${proto}://${host}`
 
-    // We generate client_reference ourselves *before* calling Wave, so it can
-    // go straight into success_url — Wave's own session id doesn't exist yet
-    // at this point, but the client_reference lets the billing page look the
-    // payment row (and from it the wave_checkout_id) back up on return.
-    const session = await createWaveCheckoutSession({
+    // We generate client_reference ourselves *before* calling the provider, so it
+    // can go straight into success_url — the provider session id doesn't exist
+    // yet at this point, but the client_reference lets the billing page look
+    // the payment row (and from it the provider ref) back up on return.
+    // Routed through the Payment Engine (provider = Wave/TEMPORARY today):
+    // same call, same behavior, plus the interface boundary for the next provider.
+    const payment = await getDefaultProvider().createPayment({
+      shopId,
+      plan: plan.key,
       amount: plan.priceXof,
       currency: 'XOF',
       clientReference,
@@ -64,12 +69,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: plan.priceXof,
       currency: 'XOF',
       client_reference: clientReference,
-      wave_checkout_id: session.id,
+      wave_checkout_id: payment.providerRef,
       status: 'pending',
     })
     if (insertError) throw insertError
 
-    res.status(200).json({ waveLaunchUrl: session.wave_launch_url })
+    // Engine mirror (best-effort, never blocks): provider-agnostic record.
+    await recordTransaction({
+      providerCode: 'wave',
+      shopId,
+      plan: plan.key,
+      amount: plan.priceXof,
+      currency: 'XOF',
+      clientReference,
+      providerRef: payment.providerRef,
+    })
+
+    res.status(200).json({ waveLaunchUrl: payment.launchUrl })
   } catch (err) {
     console.error('create-checkout failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })

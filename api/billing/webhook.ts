@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { getWaveCheckoutSession } from '../_lib/wave.js'
 import { settlePaymentFromWaveSession } from '../_lib/settlePayment.js'
+import { logWebhook } from '../_lib/payments/engine.js'
 
 // Wave signs the *raw* request body — re-serializing a parsed object changes
 // key order/whitespace and breaks the signature (documented pitfall on
@@ -61,6 +62,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const signatureHeader = req.headers['wave-signature'] as string | undefined
 
   if (!verifyWaveSignature(rawBody, signatureHeader, webhookSecret)) {
+    // Engine log (best-effort): rejected receipts are a security signal too.
+    await logWebhook({ providerCode: 'wave', eventType: 'rejected', payload: {}, signatureValid: false })
     res.status(401).json({ error: 'Invalid signature.' })
     return
   }
@@ -68,6 +71,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const event = JSON.parse(rawBody)
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.payment_failed') {
+      // Engine log (best-effort): receipt trail before processing.
+      await logWebhook({
+        providerCode: 'wave',
+        eventType: event.type,
+        payload: { id: event.data?.id ?? null },
+        signatureValid: true,
+      })
       // The event payload is a partial Checkout Session — fetch the full,
       // authoritative one rather than trusting webhook contents directly.
       const session = await getWaveCheckoutSession(event.data.id)

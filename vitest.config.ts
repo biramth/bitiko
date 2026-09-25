@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'api/**/*.test.ts'],
     // Mirrors what src/lib/tenant.ts reads at module load so subdomain
     // resolution can be tested without a real .env.
     env: {
