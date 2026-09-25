@@ -14,9 +14,11 @@ Donc :
 
 - `shop` **= canal de vente / vitrine en ligne** (slug, domaine, template, catalogue, commandes).
   Le nom est conservé (URLs, RLS, contrats) — il désigne le point de vente, plus jamais l'activité.
-- L'**activité** = nouvelle entité `organization`/`business` (identité pro, équipe, abonnement,
-  business type). Une activité **peut** avoir 0, 1 ou N boutiques (un spa sans vente en ligne
-  n'a pas de vitrine ; une enseigne peut en avoir plusieurs).
+- Le **shop est inclus dans l'activité** : c'est son morceau « commerce » (boutique/vitrine
+  en ligne), au même titre que les rendez-vous, l'équipe ou le catalogue sont d'autres morceaux.
+  Une activité coiffeur sans vente en ligne = une activité **sans** morceau shop ; une activité
+  commerçante = une activité **centrée sur** son morceau shop. Le nom `shop` est conservé
+  (URLs, RLS, contrats) — il désigne le point de vente, plus jamais l'activité.
 - Conséquence directe : tout ce qui est « qui suis-je / qui travaille avec moi / à quoi ai-je
   droit » migre vers l'organization ; tout ce qui est « que voit le visiteur » reste au shop.
 
