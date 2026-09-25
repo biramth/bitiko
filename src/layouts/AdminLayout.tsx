@@ -64,6 +64,7 @@ const NAV_GROUPS: { label?: string; items: NavEntry[] }[] = [
     ],
   },
   {
+    label: 'Boutique',
     items: [
       { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
       { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
@@ -83,7 +84,12 @@ const settingsSections = [
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
 
-export function AdminLayout() {
+/**
+ * The sidebar content itself — shared by the desktop rail and the mobile
+ * drawer so the two never drift apart. Slim by design: one compact shop row,
+ * grouped links, collapsible settings.
+ */
+function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; onNavigate?: () => void }) {
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
   const { data: shops } = useMyShops()
@@ -95,8 +101,7 @@ export function AdminLayout() {
     queryFn: () => getOrderStatusCounts(shop!.id),
     enabled: !!shop?.id,
   })
-  const ordersToTreat =
-    (orderCounts?.counts.pending ?? 0) + (orderCounts?.counts.confirmed ?? 0)
+  const ordersToTreat = (orderCounts?.counts.pending ?? 0) + (orderCounts?.counts.confirmed ?? 0)
   // Billing + team stay owner-only: hide them from managers/vendeurs (RLS
   // blocks the data anyway; this just avoids dead-end pages). Unknown role
   // (still loading) keeps everything visible to avoid flicker for owners.
@@ -105,6 +110,160 @@ export function AdminLayout() {
     shopRole && shopRole !== 'owner'
       ? settingsSections.filter((s) => s.to !== '/admin/parametres/facturation' && s.to !== '/admin/parametres/equipe')
       : settingsSections
+  const location = useLocation()
+  const [impersonation] = useState(() => getImpersonation())
+  const [quitting, setQuitting] = useState(false)
+  const onSettings = location.pathname.startsWith('/admin/parametres')
+  const [settingsOpen, setSettingsOpen] = useState(onSettings)
+  // Navigate into/out of Paramètres → follow it (adjust during render rather
+  // than in an effect, so a manual collapse isn't re-opened by an unrelated
+  // re-render, but the link itself always reflects where you actually are).
+  const [prevOnSettings, setPrevOnSettings] = useState(onSettings)
+  if (onSettings !== prevOnSettings) {
+    setPrevOnSettings(onSettings)
+    if (onSettings) setSettingsOpen(true)
+  }
+  const settingsExpanded = settingsOpen
+
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      collapsed ? 'justify-center' : ''
+    } ${isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`
+
+  const settingsSubLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+      isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
+    }`
+
+  const shopCard = shop && (
+    <div className={`mb-2 flex items-center gap-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center p-2' : 'p-2'}`}>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
+        {shop.logo_url ? (
+          <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <Store size={15} className="text-gold-400" aria-hidden />
+        )}
+      </span>
+      {!collapsed && (
+        <>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">{shop.name}</p>
+            <p className="truncate text-xs text-white/50">{shop.slug}.{DISPLAY_ROOT_DOMAIN}</p>
+          </div>
+          <Link
+            to={shopUrl(shop.slug)}
+            target="_blank"
+            rel="noreferrer"
+            title="Voir la boutique"
+            aria-label="Voir la boutique"
+            className="shrink-0 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink size={14} aria-hidden />
+          </Link>
+        </>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      <nav className="flex flex-1 flex-col gap-0.5 px-3">
+        {NAV_GROUPS.map((group) => (
+          <Fragment key={group.label ?? 'main'}>
+            {group.label && !collapsed && (
+              <p className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                {group.label}
+              </p>
+            )}
+            {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+              <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
+                <Icon size={17} aria-hidden />
+                {!collapsed && label}
+                {!collapsed && ordersBadge && ordersToTreat > 0 && (
+                  <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                    {ordersToTreat}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </Fragment>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
+          aria-expanded={settingsExpanded}
+          title={collapsed ? 'Paramètres' : undefined}
+          data-guide="guide-nav-parametres"
+          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            collapsed ? 'justify-center' : ''
+          } ${onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+        >
+          {collapsed ? (
+            <Link to="/admin/parametres" aria-label="Paramètres" className="flex items-center justify-center">
+              <Settings size={17} aria-hidden />
+            </Link>
+          ) : (
+            <>
+              <Settings size={17} aria-hidden />
+              <span className="flex-1 text-left">Paramètres</span>
+              <ChevronDown
+                size={15}
+                aria-hidden
+                className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
+              />
+            </>
+          )}
+        </button>
+        {!collapsed && settingsExpanded && (
+          <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+            {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
+              <NavLink key={to} to={to} className={settingsSubLinkClass}>
+                <Icon size={14} aria-hidden />
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </nav>
+
+      <div className={collapsed ? 'px-3 pb-2' : 'px-3 pb-3'}>
+        {multiShop && !collapsed ? <ShopSwitcher onSelect={onNavigate} /> : shopCard}
+        {impersonation ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuitting(true)
+              void endImpersonation()
+            }}
+            disabled={quitting}
+            title="Quitter le mode support et revenir à la plateforme"
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300 disabled:opacity-60 ${
+              collapsed ? 'justify-center' : ''
+            }`}
+          >
+            <LogOut size={17} aria-hidden />
+            {!collapsed && (quitting ? 'Retour…' : 'Quitter le mode support')}
+          </button>
+        ) : (
+          <button
+            onClick={() => signOut()}
+            title="Déconnexion"
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white ${
+              collapsed ? 'justify-center' : ''
+            }`}
+          >
+            <LogOut size={17} aria-hidden />
+            {!collapsed && 'Déconnexion'}
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
+export function AdminLayout() {
+  const { data: shop } = useMyShop()
   const queryClient = useQueryClient()
   // Claim team invites sent to the signed-in user's email (idempotent) —
   // once per admin session, then refresh the workspace scope.
@@ -122,16 +281,6 @@ export function AdminLayout() {
   const location = useLocation()
   const [impersonation] = useState(() => getImpersonation())
   const [quitting, setQuitting] = useState(false)
-  const onSettings = location.pathname.startsWith('/admin/parametres')
-  const [settingsOpen, setSettingsOpen] = useState(onSettings)
-  // Navigate into/out of Paramètres → follow it (adjust during render rather
-  // than in an effect, so a manual collapse isn't re-opened by an unrelated
-  // re-render, but the link itself always reflects where you actually are).
-  const [prevOnSettings, setPrevOnSettings] = useState(onSettings)
-  if (onSettings !== prevOnSettings) {
-    setPrevOnSettings(onSettings)
-    if (onSettings) setSettingsOpen(true)
-  }
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -139,8 +288,6 @@ export function AdminLayout() {
       return false
     }
   })
-
-  const settingsExpanded = settingsOpen
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   useEffect(() => {
@@ -184,158 +331,26 @@ export function AdminLayout() {
     })
   }
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-      collapsed ? 'justify-center' : ''
-    } ${isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`
-
-  const settingsSubLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-      isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
-    }`
-
-  const shopIdentity = shop && (
-    <div className={`mb-2 rounded-xl bg-white/5 ${collapsed ? 'p-2' : 'p-3'}`}>
-      <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
-          {shop.logo_url ? (
-            <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <Store size={16} className="text-gold-400" aria-hidden />
-          )}
-        </span>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{shop.name}</p>
-            <p className="truncate text-xs text-white/50">{shop.slug}.{DISPLAY_ROOT_DOMAIN}</p>
-          </div>
-        )}
-      </div>
-      {!collapsed && (
-        <Link
-          to={shopUrl(shop.slug)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2.5 flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
-        >
-          <ExternalLink size={13} aria-hidden /> Voir la boutique
-        </Link>
-      )}
-    </div>
-  )
-
-  const signOutButton = impersonation ? (
-    <button
-      type="button"
-      onClick={() => {
-        setQuitting(true)
-        void endImpersonation()
-      }}
-      disabled={quitting}
-      title="Quitter le mode support et revenir à la plateforme"
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300 disabled:opacity-60 ${
-        collapsed ? 'justify-center' : ''
-      }`}
-    >
-      <LogOut size={18} aria-hidden />
-      {!collapsed && (quitting ? 'Retour…' : 'Quitter le mode support')}
-    </button>
-  ) : (
-    <button
-      onClick={() => signOut()}
-      title="Déconnexion"
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white ${
-        collapsed ? 'justify-center' : ''
-      }`}
-    >
-      <LogOut size={18} aria-hidden />
-      {!collapsed && 'Déconnexion'}
-    </button>
-  )
-
   return (
     <GuidedTourProvider>
       <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-gray-50">
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
-          collapsed ? 'w-[4.5rem]' : 'w-64'
+          collapsed ? 'w-16' : 'w-60'
         }`}
       >
-        <div className={`flex items-center gap-2 px-5 py-5 text-white ${collapsed ? 'justify-center px-0' : ''}`}>
+        <div className={`flex items-center gap-2 px-5 py-4 text-white ${collapsed ? 'justify-center px-0' : ''}`}>
           <LogoMark />
           {!collapsed && <span className="font-heading text-lg font-bold tracking-tight text-white">Bitiko</span>}
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3">
-          {NAV_GROUPS.map((group) => (
-            <Fragment key={group.label ?? 'main'}>
-              {group.label && !collapsed && (
-                <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                  {group.label}
-                </p>
-              )}
-              {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
-                <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
-                  <Icon size={18} aria-hidden />
-                  {!collapsed && label}
-                  {!collapsed && ordersBadge && ordersToTreat > 0 && (
-                    <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                      {ordersToTreat}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
-            </Fragment>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
-            aria-expanded={settingsExpanded}
-            title={collapsed ? 'Paramètres' : undefined}
-            data-guide="guide-nav-parametres"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              collapsed ? 'justify-center' : ''
-            } ${onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
-          >
-            {collapsed ? (
-              <Link to="/admin/parametres" aria-label="Paramètres" className="flex items-center justify-center">
-                <Settings size={18} aria-hidden />
-              </Link>
-            ) : (
-              <>
-                <Settings size={18} aria-hidden />
-                <span className="flex-1 text-left">Paramètres</span>
-                <ChevronDown
-                  size={15}
-                  aria-hidden
-                  className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
-                />
-              </>
-            )}
-          </button>
-          {!collapsed && settingsExpanded && (
-            <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-              {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
-                <NavLink key={to} to={to} className={settingsSubLinkClass}>
-                  <Icon size={15} aria-hidden />
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </nav>
-
-        <div className={collapsed ? 'px-3 pb-2' : 'px-3 pb-4'}>
-          {multiShop && !collapsed ? <ShopSwitcher /> : shopIdentity}
-          {signOutButton}
-        </div>
+        <SidebarNav collapsed={collapsed} />
 
         <button
           type="button"
           onClick={toggleCollapsed}
           title={collapsed ? 'Déplier le menu' : 'Réduire le menu'}
-          className="flex items-center justify-center gap-2 border-t border-white/10 py-3 text-xs font-medium text-white/50 hover:bg-white/5 hover:text-white"
+          className="flex items-center justify-center gap-2 border-t border-white/10 py-2.5 text-xs font-medium text-white/50 hover:bg-white/5 hover:text-white"
         >
           {collapsed ? <ChevronsRight size={16} aria-hidden /> : <ChevronsLeft size={16} aria-hidden />}
           {!collapsed && 'Réduire'}
@@ -389,128 +404,7 @@ export function AdminLayout() {
                 </button>
               </div>
 
-              <nav className="flex flex-1 flex-col gap-1 px-3">
-                {NAV_GROUPS.map((group) => (
-                  <Fragment key={group.label ?? 'main'}>
-                    {group.label && (
-                      <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                        {group.label}
-                      </p>
-                    )}
-                    {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        end={end}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                            isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                        data-guide={guide}
-                      >
-                        <Icon size={18} aria-hidden />
-                        {label}
-                        {ordersBadge && ordersToTreat > 0 && (
-                          <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                            {ordersToTreat}
-                          </span>
-                        )}
-                      </NavLink>
-                    ))}
-                  </Fragment>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen((open) => !open)}
-                  aria-expanded={settingsExpanded}
-                  data-guide="guide-nav-parametres"
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <Settings size={18} aria-hidden />
-                  <span className="flex-1 text-left">Paramètres</span>
-                  <ChevronDown
-                    size={15}
-                    aria-hidden
-                    className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {settingsExpanded && (
-                  <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                    {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        className={({ isActive }) =>
-                          `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                            isActive ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                      >
-                        <Icon size={15} aria-hidden />
-                        {label}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </nav>
-
-              <div className="px-3 pb-4">
-                {multiShop ? (
-                  <ShopSwitcher onSelect={() => setMobileMenuOpen(false)} />
-                ) : (
-                  shop && (
-                  <div className="mb-2 rounded-xl bg-white/5 p-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
-                        {shop.logo_url ? (
-                          <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <Store size={16} className="text-gold-400" aria-hidden />
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">{shop.name}</p>
-                        <p className="truncate text-xs text-white/50">{shop.slug}.{DISPLAY_ROOT_DOMAIN}</p>
-                      </div>
-                    </div>
-                    <Link
-                      to={shopUrl(shop.slug)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2.5 flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
-                    >
-                      <ExternalLink size={13} aria-hidden /> Voir la boutique
-                    </Link>
-                  </div>
-                  )
-                )}
-                {impersonation ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuitting(true)
-                      void endImpersonation()
-                    }}
-                    disabled={quitting}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gold-400 transition-colors hover:bg-white/5 hover:text-gold-300 disabled:opacity-60"
-                  >
-                    <LogOut size={18} aria-hidden />
-                    {quitting ? 'Retour…' : 'Quitter le mode support'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => signOut()}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
-                  >
-                    <LogOut size={18} aria-hidden />
-                    Déconnexion
-                  </button>
-                )}
-              </div>
+              <SidebarNav collapsed={false} onNavigate={() => setMobileMenuOpen(false)} />
             </div>
           </div>
         )}

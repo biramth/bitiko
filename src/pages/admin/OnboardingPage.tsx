@@ -8,17 +8,22 @@ import {
   Briefcase,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   Globe,
   ImageIcon,
-  Info,
   Lock,
   Mail,
   MapPin,
   MessageCircle,
   Package,
+  Palette,
   Pencil,
   Phone,
   Scissors,
+  Shirt,
+  ShoppingBag,
+  ShoppingBasket,
+  Smartphone,
   Sparkles,
   Store,
   Truck,
@@ -29,6 +34,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { IconTile } from '@/components/ui/IconTile'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
@@ -58,14 +64,53 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { trackEvent } from '@/lib/analytics'
 
-const STEPS = [
-  { number: 1, label: 'Tes infos' },
-  { number: 2, label: 'Boutique' },
-  { number: 3, label: 'Commerce' },
-  { number: 4, label: 'Détails' },
-  { number: 5, label: 'Logo' },
-  { number: 6, label: 'Récap' },
-] as const
+const STEPS: { number: number; label: string; icon: LucideIcon }[] = [
+  { number: 1, label: 'Boutique', icon: Store },
+  { number: 2, label: 'Commerce', icon: ShoppingBag },
+  { number: 3, label: 'Vitrine', icon: Palette },
+  { number: 4, label: 'Coordonnées', icon: User },
+  { number: 5, label: 'Récap', icon: ClipboardCheck },
+]
+
+const STEP_TONES: Record<number, 'brand' | 'dark' | 'gold'> = {
+  1: 'brand',
+  2: 'dark',
+  3: 'gold',
+  4: 'brand',
+  5: 'dark',
+}
+
+const STEP_SUBTITLES: Record<number, string> = {
+  1: 'Nom, adresse et WhatsApp — l’essentiel pour exister.',
+  2: 'Ce que tu vends et comment tu vends.',
+  3: 'Donne envie : décris, montre, rassure.',
+  4: 'Pour te joindre et lier ton compte.',
+  5: 'Un dernier coup d’œil avant le lancement.',
+}
+
+/** Icon-led step header reusing the landing's gradient tile treatment. */
+function StepHeader({ step }: { step: number }) {
+  const meta = STEPS[step - 1]
+  if (!meta) return null
+  const StepIcon = meta.icon
+  return (
+    <div className="flex items-center gap-3">
+      <IconTile icon={StepIcon} tone={STEP_TONES[step] ?? 'brand'} />
+      <div>
+        <p className="font-heading text-base font-bold text-ink-900">{meta.label}</p>
+        <p className="text-xs text-gray-500">{STEP_SUBTITLES[step]}</p>
+      </div>
+    </div>
+  )
+}
+
+/** One icon per business vertical for the commerce picker cards. */
+const VERTICAL_ICONS: Record<string, LucideIcon> = {
+  mode: Shirt,
+  epicerie: ShoppingBasket,
+  beaute: Sparkles,
+  tech: Smartphone,
+}
 
 const fieldClass =
   'w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
@@ -326,26 +371,25 @@ export function OnboardingPage() {
         ? 'checking'
         : availability
 
-  const step1Valid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone)
+  const infosValid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone)
 
-  const step2Valid =
+  const boutiqueValid =
     name.trim().length > 0 &&
     (slugStatus === 'available' || slugStatus === 'error') &&
     !!slug &&
     validatePhoneNumber(whatsappNumber)
 
-  const step3Valid = !!businessType && !!templateId
+  const commerceValid = !!businessType && !!templateId
 
-  const step4Valid = profile.description.trim().length > 0
+  const vitrineValid = profile.description.trim().length > 0
 
   const canGoNext =
-    (step === 1 && step1Valid) ||
-    (step === 2 && step2Valid) ||
-    (step === 3 && step3Valid) ||
-    (step === 4 && step4Valid) ||
-    step === 5
+    (step === 1 && boutiqueValid) ||
+    (step === 2 && commerceValid) ||
+    (step === 3 && vitrineValid) ||
+    (step === 4 && infosValid)
 
-  const canSubmit = step1Valid && step2Valid && step3Valid && step4Valid
+  const canSubmit = boutiqueValid && commerceValid && vitrineValid && infosValid
 
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
 
@@ -366,22 +410,27 @@ export function OnboardingPage() {
         </div>
 
         <div className="mb-3 flex items-center justify-center">
-          {STEPS.map((s, i) => (
-            <div key={s.number} className="flex items-center">
-              <div
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  step === s.number
-                    ? 'bg-brand-600 text-white'
-                    : step > s.number
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
-                }`}
-              >
-                {step > s.number ? <Check size={14} className="text-white" /> : s.number}
+          {STEPS.map((s, i) => {
+            const StepIcon = s.icon
+            const done = step > s.number
+            const active = step === s.number
+            return (
+              <div key={s.number} className="flex items-center" title={s.label}>
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    active
+                      ? 'bg-brand-600 text-white'
+                      : done
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  {done ? <Check size={14} className="text-white" /> : <StepIcon size={14} aria-hidden />}
+                </div>
+                {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 shrink-0 bg-gray-200 sm:w-6" />}
               </div>
-              {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 shrink-0 bg-gray-200 sm:w-6" />}
-            </div>
-          ))}
+            )
+          })}
         </div>
         <p className="mb-8 text-center text-xs font-medium text-gray-400">
           Étape {step} sur {STEPS.length} — <span className="text-ink-900">{STEPS[step - 1]?.label}</span>
@@ -393,17 +442,15 @@ export function OnboardingPage() {
           onSubmit={(e) => {
             e.preventDefault()
             setError(null)
-            if (step === 6 && canSubmit) {
+            if (step === 5 && canSubmit) {
               mutation.mutate()
             }
           }}
           className="space-y-5"
         >
-          {step === 1 && (
+          {step === 4 && (
             <>
-              <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User size={15} className="text-gray-400" aria-hidden /> Tes coordonnées
-              </p>
+              <StepHeader step={4} />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -489,8 +536,9 @@ export function OnboardingPage() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 1 && (
             <>
+              <StepHeader step={1} />
               <div>
                 <label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
                   Nom de ta boutique
@@ -601,15 +649,14 @@ export function OnboardingPage() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <div className="space-y-5">
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Store size={15} className="text-gray-400" aria-hidden /> Quel type de commerce ?
-                </label>
+                <StepHeader step={2} />
                 <div className="mt-2 grid grid-cols-2 gap-2.5">
                   {availableVerticals().map((vertical) => {
                     const selected = businessType === vertical.key
+                    const VerticalIcon = VERTICAL_ICONS[vertical.key] ?? Store
                     return (
                       <button
                         key={vertical.key}
@@ -620,9 +667,12 @@ export function OnboardingPage() {
                           selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <span className="flex items-center justify-between">
-                          <span className="block text-sm font-semibold text-ink-900">{vertical.label}</span>
-                          {selected && <Check size={14} className="text-brand-700" aria-hidden />}
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <VerticalIcon size={16} className={`shrink-0 ${selected ? 'text-brand-700' : 'text-gray-400'}`} aria-hidden />
+                            <span className="block text-sm font-semibold text-ink-900">{vertical.label}</span>
+                          </span>
+                          {selected && <Check size={14} className="shrink-0 text-brand-700" aria-hidden />}
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug text-gray-500">{vertical.description}</span>
                       </button>
@@ -633,15 +683,43 @@ export function OnboardingPage() {
                   Le type de commerce définit la structure de ta boutique. Modifiable plus tard dans « Personnaliser ».
                 </p>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <ToggleTile
+                    icon={Truck}
+                    checked={profile.homeDelivery}
+                    onChange={(homeDelivery) => updateProfile({ homeDelivery })}
+                    label="Livraison à domicile"
+                  />
+                  <ToggleTile
+                    icon={Banknote}
+                    checked={profile.payOnDelivery}
+                    onChange={(payOnDelivery) => updateProfile({ payOnDelivery })}
+                    label="Paiement à la livraison"
+                  />
+                  <ToggleTile
+                    icon={Zap}
+                    checked={profile.expressDelivery}
+                    onChange={(expressDelivery) => updateProfile({ expressDelivery })}
+                    label="Livraison express"
+                  />
+                  <ToggleTile
+                    icon={Scissors}
+                    checked={profile.madeToOrder}
+                    onChange={(madeToOrder) => updateProfile({ madeToOrder })}
+                    label="Préparé sur commande"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <div className="space-y-5">
               <div>
-                <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Info size={15} className="text-gray-400" aria-hidden /> Ta boutique en détail
-                </p>
+                <StepHeader step={3} />
                 <p className="mt-1 text-xs text-gray-500">
                   Tes réponses servent à créer une vitrine qui te ressemble. Tu pourras tout modifier plus tard.
                 </p>
@@ -674,36 +752,6 @@ export function OnboardingPage() {
                 <label className="block text-sm font-medium text-gray-700">Ton positionnement</label>
                 <div className="mt-2">
                   <ChoicePills options={PRICE_OPTIONS} value={profile.priceRange} onChange={(priceRange) => updateProfile({ priceRange })} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <ToggleTile
-                    icon={Truck}
-                    checked={profile.homeDelivery}
-                    onChange={(homeDelivery) => updateProfile({ homeDelivery })}
-                    label="Livraison à domicile"
-                  />
-                  <ToggleTile
-                    icon={Banknote}
-                    checked={profile.payOnDelivery}
-                    onChange={(payOnDelivery) => updateProfile({ payOnDelivery })}
-                    label="Paiement à la livraison"
-                  />
-                  <ToggleTile
-                    icon={Zap}
-                    checked={profile.expressDelivery}
-                    onChange={(expressDelivery) => updateProfile({ expressDelivery })}
-                    label="Livraison express"
-                  />
-                  <ToggleTile
-                    icon={Scissors}
-                    checked={profile.madeToOrder}
-                    onChange={(madeToOrder) => updateProfile({ madeToOrder })}
-                    label="Préparé sur commande"
-                  />
                 </div>
               </div>
 
@@ -756,7 +804,7 @@ export function OnboardingPage() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 3 && (
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ta boutique
@@ -817,18 +865,136 @@ export function OnboardingPage() {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 5 && (
             <div className="space-y-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <Users size={15} className="text-gray-400" aria-hidden /> Vérifie les informations avant de créer
-              </p>
+              <StepHeader step={5} />
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ta boutique</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Nom</span>
+                    <span className="truncate text-right font-medium text-ink-900">{name.trim()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Adresse</span>
+                    <span className="truncate text-right font-medium text-ink-900">{slug}.{DISPLAY_ROOT_DOMAIN}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">WhatsApp</span>
+                    <span className="truncate text-right font-medium text-ink-900">{whatsappNumber}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ton commerce</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Type de commerce</span>
+                    <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Ventes</span>
+                    <span className="text-right text-xs">
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {profile.homeDelivery && <Chip>Livraison à domicile</Chip>}
+                        {profile.payOnDelivery && <Chip>Paiement à la livraison</Chip>}
+                        {profile.expressDelivery && <Chip>Livraison express</Chip>}
+                        {profile.madeToOrder && <Chip>Sur commande</Chip>}
+                        {!profile.homeDelivery && !profile.payOnDelivery && !profile.expressDelivery && !profile.madeToOrder && (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ta vitrine</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Description</span>
+                    <span className="truncate text-right font-medium text-ink-900">{profile.description.trim()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Clients</span>
+                    <span className="text-right font-medium text-ink-900">{AUDIENCE_LABELS[profile.audience]}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Positionnement</span>
+                    <span className="text-right font-medium text-ink-900">{PRICE_RANGE_LABELS[profile.priceRange]}</span>
+                  </div>
+                  {logoPalette?.primary && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500">Couleur</span>
+                      <span className="flex items-center gap-1.5 text-right text-xs text-gray-500">
+                        <span className="inline-block h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: effectiveThemeColor }} aria-hidden />
+                        Suggérée à partir de ton logo, assombrie pour rester lisible
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-gray-500">Logo</span>
+                    {logoPreviewUrl ? (
+                      <img
+                        src={logoPreviewUrl}
+                        alt="Logo sélectionné"
+                        className="h-8 w-8 shrink-0 rounded-md border border-sand-200 object-cover"
+                      />
+                    ) : (
+                      <span className="text-right font-medium text-ink-900">Sans logo</span>
+                    )}
+                  </div>
+                  {profile.story.trim() && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500">Histoire</span>
+                      <span className="max-w-[70%] truncate text-right font-medium text-ink-900">{profile.story.trim()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">FAQ</span>
+                    <span className="text-right font-medium text-ink-900">
+                      {completedFaqCount > 0 ? `${completedFaqCount} question${completedFaqCount > 1 ? 's' : ''}` : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               <div className="overflow-hidden rounded-xl border border-sand-200">
                 <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
                   <p className="text-sm font-semibold text-ink-900">Tes coordonnées</p>
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => setStep(4)}
                     className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
                   >
                     <Pencil size={12} aria-hidden /> Modifier
@@ -854,111 +1020,6 @@ export function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-sand-200">
-                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ta boutique</p>
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    <Pencil size={12} aria-hidden /> Modifier
-                  </button>
-                </div>
-                <div className="space-y-2.5 px-4 py-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Nom</span>
-                    <span className="truncate text-right font-medium text-ink-900">{name.trim()}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Adresse</span>
-                    <span className="truncate text-right font-medium text-ink-900">{slug}.{DISPLAY_ROOT_DOMAIN}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">WhatsApp</span>
-                    <span className="truncate text-right font-medium text-ink-900">{whatsappNumber}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Type de commerce</span>
-                    <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
-                  </div>
-                  {logoPalette?.primary && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-500">Couleur</span>
-                      <span className="flex items-center gap-1.5 text-right text-xs text-gray-500">
-                        <span className="inline-block h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: effectiveThemeColor }} aria-hidden />
-                        Suggérée à partir de ton logo, assombrie pour rester lisible
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-gray-500">Logo</span>
-                    {logoPreviewUrl ? (
-                      <img
-                        src={logoPreviewUrl}
-                        alt="Logo sélectionné"
-                        className="h-8 w-8 shrink-0 rounded-md border border-sand-200 object-cover"
-                      />
-                    ) : (
-                      <span className="text-right font-medium text-ink-900">Sans logo</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-sand-200">
-                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ta boutique en détail</p>
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    <Pencil size={12} aria-hidden /> Modifier
-                  </button>
-                </div>
-                <div className="space-y-2.5 px-4 py-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Description</span>
-                    <span className="truncate text-right font-medium text-ink-900">{profile.description.trim()}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Clients</span>
-                    <span className="text-right font-medium text-ink-900">{AUDIENCE_LABELS[profile.audience]}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Positionnement</span>
-                    <span className="text-right font-medium text-ink-900">{PRICE_RANGE_LABELS[profile.priceRange]}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Ventes</span>
-                    <span className="text-right text-xs">
-                      <span className="flex flex-wrap justify-end gap-1">
-                        {profile.homeDelivery && <Chip>Livraison à domicile</Chip>}
-                        {profile.payOnDelivery && <Chip>Paiement à la livraison</Chip>}
-                        {profile.expressDelivery && <Chip>Livraison express</Chip>}
-                        {profile.madeToOrder && <Chip>Sur commande</Chip>}
-                        {!profile.homeDelivery && !profile.payOnDelivery && !profile.expressDelivery && !profile.madeToOrder && (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </span>
-                    </span>
-                  </div>
-                  {profile.story.trim() && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-500">Histoire</span>
-                      <span className="max-w-[70%] truncate text-right font-medium text-ink-900">{profile.story.trim()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">FAQ</span>
-                    <span className="text-right font-medium text-ink-900">
-                      {completedFaqCount > 0 ? `${completedFaqCount} question${completedFaqCount > 1 ? 's' : ''}` : '—'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               <p className="text-xs text-gray-500">
                 Tout pourra encore être modifié plus tard dans Réglages.
               </p>
@@ -977,9 +1038,9 @@ export function OnboardingPage() {
               </button>
             )}
 
-            {step < 6 && <div className="flex-1" />}
+            {step < 5 && <div className="flex-1" />}
 
-            {step < 6 ? (
+            {step < 5 ? (
               <button
                 type="button"
                 disabled={!canGoNext}
