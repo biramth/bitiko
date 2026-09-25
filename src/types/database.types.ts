@@ -37,6 +37,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          metadata: Json
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
@@ -690,6 +726,7 @@ export type Database = {
           banner_url: string | null
           builder_draft: BuilderDraft | null
           business_type: string | null
+          business_type_id: string | null
           created_at: string
           currency: string
           delivery_fee: number
@@ -702,6 +739,7 @@ export type Database = {
           low_stock_threshold: number
           name: string
           onboarding_responses: StoreProfileAnswers | null
+          organization_id: string | null
           owner_id: string
           page_templates: SystemTemplateMap
           payment_instructions: string | null
@@ -718,6 +756,7 @@ export type Database = {
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
+          business_type_id?: string | null
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -730,6 +769,7 @@ export type Database = {
           low_stock_threshold?: number
           name: string
           onboarding_responses?: StoreProfileAnswers | null
+          organization_id?: string | null
           owner_id: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
@@ -746,6 +786,7 @@ export type Database = {
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
+          business_type_id?: string | null
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -758,6 +799,7 @@ export type Database = {
           low_stock_threshold?: number
           name?: string
           onboarding_responses?: StoreProfileAnswers | null
+          organization_id?: string | null
           owner_id?: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null

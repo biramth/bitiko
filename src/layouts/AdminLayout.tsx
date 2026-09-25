@@ -8,20 +8,15 @@ import {
   CreditCard,
   ExternalLink,
   ImagePlus,
-  LayoutDashboard,
   LogOut,
   Menu,
-  Package,
   Phone,
   Settings,
-  ShoppingBag,
   Store,
   Truck,
   User,
   Users,
-  Wand2,
   X,
-  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop, useMyShops } from '@/features/shop-settings/useMyShop'
@@ -34,43 +29,16 @@ import { endImpersonation, getImpersonation } from '@/lib/supportSession'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
+import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 
 // One "Ventes" group (Commandes + Clients, the daily sales workflow) —
 // everything else stays top-level: with this few items, more groups would
 // just be chrome. Catégories lives as a tab of Produits and Facturation
 // under Paramètres (see settingsSections below).
-interface NavEntry {
-  to: string
-  label: string
-  icon: LucideIcon
-  end?: boolean
-  guide?: string
-  /** Shows the pending+confirmed orders count as a pill (Commandes only). */
-  ordersBadge?: boolean
-}
-
-const NAV_GROUPS: { label?: string; items: NavEntry[] }[] = [
-  {
-    items: [
-      { to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard' },
-    ],
-  },
-  {
-    label: 'Ventes',
-    items: [
-      { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag, guide: 'guide-nav-commandes', ordersBadge: true },
-      { to: '/admin/clients', label: 'Clients', icon: Users },
-    ],
-  },
-  {
-    label: 'Boutique',
-    items: [
-      { to: '/admin/produits', label: 'Produits', icon: Package, guide: 'guide-nav-produits' },
-      { to: '/admin/personnaliser', label: 'Personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser' },
-    ],
-  },
-]
+// Workspace navigation is generated from the module registry
+// (src/features/workspace/modules.ts): Business Type → Capabilities → Modules.
+// For today's commerce shops the output matches the historic sidebar exactly.
 
 const settingsSections = [
   { to: '/admin/parametres/general', label: 'Général', icon: Store },
@@ -93,6 +61,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
   const { data: shops } = useMyShops()
+  const { groups } = useWorkspaceModules()
   const multiShop = (shops?.length ?? 0) > 1
   // Shared with OrdersPage's own query (same key): the sidebar pill costs
   // no extra fetch once Commandes has been visited, and vice versa.
@@ -168,7 +137,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   return (
     <>
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <Fragment key={group.label ?? 'main'}>
             {group.label && !collapsed && (
               <p className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/35">

@@ -94,6 +94,24 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
     ? generateStorefront({ template: generatedSource, answers: input.profile, palette: input.palette })
     : null
 
+  // Link the referential business type when it exists (PHASE-05 compat: the
+  // legacy TEXT column stays authoritative until every flow writes the FK).
+  // Best-effort — creation never fails on this lookup (backfill covers gaps).
+  const vertical = generatedSource.vertical
+  let businessTypeId: string | null = null
+  try {
+    const { data } = await supabase
+      .from('business_types')
+      .select('id')
+      .eq('slug', vertical)
+      .eq('status', 'active')
+      .maybeSingle()
+    businessTypeId = (data as { id: string } | null)?.id ?? null
+  } catch {
+    businessTypeId = null
+  }
+  const businessTypeLink = businessTypeId ? { business_type_id: businessTypeId } : {}
+
   const { data, error } = await supabase
     .from('shops')
     .insert({
@@ -102,6 +120,7 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
       currency: input.currency ?? 'XOF',
+      ...businessTypeLink,
       ...(generated
         ? {
             onboarding_responses: input.profile,
