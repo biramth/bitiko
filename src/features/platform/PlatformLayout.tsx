@@ -108,15 +108,13 @@ export function PlatformLayout() {
       </nav>
 
       <div className="space-y-1 border-t border-white/10 px-3 py-3">
-        {shop ? (
+        {/* Operators who also own a shop keep a shortcut to it. Platform
+            staff must never own a merchant shop, so no-shop members get no
+            creation prompt here (nor anywhere else in this workspace). */}
+        {shop && (
           <Link to="/admin" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white">
             <Store size={18} aria-hidden />
             Ma boutique
-          </Link>
-        ) : (
-          <Link to="/admin/onboarding" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white">
-            <Store size={18} aria-hidden />
-            Créer ma boutique
           </Link>
         )}
         <button
