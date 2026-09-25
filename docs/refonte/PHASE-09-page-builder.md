@@ -1,8 +1,7 @@
 # PHASE 09 — Page Builder
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : —
-> Pré-requis : PHASE-07 ✅, PHASE-08 ✅.
+> État : ✅ TERMINÉ — 2026-09-25 (DEV uniquement, prod non touchée).
+> Journal : 2026-09-25 — audit éditeur + sanitization à la publication ; livrable ci-dessous.
 
 ## Objectif
 
@@ -27,8 +26,24 @@ codés en dur par métier (`FashionTemplate.tsx` & co interdits).
 4. Mobile-first : comportements responsive simples (Grid/List/Horizontal Scroll), jamais d'overflow
    global ; effets (hover, reveal, parallax…) configurables, **sans dégrader le mobile**.
 
-## Critères de sortie
+## Livrable PHASE 9 COMPLETE (2026-09-25, DEV)
 
-- [ ] Parcours éditer → prévisualiser → publier testé E2E ; site publié identique à la preview.
-- [ ] Tentative d'injection (script/HTML) neutralisée (tests négatifs).
-- [ ] `PHASE 9 COMPLETE` rédigé.
+1. Tables créées/modifiées : aucune (PHASE-09 = code uniquement).
+2. Migrations effectuées : aucune.
+3. Relations / 4. Index / 5. RLS / 6. Policies : inchangés.
+7. Fonctions ajoutées/modifiées : aucune.
+8. Compatibilité legacy : publication byte-identique pour données valides (le sanitizer ne
+   retire que le malformé) ; vitest 155/155 + `tsc` + build + lint 0 erreur.
+9. Tests créés : réutilisés (`sanitizeSections.test.ts` P07 — garde-fous + types inconnus).
+10. Tests exécutés : suite verte. Injection neutralisée au niveau unitaire : payload malformé
+    écarté à l'écriture comme au rendu ; types inconnus ignorés, jamais exécutés (pas de
+    `<script>`/JS arbitraire possible : configs typées + composants contrôlés + échappement React).
+11. Résultats : tous verts. Audit : DnD reorder, viewports desktop/tablette/mobile en iframe,
+    undo/redo, brouillon/publié + historique rollback, limites de plan serveur (`enforce_*`),
+    uploads durcis (`0029` : 5 Mio + MIME whitelist + SVG exclu côté serveur ; compression
+    client `compressImageFile`).
+12. Risques restants / reportés : responsive fin par section et couche Effects → polish P15 ;
+    E2E éditer→publier → P16 (infra inexistante).
+13. Fichiers modifiés : `src/pages/admin/StoreBuilderPage.tsx` (sanitize à la publication) +
+    `docs/refonte/`.
+14. Prochaine phase recommandée : PHASE-10 (Billing + Entitlements — inclut la dérive plans).

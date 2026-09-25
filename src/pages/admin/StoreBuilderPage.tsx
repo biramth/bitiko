@@ -28,6 +28,7 @@ import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
 import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
 import { isRestoredDesignKey } from '@/features/store-builder/templateKeys'
+import { sanitizeSections } from '@/features/store-builder/sanitizeSections'
 import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
@@ -261,16 +262,21 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
  *  the others). This is the "publish the template" action the merchant expects. */
 async function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
   const draft = shop.builder_draft
-  const homeSections: LayoutSection[] =
-    context.kind === 'home' ? snap.sections : draft?.sections ?? shop.layout_sections
+  // Sanitize at write time (PHASE-09): only structurally valid sections are
+  // persisted — render-time sanitizing (SectionList) stays as defense in depth.
+  // Unknown section types are preserved by the sanitizer (forward-compat) and
+  // skipped by the renderer, never executed.
+  const homeSections: LayoutSection[] = sanitizeSections(
+    context.kind === 'home' ? snap.sections : (draft?.sections ?? shop.layout_sections),
+  )
 
   const systemPublished = (key: SystemTemplateKey): LayoutSection[] => {
     const live = context.kind === 'system' && context.key === key ? snap.sections : undefined
-    return (
+    return sanitizeSections(
       live ??
-      draft?.templates?.[key] ??
-      shop.page_templates?.[key]?.published ??
-      buildDefaultSystemTemplate(key)
+        draft?.templates?.[key] ??
+        shop.page_templates?.[key]?.published ??
+        buildDefaultSystemTemplate(key),
     )
   }
 
