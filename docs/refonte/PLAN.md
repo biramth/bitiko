@@ -57,7 +57,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 09 | [Page Builder](PHASE-09-page-builder.md) | Éditeur visuel data-driven, header/footer configurables, sans `<script>` arbitraire | 07, 08 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 10 | [Billing + Entitlements](PHASE-10-billing.md) | `Subscription → Plan → Entitlements`, prix configurables + historique, quotas/overage | 03, 04 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : entitlements+limites source unique ; prix/factures/usage en suivi) |
 | 11 | [Payment Engine](PHASE-11-payments.md) | `Application → Payment Engine → Provider → Wave` ; Wave = `TEMPORARY` provider conservé | 10 | ✅ TERMINÉ — 2026-09-25 (DEV) |
-| 12 | [Usage + Cost Engine](PHASE-12-usage-cost.md) | Metering, quotas, coût réel par business/plan/pays | 10, 11 | ⬜ NON DÉMARRÉ |
+| 12 | [Usage + Cost Engine](PHASE-12-usage-cost.md) | Metering, quotas, coût réel par business/plan/pays | 10, 11 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : ledger + 1 source ; rating/advisor en suivi) |
 | 13 | [Automation Engine](PHASE-13-automations.md) | `Business Event → Automation Engine → Channel` (WhatsApp/SMS/Email/Push) | 05, 10 | ⬜ NON DÉMARRÉ |
 | 14 | [Platform Admin](PHASE-14-platform-admin.md) | Business, marketing, analytics, support, configuration (types, plans, prix, pays…) | 05, 10, 12 | ⬜ NON DÉMARRÉ |
 | 15 | [Performance + Security hardening](PHASE-15-hardening.md) | Budgets, durcissement complet browser→DB→infra, uploads, tenant isolation | 06–14 | ⬜ NON DÉMARRÉ |

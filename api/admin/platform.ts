@@ -12,6 +12,7 @@ import {
 } from '../_lib/supabaseAdmin.js'
 import { deleteUserCompletely } from '../_lib/userDeletion.js'
 import { sendEmail } from '../_lib/resendEmail.js'
+import { recordUsage } from '../_lib/usage.js'
 import { campaignEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { can } from '../../src/features/platform/permissions.js'
 
@@ -935,6 +936,19 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
     if (logs.length > 0) {
       const { error: logError } = await admin.from('campaign_sends').insert(logs)
       if (logError) console.error('platform campaign-send: logging failed', logError)
+    }
+
+    // Metering (PHASE-12, best-effort): emails actually delivered, per shop,
+    // into the usage ledger — never blocks or alters the send itself.
+    {
+      const sentByShop = new Map<string, number>()
+      for (const row of logs) {
+        if (row.status !== 'sent') continue
+        sentByShop.set(row.shop_id, (sentByShop.get(row.shop_id) ?? 0) + 1)
+      }
+      for (const [shopId, count] of sentByShop) {
+        await recordUsage(shopId, 'emails', count)
+      }
     }
 
     // Totals across runs: a resumed send must report every successfully
