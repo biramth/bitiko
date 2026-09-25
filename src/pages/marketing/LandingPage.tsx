@@ -121,6 +121,8 @@ const shopCategories = [
   'Mode & textiles',
   'Restauration & livraison',
   'Beauté & cosmétiques',
+  'Coiffure & beauté',
+  'Food & services',
   'Artisanat & créations',
   'Électronique',
   'Épicerie',
@@ -344,11 +346,17 @@ function Nav() {
   const [produitOpen, setProduitOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const produitRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (produitRef.current && !produitRef.current.contains(e.target as Node)) setProduitOpen(false)
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(e.target as Node)
+      ) {
+        setProduitOpen(false)
+      }
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
@@ -361,8 +369,18 @@ function Nav() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const dropdownStyle: React.CSSProperties = produitOpen && triggerRef.current
+    ? {
+        position: 'fixed',
+        top: triggerRef.current.getBoundingClientRect().bottom + window.scrollY + 8,
+        left: triggerRef.current.getBoundingClientRect().left + window.scrollX,
+        zIndex: 40,
+      }
+    : {}
+
   return (
     <header
+      ref={headerRef}
       className={`sticky top-0 z-50 px-3 pt-3 transition-all duration-300 sm:px-4 ${
         scrolled ? 'pb-3 backdrop-blur-xl [mask-image:linear-gradient(to_bottom,black_70%,transparent)]' : ''
       }`}
@@ -380,21 +398,18 @@ function Nav() {
             <Logo size={20} />
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-ink-700 lg:flex" aria-label="Navigation principale">
-            <div className="relative" ref={produitRef} onMouseEnter={() => setProduitOpen(true)} onMouseLeave={() => setProduitOpen(false)}>
-              <button type="button" onClick={() => setProduitOpen((v) => !v)} aria-expanded={produitOpen} className="flex items-center gap-1 transition-opacity hover:opacity-70">
+            <div className="relative" onMouseEnter={() => setProduitOpen(true)} onMouseLeave={() => setProduitOpen(false)}>
+              <button
+                ref={triggerRef}
+                type="button"
+                onClick={() => setProduitOpen((v) => !v)}
+                aria-expanded={produitOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-1 transition-opacity hover:opacity-70"
+              >
                 Produit
                 <ChevronDown size={14} className={`transition-transform ${produitOpen ? 'rotate-180' : ''}`} />
               </button>
-              {produitOpen && (
-                <div className="absolute left-0 top-full z-30 mt-3 w-72 rounded-2xl border border-sand-200 bg-white p-2 shadow-xl">
-                  {produitLinks.map(({ label, href, description }) => (
-                    <a key={label} href={href} onClick={() => setProduitOpen(false)} className="block rounded-xl px-3 py-2.5 hover:bg-sand-50">
-                      <span className="block text-sm font-medium text-ink-900">{label}</span>
-                      <span className="block text-xs text-ink-700/75">{description}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
             </div>
             <a href="#fonctionnalites" className="transition-opacity hover:opacity-70">Fonctionnalités</a>
             <a href="#tarifs" className="transition-opacity hover:opacity-70">Tarifs</a>
@@ -422,6 +437,28 @@ function Nav() {
           {mobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
+
+      {/* Dropdown rendered at header level to avoid clipping by rounded-full inner container */}
+      {produitOpen && triggerRef.current && (
+        <div
+          style={dropdownStyle}
+          className="w-72 rounded-2xl border border-sand-200 bg-white p-2 shadow-xl"
+          role="menu"
+        >
+          {produitLinks.map(({ label, href, description }) => (
+            <a
+              key={label}
+              href={href}
+              onClick={() => setProduitOpen(false)}
+              className="block rounded-xl px-3 py-2.5 hover:bg-sand-50"
+              role="menuitem"
+            >
+              <span className="block text-sm font-medium text-ink-900">{label}</span>
+              <span className="block text-xs text-ink-700/75">{description}</span>
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Mobile drawer */}
       {mobileOpen && (
