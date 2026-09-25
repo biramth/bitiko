@@ -15,6 +15,28 @@ export async function fetchCompatibleTemplateSlugs(shopId: string): Promise<stri
   }
 }
 
+/** Template slugs serving a business-type slug (DB compatibility, active only).
+ *  Returns `null` on error so callers fall back to legacy lists. */
+export async function fetchTemplateSlugsForTypeSlug(typeSlug: string): Promise<string[] | null> {
+  try {
+    const [{ data: types }, { data: mappings }, { data: templates }] = await Promise.all([
+      supabase.from('business_types').select('id, slug').eq('status', 'active'),
+      supabase.from('template_business_types').select('template_id, business_type_id'),
+      supabase.from('templates').select('id, slug').eq('status', 'active'),
+    ])
+    if (!types || !mappings || !templates) return null
+    const typeId = types.find((t) => t.slug === typeSlug)?.id
+    if (!typeId) return null
+    const templateIds = new Set(
+      mappings.filter((m) => m.business_type_id === typeId).map((m) => m.template_id),
+    )
+    const slugs = templates.filter((t) => templateIds.has(t.id)).map((t) => t.slug)
+    return slugs.length > 0 ? slugs : null
+  } catch {
+    return null
+  }
+}
+
 /** Resolves the picker list: DB compatibility wins when it yields templates,
  *  otherwise the legacy per-vertical list (fail-open). Pure — unit-tested. */
 export function resolvePickerTemplates(

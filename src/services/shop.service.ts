@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { compressImageFile } from '@/utils/image'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
@@ -98,18 +99,7 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
   // legacy TEXT column stays authoritative until every flow writes the FK).
   // Best-effort — creation never fails on this lookup (backfill covers gaps).
   const vertical = generatedSource.vertical
-  let businessTypeId: string | null = null
-  try {
-    const { data } = await supabase
-      .from('business_types')
-      .select('id')
-      .eq('slug', vertical)
-      .eq('status', 'active')
-      .maybeSingle()
-    businessTypeId = (data as { id: string } | null)?.id ?? null
-  } catch {
-    businessTypeId = null
-  }
+  const businessTypeId = await resolveBusinessTypeId(vertical)
   const businessTypeLink = businessTypeId ? { business_type_id: businessTypeId } : {}
 
   const { data, error } = await supabase

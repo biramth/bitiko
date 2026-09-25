@@ -27,7 +27,9 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
 import { getImpersonation } from '@/lib/supportSession'
-import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
+import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
+import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
+import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { deleteAccount } from '@/services/account.service'
@@ -467,6 +469,8 @@ function SettingsForm({
   const [name, setName] = useState(shop.name)
   const [description, setDescription] = useState(shop.description ?? '')
   const [businessType, setBusinessType] = useState(shop.business_type ?? '')
+  // Activity picker sourced from the DB referential, legacy list as fallback.
+  const typeOptions = useBusinessTypeOptions()
   const [whatsappNumber, setWhatsappNumber] = useState(shop.whatsapp_number)
   const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
   const [currency, setCurrency] = useState(shop.currency)
@@ -648,7 +652,7 @@ function SettingsForm({
   })
 
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const phone = normalizePhoneNumber(whatsappNumber)
       if (!phone.ok || !phone.value) {
         throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
@@ -661,10 +665,13 @@ function SettingsForm({
         }
         threshold = parsed.value
       }
+      // Keep the referential FK in sync with the TEXT column (best-effort).
+      const businessTypeId = await resolveBusinessTypeId(businessType || null)
       return updateShop(shop.id, {
         name: name.trim(),
         description: description.trim() || null,
         business_type: businessType || null,
+        ...(businessTypeId ? { business_type_id: businessTypeId } : {}),
         whatsapp_number: phone.value,
         payment_instructions: paymentInstructions.trim() || null,
         currency: normalizeCurrency(currency),
@@ -849,8 +856,8 @@ function SettingsForm({
                   className={inputClass}
                 >
                   <option value="">Non renseigné</option>
-                  {availableVerticals().map((vertical) => (
-                    <option key={vertical.key} value={vertical.key}>{vertical.label}</option>
+                  {typeOptions.map((option) => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-gray-500">

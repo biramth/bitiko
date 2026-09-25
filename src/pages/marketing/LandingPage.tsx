@@ -17,12 +17,14 @@ import {
   Palette,
   Phone,
   Plus,
+  Scissors,
   Shirt,
   ShoppingBag,
   ShoppingCart,
   Smartphone,
   Sparkles,
   Store,
+  UtensilsCrossed,
   Wallet,
   Wand2,
   X,
@@ -34,6 +36,7 @@ import { SocialIcon } from '@/components/ui/SocialIcon'
 import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
+import { useSoftwareStructuredData } from '@/hooks/useSoftwareStructuredData'
 
 /** Counts up from 0 to `target` once the element scrolls into view — the
  * small "alive" detail both reference sites use on their stat strips. */
@@ -149,6 +152,22 @@ const solutions = [
     description:
       'Tes produits se vendent la nuit — toi tu dors. Le matin, tu lis tes commandes et tu organises les livraisons. Stock toujours à jour.',
     products: 'Crèmes • Maquillage • Soin • Parfums',
+  },
+  {
+    icon: Scissors,
+    tint: 'bg-sky-500/[0.08] text-sky-700 ring-sky-600/15',
+    title: 'Coiffure & beauté',
+    description:
+      'Services, tarifs, prise de rendez-vous, équipe, galerie. Tes clientes réservent en ligne — pas besoin de panier pour remplir ton salon.',
+    products: 'Services • Tarifs • Rendez-vous • Équipe',
+  },
+  {
+    icon: UtensilsCrossed,
+    tint: 'bg-lime-600/[0.08] text-lime-700 ring-lime-600/15',
+    title: 'Food & services',
+    description:
+      'Menu ou prestations, commande ou réservation, devis pour les interventions. Ton activité de service a sa vitrine, sans la complexité d’une boutique.',
+    products: 'Menu • Réservation • Devis • Interventions',
   },
   {
     icon: Palette,
@@ -592,11 +611,12 @@ function SquiggleUnderline() {
 
 export function LandingPage() {
   usePageSeo({
-    title: 'Bitiko — Crée ta boutique en ligne, vends sur WhatsApp',
+    title: 'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
     description:
-      "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
+      "Bitiko donne à chaque activité sa présence en ligne : boutique e-commerce, prise de rendez-vous, catalogue de services — adaptée à ton métier, pilotée depuis ton téléphone. Fait pour l'Afrique, gratuit pour commencer.",
   })
   useFaqStructuredData(faq)
+  useSoftwareStructuredData()
   const { promo, isLoading: promoLoading } = useLandingPromo()
   const promoDate = formatPromoDate(promo?.expires_at ?? null)
 
@@ -637,11 +657,11 @@ export function LandingPage() {
               className="mx-auto mb-6 hidden w-fit animate-fade-up items-center gap-1.5 rounded-3xl border border-sand-200 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-700 shadow-[inset_0_-2px_0_#E7E0D4] transition-colors hover:bg-sand-100 lg:inline-flex"
             >
               <Zap size={13} className="text-brand-500" aria-hidden />
-              Pour les commerçants d'Afrique de l'Ouest
+              Pour les activités d'Afrique de l'Ouest
               <ArrowRight size={12} className="text-ink-700" aria-hidden />
             </a>
             <h1 className="mx-auto max-w-[600px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.4rem]">
-              Ton commerce mérite mieux qu'un{' '}
+              Ton activité mérite mieux qu'un{' '}
               <span className="relative inline-block whitespace-nowrap">
                 fil WhatsApp
                 <SquiggleUnderline />
@@ -649,7 +669,7 @@ export function LandingPage() {
               .
             </h1>
             <p className="mx-auto mt-5 max-w-[540px] animate-fade-up text-[15px] leading-relaxed text-[#605958] [animation-delay:200ms] sm:text-base lg:mx-0">
-              Bitiko transforme ton téléphone en vraie boutique en ligne : catalogue, panier, et chaque commande qui atterrit directement sur ton WhatsApp. Aucun code, aucune carte bancaire, aucune commission — juste plus de ventes.
+              Bitiko transforme ton téléphone en présence en ligne de ton activité : boutique avec catalogue et panier, rendez-vous, catalogue de services — chaque commande ou réservation atterrit directement sur ton WhatsApp. Aucun code, aucune carte bancaire, aucune commission.
             </p>
             <div className="mb-8 mt-8 flex animate-fade-up flex-col items-center gap-3 [animation-delay:300ms] sm:flex-row lg:justify-start">
               <Link to="/admin/login" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
@@ -661,7 +681,7 @@ export function LandingPage() {
               </a>
             </div>
             <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/75 [animation-delay:400ms] lg:justify-start">
-              {['0 F pour lancer', 'Zéro commission', '15 produits offerts', 'Sans carte bancaire'].map((t) => (
+              {['0 F pour lancer', 'Zéro commission', '8 produits offerts', 'Sans carte bancaire'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} className="text-brand-500" aria-hidden /> {t}
                 </span>
@@ -854,12 +874,13 @@ export function LandingPage() {
         <section id="solutions" className="border-b border-sand-200">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Une boutique pour chaque commerce</SectionEyebrow>
+              <SectionEyebrow>Une boutique pour chaque commerce, un espace pour chaque service</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Bitiko s'adapte à ton activité, pas l'inverse.
-            </h2>
+              </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Que tu vendes des vêtements, des plats, des cosmétiques ou de l'artisanat — la structure est la même, le résultat aussi.
+                Que tu vendes des vêtements, des plats, des cosmétiques — ou que tu coiffes, soignes ou
+                répares : ton workspace et ta page publique suivent ton métier, pas l'inverse.
               </p>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2">
@@ -954,9 +975,9 @@ export function LandingPage() {
             </Reveal>
             <div className="grid gap-10 sm:grid-cols-3">
               {[
-                { n: '1', title: 'Crée ta boutique', desc: 'Choisis un nom, un sous-domaine, un numéro WhatsApp. 2 minutes.' },
-                { n: '2', title: 'Ajoute tes produits', desc: 'Photos, prix, stock. En 30 secondes par produit.' },
-                { n: '3', title: 'Partage ton lien', desc: 'WhatsApp, Facebook, Instagram, bouche-à-oreille. Ta boutique vend 24h/24.' },
+                { n: '1', title: 'Décris ton activité', desc: 'Coiffeur, boutique, restaurant… Nom, sous-domaine, WhatsApp. 2 minutes.' },
+                { n: '2', title: 'Ajoute ton offre', desc: 'Produits, services, tarifs. Ton espace s’adapte à ton métier.' },
+                { n: '3', title: 'Partage ton lien', desc: 'WhatsApp, Facebook, Instagram, bouche-à-oreille. Ton activité travaille 24h/24.' },
               ].map(({ n, title, desc }, i) => (
                 <Reveal key={n} delay={i * 120} className="relative text-center">
                   {i < 2 && <span className="absolute left-[calc(50%+2rem)] top-6 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-gold-400/40 to-gold-400/10 sm:block" />}
@@ -1096,7 +1117,7 @@ export function LandingPage() {
                 Prêt à vendre en ligne ?
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ink-700/70">
-                Crée ta boutique gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
+                Lance ton activité gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
               </p>
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
                 Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />

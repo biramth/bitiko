@@ -58,6 +58,8 @@ import {
 } from '@/features/onboarding/storeProfile'
 import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
+import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
+import { fetchTemplateSlugsForTypeSlug } from '@/services/template.service'
 import { slugify } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber, validatePhoneNumber } from '@/utils/phone'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -220,10 +222,23 @@ export function OnboardingPage() {
   const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
   const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
 
-  const handleSelectVertical = (vertical: string) => {
+  // Activity picker sourced from the DB referential (types with an active
+  // template), legacy hardcoded list as fail-open fallback.
+  const typeOptions = useBusinessTypeOptions()
+
+  const handleSelectVertical = async (vertical: string) => {
     setBusinessType(vertical)
-    const first = templatesForVertical(vertical)[0]
-    if (first) setTemplateId(first.key)
+    try {
+      const slugs = await fetchTemplateSlugsForTypeSlug(vertical)
+      const compatible = slugs && slugs.length > 0
+        ? STORE_TEMPLATES.filter((t) => slugs.includes(t.key))
+        : templatesForVertical(vertical)
+      const first = (compatible.length > 0 ? compatible : templatesForVertical(vertical))[0]
+      if (first) setTemplateId(first.key)
+    } catch {
+      const first = templatesForVertical(vertical)[0]
+      if (first) setTemplateId(first.key)
+    }
   }
   const [profile, setProfile] = useState<StoreProfileAnswers>(EMPTY_STORE_PROFILE)
   const updateProfile = (patch: Partial<StoreProfileAnswers>) => setProfile((prev) => ({ ...prev, ...patch }))
@@ -350,7 +365,7 @@ export function OnboardingPage() {
   if (existingShop && !creatingAdditional) return <Navigate to="/admin" replace />
 
   const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
-  const selectedVertical = VERTICAL_BY_KEY[businessType]
+  const selectedVertical = typeOptions.find((o) => o.key === businessType) ?? VERTICAL_BY_KEY[businessType]
   // The recap shows the color actually applied: a light logo color is deepened
   // so white text on it stays readable.
   const effectiveThemeColor = logoPalette?.primary
@@ -654,7 +669,7 @@ export function OnboardingPage() {
               <div>
                 <StepHeader step={2} />
                 <div className="mt-2 grid grid-cols-2 gap-2.5">
-                  {availableVerticals().map((vertical) => {
+                  {typeOptions.map((vertical) => {
                     const selected = businessType === vertical.key
                     const VerticalIcon = VERTICAL_ICONS[vertical.key] ?? Store
                     return (
@@ -680,7 +695,7 @@ export function OnboardingPage() {
                   })}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Le type de commerce définit la structure de ta boutique. Modifiable plus tard dans « Personnaliser ».
+                  Ton activité définit ton espace : boutique, rendez-vous, services. Modifiable plus tard dans « Personnaliser ».
                 </p>
               </div>
 

@@ -73,6 +73,48 @@ export type Database = {
         }
         Relationships: []
       }
+      template_business_types: {
+        Row: {
+          template_id: string
+          business_type_id: string
+          created_at: string
+        }
+        Insert: {
+          template_id: string
+          business_type_id: string
+          created_at?: string
+        }
+        Update: {
+          template_id?: string
+          business_type_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          description: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          description?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          description?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null

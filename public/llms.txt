@@ -1,17 +1,20 @@
 # Bitiko
 
-Bitiko crée des boutiques en ligne pour les commerçants d'Afrique de l'Ouest :
-catalogue, panier, commandes relayées sur WhatsApp, paiement à la livraison
-ou mobile money. Gratuit pour commencer.
+Bitiko donne à chaque activité d'Afrique de l'Ouest sa présence en ligne :
+boutique e-commerce (catalogue, panier, commandes), prise de rendez-vous,
+catalogue de services — adaptée au métier (commerçant, coiffeur, restaurant,
+artisan, prestataire). Commandes et réservations relayées sur WhatsApp,
+paiement à la livraison ou mobile money. Gratuit pour commencer.
 
 - [Accueil](https://bitiko.shop/)
-- [Créer une boutique](https://bitiko.shop/admin/login)
+- [Créer son espace](https://bitiko.shop/admin/login)
 - [Tarifs](https://bitiko.shop/#tarifs)
 - [Fonctionnement](https://bitiko.shop/#marche)
 - [FAQ](https://bitiko.shop/#faq)
 - [CGU](https://bitiko.shop/legal/cgu)
 - [Confidentialité](https://bitiko.shop/legal/confidentialite)
 
-Chaque boutique cliente vit sur `<slug>.bitiko.shop` (catalogue, produit,
-panier, commande). Les pages `/admin/*`, `/plateforme/*`, `/panier`,
-`/commande` et `/compte` ne sont pas indexées.
+Chaque activité peut avoir une boutique sur `<slug>.bitiko.shop` (catalogue,
+produit, panier, commande) — sans obligation : un salon ou un restaurant peut
+n'utiliser que rendez-vous, menu et réservation. Les pages `/admin/*`,
+`/plateforme/*`, `/panier`, `/commande` et `/compte` ne sont pas indexées.
