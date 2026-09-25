@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   BarChart3,
+  Briefcase,
   CreditCard,
   Gift,
   LayoutDashboard,
@@ -41,6 +42,7 @@ const TOOLS: Tool[] = [
   { to: '/plateforme/campagnes', label: 'Campagnes', icon: Mail, capability: 'send_campaigns' },
   { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns' },
   { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team' },
+  { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types' },
 ]
 
 function LogoMark({ size = 28 }: { size?: number }) {

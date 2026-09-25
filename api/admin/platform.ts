@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   canDeleteUsers,
+  canManageCatalog,
   canManageTeam,
   canSupportAccess,
   getPlatformMemberByUserId,
@@ -75,6 +76,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handlePromoList(req, res)
     case 'promo-save':
       return handlePromoSave(req, res)
+    case 'biztype-list':
+      return handleBizTypeList(req, res)
+    case 'biztype-save':
+      return handleBizTypeSave(req, res)
+    case 'biztype-capabilities':
+      return handleBizTypeCapabilities(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -124,7 +131,7 @@ async function logAudit(
   entry: {
     actorUserId: string
     actorEmail: string
-    action: 'support_access' | 'user_delete' | 'team_add'
+    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save'
     targetUserId?: string
     targetShopId?: string
     details?: Record<string, unknown>
@@ -1141,6 +1148,246 @@ async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ saved: true, code })
   } catch (err) {
     console.error('platform promo-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Business catalog (PHASE-05): business_types + capabilities, owner/admin only.
+// Slugs are immutable once created (compat layers reference them); types retire
+// via status=deprecated, never by DELETE (shops may point at them).
+// ---------------------------------------------------------------------------
+
+const BIZTYPE_STATUSES = ['active', 'deprecated', 'draft'] as const
+const SLUG_RE = /^[a-z0-9]+(_[a-z0-9]+)*$/
+
+async function handleBizTypeList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: types, error: typesError } = await admin
+      .from('business_types')
+      .select('id, slug, name, description, icon, status, updated_at')
+      .order('slug')
+    if (typesError) throw typesError
+
+    const { data: capabilities, error: capsError } = await admin
+      .from('capabilities')
+      .select('id, code, label, description, category, status')
+      .order('code')
+    if (capsError) throw capsError
+
+    const { data: mappings, error: mapError } = await admin
+      .from('business_type_capabilities')
+      .select('business_type_id, capability_id')
+    if (mapError) throw mapError
+
+    const { data: shopCounts, error: countError } = await admin
+      .from('shops')
+      .select('business_type_id')
+    if (countError) throw countError
+    const shopsByType = new Map<string, number>()
+    for (const row of shopCounts ?? []) {
+      const id = row.business_type_id as string | null
+      if (!id) continue
+      shopsByType.set(id, (shopsByType.get(id) ?? 0) + 1)
+    }
+
+    res.status(200).json({
+      types: (types ?? []).map((t) => ({
+        ...(t as Record<string, unknown>),
+        shops: shopsByType.get((t as { id: string }).id) ?? 0,
+      })),
+      capabilities: capabilities ?? [],
+      mappings: mappings ?? [],
+    })
+  } catch (err) {
+    console.error('platform biztype-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleBizTypeSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const { id, slug, name, description, icon, status, create } = (req.body ?? {}) as {
+      id?: unknown
+      slug?: unknown
+      name?: unknown
+      description?: unknown
+      icon?: unknown
+      status?: unknown
+      create?: unknown
+    }
+    const cleanName = typeof name === 'string' ? name.trim() : ''
+    if (!cleanName) {
+      res.status(400).json({ error: 'Le nom est requis.' })
+      return
+    }
+    if (!(BIZTYPE_STATUSES as readonly unknown[]).includes(status)) {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    if (create) {
+      const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
+      if (!SLUG_RE.test(cleanSlug)) {
+        res.status(400).json({ error: 'Slug invalide (minuscules, chiffres, tirets bas).' })
+        return
+      }
+      const { data, error } = await admin
+        .from('business_types')
+        .insert({
+          slug: cleanSlug,
+          name: cleanName,
+          description: typeof description === 'string' ? description.trim() || null : null,
+          icon: typeof icon === 'string' ? icon.trim() || null : null,
+          status: status as string,
+        })
+        .select('id')
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          res.status(409).json({ error: 'Ce slug existe déjà.' })
+          return
+        }
+        throw error
+      }
+      await logAudit({
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'biztype_save',
+        details: { slug: cleanSlug },
+      })
+      res.status(200).json({ saved: true, id: (data as { id: string }).id })
+      return
+    }
+
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+    // Slug is immutable: only name/description/icon/status can change.
+    const { data, error } = await admin
+      .from('business_types')
+      .update({
+        name: cleanName,
+        description: typeof description === 'string' ? description.trim() || null : null,
+        icon: typeof icon === 'string' ? icon.trim() || null : null,
+        status: status as string,
+      })
+      .eq('id', id)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      res.status(404).json({ error: 'Type introuvable.' })
+      return
+    }
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'biztype_save',
+      details: { id, status },
+    })
+    res.status(200).json({ saved: true, id })
+  } catch (err) {
+    console.error('platform biztype-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleBizTypeCapabilities(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const { typeId, codes } = (req.body ?? {}) as { typeId?: unknown; codes?: unknown }
+    if (typeof typeId !== 'string' || !typeId) {
+      res.status(400).json({ error: 'Type manquant.' })
+      return
+    }
+    if (!Array.isArray(codes) || !codes.every((c): c is string => typeof c === 'string')) {
+      res.status(400).json({ error: 'Capabilities invalides.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: typeRow, error: typeError } = await admin
+      .from('business_types')
+      .select('id')
+      .eq('id', typeId)
+      .maybeSingle()
+    if (typeError) throw typeError
+    if (!typeRow) {
+      res.status(404).json({ error: 'Type introuvable.' })
+      return
+    }
+
+    const { data: capRows, error: capsError } = await admin
+      .from('capabilities')
+      .select('id, code')
+      .in('code', codes.length > 0 ? codes : ['__none__'])
+    if (capsError) throw capsError
+    const found = new Set((capRows ?? []).map((c) => (c as { code: string }).code))
+    const unknown = codes.filter((c) => !found.has(c))
+    if (unknown.length > 0) {
+      res.status(400).json({ error: `Capabilities inconnues : ${unknown.join(', ')}` })
+      return
+    }
+
+    const { error: deleteError } = await admin
+      .from('business_type_capabilities')
+      .delete()
+      .eq('business_type_id', typeId)
+    if (deleteError) throw deleteError
+    if (capRows && capRows.length > 0) {
+      const { error: insertError } = await admin.from('business_type_capabilities').insert(
+        capRows.map((c) => ({
+          business_type_id: typeId,
+          capability_id: (c as { id: string }).id,
+        })),
+      )
+      if (insertError) throw insertError
+    }
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'biztype_save',
+      details: { typeId, codes },
+    })
+    res.status(200).json({ saved: true })
+  } catch (err) {
+    console.error('platform biztype-capabilities failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

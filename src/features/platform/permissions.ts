@@ -17,6 +17,7 @@ export type PlatformCapability =
   | 'manage_team'
   | 'support_access'
   | 'delete_users'
+  | 'manage_business_types'
 
 export interface PlatformRoleInfo {
   key: PlatformRole
@@ -32,8 +33,8 @@ export const PLATFORM_ROLES: PlatformRoleInfo[] = [
 ]
 
 const CAPABILITIES: Record<PlatformRole, PlatformCapability[]> = {
-  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
-  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
+  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types'],
+  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types'],
   dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access'],
   marketing: ['view_analytics', 'view_shops', 'send_campaigns'],
 }
@@ -46,6 +47,7 @@ export const CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   manage_team: 'Gérer l’équipe',
   support_access: 'Accès support aux boutiques',
   delete_users: 'Supprimer des comptes utilisateurs',
+  manage_business_types: 'Gérer les types d’activité et capabilities',
 }
 
 export function roleLabel(role: PlatformRole | null | undefined): string {

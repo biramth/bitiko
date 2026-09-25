@@ -88,3 +88,67 @@ export async function savePromo(input: PromoInput, create: boolean): Promise<voi
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? "Impossible d'enregistrer la promotion.")
 }
+
+// ---------------------------------------------------------------------------
+// Business catalog (PHASE-05): business_types + capabilities (owner/admin only,
+// enforced server-side in api/admin/platform.ts).
+// ---------------------------------------------------------------------------
+
+export interface AdminBusinessType {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  icon: string | null
+  status: 'active' | 'deprecated' | 'draft'
+  shops: number
+}
+
+export interface AdminCapability {
+  id: string
+  code: string
+  label: string
+  description: string | null
+  category: string
+  status: string
+}
+
+export interface BusinessCatalog {
+  types: AdminBusinessType[]
+  capabilities: AdminCapability[]
+  mappings: { business_type_id: string; capability_id: string }[]
+}
+
+export async function listBusinessCatalog(): Promise<BusinessCatalog> {
+  const res = await fetch('/api/admin/business-types', { headers: await authHeader() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible de charger le catalogue métier.')
+  return body as BusinessCatalog
+}
+
+export async function saveBusinessType(input: {
+  id?: string
+  slug?: string
+  name: string
+  description?: string | null
+  icon?: string | null
+  status: string
+  create: boolean
+}): Promise<void> {
+  const res = await fetch('/api/admin/business-types/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? "Impossible d'enregistrer le type d'activité.")
+}
+
+export async function saveBusinessTypeCapabilities(typeId: string, codes: string[]): Promise<void> {
+  const res = await fetch('/api/admin/business-types/capabilities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ typeId, codes }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible d’enregistrer les capabilities.')}

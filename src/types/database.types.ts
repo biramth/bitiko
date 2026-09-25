@@ -972,6 +972,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      business_type_capability_codes: {
+        Args: { p_slug: string }
+        Returns: string[]
+      }
+      shop_business_type_slug: {
+        Args: { p_shop_id: string }
+        Returns: string
+      }
+      organization_role: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       get_platform_orders: {
         Args: { p_limit?: number }
         Returns: {
