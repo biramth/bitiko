@@ -47,7 +47,9 @@ export const PLANS: Record<PlanKey, Plan> = {
     key: 'free',
     label: 'Découverte',
     priceXof: 0,
-    maxActiveProducts: 15,
+    // Single source of truth: public.plan_limits (MAX_ACTIVE_PRODUCTS). This
+    // mirror must stay in sync — the DB trigger enforces the table value.
+    maxActiveProducts: 8,
     storeBuilderAccess: true,
     advancedBuilder: false,
     removableBranding: false,

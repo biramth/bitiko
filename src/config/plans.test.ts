@@ -40,16 +40,17 @@ describe('effectivePlan', () => {
   it('defaults to the free plan', () => {
     const plan = effectivePlan(null)
     expect(plan.key).toBe('free')
-    expect(plan.maxActiveProducts).toBe(15)
+    // Mirrors public.plan_limits (single source is the DB trigger) — see plans.ts.
+    expect(plan.maxActiveProducts).toBe(8)
     expect(plan.storeBuilderAccess).toBe(true)
     expect(plan.advancedBuilder).toBe(false)
   })
 })
 
 describe('canAddProduct', () => {
-  it('blocks the free plan at its 15-product cap', () => {
-    expect(canAddProduct(PLANS.free, 15)).toBe(false)
-    expect(canAddProduct(PLANS.free, 14)).toBe(true)
+  it('blocks the free plan at its 8-product cap', () => {
+    expect(canAddProduct(PLANS.free, 8)).toBe(false)
+    expect(canAddProduct(PLANS.free, 7)).toBe(true)
     expect(canAddProduct(PLANS.free, 0)).toBe(true)
   })
 
