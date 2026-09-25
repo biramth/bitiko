@@ -1,8 +1,8 @@
 # PHASE 14 — Platform Admin (3ᵉ espace produit)
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : —
-> Pré-requis : PHASE-05 ✅, PHASE-10 ✅, PHASE-12 ✅.
+> État : ✅ TERMINÉ — 2026-09-25 (DEV uniquement, prod non touchée).
+> Journal : 2026-09-25 — audit money-flows + helper partagé + règle Hobby 12 fonctions ;
+> livrable ci-dessous.
 
 ## Objectif
 
@@ -28,8 +28,30 @@ paramètres). Permissions platform **séparées** des permissions business.
 3. Analytics financières §42 de la mission (Revenue/Growth/Economics/SaaS) branchées sur
    PHASE-10/12, pas sur des requêtes ad hoc.
 
-## Critères de sortie
+## Livrable PHASE 14 COMPLETE (2026-09-25, DEV)
 
-- [ ] Un support peut retrouver un business, voir son historique et agir, avec traçabilité.
-- [ ] Prix/entitlements/types modifiables sans code depuis Platform (selon phases).
-- [ ] `PHASE 14 COMPLETE` rédigé.
+1. Tables créées/modifiées : aucune (contrainte `admin_audit_log.action` étendue uniquement).
+2. Migrations effectuées : `0108_audit_actions.sql` (+`biztype_save`, +`payment_approve`,
+   +`payment_reject`, +`promo_save`) — historique `0108|0108` ✅. Prod non touchée.
+3. Relations : inchangées. 4. Index : inchangés. 5. RLS : inchangée (service-only).
+4. Policies : inchangées.
+5. Fonctions ajoutées/modifiées : aucune SQL ; helper `api/_lib/auditLog.ts` (`logAdminAudit`,
+   best-effort + `required`), `logAudit` de `platform.ts` délégué (zéro changement d'appels).
+6. Compatibilité legacy : audit best-effort post-action (ne casse jamais le flux observé) ;
+   vitest 162/162 + `tsc` + build + lint 0 erreur.
+7. Tests créés : preuve DB par sonde (insert `payment_approve` accepté puis supprimé, zéro trace).
+8. Tests exécutés : suite verte (162/162) ; contrainte vérifiée effective.
+9. Résultats : tous verts. Bug P05 corrigé au passage (`biztype_save` échouait sur l'ancien check).
+10. Risques restants / décisions : (a) créations de promos (= abonnements offerts) accessibles
+    au rôle marketing — tracées désormais, mais la restriction éventuelle à owner/admin est une
+    décision d'accès (P15 review, pas de changement silencieux) ; (b) dashboards financiers
+    (MRR/churn/coûts) dépendent des prix en DB → suivi pricing ; (c) **Vercel Hobby : 12
+    fonctions max — `api/` en compte 11, règle opposable ajoutée au PLAN.md** (nouveaux
+    endpoints en `?action=`, tests API sous `src/api/**` — le test `api/cron/*.test.ts`
+    déplacé ce jour car il aurait fait la 12ᵉ fonction déployée).
+11. Fichiers modifiés : `supabase/migrations/0108*`, `api/_lib/auditLog.ts` (créé),
+    `api/admin/{platform,payments}.ts`, `src/api/cron/automation-dispatch.test.ts` (déplacé),
+    `docs/refonte/`.
+12. Prochaine phase recommandée : PHASE-15 (hardening : batch WITH CHECK, perfs, tenant).
+13. Compatibilité prod : aucune (dev-only, zéro déploiement).
+14. Validation : auto (mode continu) — revue humaine au STOP P17.

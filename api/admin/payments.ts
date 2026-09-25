@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { logAdminAudit } from '../_lib/auditLog.js'
 import { getPlatformOperatorFromAuthHeader, getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { proActivatedEmailHtml } from '../_lib/emailTemplates.js'
@@ -176,6 +177,13 @@ async function handleApprove(req: VercelRequest, res: VercelResponse) {
       console.error('admin approve-payment: confirmation email failed', emailErr)
     }
 
+    await logAdminAudit({
+      actorUserId: admin.id,
+      actorEmail: admin.email,
+      action: 'payment_approve',
+      targetShopId: payment.shop_id,
+      details: { paymentId, plan, amount: verifiedPlan.priceXof },
+    })
     res.status(200).json({ status: 'succeeded' })
   } catch (err) {
     console.error('admin approve-payment failed', err)
@@ -212,6 +220,12 @@ async function handleReject(req: VercelRequest, res: VercelResponse) {
       .eq('status', 'pending')
     if (error) throw error
 
+    await logAdminAudit({
+      actorUserId: admin.id,
+      actorEmail: admin.email,
+      action: 'payment_reject',
+      details: { paymentId, reason: cleanReason || null },
+    })
     res.status(200).json({ status: 'failed' })
   } catch (err) {
     console.error('admin reject-payment failed', err)

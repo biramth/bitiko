@@ -24,6 +24,11 @@ SECURITY + MULTI-TENANCY + MOBILE-FIRST + PERFORMANCE
 ```
 
 - Bitiko est **fonctionnel en production** : refonte progressive, jamais de « big bang ».
+- **Vercel Hobby (actuel) : 12 Serverless Functions max par déploiement** — `api/` en compte
+  11 (ne comptent pas : `api/_lib/**`, `middleware.ts`). Règle opposable : **aucun nouveau
+  fichier `*.ts` directement sous `api/`** (ni test co-localisé) — les nouveaux endpoints
+  passent en `?action=` dans une fonction existante (pattern `platform.ts`), et les tests
+  d'API vivent sous `src/api/**`. Un 12ᵉ slot est gardé en réserve.
 - On ne supprime ni tables utilisées, ni policies RLS fonctionnelles, ni le paiement Wave,
   ni templates, ni fonctionnalités non migrées.
 - Stratégie imposée pour tout remplacement :
@@ -59,7 +64,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 11 | [Payment Engine](PHASE-11-payments.md) | `Application → Payment Engine → Provider → Wave` ; Wave = `TEMPORARY` provider conservé | 10 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 12 | [Usage + Cost Engine](PHASE-12-usage-cost.md) | Metering, quotas, coût réel par business/plan/pays | 10, 11 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : ledger + 1 source ; rating/advisor en suivi) |
 | 13 | [Automation Engine](PHASE-13-automations.md) | `Business Event → Automation Engine → Channel` (WhatsApp/SMS/Email/Push) | 05, 10 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : journal + dispatcher + email ; autres canaux en suivi) |
-| 14 | [Platform Admin](PHASE-14-platform-admin.md) | Business, marketing, analytics, support, configuration (types, plans, prix, pays…) | 05, 10, 12 | ⬜ NON DÉMARRÉ |
+| 14 | [Platform Admin](PHASE-14-platform-admin.md) | Business, marketing, analytics, support, configuration (types, plans, prix, pays…) | 05, 10, 12 | ✅ TERMINÉ — 2026-09-25 (DEV, audit money-flows ; dashboards financiers en suivi) |
 | 15 | [Performance + Security hardening](PHASE-15-hardening.md) | Budgets, durcissement complet browser→DB→infra, uploads, tenant isolation | 06–14 | ⬜ NON DÉMARRÉ |
 | 16 | [Testing](PHASE-16-testing.md) | Unit + intégration + E2E + sécurité multi-tenant explicites | 03–15 | ⬜ NON DÉMARRÉ |
 | 17 | [Production migration](PHASE-17-production.md) | Bascule dev→prod, REMOVE LEGACY, validation critères §67 de la mission | 16 | ⬜ NON DÉMARRÉ |

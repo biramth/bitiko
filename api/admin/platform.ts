@@ -11,6 +11,7 @@ import {
   type PlatformRole,
 } from '../_lib/supabaseAdmin.js'
 import { deleteUserCompletely } from '../_lib/userDeletion.js'
+import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { recordUsage } from '../_lib/usage.js'
 import { campaignEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
@@ -124,36 +125,21 @@ async function loadUserDirectory(): Promise<Map<string, { email: string; name: s
   return directory
 }
 
-/** Records a sensitive backoffice action in admin_audit_log (service-role
- *  only, no FK — an audit row must never block the deletion it describes).
- *  Fail-closed for the flows that need the trace first, best-effort for the
- *  rest: the caller decides via `required`. */
+/** Local alias kept so existing call sites don't churn — the shared helper in
+ *  api/_lib/auditLog.ts is the single implementation (same best-effort /
+ *  fail-closed semantics via `required`). */
 async function logAudit(
   entry: {
     actorUserId: string
     actorEmail: string
-    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save'
+    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save' | 'promo_save'
     targetUserId?: string
     targetShopId?: string
     details?: Record<string, unknown>
   },
   required = false,
 ): Promise<void> {
-  try {
-    const admin = getSupabaseAdmin()
-    const { error } = await admin.from('admin_audit_log').insert({
-      actor_user_id: entry.actorUserId,
-      actor_email: entry.actorEmail,
-      action: entry.action,
-      target_user_id: entry.targetUserId ?? null,
-      target_shop_id: entry.targetShopId ?? null,
-      details: entry.details ?? {},
-    })
-    if (error) throw error
-  } catch (err) {
-    if (required) throw err
-    console.error('platform logAudit failed', err)
-  }
+  await logAdminAudit(entry, required)
 }
 
 // ---------------------------------------------------------------------------
@@ -1078,7 +1064,8 @@ async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
     return
   }
   try {
-    if (!(await requirePromoMember(req, res))) return
+    const promoMember = await requirePromoMember(req, res)
+    if (!promoMember) return
 
     const b = (req.body ?? {}) as Record<string, unknown>
     const isNew = b.create === true
@@ -1159,6 +1146,12 @@ async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    await logAudit({
+      actorUserId: promoMember.id,
+      actorEmail: promoMember.email,
+      action: 'promo_save',
+      details: { code, plan: b.plan, days, create: isNew },
+    })
     res.status(200).json({ saved: true, code })
   } catch (err) {
     console.error('platform promo-save failed', err)
