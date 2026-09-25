@@ -1,8 +1,9 @@
 # PHASE 04 — Auth + Organizations + Memberships
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : —
-> Pré-requis : PHASE-03 ✅.
+> État : 🟨 EN COURS — design rédigé, en attente de validation décideur ; migrations NON exécutées.
+> Dossier de validation : [PHASE-04-DESIGN.md](PHASE-04-DESIGN.md) (état actuel A, cible B,
+> migration prévue C, risques/tests D).
+> Journal : 2026-09-25 — état des lieux (lecteurs `owner_id`/`shop_members`, drift dev) + design rédigé.
 
 ## Objectif
 
