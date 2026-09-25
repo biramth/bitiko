@@ -28,6 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const initialized = useRef(false)
+  const unsubscribeRef = useRef<(() => void) | undefined>(undefined)
+
+  // The auth listener is app-lifetime: it must survive SPA navigations.
+  // Unsubscribing on pathname change (the natural effect cleanup) silently
+  // kills session updates — signOut() then clears the session without the UI
+  // ever noticing. So unsubscribe only if the provider itself unmounts.
+  useEffect(() => () => {
+    unsubscribeRef.current?.()
+  }, [])
 
   // supabase-js (~200 Ko) is dynamic-imported so it never blocks first paint.
   // The "/" home (marketing landing comme vitrine d'accueil) renders nothing
@@ -40,25 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     if (initialized.current) return
-    initialized.current = true
     setLoading(true)
-    let active = true
-    let unsubscribe: (() => void) | undefined
+    let cancelled = false
     import('@/lib/supabaseClient').then(({ supabase }) => {
-      if (!active) return
+      if (cancelled) return
+      initialized.current = true
       supabase.auth.getSession().then(({ data }) => {
-        if (!active) return
         setSession(data.session)
         setLoading(false)
       })
       const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-        if (active) setSession(newSession)
+        setSession(newSession)
       })
-      unsubscribe = () => listener.subscription.unsubscribe()
+      unsubscribeRef.current = () => listener.subscription.unsubscribe()
     })
     return () => {
-      active = false
-      unsubscribe?.()
+      cancelled = true
     }
   }, [pathname])
 
