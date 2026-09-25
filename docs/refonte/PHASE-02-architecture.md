@@ -1,7 +1,9 @@
 # PHASE 02 — Architecture cible
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : —
+> État : ✅ TERMINÉ — 2026-09-25
+> Journal : décisions figées dans [docs/architecture/CIBLE.md](../architecture/CIBLE.md)
+> (D0 shop≠activité actée avec le décideur, D1 entités, D2 7 décisions avec alternatives rejetées,
+> D3 nommage, D4 conventions API, D5 compat par chantier, D6/D7 reports).
 > Pré-requis : PHASE-01 ✅ (décisions prises sur faits, pas sur suppositions).
 
 ## Objectif
