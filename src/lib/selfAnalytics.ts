@@ -7,9 +7,13 @@
  * This is intentionally tiny and privacy-light: no cookies, no third-party
  * network calls, one random session id kept locally (not tied to an account).
  *
- * The Supabase client is dynamic-imported so this module — loaded on every
- * page via SelfAnalytics — never pulls supabase-js into the initial bundle.
+ * The insert goes over plain fetch (anon key, same RLS posture as the
+ * supabase-js call it replaces) so this module — loaded on every page via
+ * SelfAnalytics — never pulls supabase-js into the initial bundle.
  */
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 const SESSION_STORAGE_KEY = 'bitiko:analytics-session'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -78,20 +82,32 @@ export function trackPageView({
 
   lastSentAt = now
 
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
+
   // Fire-and-forget after idle: analytics must never contend with first paint.
-  void import('@/lib/supabaseClient').then(({ supabase }) =>
-    supabase
-      .from('page_views')
-      .insert({
-        shop_id: shopId,
-        user_id: userId,
-        path: path.slice(0, MAX_PATH_LENGTH),
-        session_id: sessionId,
-        referrer: document.referrer ? document.referrer.slice(0, MAX_REFERRER_LENGTH) : null,
-        device: detectDevice(),
-      })
-      .then(({ error }) => {
-        if (error) console.warn('[analytics] page view not recorded:', error.message)
-      }),
+  const row = {
+    shop_id: shopId,
+    user_id: userId,
+    path: path.slice(0, MAX_PATH_LENGTH),
+    session_id: sessionId,
+    referrer: document.referrer ? document.referrer.slice(0, MAX_REFERRER_LENGTH) : null,
+    device: detectDevice(),
+  }
+  void fetch(`${SUPABASE_URL}/rest/v1/page_views`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify(row),
+  }).then(
+    (res) => {
+      if (!res.ok) console.warn('[analytics] page view not recorded:', res.status)
+    },
+    (err: unknown) => {
+      console.warn('[analytics] page view not recorded:', err instanceof Error ? err.message : err)
+    },
   )
 }

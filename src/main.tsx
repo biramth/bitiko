@@ -15,7 +15,6 @@ import '@fontsource/inter/latin-500.css'
 import '@fontsource/inter/latin-600.css'
 import '@fontsource/sora/latin-600.css'
 import '@fontsource/sora/latin-700.css'
-import '@fontsource/sora/latin-800.css'
 import '@/index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -23,16 +22,18 @@ createRoot(document.getElementById('root')!).render(
     <ToastProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <BrowserRouter>
+          {/* Router sits above Auth so AuthProvider can gate the supabase-js
+              download on the current path (skipped on "/"). */}
+          <BrowserRouter>
+            <AuthProvider>
               <TenantProvider>
                 <CartProvider>
                   <App />
                   <DeferredThirdParty />
                 </CartProvider>
               </TenantProvider>
-            </BrowserRouter>
-          </AuthProvider>
+            </AuthProvider>
+          </BrowserRouter>
         </QueryClientProvider>
       </ErrorBoundary>
     </ToastProvider>

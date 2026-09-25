@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { Session, User } from '@supabase/supabase-js'
 
 interface AuthContextValue {
@@ -23,47 +24,43 @@ function authCallbackUrl() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const initialized = useRef(false)
 
-  // supabase-js (~200 Ko) is dynamic-imported so it loads asynchronously,
-  // after first paint, instead of blocking the landing page's critical path.
-  // The module registry caches the import, so every later call is free.
-  // On the marketing landing page (exact "/") nothing needs the session for
-  // first paint, so the download waits for an idle slot instead of racing
-  // the LCP fonts — auth-gated pages keep loading it immediately.
+  // supabase-js (~200 Ko) is dynamic-imported so it never blocks first paint.
+  // The "/" home (marketing landing comme vitrine d'accueil) renders nothing
+  // user-specific, so the client isn't even downloaded there — initialization
+  // runs once, on the first navigation to any other path. The module registry
+  // caches the import, so every later auth call is free.
   useEffect(() => {
+    if (pathname === '/') {
+      setLoading(false)
+      return
+    }
+    if (initialized.current) return
+    initialized.current = true
+    setLoading(true)
     let active = true
     let unsubscribe: (() => void) | undefined
-    let idleId: number | undefined
-    const load = () => {
-      import('@/lib/supabaseClient').then(({ supabase }) => {
+    import('@/lib/supabaseClient').then(({ supabase }) => {
+      if (!active) return
+      supabase.auth.getSession().then(({ data }) => {
         if (!active) return
-        supabase.auth.getSession().then(({ data }) => {
-          if (!active) return
-          setSession(data.session)
-          setLoading(false)
-        })
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-          if (active) setSession(newSession)
-        })
-        unsubscribe = () => listener.subscription.unsubscribe()
+        setSession(data.session)
+        setLoading(false)
       })
-    }
-    if (
-      window.location.pathname === '/' &&
-      typeof window.requestIdleCallback === 'function'
-    ) {
-      idleId = window.requestIdleCallback(load, { timeout: 3000 })
-    } else {
-      load()
-    }
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        if (active) setSession(newSession)
+      })
+      unsubscribe = () => listener.subscription.unsubscribe()
+    })
     return () => {
       active = false
-      if (idleId !== undefined) window.cancelIdleCallback(idleId)
       unsubscribe?.()
     }
-  }, [])
+  }, [pathname])
 
   const signIn = async (email: string, password: string) => {
     const { supabase } = await import('@/lib/supabaseClient')
