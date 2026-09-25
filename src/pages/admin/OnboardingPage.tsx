@@ -31,6 +31,7 @@ import {
 import { Logo } from '@/components/ui/Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
+import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
@@ -158,6 +159,7 @@ export function OnboardingPage() {
   const { user } = useAuth()
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
   const { data: allShops } = useMyShops()
+  const { data: platformRole, isPending: rolePending } = usePlatformRole()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
@@ -298,7 +300,11 @@ export function OnboardingPage() {
     onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
   })
 
-  if (shopLoading) return <PageLoader />
+  if (shopLoading || rolePending) return <PageLoader />
+  // Platform staff must never own a merchant shop — they live in /plateforme
+  // (same rule as RequireShop). Bounce instead of showing the creation form.
+  // A staff member who already owns shops (merchant too) keeps prior behavior.
+  if (platformRole && !existingShop) return <Navigate to="/plateforme" replace />
   // Server cap is 5 shops per account (0097) — bounce instead of letting
   // the save fail at the end of the form.
   if ((allShops?.length ?? 0) >= 5) return <Navigate to="/admin" replace />
