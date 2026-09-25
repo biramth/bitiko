@@ -25,6 +25,7 @@ modification automatique des prix**).
    (coût/business, marge/plan/pays/type).
 3. Pricing Advisor (Platform) : coût moyen, prix actuel, marge, conversion, churn, LTV/CAC,
    usage, scénarios what-if (ex. 10 000 businesses 60/25/12/3 — **scénarios, pas prévisions**).
+   Réutiliser les tables `countries`/`currencies` existantes (`0033`) — ne pas les recréer.
 
 ## Critères de sortie
 

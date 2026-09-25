@@ -21,6 +21,9 @@ Plans de référence (FREE 0 F, ESSENTIEL 4 900 F/mois, PRO 14 900 F/mois, BUSIN
 
 ## Étapes
 
+0. **Résorber d'abord la dérive constatée en PHASE-01** : `plans.ts` (free 15 produits,
+   3 000/10 000 F) ≠ DB (`plan_max_*` : free 8, hypothèses mission 4 900/14 900 F, pas de
+   plan BUSINESS). Source unique imposée dès cette phase, même en compat temporaire.
 1. Modèle : `plans`, `plan_prices` (+ `country_pricing`, `currencies`, `tax_rules`),
    `plan_entitlements`, `subscriptions` (+ items/history), `invoices`, `promotions`/`coupons`,
    `price_history` — simplifier si une abstraction suffit (pas 50 tables pour le plaisir).

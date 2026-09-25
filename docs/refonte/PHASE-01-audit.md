@@ -1,7 +1,8 @@
 # PHASE 01 — Audit validé contre le code réel
 
-> État : ⬜ NON DÉMARRÉ
-> Journal : — (l'audit externe est validé comme base, la confrontation au code reste à faire)
+> État : ✅ TERMINÉ — 2026-09-25
+> Journal : validation exécutée (migrations relues, état effectif inspecté en lecture seule,
+> inventaires réalisés, classification écrite). Détail : [PHASE-01-ANNEXE-validation.md](PHASE-01-ANNEXE-validation.md).
 
 ## Objectif
 

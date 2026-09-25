@@ -46,7 +46,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 
 | # | Phase | Objectif (1 ligne) | Dépend de | État |
 |---|-------|--------------------|-----------|------|
-| 01 | [Audit validé contre le code réel](PHASE-01-audit.md) | Confronter l'audit au réel : migrations, tables, RLS, `shop_id`, `business_type`, plans, Wave, routes, frontend | — | ⬜ NON DÉMARRÉ |
+| 01 | [Audit validé contre le code réel](PHASE-01-audit.md) | Confronter l'audit au réel : migrations, tables, RLS, `shop_id`, `business_type`, plans, Wave, routes, frontend | — | ✅ TERMINÉ — 2026-09-25 |
 | 02 | [Architecture cible](PHASE-02-architecture.md) | Figer l'architecture cible et les décisions (docs `/architecture`, `/security`, …) | 01 | ⬜ NON DÉMARRÉ |
 | 03 | [Database Foundation](PHASE-03-database-foundation.md) | Créer `business_types`, `capabilities`, `business_type_capabilities` (+ audit-logging minimal), sans casser l'existant | 01, 02 | ⬜ NON DÉMARRÉ |
 | 04 | [Auth + Organizations + Memberships](PHASE-04-auth-organizations.md) | Modèle `USER → ORGANIZATION → MEMBERSHIP → ROLES`, coexistence avec `shops`/`shop_members` | 03 | ⬜ NON DÉMARRÉ |

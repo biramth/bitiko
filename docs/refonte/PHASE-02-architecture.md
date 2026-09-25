@@ -14,6 +14,9 @@ C'est le seul document qui autorise les phases suivantes à diverger du système
 - [ ] Reprendre le tableau KEEP/REFACTOR/REDESIGN/REBUILD/REMOVE/SECURITY REPLACEMENT de PHASE-01.
 - [ ] Trancher `shop` (storefront ? business ? organization ?) et écrire la règle de nommage
       qui en découle pour toute la refonte.
+- [ ] Trancher le sort des colonnes `shops` exposées en lecture publique sans besoin storefront :
+      `payment_instructions`, `onboarding_responses` (constat PHASE-01 §3.2 — déplacer ou vue
+      restreinte, voir PHASE-15 batch).
 - [ ] Trancher : organisations introduites **à côté** de `shops` (compat) ou `shops` étendu ?
       (recommandation de départ : nouvelle entité + lien, jamais de renommage brutal — à valider).
 
