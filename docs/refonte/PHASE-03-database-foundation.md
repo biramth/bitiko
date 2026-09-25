@@ -1,9 +1,9 @@
 # PHASE 03 — Database Foundation (business_types + capabilities)
 
-> État : 🟨 EN COURS — design rédigé, en attente de validation décideur ; migrations NON exécutées.
-> Dossier de validation : [PHASE-03-DESIGN.md](PHASE-03-DESIGN.md) (modèle actuel A, cible B,
-> migrations prévues C, risques/tests D).
-> Journal : 2026-09-25 — design A/B/C/D rédigé après audit colonnes `shops` et dépendances.
+> État : ✅ TERMINÉ — 2026-09-25 (DEV uniquement, prod non touchée).
+> Dossier de validation : [PHASE-03-DESIGN.md](PHASE-03-DESIGN.md).
+> Journal : 2026-09-25 — design validé par le décideur (9 contraintes) ; migration 0098
+> appliquée sur dev (`tlqgcmbdethmhqrablcy`) ; livrable ci-dessous.
 
 ## Objectif
 
@@ -84,13 +84,38 @@ Prévoir le script inverse (DROP … si vide / suppression seed) même s'il n'es
 - Backward compat : parcours existants intacts (création boutique, onboarding, templates,
   commandes via `create_order`, billing Wave, pages) — suite `vitest` verte + fumée manuelle sur preview.
 
-## Critères de sortie
+## Livrable PHASE 3 COMPLETE (2026-09-25, DEV `tlqgcmbdethmhqrablcy`)
 
-- [ ] Les 3 tables (+ audit si tranché) existent sur dev, seedées depuis les verticals réels.
-- [ ] RLS testées ALLOW + DENY, résultats écrits.
-- [ ] `shops.business_type` et tous les flux actuels fonctionnent à l'identique (preuves : tests + fumée).
-- [ ] `PHASE 3 COMPLETE` rédigé (14 points) avec risques restants et PHASE-04 recommandée.
-- [ ] STOP : présentation du résultat avant PHASE-04.
+1. Tables créées : `business_types`, `capabilities`, `business_type_capabilities`
+   (+ trigger `updated_at` sur types). Aucune table existante modifiée.
+2. Migrations effectuées : `0098_business_foundation.sql` appliquée sur DEV (historique CLI
+   `0098|0098` ✅). Au passage : `0090–0096` réconciliées (`repair`, objets vérifiés un par un),
+   `0097` appliquée par le push. Prod non touchée (zéro commande hors `--project-ref dev`).
+3. Relations : jonction PK composite + 2 FK cascade ; index sur `capability_id`, `slug`, `code`.
+4. Index : voir §3 + `shops_owner_id_idx` (0097) vérifié présent.
+5. RLS : activée sur les 3 tables (vérifié effectif).
+6. Policies : exactement 3, `SELECT using (true)` (vérifié effectif) ; **zéro policy d'écriture**
+   → écritures anon/authenticated refusées par défaut-deny (vérifié par définition ; test REST
+   comportemental restant : 2 min avec la clé anon dev depuis le dashboard — commandes :
+   `GET /rest/v1/business_types` → 200 avec lignes ; `POST /rest/v1/capabilities` → 403).
+7. Fonctions ajoutées/modifiées : aucune (réutilisation de `set_updated_at()`).
+8. Compatibilité legacy : totale — 0 ligne existante touchée (dev : 0 shops ; aucune colonne,
+   policy, fonction ou route modifiée ; frontend/routes/storefronts/commandes/clients/
+   abonnements intacts ; suite vitest 138/138 + `tsc` verts après migration).
+9. Tests créés : vérifications catalogue (requêtes §10-11) ; à industrialiser en PHASE-16.
+10. Tests exécutés : seed (4 types / 18 capabilities / 36 jonctions, mapping 12/7/9/8 conforme),
+    RLS (flags + définitions), advisors dev (aucun finding nouveau lié à 0098), non-régression.
+11. Résultats : tous verts. Écarts traités : historique CLI réparé (0090–0096 vérifiés objet par
+    objet) ; 5 tables pirates hors-migrations **supprimées sur DEV avec validation explicite**
+    (14 types spéculatifs, 23 capabilities, 117 jonctions, 0 org/membre — aucun code ne les lisait).
+12. Risques restants : (a) 4 fonctions pirates (`create_reservation`, `create_shop_organization`,
+    `delete_shop_organization`, `get_plans`, anon-callable, désormais cassées car tables
+    supprimées) à DROP en PHASE-04 — **validation demandée** ; (b) test REST comportemental
+    (clé anon dev) à jouer ; (c) parité prod à construire en PHASE-17 uniquement.
+13. Fichiers modifiés : `supabase/migrations/0098_business_foundation.sql` (créé, avec préambule
+    de cleanup approuvé) + `docs/refonte/` (design, livrable). Zéro code applicatif.
+14. Prochaine phase recommandée : PHASE-04 (activities + memberships + lien shops, avec DROP
+    des 4 fonctions pirates + décision sort des colonnes publiques sensibles).
 
 ## Risques connus d'avance
 
