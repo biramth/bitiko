@@ -29,23 +29,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // supabase-js (~200 Ko) is dynamic-imported so it loads asynchronously,
   // after first paint, instead of blocking the landing page's critical path.
   // The module registry caches the import, so every later call is free.
+  // On the marketing landing page (exact "/") nothing needs the session for
+  // first paint, so the download waits for an idle slot instead of racing
+  // the LCP fonts — auth-gated pages keep loading it immediately.
   useEffect(() => {
     let active = true
     let unsubscribe: (() => void) | undefined
-    import('@/lib/supabaseClient').then(({ supabase }) => {
-      if (!active) return
-      supabase.auth.getSession().then(({ data }) => {
+    let idleId: number | undefined
+    const load = () => {
+      import('@/lib/supabaseClient').then(({ supabase }) => {
         if (!active) return
-        setSession(data.session)
-        setLoading(false)
+        supabase.auth.getSession().then(({ data }) => {
+          if (!active) return
+          setSession(data.session)
+          setLoading(false)
+        })
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+          if (active) setSession(newSession)
+        })
+        unsubscribe = () => listener.subscription.unsubscribe()
       })
-      const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-        if (active) setSession(newSession)
-      })
-      unsubscribe = () => listener.subscription.unsubscribe()
-    })
+    }
+    if (
+      window.location.pathname === '/' &&
+      typeof window.requestIdleCallback === 'function'
+    ) {
+      idleId = window.requestIdleCallback(load, { timeout: 3000 })
+    } else {
+      load()
+    }
     return () => {
       active = false
+      if (idleId !== undefined) window.cancelIdleCallback(idleId)
       unsubscribe?.()
     }
   }, [])

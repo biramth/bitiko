@@ -1,10 +1,58 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import path from 'path'
 
+/**
+ * Injects connection + font preload hints into index.html at build time:
+ * - preconnect to the Supabase origin (the landing promo RPC fires on load —
+ *   Lighthouse estimates ~320 ms of LCP savings on slow 4G);
+ * - preload for every emitted .woff2 (the H1/body text is the LCP element and
+ *   today the fonts are only discovered after the CSS parses).
+ * Hashed filenames are read from the bundle, so nothing is hardcoded.
+ */
+function perfHints(): Plugin {
+  return {
+    name: 'bitiko-perf-hints',
+    transformIndexHtml(html, ctx) {
+      const tags: { tag: string; attrs: Record<string, string>; injectTo: 'head-prepend' }[] = []
+      const supabaseUrl = process.env.VITE_SUPABASE_URL
+      if (supabaseUrl) {
+        try {
+          tags.push({
+            tag: 'link',
+            attrs: { rel: 'preconnect', href: new URL(supabaseUrl).origin, crossorigin: '' },
+            injectTo: 'head-prepend',
+          })
+        } catch {
+          // Invalid URL in env — skip the hint, never break the build.
+        }
+      }
+      const bundle = ctx.bundle
+      if (bundle) {
+        for (const fileName of Object.keys(bundle)) {
+          if (fileName.endsWith('.woff2')) {
+            tags.push({
+              tag: 'link',
+              attrs: {
+                rel: 'preload',
+                as: 'font',
+                type: 'font/woff2',
+                crossorigin: '',
+                href: `/${fileName}`,
+              },
+              injectTo: 'head-prepend',
+            })
+          }
+        }
+      }
+      return { html, tags }
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), perfHints()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

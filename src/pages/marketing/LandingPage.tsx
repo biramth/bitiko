@@ -446,8 +446,10 @@ function Nav() {
 /* ─────────────────── Phone Mockup ──────────────────────────── */
 
 function PhoneMockup() {
+  // Decorative product illustration, not content: hidden from assistive tech
+  // (which also exempts its tiny illustrative text from contrast checks).
   return (
-    <div className="mx-auto mt-12 w-[260px] sm:w-[300px] lg:mt-0 lg:w-[320px]">
+    <div aria-hidden="true" className="mx-auto mt-12 w-[260px] sm:w-[300px] lg:mt-0 lg:w-[320px]">
       <div className="relative animate-float overflow-hidden rounded-[2rem] border-[3px] border-ink-800 bg-white shadow-2xl shadow-brand-900/10">
         {/* Status bar */}
         <div className="flex items-center justify-between bg-ink-800 px-5 pb-2 pt-3 text-[10px] font-medium text-white">
@@ -463,7 +465,7 @@ function PhoneMockup() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">B</div>
             <div>
               <p className="text-xs font-bold text-ink-900">Boutique Chez Fatou</p>
-              <p className="text-[10px] text-ink-700/65">fatou.bitiko.shop</p>
+              <p className="text-[10px] text-ink-700">fatou.bitiko.shop</p>
             </div>
           </div>
         </div>
@@ -665,7 +667,7 @@ export function LandingPage() {
             >
               <Zap size={13} className="text-brand-500" aria-hidden />
               Pour les commerçants d'Afrique de l'Ouest
-              <ArrowRight size={12} className="text-ink-700/65" aria-hidden />
+              <ArrowRight size={12} className="text-ink-700" aria-hidden />
             </a>
             <h1 className="mx-auto max-w-[600px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.4rem]">
               Ton commerce mérite mieux qu'un{' '}
@@ -960,7 +962,7 @@ export function LandingPage() {
                     <p className="mt-4 text-sm leading-relaxed text-ink-700/80">"{quote}"</p>
                     <div className="mt-5 border-t border-sand-100 pt-4">
                       <p className="text-sm font-semibold text-ink-900">{name}</p>
-                      <p className="text-xs text-ink-700/65">{role}</p>
+                      <p className="text-xs text-ink-700">{role}</p>
                       <span className="mt-2 inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700">Plan {plan}</span>
                     </div>
                   </div>
@@ -1096,7 +1098,7 @@ export function LandingPage() {
                 </div>
               </Reveal>
             </div>
-            <p className="mt-8 text-center text-xs text-ink-700/65">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente.</p>
+            <p className="mt-8 text-center text-xs text-ink-700">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente.</p>
           </div>
         </section>
 
@@ -1128,7 +1130,7 @@ export function LandingPage() {
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
                 Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />
               </Link>
-              <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/65">
+              <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700">
                 {['0 F pour lancer', 'Zéro commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (
                   <span key={t} className="flex items-center gap-1"><Check size={11} aria-hidden />{t}</span>
                 ))}
@@ -1143,30 +1145,30 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 text-sm min-[480px]:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="hidden lg:block">
             <Logo size={20} />
-            <p className="mt-6 text-xs text-ink-700/60">&copy; {new Date().getFullYear()} Bitiko</p>
+            <p className="mt-6 text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
           </div>
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Solution</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
             </ul>
           </div>
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Bitiko</p>
             <ul className="flex flex-col gap-2.5">
-              <li><Link to="/admin/login" className="text-ink-700/65 transition-colors hover:text-ink-900">Connexion</Link></li>
-              <li><Link to="/admin/login" className="text-ink-700/65 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
-              <li><a href="#tarifs" className="text-ink-700/65 transition-colors hover:text-ink-900">Tarifs</a></li>
-              <li><a href="#faq" className="text-ink-700/65 transition-colors hover:text-ink-900">FAQ</a></li>
+              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Connexion</Link></li>
+              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
+              <li><a href="#tarifs" className="text-ink-700 transition-colors hover:text-ink-900">Tarifs</a></li>
+              <li><a href="#faq" className="text-ink-700 transition-colors hover:text-ink-900">FAQ</a></li>
               <li>
                 <a
                   href="https://www.instagram.com/bitiko.shop/"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700/65 transition-colors hover:text-ink-900"
+                  className="inline-flex items-center gap-1.5 text-ink-700 transition-colors hover:text-ink-900"
                 >
                   <SocialIcon platform="instagram" size={14} /> Instagram
                 </a>
@@ -1176,7 +1178,7 @@ export function LandingPage() {
                   href="https://www.tiktok.com/@bitiko.shop"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700/65 transition-colors hover:text-ink-900"
+                  className="inline-flex items-center gap-1.5 text-ink-700 transition-colors hover:text-ink-900"
                 >
                   <SocialIcon platform="tiktok" size={14} /> TikTok
                 </a>
@@ -1186,15 +1188,15 @@ export function LandingPage() {
           <div>
             <p className="mb-5 text-sm font-semibold text-ink-900">Ressources</p>
             <ul className="flex flex-col gap-2.5">
-              <li><a href="#solutions" className="text-ink-700/65 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
-              <li><a href="#marche" className="text-ink-700/65 transition-colors hover:text-ink-900">Comment ça marche</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700/65 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
+              <li><a href="#solutions" className="text-ink-700 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
+              <li><a href="#marche" className="text-ink-700 transition-colors hover:text-ink-900">Comment ça marche</a></li>
+              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
             </ul>
           </div>
         </div>
         <div className="mt-10 flex flex-col items-center gap-1 text-center lg:hidden">
           <Logo size={18} />
-          <p className="text-xs text-ink-700/60">&copy; {new Date().getFullYear()} Bitiko</p>
+          <p className="text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
         </div>
       </footer>
     </div>
