@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, Eye, History, Pencil, Save, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { templatesForVertical } from '@/config/storeTemplates'
+import { fetchCompatibleTemplateSlugs, resolvePickerTemplates } from '@/services/template.service'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -143,7 +143,17 @@ export function TemplateLibraryPanel({
 }) {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const templates = templatesForVertical(shop.business_type)
+  // DB-driven compatibility (Template ≠ Business Type): a new mapping surfaces
+  // a template to another type with zero code change. Fail-open to the legacy
+  // per-vertical list while loading or on error — never an empty picker.
+  const { data: compatSlugs } = useQuery({
+    queryKey: ['template-compat', shop.id],
+    queryFn: () => fetchCompatibleTemplateSlugs(shop.id),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+  const templates = resolvePickerTemplates(compatSlugs ?? null, shop.business_type)
   const vertical = shop.business_type ? VERTICAL_BY_KEY[shop.business_type] : undefined
 
   const { data: savedThemes = [] } = useQuery({

@@ -53,7 +53,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 05 | [Business Types + Capabilities (activation)](PHASE-05-business-types.md) | Seed des types/capabilities, couche de compat avec `shops.business_type`, exposition Platform | 03, 04 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 06 | [Business Workspace](PHASE-06-workspace.md) | Dashboard généré depuis `Business Type + Capabilities + Entitlements + Modules` | 05 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 07 | [Storefront engine](PHASE-07-storefront.md) | Moteur `Store → Pages → Sections → Blocks`, storefront allégé séparé du workspace | 04, 05 | ✅ TERMINÉ — 2026-09-25 (DEV) |
-| 08 | [Template system](PHASE-08-templates.md) | Vrais templates préconstruits, galerie + démo, `Template ≠ Business Type` | 07 | ⬜ NON DÉMARRÉ |
+| 08 | [Template system](PHASE-08-templates.md) | Vrais templates préconstruits, galerie + démo, `Template ≠ Business Type` | 07 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 09 | [Page Builder](PHASE-09-page-builder.md) | Éditeur visuel data-driven, header/footer configurables, sans `<script>` arbitraire | 07, 08 | ⬜ NON DÉMARRÉ |
 | 10 | [Billing + Entitlements](PHASE-10-billing.md) | `Subscription → Plan → Entitlements`, prix configurables + historique, quotas/overage | 03, 04 | ⬜ NON DÉMARRÉ |
 | 11 | [Payment Engine](PHASE-11-payments.md) | `Application → Payment Engine → Provider → Wave` ; Wave = `TEMPORARY` provider conservé | 10 | ⬜ NON DÉMARRÉ |

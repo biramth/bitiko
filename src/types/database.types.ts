@@ -1022,6 +1022,10 @@ export type Database = {
         Args: { p_shop_id: string }
         Returns: string
       }
+      shop_template_slugs: {
+        Args: { p_shop_id: string }
+        Returns: string[]
+      }
       organization_role: {
         Args: { p_organization_id: string }
         Returns: string
