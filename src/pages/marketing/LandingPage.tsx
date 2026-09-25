@@ -290,13 +290,22 @@ function Reveal({
   )
 }
 
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false)
+function FaqItem({
+  question,
+  answer,
+  open,
+  onToggle,
+}: {
+  question: string
+  answer: string
+  open: boolean
+  onToggle: () => void
+}) {
   return (
     <div className="group border-b border-ink-900/10">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
@@ -980,7 +989,7 @@ export function LandingPage() {
               ].map(({ n, title, desc }, i) => (
                 <Reveal key={n} delay={i * 120} className="relative text-center">
                   {i < 2 && <span className="absolute left-[calc(50%+2rem)] top-6 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-gold-400/40 to-gold-400/10 sm:block" />}
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold-400/20 text-lg font-bold text-ink-900 ring-1 ring-inset ring-gold-500/30">{n}</div>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold-400 text-lg font-bold text-ink-900 ring-2 ring-inset ring-gold-500/50 shadow-lg shadow-gold-400/30">{n}</div>
                   <h3 className="mt-5 font-heading text-base font-semibold text-white">{title}</h3>
                   <p className="mt-2 text-sm text-ink-100/70">{desc}</p>
                 </Reveal>
@@ -1103,7 +1112,21 @@ export function LandingPage() {
               </h2>
             </Reveal>
             <Reveal delay={100} className="mx-auto mt-10 max-w-xl">
-              {faq.map((item) => <FaqItem key={item.question} {...item} />)}
+              {(() => {
+                const [openIndex, setOpenIndex] = useState<number | null>(null)
+                return (
+                  <>
+                    {faq.map((item, index) => (
+                      <FaqItem
+                        key={item.question}
+                        {...item}
+                        open={openIndex === index}
+                        onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+                      />
+                    ))}
+                  </>
+                )
+              })()}
             </Reveal>
           </div>
         </section>
