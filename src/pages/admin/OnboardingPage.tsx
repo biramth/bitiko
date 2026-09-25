@@ -8,9 +8,11 @@ import {
   Briefcase,
   Check,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Globe,
   ImageIcon,
+  LayoutTemplate,
   Lock,
   Mail,
   MapPin,
@@ -35,6 +37,7 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { IconTile } from '@/components/ui/IconTile'
+import { TemplateThumbnail } from '@/features/store-builder/TemplateThumbnail'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
@@ -83,7 +86,7 @@ const STEP_TONES: Record<number, 'brand' | 'dark' | 'gold'> = {
 const STEP_SUBTITLES: Record<number, string> = {
   1: 'Nom, adresse et WhatsApp — l’essentiel pour exister.',
   2: 'Ce que tu vends et comment tu vends.',
-  3: 'Donne envie : décris, montre, rassure.',
+  3: 'Style, description, logo : donne envie d’acheter.',
   4: 'Pour te joindre et lier ton compte.',
   5: 'Un dernier coup d’œil avant le lancement.',
 }
@@ -726,6 +729,38 @@ export function OnboardingPage() {
               </div>
 
               <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <LayoutTemplate size={15} className="text-gray-400" aria-hidden /> Quel style pour ta boutique ?
+                </label>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {templatesForVertical(businessType).map((template) => {
+                    const selected = templateId === template.key
+                    return (
+                      <button
+                        key={template.key}
+                        type="button"
+                        onClick={() => setTemplateId(template.key)}
+                        aria-pressed={selected}
+                        className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                          selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <TemplateThumbnail template={template} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <span className="block truncate text-sm font-semibold text-ink-900">{template.label}</span>
+                            {selected && <Check size={14} className="shrink-0 text-brand-700" aria-hidden />}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">{template.description}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Modifiable à tout moment dans « Personnaliser ».</p>
+              </div>
+
+              <div>
                 <label htmlFor="shopDescription" className="block text-sm font-medium text-gray-700">
                   Décris ta boutique en une phrase
                 </label>
@@ -755,6 +790,12 @@ export function OnboardingPage() {
                 </div>
               </div>
 
+              <details className="group rounded-xl border border-gray-200">
+                <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium text-gray-700">
+                  Aller plus loin (optionnel)
+                  <ChevronDown size={15} className="text-gray-400 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="space-y-5 border-t border-gray-100 px-4 py-4">
               <div>
                 <label htmlFor="story" className="block text-sm font-medium text-gray-700">
                   Parle de ton histoire (optionnel)
@@ -801,6 +842,8 @@ export function OnboardingPage() {
                   </p>
                 )}
               </div>
+                </div>
+              </details>
             </div>
           )}
 
