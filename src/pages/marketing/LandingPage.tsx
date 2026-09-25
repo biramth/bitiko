@@ -128,7 +128,7 @@ const shopCategories = [
 const solutions = [
   {
     icon: Shirt,
-    gradient: 'bg-rose-500/[0.08] text-rose-600 ring-rose-600/15',
+    tint: 'bg-rose-500/[0.08] text-rose-600 ring-rose-600/15',
     title: 'Mode & textiles',
     description:
       'Robes, pagnes, chaussures — chaque produit a ses photos, son prix, sa taille. Le client ne te pose plus 10 fois les mêmes questions sur WhatsApp.',
@@ -136,7 +136,7 @@ const solutions = [
   },
   {
     icon: ChefHat,
-    gradient: 'bg-orange-500/[0.08] text-orange-600 ring-orange-600/15',
+    tint: 'bg-orange-500/[0.08] text-orange-600 ring-orange-600/15',
     title: 'Restauration & livraison',
     description:
       'Le client choisit son quartier, sa ville, valide son menu. Tu reçois la commande formatée, tu prépares, tu livres. Simple.',
@@ -144,7 +144,7 @@ const solutions = [
   },
   {
     icon: Sparkles,
-    gradient: 'bg-fuchsia-500/[0.08] text-fuchsia-700 ring-fuchsia-600/15',
+    tint: 'bg-fuchsia-500/[0.08] text-fuchsia-700 ring-fuchsia-600/15',
     title: 'Beauté & cosmétiques',
     description:
       'Tes produits se vendent la nuit — toi tu dors. Le matin, tu lis tes commandes et tu organises les livraisons. Stock toujours à jour.',
@@ -152,7 +152,7 @@ const solutions = [
   },
   {
     icon: Palette,
-    gradient: 'bg-teal-600/[0.08] text-teal-700 ring-teal-600/15',
+    tint: 'bg-teal-600/[0.08] text-teal-700 ring-teal-600/15',
     title: 'Artisanat & créations',
     description:
       'Chaque pièce est unique. Bitiko lui donne une vitrine à la hauteur — photos HD, description, stock. Paiement à la livraison pour les pièces de confiance.',
@@ -863,10 +863,10 @@ export function LandingPage() {
               </p>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2">
-              {solutions.map(({ icon: Icon, gradient, title, description, products }, i) => (
+              {solutions.map(({ icon: Icon, tint, title, description, products }, i) => (
                 <Reveal key={title} delay={i * 80}>
                   <div className="group h-full rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
-                    <IconTile icon={Icon} gradient={gradient} size="lg" />
+                    <IconTile icon={Icon} tint={tint} size="lg" />
                     <h3 className="mt-4 font-heading text-base font-semibold text-ink-900">{title}</h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
                     <p className="mt-3 text-xs font-medium text-brand-600">{products}</p>
@@ -960,7 +960,7 @@ export function LandingPage() {
               ].map(({ n, title, desc }, i) => (
                 <Reveal key={n} delay={i * 120} className="relative text-center">
                   {i < 2 && <span className="absolute left-[calc(50%+2rem)] top-6 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-gold-400/40 to-gold-400/10 sm:block" />}
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-gold-400 to-gold-300 text-lg font-bold text-ink-900 shadow-lg">{n}</div>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold-400/20 text-lg font-bold text-ink-900 ring-1 ring-inset ring-gold-500/30">{n}</div>
                   <h3 className="mt-5 font-heading text-base font-semibold text-white">{title}</h3>
                   <p className="mt-2 text-sm text-ink-100/70">{desc}</p>
                 </Reveal>

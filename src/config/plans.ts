@@ -146,3 +146,14 @@ export function canAddVariant(plan: Plan, currentVariantCount: number): boolean 
 export const WAVE_PRO_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.pro.priceXof}`
 
 export const WAVE_ESSENTIAL_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.essential.priceXof}`
+
+/** Display metadata for plan keys coming back as raw strings (DB rows,
+ *  webhook payloads). Kept here — a components-free module — rather than next
+ *  to the platform panels that render them, so those files stay
+ *  components-only (React fast-refresh rule). */
+export const PLAN_LABELS: Record<string, string> = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro' }
+export const PLAN_BADGE: Record<string, string> = {
+  free: 'bg-gray-100 text-gray-700',
+  essential: 'bg-blue-100 text-blue-800',
+  pro: 'bg-brand-100 text-brand-800',
+}

@@ -27,7 +27,7 @@ import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { can } from '@/features/platform/permissions'
 import { supabase } from '@/lib/supabaseClient'
 import { saveSupportReturnSession, beginImpersonation } from '@/lib/supportSession'
-import { PLANS } from '@/config/plans'
+import { PLANS, PLAN_BADGE, PLAN_LABELS } from '@/config/plans'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
@@ -39,13 +39,6 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
  * the single /super-admin page; each one now backs its own tool page under
  * /plateforme so a member only loads the tool their role grants.
  */
-
-export const PLAN_LABELS: Record<string, string> = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro' }
-export const PLAN_BADGE: Record<string, string> = {
-  free: 'bg-gray-100 text-gray-700',
-  essential: 'bg-blue-100 text-blue-800',
-  pro: 'bg-brand-100 text-brand-800',
-}
 
 export function MetricCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: LucideIcon }) {
   return (

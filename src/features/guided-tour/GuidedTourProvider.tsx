@@ -1,22 +1,10 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, createContext, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TOUR_PREPARE_EVENT, type GuidedTour, type TourPrepare } from './types'
 import { GUIDED_TOUR_BY_ID } from './tours'
 import { isTourSeen, markTourSeen } from './storage'
+import { GuidedTourContext, type GuidedTourContextValue } from './useGuidedTour'
 import { TourOverlay } from './TourOverlay'
-
-interface GuidedTourContextValue {
-  startGuidedTour: (id: string) => void
-  activeTourId: string | null
-}
-
-const GuidedTourContext = createContext<GuidedTourContextValue | null>(null)
-
-export function useGuidedTour(): GuidedTourContextValue {
-  const context = useContext(GuidedTourContext)
-  if (!context) throw new Error('useGuidedTour doit être utilisé dans GuidedTourProvider')
-  return context
-}
 
 /** Cleans the ?tour=<id> launch parameter (from onboarding) out of the URL so
  *  a refresh doesn't replay the tour. */

@@ -3,7 +3,7 @@ import { MapPin, MessageCircle, Store } from 'lucide-react'
 import type { Shop } from '@/types'
 import type { FooterSectionConfig } from '@/types/builder'
 import { Logo } from '@/components/ui/Logo'
-import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
+import { SocialIcon } from '@/components/ui/SocialIcon'
 import { resolveTextStyle } from '@/config/textStyle'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
@@ -11,6 +11,19 @@ import { ensureReadableAccent } from '@/utils/color'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+
+/** Accessible name for a storefront social link. Lives next to its only
+ *  caller (not exported) so the shared icon file stays components-only. */
+function socialLabel(platform: string): string {
+  return (
+    {
+      facebook: 'Facebook',
+      instagram: 'Instagram',
+      tiktok: 'TikTok',
+      x: 'X (Twitter)',
+    } as Record<string, string>
+  )[platform] ?? platform
+}
 
 /** The storefront footer. Lives here (not inline in StoreLayout) so it has the
  *  same Renderer/Editor split as every other section, and can switch between

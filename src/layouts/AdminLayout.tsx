@@ -290,9 +290,14 @@ export function AdminLayout() {
   })
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  useEffect(() => {
+  // The drawer is a mobile overlay: any route change dismisses it. Adjusted
+  // during render (React's "adjust state when props change" pattern) rather
+  // than in an effect, so no extra render pass is scheduled for the reset.
+  const [dismissedFor, setDismissedFor] = useState(location.pathname)
+  if (location.pathname !== dismissedFor) {
+    setDismissedFor(location.pathname)
     setMobileMenuOpen(false)
-  }, [location.pathname])
+  }
   // A guided-tour step can ask for the nav drawer (its links only exist on
   // screen while it is open); desktop keeps the always-visible sidebar.
   useEffect(() => {

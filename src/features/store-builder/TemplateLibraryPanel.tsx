@@ -20,16 +20,7 @@ import type { Shop } from '@/types'
 import type { SavedTheme } from '@/types/savedTheme'
 import type { PublishHistoryEntry } from '@/types/publishHistory'
 import { SYSTEM_TEMPLATE_KEYS, type StoreTemplate } from '@/types/builder'
-
-/** Marks a `StoreTemplate` synthesized from a merchant's own saved theme or
- *  a past publish (see `savedThemeToTemplate`/`historyEntryToTemplate`)
- *  rather than one of the built-in per-vertical templates — applying one
- *  must skip onboarding-profile personalization and never overwrite the
- *  shop's vertical (see StoreBuilderPage's buildTarget). */
-export const SAVED_THEME_KEY_PREFIX = 'saved:'
-export const HISTORY_KEY_PREFIX = 'history:'
-export const isSavedThemeKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX)
-export const isRestoredDesignKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX) || key.startsWith(HISTORY_KEY_PREFIX)
+import { HISTORY_KEY_PREFIX, SAVED_THEME_KEY_PREFIX } from './templateKeys'
 
 /** What "the current design" means for saving a personal style: the shop's
  *  live, published design — not an in-progress unsaved draft, which the

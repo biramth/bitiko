@@ -45,7 +45,38 @@ function useIsTouchPrimary() {
 /** Desktop fallback for "Payer avec Wave": the payment link itself only
  *  does anything useful on a phone with the Wave app installed, so this
  *  renders it as a QR code (encoding the same link, amount included) to
- *  scan instead of opening a dead page in a new tab. */
+ *  scan instead of opening a dead page in a new tab. The QR state lives in
+ *  `WaveQrBody`, keyed by link — `Dialog` unmounts its children on close, so
+ *  each opening starts from a clean state without a synchronous reset inside
+ *  the generation effect. */
+function WaveQrBody({ paymentLink, planLabel }: { paymentLink: string; planLabel: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    QRCode.toDataURL(paymentLink, { width: 288, margin: 1, color: { dark: '#17152e', light: '#ffffff' } })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [paymentLink])
+
+  return (
+    <div className="flex h-64 w-full max-w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
+      {qrDataUrl ? (
+        <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
+      ) : (
+        <Loader2 size={28} className="animate-spin text-gray-300" aria-hidden />
+      )}
+    </div>
+  )
+}
+
 function WaveQrDialog({
   open,
   onClose,
@@ -59,16 +90,6 @@ function WaveQrDialog({
   planLabel: string
   amountLabel: string
 }) {
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    setQrDataUrl(null)
-    QRCode.toDataURL(paymentLink, { width: 288, margin: 1, color: { dark: '#17152e', light: '#ffffff' } })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null))
-  }, [open, paymentLink])
-
   return (
     <Dialog open={open} onClose={onClose} title={`Payer avec Wave — ${planLabel}`}>
       <div className="flex flex-col items-center gap-4 text-center">
@@ -76,13 +97,7 @@ function WaveQrDialog({
           Ouvre l'app Wave sur ton téléphone et scanne ce code pour payer{' '}
           <strong className="text-gray-900">{amountLabel}</strong> et activer le plan {planLabel}.
         </p>
-        <div className="flex h-64 w-full max-w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
-          ) : (
-            <Loader2 size={28} className="animate-spin text-gray-300" aria-hidden />
-          )}
-        </div>
+        <WaveQrBody key={paymentLink} paymentLink={paymentLink} planLabel={planLabel} />
         <p className="text-xs text-gray-400">
           Une fois le paiement effectué, reviens ici et envoie la capture de ton reçu Wave avec « Envoyer ma preuve de paiement ».
         </p>
