@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useQuery } from '@tanstack/react-query'
 import { CART_STORAGE_KEY } from '@/config/constants'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { listProductsByIds } from '@/services/product.service'
 import { optionsKey, parseOptionFields, resolveSelection } from '@/utils/productOptions'
 import type { CartItem } from '@/types'
 
@@ -105,7 +104,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const { data: synced } = useQuery({
     queryKey: ['cart-sync', shopId, syncKey],
-    queryFn: () => listProductsByIds(productIds),
+    // product.service (supabase-js) stays out of the initial bundle — it only
+    // downloads once a visitor actually has items to sync.
+    queryFn: () => import('@/services/product.service').then((m) => m.listProductsByIds(productIds)),
     enabled: productIds.length > 0,
     staleTime: 60_000,
   })

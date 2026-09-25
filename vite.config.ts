@@ -24,5 +24,16 @@ export default defineConfig({
     // base64 into the JS/CSS bundle — matters a lot on the slower mobile
     // connections this app targets.
     assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        // lucide-react ships one module per icon: without this, the landing
+        // page (~30 icons) fans out into ~25 tiny single-icon chunks, i.e.
+        // ~25 extra HTTP requests on the critical path. One chunk instead.
+        manualChunks(id) {
+          if (id.includes('node_modules/lucide-react')) return 'lucide'
+          return undefined
+        },
+      },
+    },
   },
 })

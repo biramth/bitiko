@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabaseClient'
-
 /**
  * Self-hosted storefront/platform analytics. Every page view is appended to
  * `public.page_views` with the public key; merchants read only their own
@@ -8,6 +6,9 @@ import { supabase } from '@/lib/supabaseClient'
  *
  * This is intentionally tiny and privacy-light: no cookies, no third-party
  * network calls, one random session id kept locally (not tied to an account).
+ *
+ * The Supabase client is dynamic-imported so this module — loaded on every
+ * page via SelfAnalytics — never pulls supabase-js into the initial bundle.
  */
 
 const SESSION_STORAGE_KEY = 'bitiko:analytics-session'
@@ -77,17 +78,20 @@ export function trackPageView({
 
   lastSentAt = now
 
-  void supabase
-    .from('page_views')
-    .insert({
-      shop_id: shopId,
-      user_id: userId,
-      path: path.slice(0, MAX_PATH_LENGTH),
-      session_id: sessionId,
-      referrer: document.referrer ? document.referrer.slice(0, MAX_REFERRER_LENGTH) : null,
-      device: detectDevice(),
-    })
-    .then(({ error }) => {
-      if (error) console.warn('[analytics] page view not recorded:', error.message)
-    })
+  // Fire-and-forget after idle: analytics must never contend with first paint.
+  void import('@/lib/supabaseClient').then(({ supabase }) =>
+    supabase
+      .from('page_views')
+      .insert({
+        shop_id: shopId,
+        user_id: userId,
+        path: path.slice(0, MAX_PATH_LENGTH),
+        session_id: sessionId,
+        referrer: document.referrer ? document.referrer.slice(0, MAX_REFERRER_LENGTH) : null,
+        device: detectDevice(),
+      })
+      .then(({ error }) => {
+        if (error) console.warn('[analytics] page view not recorded:', error.message)
+      }),
+  )
 }

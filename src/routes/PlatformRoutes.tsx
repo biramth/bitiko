@@ -1,13 +1,25 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PageLoader } from '@/components/ui/PageLoader'
-import { AdminLayout } from '@/layouts/AdminLayout'
-import { LandingPage } from '@/pages/marketing/LandingPage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
-import { PlatformLayout } from '@/features/platform/PlatformLayout'
 import { CapabilityGate, RequirePlatformMember } from '@/features/platform/RequirePlatformMember'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireShop } from './RequireShop'
+
+// The landing page and both shells are lazy like every other page: a landing
+// visitor must not download the admin layout (and vice versa). Unwrapped lazy
+// elements fall back to App's top-level <Suspense> (PageLoader).
+const LandingPage = lazy(() =>
+  import('@/pages/marketing/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
+const NotFoundPage = lazy(() =>
+  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
+)
+const AdminLayout = lazy(() =>
+  import('@/layouts/AdminLayout').then((m) => ({ default: m.AdminLayout })),
+)
+const PlatformLayout = lazy(() =>
+  import('@/features/platform/PlatformLayout').then((m) => ({ default: m.PlatformLayout })),
+)
 
 const AuthCallbackPage = lazy(() =>
   import('@/pages/auth/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })),

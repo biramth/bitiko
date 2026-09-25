@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabaseClient'
 
 interface AuthContextValue {
   session: Session | null
@@ -27,25 +26,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // supabase-js (~200 Ko) is dynamic-imported so it loads asynchronously,
+  // after first paint, instead of blocking the landing page's critical path.
+  // The module registry caches the import, so every later call is free.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
+    let active = true
+    let unsubscribe: (() => void) | undefined
+    import('@/lib/supabaseClient').then(({ supabase }) => {
+      if (!active) return
+      supabase.auth.getSession().then(({ data }) => {
+        if (!active) return
+        setSession(data.session)
+        setLoading(false)
+      })
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        if (active) setSession(newSession)
+      })
+      unsubscribe = () => listener.subscription.unsubscribe()
     })
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-    })
-
-    return () => subscription.subscription.unsubscribe()
+    return () => {
+      active = false
+      unsubscribe?.()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
   const signUp = async (email: string, password: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -63,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: authCallbackUrl() },
@@ -71,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const resendConfirmation = async (email: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
@@ -80,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const resetPasswordForEmail = async (email: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reinitialiser-mot-de-passe`,
     })
@@ -87,16 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    const { supabase } = await import('@/lib/supabaseClient')
     await supabase.auth.signOut()
   }
 
   const updateFullName = async (fullName: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { data, error } = await supabase.auth.updateUser({ data: { full_name: fullName } })
     if (!error && data.user) setSession((prev) => (prev ? { ...prev, user: data.user } : prev))
     return { error: error?.message ?? null }
   }
 
   const updateEmail = async (email: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.updateUser(
       { email },
       { emailRedirectTo: authCallbackUrl() },
@@ -105,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const updatePassword = async (password: string) => {
+    const { supabase } = await import('@/lib/supabaseClient')
     const { error } = await supabase.auth.updateUser({ password })
     return { error: error?.message ?? null }
   }
