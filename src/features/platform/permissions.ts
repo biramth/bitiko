@@ -2,7 +2,7 @@
  * Platform-team roles and what each one can do.
  *
  * This is the frontend mirror of the server-side gates in
- * api/admin/payments.ts and api/admin/platform.ts — the server is the source
+ * api/admin/platform.ts — the server is the source
  * of truth (a member cannot self-promote), this only decides which tools the
  * workspace *shows*. Keep the two in sync when adding a role or capability.
  */

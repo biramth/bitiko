@@ -25,9 +25,9 @@
   "rewrites": [
     { "source": "/robots.txt", "destination": "/api/sitemap?kind=robots" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap?kind=sitemap" },
-    { "source": "/api/admin/pending-payments", "destination": "/api/admin/payments?action=pending" },
-    { "source": "/api/admin/approve-payment", "destination": "/api/admin/payments?action=approve" },
-    { "source": "/api/admin/reject-payment", "destination": "/api/admin/payments?action=reject" },
+    { "source": "/api/admin/pending-payments", "destination": "/api/admin/platform?action=payment-pending" },
+    { "source": "/api/admin/approve-payment", "destination": "/api/admin/platform?action=payment-approve" },
+    { "source": "/api/admin/reject-payment", "destination": "/api/admin/platform?action=payment-reject" },
     { "source": "/api/admin/team", "destination": "/api/admin/platform?action=team-list" },
     { "source": "/api/admin/team/add", "destination": "/api/admin/platform?action=team-add" },
     { "source": "/api/admin/team/update", "destination": "/api/admin/platform?action=team-update" },

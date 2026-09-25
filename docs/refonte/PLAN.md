@@ -65,7 +65,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 12 | [Usage + Cost Engine](PHASE-12-usage-cost.md) | Metering, quotas, coût réel par business/plan/pays | 10, 11 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : ledger + 1 source ; rating/advisor en suivi) |
 | 13 | [Automation Engine](PHASE-13-automations.md) | `Business Event → Automation Engine → Channel` (WhatsApp/SMS/Email/Push) | 05, 10 | ✅ TERMINÉ — 2026-09-25 (DEV, fondation : journal + dispatcher + email ; autres canaux en suivi) |
 | 14 | [Platform Admin](PHASE-14-platform-admin.md) | Business, marketing, analytics, support, configuration (types, plans, prix, pays…) | 05, 10, 12 | ✅ TERMINÉ — 2026-09-25 (DEV, audit money-flows ; dashboards financiers en suivi) |
-| 15 | [Performance + Security hardening](PHASE-15-hardening.md) | Budgets, durcissement complet browser→DB→infra, uploads, tenant isolation | 06–14 | ⬜ NON DÉMARRÉ |
+| 15 | [Performance + Security hardening](PHASE-15-hardening.md) | Budgets, durcissement complet browser→DB→infra, uploads, tenant isolation | 06–14 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 16 | [Testing](PHASE-16-testing.md) | Unit + intégration + E2E + sécurité multi-tenant explicites | 03–15 | ⬜ NON DÉMARRÉ |
 | 17 | [Production migration](PHASE-17-production.md) | Bascule dev→prod, REMOVE LEGACY, validation critères §67 de la mission | 16 | ⬜ NON DÉMARRÉ |
 
