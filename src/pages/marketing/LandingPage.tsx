@@ -213,7 +213,7 @@ const faq = [
   {
     question: 'Est-ce que Bitiko est vraiment gratuit ?',
     answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 15 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
+      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 8 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
   },
   {
     question: 'Comment les clients paient-ils ?',
@@ -238,7 +238,7 @@ const faq = [
   {
     question: 'Mes données sont-elles sécurisées ?',
     answer:
-      'Chaque boutique est complètement isolée. Toi seul(e) peux voir tes produits, tes commandes et tes paramètres. Personne d\'autre — ni les autres vendeurs de Bitiko, ni nous. Nous n\'avons accès à aucune de tes données.',
+      'Chaque activité est complètement isolée. Toi seul(e) peux voir tes produits, tes commandes et tes paramètres. Personne d\'autre — ni les autres utilisateurs de Bitiko. Notre équipe support ne peut accéder à tes données que pour t\'aider, et chaque accès est tracé.',
   },
   {
     question: 'Est-ce que je paye une commission sur mes ventes ?',
@@ -398,7 +398,7 @@ function Nav() {
             Connexion
           </Link>
           <Link to="/admin/login" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-            Créer ma boutique <ArrowRight size={15} aria-hidden />
+            Créer mon espace <ArrowRight size={15} aria-hidden />
           </Link>
         </div>
 
@@ -425,7 +425,7 @@ function Nav() {
           </div>
           <div className="mt-3 flex flex-col gap-2 border-t border-sand-100 pt-3">
             <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full border border-sand-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800">Connexion</Link>
-            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer ma boutique</Link>
+            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer mon espace</Link>
           </div>
         </div>
       )}
@@ -673,7 +673,7 @@ export function LandingPage() {
             </p>
             <div className="mb-8 mt-8 flex animate-fade-up flex-col items-center gap-3 [animation-delay:300ms] sm:flex-row lg:justify-start">
               <Link to="/admin/login" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
-                Créer ma boutique gratuitement
+                Créer mon espace gratuitement
                 <ArrowRight size={16} aria-hidden />
               </Link>
               <a href="#marche" className="inline-flex w-full items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100 sm:w-auto">
@@ -996,7 +996,7 @@ export function LandingPage() {
             <Reveal className="text-center">
               <SectionEyebrow>Tarifs</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Investis dans ton commerce.
+                Investis dans ton activité.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
                 Zéro commission. Zéro frais cachés. Tu gardes 100% de tes revenus.
@@ -1015,8 +1015,8 @@ export function LandingPage() {
                   <ul className="space-y-3">
                     {[
                       'Boutique en ligne complète',
-                      'Commandes sur WhatsApp',
-                      'Jusqu\'à 15 produits actifs',
+                      'Commandes et réservations sur WhatsApp',
+                      'Jusqu’à 8 produits actifs',
                       'Livraison par secteurs & villes',
                       'Espace client mobile-first',
                       '1 utilisateur',
@@ -1028,7 +1028,7 @@ export function LandingPage() {
                     ))}
                   </ul>
                   <Link to="/admin/login" className="mt-8 block w-full rounded-[100px] border border-brand-600 py-3.5 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50">
-                    Créer ma boutique
+                    Créer mon espace
                   </Link>
                 </div>
               </Reveal>
@@ -1075,7 +1075,7 @@ export function LandingPage() {
                       'Produits illimités',
                       'Store builder — personnalise ta page',
                       'Supprime le logo Bitiko',
-                      '5 utilisateurs',
+                      'Gestion d’équipe incluse',
                       'Support prioritaire',
                     ].map((f, i) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
@@ -1114,13 +1114,13 @@ export function LandingPage() {
           <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:py-32">
             <Reveal>
               <h2 className="mx-auto max-w-[650px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Prêt à vendre en ligne ?
+                Prêt à lancer ton activité en ligne ?
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ink-700/70">
                 Lance ton activité gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
               </p>
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-                Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />
+                Créer mon espace gratuitement <ArrowRight size={16} aria-hidden />
               </Link>
               <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700">
                 {['0 F pour lancer', 'Zéro commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (

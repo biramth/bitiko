@@ -1,7 +1,7 @@
 {
-  "name": "Bitiko — Crée ta boutique en ligne, vends sur WhatsApp",
+  "name": "Bitiko — Le site de ton activité",
   "short_name": "Bitiko",
-  "description": "Catalogue, panier, commandes relayées sur WhatsApp pour les commerçants d'Afrique de l'Ouest.",
+  "description": "Boutique, rendez-vous et services en ligne pour les activités d'Afrique de l'Ouest.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

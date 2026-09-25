@@ -59,7 +59,8 @@ import {
 import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
-import { fetchTemplateSlugsForTypeSlug } from '@/services/template.service'
+import { fetchBusinessCapabilities } from '@/services/businessType.service'
+import { fetchTemplateSlugsForTypeSlug, resolvePickerTemplates } from '@/services/template.service'
 import { slugify } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber, validatePhoneNumber } from '@/utils/phone'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -69,17 +70,17 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { trackEvent } from '@/lib/analytics'
 
 const STEPS: { number: number; label: string; icon: LucideIcon }[] = [
-  { number: 1, label: 'Boutique', icon: Store },
-  { number: 2, label: 'Commerce', icon: ShoppingBag },
+  { number: 1, label: 'Activité', icon: Briefcase },
+  { number: 2, label: 'Offre', icon: ShoppingBag },
   { number: 3, label: 'Vitrine', icon: Palette },
   { number: 4, label: 'Coordonnées', icon: User },
   { number: 5, label: 'Récap', icon: ClipboardCheck },
 ]
 
 const STEP_SUBTITLES: Record<number, string> = {
-  1: 'Nom, adresse et WhatsApp — l’essentiel pour exister.',
-  2: 'Ce que tu vends et comment tu vends.',
-  3: 'Style, description, logo : donne envie d’acheter.',
+  1: 'Nom, page et contact — l’essentiel pour exister.',
+  2: 'Ce que tu proposes et comment tu vends.',
+  3: 'Style, description, logo : donne envie.',
   4: 'Pour te joindre et lier ton compte.',
   5: 'Un dernier coup d’œil avant le lancement.',
 }
@@ -136,7 +137,7 @@ function ChoicePills<T extends string>({
   onChange: (key: T) => void
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {options.map((option) => {
         const selected = value === option.key
         const Icon = option.icon
@@ -196,7 +197,7 @@ function ToggleTile({
 }
 
 export function OnboardingPage() {
-  usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
+  usePageSeo({ title: 'Créer ton espace — Bitiko', noindex: true })
   const { user } = useAuth()
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
   const { data: allShops } = useMyShops()
@@ -226,22 +227,52 @@ export function OnboardingPage() {
   // template), legacy hardcoded list as fail-open fallback.
   const typeOptions = useBusinessTypeOptions()
 
-  const handleSelectVertical = async (vertical: string) => {
-    setBusinessType(vertical)
-    try {
-      const slugs = await fetchTemplateSlugsForTypeSlug(vertical)
-      const compatible = slugs && slugs.length > 0
-        ? STORE_TEMPLATES.filter((t) => slugs.includes(t.key))
-        : templatesForVertical(vertical)
-      const first = (compatible.length > 0 ? compatible : templatesForVertical(vertical))[0]
-      if (first) setTemplateId(first.key)
-    } catch {
-      const first = templatesForVertical(vertical)[0]
-      if (first) setTemplateId(first.key)
+  // Template slugs + capabilities compatible with the chosen type (DB-driven,
+  // Template ≠ Business Type). Null = legacy fallback (fail-open).
+  const [compatSlugs, setCompatSlugs] = useState<string[] | null>(null)
+  const [typeCaps, setTypeCaps] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setCompatSlugs(null)
+    setTypeCaps(null)
+    Promise.all([fetchTemplateSlugsForTypeSlug(businessType), fetchBusinessCapabilities(businessType)])
+      .then(([slugs, caps]) => {
+        if (!active) return
+        setCompatSlugs(slugs)
+        setTypeCaps(caps)
+      })
+      .catch(() => {
+        if (!active) return
+        setCompatSlugs(null)
+        setTypeCaps(null)
+      })
+    return () => {
+      active = false
     }
+  }, [businessType])
+
+  const typeTemplates = resolvePickerTemplates(compatSlugs, businessType)
+
+  const handleSelectVertical = (vertical: string) => {
+    setBusinessType(vertical)
+    // Template defaults follow once compatSlugs reload (effect above); set an
+    // immediate legacy fallback so the choice never lags behind the click.
+    const first = templatesForVertical(vertical)[0]
+    if (first) setTemplateId(first.key)
   }
   const [profile, setProfile] = useState<StoreProfileAnswers>(EMPTY_STORE_PROFILE)
   const updateProfile = (patch: Partial<StoreProfileAnswers>) => setProfile((prev) => ({ ...prev, ...patch }))
+
+  // Sale toggles only make sense for types that sell/deliver — a coiffeur never
+  // sees "Livraison à domicile". Null (unknown) fails open to today's toggles.
+  const showToggle = (code: string) => typeCaps === null || typeCaps.includes(code)
+  const saleToggles: { icon: LucideIcon; checked: boolean; flip: () => void; label: string; cap: string }[] = [
+    { icon: Truck, checked: profile.homeDelivery, flip: () => updateProfile({ homeDelivery: !profile.homeDelivery }), label: 'Livraison à domicile', cap: 'HAS_DELIVERY' },
+    { icon: Banknote, checked: profile.payOnDelivery, flip: () => updateProfile({ payOnDelivery: !profile.payOnDelivery }), label: 'Paiement à la livraison', cap: 'HAS_ORDERS' },
+    { icon: Zap, checked: profile.expressDelivery, flip: () => updateProfile({ expressDelivery: !profile.expressDelivery }), label: 'Livraison express', cap: 'HAS_DELIVERY' },
+    { icon: Scissors, checked: profile.madeToOrder, flip: () => updateProfile({ madeToOrder: !profile.madeToOrder }), label: 'Préparé sur commande', cap: 'HAS_PRODUCTS' },
+  ].filter((t) => showToggle(t.cap))
   const updateFaq = (index: number, field: keyof StoreFaqItem, value: string) =>
     setProfile((prev) => ({
       ...prev,
@@ -351,7 +382,7 @@ export function OnboardingPage() {
       // The `tour` param makes the admin open the welcome guided tour once.
       navigate('/admin?tour=welcome', { replace: true })
     },
-    onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
+    onError: (err: Error) => setError(err?.message || 'Impossible de créer ton espace. Réessayez.'),
   })
 
   if (shopLoading || rolePending) return <PageLoader />
@@ -412,9 +443,9 @@ export function OnboardingPage() {
       <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8 lg:p-10">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <Logo size={40} withWordmark={false} />
-          <h1 className="font-heading text-xl font-bold text-ink-900">Créons ta boutique</h1>
+          <h1 className="font-heading text-xl font-bold text-ink-900">Créons ton espace</h1>
           <p className="max-w-md text-sm text-gray-500">
-            Quelques étapes rapides et ta boutique est prête.
+            Quelques étapes rapides et ton activité est en ligne.
           </p>
         </div>
 
@@ -546,7 +577,7 @@ export function OnboardingPage() {
                   <Mail size={15} className="shrink-0 text-gray-400" aria-hidden />
                   <span className="truncate">{user?.email ?? '—'}</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Ce compte sera lié à ta boutique.</p>
+                <p className="mt-1 text-xs text-gray-500">Ce compte sera lié à ton espace.</p>
               </div>
             </>
           )}
@@ -556,7 +587,7 @@ export function OnboardingPage() {
               <StepHeader step={1} />
               <div>
                 <label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
-                  Nom de ta boutique
+                  Nom de ton activité
                 </label>
                 <div className="relative mt-1">
                   <Store size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
@@ -577,7 +608,7 @@ export function OnboardingPage() {
 
               <div>
                 <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
-                  Adresse de ta boutique
+                  Adresse de ta page
                 </label>
                 <div className="mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors focus-within:border-brand-400">
                   <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs text-gray-500">
@@ -656,9 +687,9 @@ export function OnboardingPage() {
                     {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber).error ?? 'invalid_length']}
                   </p>
                 ) : (
-                  <p className="mt-1 text-xs text-gray-500">
-                    C'est ce numéro qui recevra les commandes. Il peut être différent de ton numéro personnel.
-                  </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  C'est ce numéro qui recevra commandes et réservations. Il peut être différent de ton numéro personnel.
+                </p>
                 )}
               </div>
             </>
@@ -701,32 +732,24 @@ export function OnboardingPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <ToggleTile
-                    icon={Truck}
-                    checked={profile.homeDelivery}
-                    onChange={(homeDelivery) => updateProfile({ homeDelivery })}
-                    label="Livraison à domicile"
-                  />
-                  <ToggleTile
-                    icon={Banknote}
-                    checked={profile.payOnDelivery}
-                    onChange={(payOnDelivery) => updateProfile({ payOnDelivery })}
-                    label="Paiement à la livraison"
-                  />
-                  <ToggleTile
-                    icon={Zap}
-                    checked={profile.expressDelivery}
-                    onChange={(expressDelivery) => updateProfile({ expressDelivery })}
-                    label="Livraison express"
-                  />
-                  <ToggleTile
-                    icon={Scissors}
-                    checked={profile.madeToOrder}
-                    onChange={(madeToOrder) => updateProfile({ madeToOrder })}
-                    label="Préparé sur commande"
-                  />
-                </div>
+                {saleToggles.length > 0 ? (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {saleToggles.map((t) => (
+                      <ToggleTile
+                        key={t.label}
+                        icon={t.icon}
+                        checked={t.checked}
+                        onChange={t.flip}
+                        label={t.label}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Ce type d'activité ne passe ni par la livraison ni par le paiement à la livraison — tu pourras
+                    détailler ton offre à l'étape suivante.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -742,10 +765,10 @@ export function OnboardingPage() {
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <LayoutTemplate size={15} className="text-gray-400" aria-hidden /> Quel style pour ta boutique ?
+                  <LayoutTemplate size={15} className="text-gray-400" aria-hidden /> Quel style pour ton espace ?
                 </label>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {templatesForVertical(businessType).map((template) => {
+                  {typeTemplates.map((template) => {
                     const selected = templateId === template.key
                     return (
                       <button
@@ -774,7 +797,7 @@ export function OnboardingPage() {
 
               <div>
                 <label htmlFor="shopDescription" className="block text-sm font-medium text-gray-700">
-                  Décris ta boutique en une phrase
+                  Décris ton activité en une phrase
                 </label>
                 <textarea
                   id="shopDescription"
@@ -789,7 +812,7 @@ export function OnboardingPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">À qui s'adresse ta boutique ?</label>
+                <label className="block text-sm font-medium text-gray-700">À qui t'adresses-tu ?</label>
                 <div className="mt-2">
                   <ChoicePills options={AUDIENCE_OPTIONS} value={profile.audience} onChange={(audience) => updateProfile({ audience })} />
                 </div>
@@ -861,9 +884,9 @@ export function OnboardingPage() {
 
           {step === 3 && (
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ta boutique
-              </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ton activité
+                </label>
               <p className="mt-1 text-xs text-gray-500">Optionnel — tu pourras l'ajouter plus tard dans Réglages.</p>
               <div className="mt-3 flex items-start gap-4">
                 <label className="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-brand-400 hover:bg-brand-50/30">
@@ -895,7 +918,7 @@ export function OnboardingPage() {
                             style={{ backgroundColor: logoPalette.secondary ?? undefined }}
                             aria-hidden
                           />
-                          Couleurs de la boutique mises à jour à partir de ton logo — modifiables plus tard.
+                          Couleurs de ton espace mises à jour à partir de ton logo — modifiables plus tard.
                         </p>
                       ) : (
                         <p className="mt-0.5 text-xs text-gray-500">Image prête à être utilisée.</p>
@@ -912,7 +935,7 @@ export function OnboardingPage() {
                     <p className="text-xs leading-relaxed text-gray-500">
                       Formats .png ou .jpg acceptés.<br />
                       Image carrée recommandée (256 × 256 px).<br />
-                      Sans logo, seul le nom de ta boutique est affiché.
+                      Sans logo, seul le nom de ton activité est affiché.
                     </p>
                   )}
                 </div>
@@ -926,7 +949,7 @@ export function OnboardingPage() {
 
               <div className="overflow-hidden rounded-xl border border-sand-200">
                 <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ta boutique</p>
+                  <p className="text-sm font-semibold text-ink-900">Ton activité</p>
                   <button
                     type="button"
                     onClick={() => setStep(1)}
@@ -953,7 +976,7 @@ export function OnboardingPage() {
 
               <div className="overflow-hidden rounded-xl border border-sand-200">
                 <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ton commerce</p>
+                  <p className="text-sm font-semibold text-ink-900">Ton offre</p>
                   <button
                     type="button"
                     onClick={() => setStep(2)}
@@ -964,7 +987,7 @@ export function OnboardingPage() {
                 </div>
                 <div className="space-y-2.5 px-4 py-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Type de commerce</span>
+                    <span className="text-gray-500">Type d'activité</span>
                     <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -1117,7 +1140,7 @@ export function OnboardingPage() {
                 }}
                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {mutation.isPending ? 'Création…' : 'Confirmer et créer ma boutique'}
+                {mutation.isPending ? 'Création…' : 'Confirmer et créer mon espace'}
               </button>
             )}
           </div>

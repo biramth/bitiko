@@ -67,6 +67,18 @@ export default defineConfig({
     // wrong code, and blocked by its CSP frame-ancestors allowlist anyway).
     'import.meta.env.VITE_VERCEL_ENV': JSON.stringify(process.env.VERCEL_ENV ?? ''),
   },
+  server: {
+    // Local /api/* are Vercel serverless functions (see AGENTS.md): they only
+    // run under `vercel dev --listen 3001`, so forward them there instead of
+    // serving Vite's SPA fallback (which would 404-as-HTML and break callers
+    // parsing JSON, e.g. the login email check).
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     // Fonts should stay as separate cacheable files, never inlined as
     // base64 into the JS/CSS bundle — matters a lot on the slower mobile

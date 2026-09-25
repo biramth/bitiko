@@ -21,7 +21,7 @@ export const GUIDED_TOURS: GuidedTour[] = [
         target: '[data-guide="guide-nav-produits"]',
         prepare: 'admin-menu-open',
         title: 'Produits',
-        body: 'Ajoute, modifie et organise tes produits. Le plan gratuit autorise jusqu’à 15 produits actifs et 4 photos par produit.',
+        body: 'Ajoute, modifie et organise tes produits. Le plan gratuit autorise jusqu’à 8 produits actifs et 4 photos par produit.',
       },
       {
         target: '[data-guide="guide-nav-personnaliser"]',
@@ -65,7 +65,7 @@ export const GUIDED_TOURS: GuidedTour[] = [
       {
         target: '[data-guide="guide-plan-produits"]',
         title: 'Ta jauge de plan',
-        body: 'Surveille cette jauge : le plan gratuit plafonne à 15 produits actifs. Au-delà, tes produits sont enregistrés inactifs — passe à Essentiel pour en activer plus.',
+        body: 'Surveille cette jauge : le plan gratuit plafonne à 8 produits actifs. Au-delà, tes produits sont enregistrés inactifs — passe à Essentiel pour en activer plus.',
       },
       {
         title: 'Astuce',
