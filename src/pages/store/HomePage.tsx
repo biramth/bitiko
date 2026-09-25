@@ -1,6 +1,7 @@
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
 import { SectionList } from '@/features/store-builder/SectionList'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { usePageSeo } from '@/hooks/usePageSeo'
 
 export function HomePage() {
@@ -12,6 +13,7 @@ export function HomePage() {
     siteName: shop?.name,
   })
   const { bodySections, themeConfig, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
+  const capabilities = useStorefrontCapabilities(shop)
 
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
 
@@ -25,6 +27,7 @@ export function HomePage() {
         themeConfig={themeConfig}
         isEmbeddedPreview={isEmbeddedPreview}
         inlineEditable={inlineEditable}
+        capabilities={capabilities}
       />
     </div>
   )

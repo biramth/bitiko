@@ -353,7 +353,17 @@ export type SectionConfigMap = {
 }
 
 export type LayoutSection = {
-  [K in SectionType]: { id: string; type: K; visible: boolean; config: SectionConfigMap[K] }
+  [K in SectionType]: {
+    id: string
+    type: K
+    visible: boolean
+    config: SectionConfigMap[K]
+    /** Capabilities required to display this section (PHASE-07+). Absent/empty =
+     *  always displayed (all legacy sections). The renderer hides a section when
+     *  the shop's business type lacks any listed capability — this is how a
+     *  coiffeur frontstore drops e-commerce blocks without code branches. */
+    capabilities?: string[]
+  }
 }[SectionType]
 
 export type FontChoice = 'sora-inter' | 'inter' | 'sora'

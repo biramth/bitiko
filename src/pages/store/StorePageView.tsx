@@ -5,6 +5,8 @@ import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
+import { sanitizeSections, sectionVisibleForCapabilities } from '@/features/store-builder/sanitizeSections'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { StoreNotFoundPage } from './StoreNotFoundPage'
 import type { StorePage } from '@/types/pages'
@@ -20,6 +22,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const slug = pageSlug ? pageSlug.replace(/^pages\//, '').replace(/\/+$/, '') : routeSlug
   const { shop } = useTenant()
   const isDraftPreview = useIsDraftPreview()
+  const capabilities = useStorefrontCapabilities(shop)
 
   // Keyed by slug so "loading" can be derived during render (comparing the
   // last-resolved slug against the current one) instead of toggled with a
@@ -87,11 +90,12 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   return (
     <div className="mx-auto py-6">
       <h1 className="sr-only">{page?.title}</h1>
-      {sections.map((section) => {
+      {sanitizeSections(sections).map((section) => {
         const def = registry[section.type]
         const Renderer = def?.Renderer
         if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
+        if (!sectionVisibleForCapabilities(section, capabilities)) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>
         return (
