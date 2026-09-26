@@ -42,8 +42,25 @@ Colle l'entrée générée dans `STORE_TEMPLATES`, adapte textes/couleurs/sectio
    des pickers pilotés par DB.
 
 Règles : `key` unique et immuable (minuscules, chiffres, `_`) ; ne réutilise
-jamais la clé d'un gabarit existant ; un gabarit ne se supprime pas, il passe
-en `deprecated`.
+jamais la clé d'un gabarit existant.
+
+## Supprimer un gabarit
+
+Admin plateforme → Gabarits → corbeille. Garde-fous serveur :
+
+- **En usage** (≥ 1 boutique avec ce `template_id`) : suppression **refusée
+  (409)**. Passe le gabarit en `deprecated` : il disparaît des pickers mais
+  les vitrines existantes continuent de fonctionner.
+- **Inutilisé** : suppression définitive (compatibilités supprimées en
+  cascade). Si le slug a aussi une entrée code, c'est la version code qui
+  refait foi.
+
+## Parcours inscription
+
+L'inscrit choisit son **type** (étape précédente), puis l'étape style lui
+propose **les gabarits compatibles avec ce type, gabarit exact en premier**
+(ex. Restaurant → Restaurant, Bistrot, puis Épicerie). Le défaut suit
+automatiquement le premier de la liste dès que les compatibilités arrivent.
 
 ## 3. Surcharge sans déploiement (admin plateforme → Gabarits)
 

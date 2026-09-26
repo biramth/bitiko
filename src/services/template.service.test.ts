@@ -9,8 +9,13 @@ import {
 
 describe('resolvePickerTemplates', () => {
   it('uses DB compatibility when it yields templates', () => {
-    const out = resolvePickerTemplates(['mode', 'epicerie'], 'tech')
-    expect(out.map((t) => t.key).sort()).toEqual(['epicerie', 'mode'])
+    const out = resolvePickerTemplates(['mode', 'minimal'], 'mode')
+    expect(out.map((t) => t.key)).toEqual(['mode', 'minimal'])
+  })
+
+  it('offers the exact template first, then compatible neighbours', () => {
+    const out = resolvePickerTemplates(['epicerie', 'restauration', 'bistrot'], 'restauration')
+    expect(out.map((t) => t.key)).toEqual(['restauration', 'bistrot', 'epicerie'])
   })
 
   it('falls back to the legacy vertical list on null/empty/unknown', () => {

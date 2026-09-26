@@ -263,6 +263,15 @@ export function OnboardingPage() {
 
   const typeTemplates = mergeDbTemplates(resolvePickerTemplates(compatSlugs, businessType), dbContents)
 
+  // Quand la liste compatible arrive (ou change de type), le défaut suit le
+  // premier gabarit proposé au lieu de rester sur un choix périmé.
+  useEffect(() => {
+    if (typeTemplates.length > 0 && !typeTemplates.some((t) => t.key === templateId)) {
+      setTemplateId(typeTemplates[0]!.key)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compatSlugs, businessType, dbContents])
+
   const handleSelectVertical = (vertical: string) => {
     setBusinessType(vertical)
     // Template defaults follow once compatSlugs reload (effect above); set an
@@ -404,7 +413,7 @@ export function OnboardingPage() {
   if ((allShops?.length ?? 0) >= 5) return <Navigate to="/admin" replace />
   if (existingShop && !creatingAdditional) return <Navigate to="/admin" replace />
 
-  const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
+  const selectedTemplate = typeTemplates.find((template) => template.key === templateId) ?? STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
   const selectedVertical = typeOptions.find((o) => o.key === businessType) ?? VERTICAL_BY_KEY[businessType]
   // The recap shows the color actually applied: a light logo color is deepened
   // so white text on it stays readable.

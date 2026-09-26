@@ -98,6 +98,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleTemplateSave(req, res)
     case 'template-compat':
       return handleTemplateCompat(req, res)
+    case 'template-delete':
+      return handleTemplateDelete(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -1454,7 +1456,24 @@ async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
       .from('template_business_types')
       .select('template_id, business_type_id')
     if (mapError) throw mapError
-    res.status(200).json({ templates: templates ?? [], types: types ?? [], mappings: mappings ?? [] })
+    // Boutiques utilisant chaque gabarit (template_id) : la suppression est
+    // refusée tant qu'un gabarit est en usage.
+    const { data: shopRows, error: shopsError } = await admin.from('shops').select('template_id')
+    if (shopsError) throw shopsError
+    const shopsByTemplate = new Map<string, number>()
+    for (const row of shopRows ?? []) {
+      const key = (row as { template_id: string | null }).template_id
+      if (!key) continue
+      shopsByTemplate.set(key, (shopsByTemplate.get(key) ?? 0) + 1)
+    }
+    res.status(200).json({
+      templates: (templates ?? []).map((t) => ({
+        ...(t as Record<string, unknown>),
+        shops: shopsByTemplate.get((t as { slug: string }).slug) ?? 0,
+      })),
+      types: types ?? [],
+      mappings: mappings ?? [],
+    })
   } catch (err) {
     console.error('platform template-list failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
@@ -1621,6 +1640,61 @@ async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ saved: true })
   } catch (err) {
     console.error('platform template-compat failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { id } = (req.body ?? {}) as { id?: unknown }
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: template, error: templateError } = await admin
+      .from('templates')
+      .select('id, slug')
+      .eq('id', id)
+      .maybeSingle()
+    if (templateError) throw templateError
+    if (!template) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    // Garde-fou : un gabarit utilisé par des boutiques ne se supprime pas —
+    // il se déprécie (les vitrines existantes continuent de fonctionner).
+    const { count, error: countError } = await admin
+      .from('shops')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_id', (template as { slug: string }).slug)
+    if (countError) throw countError
+    if ((count ?? 0) > 0) {
+      res.status(409).json({
+        error: `Impossible : ${count} boutique(s) utilisent encore ce gabarit. Passe-le en déprécié.`,
+      })
+      return
+    }
+
+    const { error: deleteError } = await admin.from('templates').delete().eq('id', id)
+    if (deleteError) throw deleteError
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { id, deleted: true },
+    })
+    res.status(200).json({ deleted: true })
+  } catch (err) {
+    console.error('platform template-delete failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

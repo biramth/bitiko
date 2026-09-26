@@ -47,6 +47,7 @@
     { "source": "/api/admin/templates", "destination": "/api/admin/platform?action=template-list" },
     { "source": "/api/admin/templates/save", "destination": "/api/admin/platform?action=template-save" },
     { "source": "/api/admin/templates/compat", "destination": "/api/admin/platform?action=template-compat" },
+    { "source": "/api/admin/templates/delete", "destination": "/api/admin/platform?action=template-delete" },
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },

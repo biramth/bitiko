@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { LayoutTemplate, Plus } from 'lucide-react'
+import { LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
+  deleteTemplate,
   listTemplateCatalog,
   saveTemplate,
   saveTemplateCompat,
@@ -44,6 +46,8 @@ export function TemplatesTool() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminTemplate | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [form, setForm] = useState({ slug: '', name: '', description: '', status: 'active' })
   const [contentText, setContentText] = useState('')
@@ -180,6 +184,22 @@ export function TemplatesTool() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteTemplate(deleteTarget.id)
+      toast.success('Gabarit supprimé.')
+      setDeleteTarget(null)
+      if (selectedId === deleteTarget.id) setSelectedId(null)
+      await reload()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Suppression impossible.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) return <Spinner />
   if (!catalog) return <EmptyState icon={LayoutTemplate} title="Catalogue inaccessible" />
 
@@ -195,14 +215,14 @@ export function TemplatesTool() {
         </button>
         <ul className="space-y-1">
           {catalog.templates.map((template) => (
-            <li key={template.id}>
+            <li key={template.id} className="group flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => {
                   setCreating(false)
                   setSelectedId(template.id)
                 }}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+                className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
                   selectedId === template.id && !creating
                     ? 'bg-brand-50 font-semibold text-brand-700'
                     : 'text-gray-700 hover:bg-gray-50'
@@ -213,8 +233,18 @@ export function TemplatesTool() {
                   <span className="block truncate text-xs text-gray-400">
                     {template.slug} · {STATUS_LABEL[template.status] ?? template.status}
                     {template.content ? ' · surcharge' : ''}
+                    {template.shops > 0 ? ` · ${template.shops} boutique(s)` : ''}
                   </span>
                 </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(template)}
+                aria-label={`Supprimer ${template.name}`}
+                title={template.shops > 0 ? 'En usage : passe-le en déprécié' : 'Supprimer'}
+                className="shrink-0 rounded p-1.5 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 group-focus-within:opacity-100"
+              >
+                <Trash2 size={14} aria-hidden />
               </button>
             </li>
           ))}
@@ -365,6 +395,26 @@ export function TemplatesTool() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Supprimer ce gabarit ?"
+        description={
+          deleteTarget
+            ? deleteTarget.shops > 0
+              ? `« ${deleteTarget.name} » est utilisé par ${deleteTarget.shops} boutique(s) : suppression refusée. Passe-le en déprécié pour le retirer des pickers sans casser les vitrines.`
+              : `« ${deleteTarget.name} » (${deleteTarget.slug}) sera définitivement supprimé du catalogue, avec ses compatibilités. Les vitrines existantes n’en dépendent pas.`
+            : undefined
+        }
+        confirmLabel={deleteTarget && deleteTarget.shops > 0 ? 'Compris' : 'Supprimer'}
+        pendingLabel="Suppression…"
+        pending={deleting}
+        onConfirm={() => {
+          if (deleteTarget && deleteTarget.shops > 0) setDeleteTarget(null)
+          else void handleDelete()
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

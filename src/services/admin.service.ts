@@ -165,6 +165,7 @@ export interface AdminTemplate {
   status: 'active' | 'deprecated' | 'draft'
   content: Record<string, unknown> | null
   updated_at: string
+  shops: number
 }
 
 export interface TemplateCatalog {
@@ -207,3 +208,12 @@ export async function saveTemplateCompat(templateId: string, typeIds: string[]):
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'Impossible d’enregistrer les compatibilités.')}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  const res = await fetch('/api/admin/templates/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ id }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible de supprimer le gabarit.')}

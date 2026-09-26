@@ -45,7 +45,10 @@ export async function fetchTemplateSlugsForTypeSlug(typeSlug: string): Promise<s
 }
 
 /** Resolves the picker list: DB compatibility wins when it yields templates,
- *  otherwise the legacy per-vertical list (fail-open). Pure — unit-tested. */
+ *  otherwise the legacy per-vertical list (fail-open). Order follows the
+ *  legacy list (exact slug first), then compatible neighbours from other
+ *  verticals — a restaurant is offered Restaurant, Bistrot, then Épicerie.
+ *  Pure — unit-tested. */
 export function resolvePickerTemplates(
   slugs: string[] | null,
   legacyVertical: string | null | undefined,
@@ -53,8 +56,10 @@ export function resolvePickerTemplates(
   const legacy = templatesForVertical(legacyVertical)
   if (!slugs || slugs.length === 0) return legacy
   const wanted = new Set(slugs)
-  const filtered = STORE_TEMPLATES.filter((t) => wanted.has(t.key))
-  return filtered.length > 0 ? filtered : legacy
+  const inLegacy = legacy.filter((t) => wanted.has(t.key))
+  if (inLegacy.length === 0) return legacy
+  const extra = STORE_TEMPLATES.filter((t) => wanted.has(t.key) && !inLegacy.some((l) => l.key === t.key))
+  return [...inLegacy, ...extra]
 }
 
 // ── Contenu piloté par données (sans déploiement) ──────────────────────────
