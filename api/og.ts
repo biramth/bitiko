@@ -122,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: shop } = await supabase
     .from('shops')
-    .select('id, name, description, currency, logo_url, banner_url')
+    .select('id, name, description, currency, logo_url, banner_url, business_type')
     .ilike('slug', shopSlug)
     .maybeSingle()
 
@@ -130,6 +130,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     fallback()
     return
   }
+
+  // Descripteur public du lieu (« Restaurant », « Salon & Institut »…) —
+  // mêmes libellés que getStorefrontVocabulary/siteKindForBusinessType côté
+  // front (toute divergence est un bug : les aperçus WhatsApp doivent parler
+  // le même métier que le frontstore).
+  const businessType = (shop as { business_type?: string | null }).business_type
+  const siteKind =
+    businessType === 'restauration' || businessType === 'food_services'
+      ? 'Restaurant'
+      : businessType === 'beaute' || businessType === 'coiffure'
+        ? 'Salon & Institut'
+        : 'Boutique en ligne'
 
   const shopImage = shop.banner_url ?? shop.logo_url
   const shopDescription = shop.description || `Découvre ${shop.name} et commande directement sur WhatsApp.`
@@ -205,5 +217,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Shop home & catalogue: name, description, banner/logo ─────────────
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-  res.status(200).send(page(`${shop.name} — Boutique en ligne`, shopDescription, `${origin}/`, shopImage, shop.name))
+  res.status(200).send(page(`${shop.name} — ${siteKind}`, shopDescription, `${origin}/`, shopImage, shop.name))
 }

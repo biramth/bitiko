@@ -7,6 +7,7 @@ import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { sanitizeSections, sectionVisibleWithRegistry } from '@/features/store-builder/sanitizeSections'
 import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { StoreNotFoundPage } from './StoreNotFoundPage'
 import type { StorePage } from '@/types/pages'
@@ -23,6 +24,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const { shop } = useTenant()
   const isDraftPreview = useIsDraftPreview()
   const capabilities = useStorefrontCapabilities(shop)
+  const vocab = getStorefrontVocabulary(capabilities)
 
   // Keyed by slug so "loading" can be derived during render (comparing the
   // last-resolved slug against the current one) instead of toggled with a
@@ -65,7 +67,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   }, [isDraftPreview])
 
   usePageSeo({
-    title: page ? `${page.title} — ${shop?.name ?? 'Boutique'}` : (shop?.name ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne'),
+    title: page ? `${page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
     description: page?.seo_description ?? page?.seo_title ?? shop?.description ?? undefined,
     siteName: shop?.name,
   })

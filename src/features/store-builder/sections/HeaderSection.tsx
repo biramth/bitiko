@@ -5,6 +5,8 @@ import type { Shop } from '@/types'
 import type { HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { useCart } from '@/features/cart/CartContext'
 import { whatsappHref } from '@/utils/format'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
@@ -15,6 +17,7 @@ import { InlineLinkPopover } from '../inline/InlineLinkPopover'
 function resolveHeaderNavLinks(
   header: HeaderSectionConfig,
   shop: { whatsapp_number: string | null } | null | undefined,
+  catalogLabel = 'Catalogue',
 ): { key: string; label: string; href: string; external: boolean }[] {
   if ((header.menu?.length ?? 0) > 0) {
     return header.menu!.map((link) => ({
@@ -25,7 +28,7 @@ function resolveHeaderNavLinks(
     }))
   }
   const links: { key: string; label: string; href: string; external: boolean }[] = []
-  if (header.showCatalogLink) links.push({ key: 'catalogue', label: 'Catalogue', href: '/catalogue', external: false })
+  if (header.showCatalogLink) links.push({ key: 'catalogue', label: catalogLabel, href: '/catalogue', external: false })
   if (header.showContactLink && shop?.whatsapp_number) {
     links.push({ key: 'contact', label: 'Contact', href: whatsappHref(shop.whatsapp_number), external: true })
   }
@@ -65,7 +68,8 @@ export function HeaderRenderer({
 
   const layout = header.layout ?? 'left-logo'
   const shopName = shop?.name ?? 'Boutique'
-  const navLinks = resolveHeaderNavLinks(header, shop)
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
+  const navLinks = resolveHeaderNavLinks(header, shop, vocab.catalogLabel)
   // With the stock header (logo + Catalogue), nav links render as prominent
   // CTA buttons so shopping is the obvious next step; with a custom menu the
   // merchant's own list keeps the classic link style.

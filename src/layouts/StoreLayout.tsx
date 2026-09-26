@@ -13,6 +13,8 @@ import { InlineStyleToolbar } from '@/features/store-builder/inline/InlineStyleT
 import { HeaderRenderer } from '@/features/store-builder/sections/HeaderSection'
 import { FooterRenderer } from '@/features/store-builder/sections/FooterSection'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { themeConfigToCssVars } from '@/config/themeTokens'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useShopFavicon } from '@/hooks/usePageSeo'
@@ -208,6 +210,8 @@ function AnnouncementBar({
 function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
   const { itemCount } = useCart()
   const { pathname } = useLocation()
+  const { shop } = useTenant()
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const digits = whatsappNumber?.replace(/\D/g, '') ?? ''
   const tab = (active: boolean) =>
     `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
@@ -232,7 +236,7 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
             aria-current={pathname.startsWith('/catalogue') ? 'page' : undefined}
           >
             <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith('/catalogue') ? 2.25 : 1.75} />
-            Catalogue
+            {vocab.catalogLabel}
           </Link>
           <Link
             to="/panier"
@@ -247,7 +251,7 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
                 </span>
               )}
             </span>
-            Panier
+            {vocab.cartLabel}
           </Link>
           {digits && (
             <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className={tab(false)} aria-label="Contacter sur WhatsApp">
