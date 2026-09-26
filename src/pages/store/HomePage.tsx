@@ -1,16 +1,23 @@
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
 import { SectionList } from '@/features/store-builder/SectionList'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { useJsonLd } from '@/hooks/useJsonLd'
+import { shopJsonLd } from '@/seo/jsonLd'
 
 export function HomePage() {
   const { shop } = useTenant()
+  const capabilities = useStorefrontCapabilities(shop)
+  const vocab = getStorefrontVocabulary(capabilities)
   usePageSeo({
-    title: shop ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne',
+    title: shop ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind,
     description: shop?.description ?? undefined,
     image: shop?.banner_url ?? shop?.logo_url,
     siteName: shop?.name,
   })
+  useJsonLd('shop-structured-data', shop ? shopJsonLd(shop, `${window.location.origin}/`) : null)
   const { bodySections, themeConfig, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
 
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
@@ -25,6 +32,7 @@ export function HomePage() {
         themeConfig={themeConfig}
         isEmbeddedPreview={isEmbeddedPreview}
         inlineEditable={inlineEditable}
+        capabilities={capabilities}
       />
     </div>
   )

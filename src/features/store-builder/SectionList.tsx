@@ -1,17 +1,22 @@
 import { PREVIEW_SELECT } from './previewBridge'
 import { getEffectiveRegistry } from './effectiveRegistry'
+import { sanitizeSections, sectionVisibleWithRegistry } from './sanitizeSections'
 import type { Shop } from '@/types'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
 /** Renders a list of body sections (header/footer are handled separately by
  *  StoreLayout). In embedded-preview mode each block is wrapped with a
- *  click-to-select handler so the merchant can click straight to edit it. */
+ *  click-to-select handler so the merchant can click straight to edit it.
+ *  Sections are shape-guarded at render (never crashes on corrupt data) and
+ *  capability-filtered when the caller provides the shop's set — `null` means
+ *  unknown and fails open (historic behavior, see useStorefrontCapabilities). */
 export function SectionList({
   sections,
   shop,
   themeConfig,
   isEmbeddedPreview,
   inlineEditable = false,
+  capabilities = null,
 }: {
   sections: LayoutSection[]
   shop: Shop
@@ -21,12 +26,14 @@ export function SectionList({
    *  images, buttons…) — a Renderer that doesn't support inline editing
    *  simply ignores these extra props. */
   inlineEditable?: boolean
+  capabilities?: Set<string> | null
 }) {
   const registry = getEffectiveRegistry(shop.template_id)
   return (
     <>
-      {sections.map((section) => {
+      {sanitizeSections(sections).map((section) => {
         const def = registry[section.type]
+        if (!sectionVisibleWithRegistry(section, def?.capabilities, capabilities)) return null
         const Renderer = def?.Renderer
         if (!Renderer) return null
         const content = (

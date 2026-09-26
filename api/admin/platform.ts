@@ -1,18 +1,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   canDeleteUsers,
+  canManageCountries,
+  canManageCatalog,
   canManageTeam,
+  canSuspendShops,
   canSupportAccess,
   getPlatformMemberByUserId,
   getPlatformMemberFromAuthHeader,
+  getPlatformOperatorFromAuthHeader,
   getSupabaseAdmin,
   type PlatformMember,
   type PlatformRole,
 } from '../_lib/supabaseAdmin.js'
 import { deleteUserCompletely } from '../_lib/userDeletion.js'
+import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
-import { campaignEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
+import { recordUsage } from '../_lib/usage.js'
+import { campaignEmailHtml, proActivatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { can } from '../../src/features/platform/permissions.js'
+import { PLANS } from '../../src/config/plans.js'
+import { grantedSubscription, nextSubscription } from '../_lib/subscriptionPeriod.js'
 
 /**
  * Platform-team serverless endpoint (team management + campaign tool),
@@ -69,12 +77,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleCampaignAudience(req, res)
     case 'campaign-send':
       return handleCampaignSend(req, res)
+    case 'country-set':
+      return handleCountrySet(req, res)
     case 'campaign-delete':
       return handleCampaignDelete(req, res)
     case 'promo-list':
       return handlePromoList(req, res)
     case 'promo-save':
       return handlePromoSave(req, res)
+    case 'payment-pending':
+      return handlePaymentPending(req, res)
+    case 'payment-approve':
+      return handlePaymentApprove(req, res)
+    case 'payment-reject':
+      return handlePaymentReject(req, res)
+    case 'subscription-grant':
+      return handleSubscriptionGrant(req, res)
+    case 'audit-list':
+      return handleAuditList(req, res)
+    case 'shop-suspend':
+      return handleShopSuspension(req, res, true)
+    case 'shop-unsuspend':
+      return handleShopSuspension(req, res, false)
+    case 'biztype-list':
+      return handleBizTypeList(req, res)
+    case 'biztype-save':
+      return handleBizTypeSave(req, res)
+    case 'biztype-capabilities':
+      return handleBizTypeCapabilities(req, res)
+    case 'template-list':
+      return handleTemplateList(req, res)
+    case 'template-save':
+      return handleTemplateSave(req, res)
+    case 'template-compat':
+      return handleTemplateCompat(req, res)
+    case 'template-delete':
+      return handleTemplateDelete(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -116,36 +154,21 @@ async function loadUserDirectory(): Promise<Map<string, { email: string; name: s
   return directory
 }
 
-/** Records a sensitive backoffice action in admin_audit_log (service-role
- *  only, no FK — an audit row must never block the deletion it describes).
- *  Fail-closed for the flows that need the trace first, best-effort for the
- *  rest: the caller decides via `required`. */
+/** Local alias kept so existing call sites don't churn — the shared helper in
+ *  api/_lib/auditLog.ts is the single implementation (same best-effort /
+ *  fail-closed semantics via `required`). */
 async function logAudit(
   entry: {
     actorUserId: string
     actorEmail: string
-    action: 'support_access' | 'user_delete' | 'team_add'
+    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save' | 'promo_save' | 'template_save'
     targetUserId?: string
     targetShopId?: string
     details?: Record<string, unknown>
   },
   required = false,
 ): Promise<void> {
-  try {
-    const admin = getSupabaseAdmin()
-    const { error } = await admin.from('admin_audit_log').insert({
-      actor_user_id: entry.actorUserId,
-      actor_email: entry.actorEmail,
-      action: entry.action,
-      target_user_id: entry.targetUserId ?? null,
-      target_shop_id: entry.targetShopId ?? null,
-      details: entry.details ?? {},
-    })
-    if (error) throw error
-  } catch (err) {
-    if (required) throw err
-    console.error('platform logAudit failed', err)
-  }
+  await logAdminAudit(entry, required)
 }
 
 // ---------------------------------------------------------------------------
@@ -930,6 +953,19 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
       if (logError) console.error('platform campaign-send: logging failed', logError)
     }
 
+    // Metering (PHASE-12, best-effort): emails actually delivered, per shop,
+    // into the usage ledger — never blocks or alters the send itself.
+    {
+      const sentByShop = new Map<string, number>()
+      for (const row of logs) {
+        if (row.status !== 'sent') continue
+        sentByShop.set(row.shop_id, (sentByShop.get(row.shop_id) ?? 0) + 1)
+      }
+      for (const [shopId, count] of sentByShop) {
+        await recordUsage(shopId, 'emails', count)
+      }
+    }
+
     // Totals across runs: a resumed send must report every successfully
     // delivered and failed email, not just this run's share.
     const { data: finalLogs, error: finalError } = await admin
@@ -1057,7 +1093,8 @@ async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
     return
   }
   try {
-    if (!(await requirePromoMember(req, res))) return
+    const promoMember = await requirePromoMember(req, res)
+    if (!promoMember) return
 
     const b = (req.body ?? {}) as Record<string, unknown>
     const isNew = b.create === true
@@ -1138,9 +1175,989 @@ async function handlePromoSave(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    await logAudit({
+      actorUserId: promoMember.id,
+      actorEmail: promoMember.email,
+      action: 'promo_save',
+      details: { code, plan: b.plan, days, create: isNew },
+    })
     res.status(200).json({ saved: true, code })
   } catch (err) {
     console.error('platform promo-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Business catalog (PHASE-05): business_types + capabilities, owner/admin only.
+// Slugs are immutable once created (compat layers reference them); types retire
+// via status=deprecated, never by DELETE (shops may point at them).
+// ---------------------------------------------------------------------------
+
+const BIZTYPE_STATUSES = ['active', 'deprecated', 'draft'] as const
+const SLUG_RE = /^[a-z0-9]+(_[a-z0-9]+)*$/
+
+async function handleBizTypeList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: types, error: typesError } = await admin
+      .from('business_types')
+      .select('id, slug, name, description, icon, status, updated_at')
+      .order('slug')
+    if (typesError) throw typesError
+
+    const { data: capabilities, error: capsError } = await admin
+      .from('capabilities')
+      .select('id, code, label, description, category, status')
+      .order('code')
+    if (capsError) throw capsError
+
+    const { data: mappings, error: mapError } = await admin
+      .from('business_type_capabilities')
+      .select('business_type_id, capability_id')
+    if (mapError) throw mapError
+
+    const { data: shopCounts, error: countError } = await admin
+      .from('shops')
+      .select('business_type_id')
+    if (countError) throw countError
+    const shopsByType = new Map<string, number>()
+    for (const row of shopCounts ?? []) {
+      const id = row.business_type_id as string | null
+      if (!id) continue
+      shopsByType.set(id, (shopsByType.get(id) ?? 0) + 1)
+    }
+
+    res.status(200).json({
+      types: (types ?? []).map((t) => ({
+        ...(t as Record<string, unknown>),
+        shops: shopsByType.get((t as { id: string }).id) ?? 0,
+      })),
+      capabilities: capabilities ?? [],
+      mappings: mappings ?? [],
+    })
+  } catch (err) {
+    console.error('platform biztype-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleBizTypeSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const { id, slug, name, description, icon, status, create } = (req.body ?? {}) as {
+      id?: unknown
+      slug?: unknown
+      name?: unknown
+      description?: unknown
+      icon?: unknown
+      status?: unknown
+      create?: unknown
+    }
+    const cleanName = typeof name === 'string' ? name.trim() : ''
+    if (!cleanName) {
+      res.status(400).json({ error: 'Le nom est requis.' })
+      return
+    }
+    if (!(BIZTYPE_STATUSES as readonly unknown[]).includes(status)) {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    if (create) {
+      const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
+      if (!SLUG_RE.test(cleanSlug)) {
+        res.status(400).json({ error: 'Slug invalide (minuscules, chiffres, tirets bas).' })
+        return
+      }
+      const { data, error } = await admin
+        .from('business_types')
+        .insert({
+          slug: cleanSlug,
+          name: cleanName,
+          description: typeof description === 'string' ? description.trim() || null : null,
+          icon: typeof icon === 'string' ? icon.trim() || null : null,
+          status: status as string,
+        })
+        .select('id')
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          res.status(409).json({ error: 'Ce slug existe déjà.' })
+          return
+        }
+        throw error
+      }
+      await logAudit({
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'biztype_save',
+        details: { slug: cleanSlug },
+      })
+      res.status(200).json({ saved: true, id: (data as { id: string }).id })
+      return
+    }
+
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+    // Slug is immutable: only name/description/icon/status can change.
+    const { data, error } = await admin
+      .from('business_types')
+      .update({
+        name: cleanName,
+        description: typeof description === 'string' ? description.trim() || null : null,
+        icon: typeof icon === 'string' ? icon.trim() || null : null,
+        status: status as string,
+      })
+      .eq('id', id)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      res.status(404).json({ error: 'Type introuvable.' })
+      return
+    }
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'biztype_save',
+      details: { id, status },
+    })
+    res.status(200).json({ saved: true, id })
+  } catch (err) {
+    console.error('platform biztype-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleBizTypeCapabilities(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCatalog(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue métier.' })
+      return
+    }
+
+    const { typeId, codes } = (req.body ?? {}) as { typeId?: unknown; codes?: unknown }
+    if (typeof typeId !== 'string' || !typeId) {
+      res.status(400).json({ error: 'Type manquant.' })
+      return
+    }
+    if (!Array.isArray(codes) || !codes.every((c): c is string => typeof c === 'string')) {
+      res.status(400).json({ error: 'Capabilities invalides.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: typeRow, error: typeError } = await admin
+      .from('business_types')
+      .select('id')
+      .eq('id', typeId)
+      .maybeSingle()
+    if (typeError) throw typeError
+    if (!typeRow) {
+      res.status(404).json({ error: 'Type introuvable.' })
+      return
+    }
+
+    const { data: capRows, error: capsError } = await admin
+      .from('capabilities')
+      .select('id, code')
+      .in('code', codes.length > 0 ? codes : ['__none__'])
+    if (capsError) throw capsError
+    const found = new Set((capRows ?? []).map((c) => (c as { code: string }).code))
+    const unknown = codes.filter((c) => !found.has(c))
+    if (unknown.length > 0) {
+      res.status(400).json({ error: `Capabilities inconnues : ${unknown.join(', ')}` })
+      return
+    }
+
+    const { error: deleteError } = await admin
+      .from('business_type_capabilities')
+      .delete()
+      .eq('business_type_id', typeId)
+    if (deleteError) throw deleteError
+    if (capRows && capRows.length > 0) {
+      const { error: insertError } = await admin.from('business_type_capabilities').insert(
+        capRows.map((c) => ({
+          business_type_id: typeId,
+          capability_id: (c as { id: string }).id,
+        })),
+      )
+      if (insertError) throw insertError
+    }
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'biztype_save',
+      details: { typeId, codes },
+    })
+    res.status(200).json({ saved: true })
+  } catch (err) {
+    console.error('platform biztype-capabilities failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue gabarits : templates + compatibilités types, owner/admin only.
+// `content` (jsonb) surcharge le gabarit code sans déploiement ; NULL = le
+// code fait foi. Slugs immuables, retrait via status=deprecated.
+// ---------------------------------------------------------------------------
+
+const TEMPLATE_STATUSES = ['active', 'deprecated', 'draft'] as const
+
+async function requireCatalogMember(req: VercelRequest, res: VercelResponse): Promise<PlatformMember | null> {
+  const member = await requireMember(req, res)
+  if (!member) return null
+  if (!canManageCatalog(member.role)) {
+    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue gabarits.' })
+    return null
+  }
+  return member
+}
+
+async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    if (!(await requireCatalogMember(req, res))) return
+    const admin = getSupabaseAdmin()
+    const { data: templates, error: templatesError } = await admin
+      .from('templates')
+      .select('id, slug, name, description, status, content, updated_at')
+      .order('slug')
+    if (templatesError) throw templatesError
+    const { data: types, error: typesError } = await admin
+      .from('business_types')
+      .select('id, slug, name')
+      .eq('status', 'active')
+      .order('slug')
+    if (typesError) throw typesError
+    const { data: mappings, error: mapError } = await admin
+      .from('template_business_types')
+      .select('template_id, business_type_id')
+    if (mapError) throw mapError
+    // Boutiques utilisant chaque gabarit (template_id) : la suppression est
+    // refusée tant qu'un gabarit est en usage.
+    const { data: shopRows, error: shopsError } = await admin.from('shops').select('template_id')
+    if (shopsError) throw shopsError
+    const shopsByTemplate = new Map<string, number>()
+    for (const row of shopRows ?? []) {
+      const key = (row as { template_id: string | null }).template_id
+      if (!key) continue
+      shopsByTemplate.set(key, (shopsByTemplate.get(key) ?? 0) + 1)
+    }
+    res.status(200).json({
+      templates: (templates ?? []).map((t) => ({
+        ...(t as Record<string, unknown>),
+        shops: shopsByTemplate.get((t as { slug: string }).slug) ?? 0,
+      })),
+      types: types ?? [],
+      mappings: mappings ?? [],
+    })
+  } catch (err) {
+    console.error('platform template-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { id, slug, name, description, status, content, create } = (req.body ?? {}) as {
+      id?: unknown
+      slug?: unknown
+      name?: unknown
+      description?: unknown
+      status?: unknown
+      content?: unknown
+      create?: unknown
+    }
+    const cleanName = typeof name === 'string' ? name.trim() : ''
+    if (!cleanName) {
+      res.status(400).json({ error: 'Le nom est requis.' })
+      return
+    }
+    if (!(TEMPLATE_STATUSES as readonly unknown[]).includes(status)) {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+    if (content !== null && content !== undefined && (typeof content !== 'object' || Array.isArray(content))) {
+      res.status(400).json({ error: 'Le contenu doit être un objet JSON ou null.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    if (create) {
+      const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
+      if (!SLUG_RE.test(cleanSlug)) {
+        res.status(400).json({ error: 'Slug invalide (minuscules, chiffres, tirets bas).' })
+        return
+      }
+      const { data, error } = await admin
+        .from('templates')
+        .insert({
+          slug: cleanSlug,
+          name: cleanName,
+          description: typeof description === 'string' ? description.trim() || null : null,
+          status: status as string,
+          content: (content ?? null) as never,
+        })
+        .select('id')
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          res.status(409).json({ error: 'Ce slug existe déjà.' })
+          return
+        }
+        throw error
+      }
+      await logAudit({
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'template_save',
+        details: { slug: cleanSlug },
+      })
+      res.status(200).json({ saved: true, id: (data as { id: string }).id })
+      return
+    }
+
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+    const { data, error } = await admin
+      .from('templates')
+      .update({
+        name: cleanName,
+        description: typeof description === 'string' ? description.trim() || null : null,
+        status: status as string,
+        content: (content ?? null) as never,
+      })
+      .eq('id', id)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { id, status },
+    })
+    res.status(200).json({ saved: true, id })
+  } catch (err) {
+    console.error('platform template-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { templateId, typeIds } = (req.body ?? {}) as { templateId?: unknown; typeIds?: unknown }
+    if (typeof templateId !== 'string' || !templateId) {
+      res.status(400).json({ error: 'Gabarit manquant.' })
+      return
+    }
+    if (!Array.isArray(typeIds) || !typeIds.every((t): t is string => typeof t === 'string')) {
+      res.status(400).json({ error: 'Types invalides.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: templateRow, error: templateError } = await admin
+      .from('templates')
+      .select('id')
+      .eq('id', templateId)
+      .maybeSingle()
+    if (templateError) throw templateError
+    if (!templateRow) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    if (typeIds.length > 0) {
+      const { data: typeRows, error: typesError } = await admin
+        .from('business_types')
+        .select('id')
+        .in('id', typeIds)
+      if (typesError) throw typesError
+      if ((typeRows ?? []).length !== typeIds.length) {
+        res.status(400).json({ error: "Un type d'activité est introuvable." })
+        return
+      }
+    }
+
+    const { error: deleteError } = await admin
+      .from('template_business_types')
+      .delete()
+      .eq('template_id', templateId)
+    if (deleteError) throw deleteError
+    if (typeIds.length > 0) {
+      const { error: insertError } = await admin.from('template_business_types').insert(
+        typeIds.map((business_type_id) => ({ template_id: templateId, business_type_id })),
+      )
+      if (insertError) throw insertError
+    }
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { templateId, typeIds },
+    })
+    res.status(200).json({ saved: true })
+  } catch (err) {
+    console.error('platform template-compat failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { id } = (req.body ?? {}) as { id?: unknown }
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: template, error: templateError } = await admin
+      .from('templates')
+      .select('id, slug')
+      .eq('id', id)
+      .maybeSingle()
+    if (templateError) throw templateError
+    if (!template) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    // Garde-fou : un gabarit utilisé par des boutiques ne se supprime pas —
+    // il se déprécie (les vitrines existantes continuent de fonctionner).
+    const { count, error: countError } = await admin
+      .from('shops')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_id', (template as { slug: string }).slug)
+    if (countError) throw countError
+    if ((count ?? 0) > 0) {
+      res.status(409).json({
+        error: `Impossible : ${count} boutique(s) utilisent encore ce gabarit. Passe-le en déprécié.`,
+      })
+      return
+    }
+
+    const { error: deleteError } = await admin.from('templates').delete().eq('id', id)
+    if (deleteError) throw deleteError
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { id, deleted: true },
+    })
+    res.status(200).json({ deleted: true })
+  } catch (err) {
+    console.error('platform template-delete failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Manual payments (moved from api/admin/payments.ts — one fewer serverless
+// function, Hobby plan limit. Behavior identical: owner/admin operators,
+// manual Wave verification, audit-trailed approve/reject).
+// ---------------------------------------------------------------------------
+
+async function handlePaymentPending(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
+    if (!admin) {
+      res.status(403).json({ error: 'Accès réservé.' })
+      return
+    }
+
+    const supabase = getSupabaseAdmin()
+    const { data: payments, error } = await supabase
+      .from('wave_payments')
+      .select('id, shop_id, plan, amount, currency, client_reference, created_at, proof_path, payer_phone, transaction_ref, proof_submitted_at, shop:shops(name, slug, whatsapp_number, owner_id)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+
+    const enriched = await Promise.all(
+      (payments ?? []).map(async (payment) => {
+        const shop = payment.shop as unknown as {
+          name: string
+          slug: string
+          whatsapp_number: string
+          owner_id: string
+        } | null
+        let ownerEmail: string | null = null
+        if (shop?.owner_id) {
+          const { data } = await supabase.auth.admin.getUserById(shop.owner_id)
+          ownerEmail = data.user?.email ?? null
+        }
+        let proofUrl: string | null = null
+        if (payment.proof_path) {
+          const { data: signed } = await supabase.storage.from('payment-proofs').createSignedUrl(payment.proof_path, 3600)
+          proofUrl = signed?.signedUrl ?? null
+        }
+        return { ...payment, shop, ownerEmail, proofUrl }
+      }),
+    )
+
+    res.status(200).json({ payments: enriched })
+  } catch (err) {
+    console.error('admin pending-payments failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/**
+ * Manual counterpart to settlePaymentFromWaveSession for the Wave manual-bridge
+ * payments (see api/account.ts).
+ *
+ * The plan to activate is chosen explicitly by the platform admin here, in the
+ * request body — it is never read from the payment row. That row only carries
+ * the merchant's own claim (requested plan + its price), which cannot be
+ * trusted: the admin verifies the amount that actually arrived in the Wave
+ * transaction list and picks the matching plan (Essentiel = PLANS.essential,
+ * Pro = PLANS.pro). Both the payment row and the subscription are rewritten to
+ * that verified plan + its real price, so the audit trail reflects what was
+ * actually confirmed rather than what was claimed.
+ */
+async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
+    if (!admin) {
+      res.status(403).json({ error: 'Accès réservé.' })
+      return
+    }
+
+    const body: { paymentId?: unknown; plan?: unknown } = req.body ?? {}
+    const { paymentId, plan } = body
+    if (typeof paymentId !== 'string' || !paymentId) {
+      res.status(400).json({ error: 'paymentId manquant.' })
+      return
+    }
+    if (plan !== 'essential' && plan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const verifiedPlan = PLANS[plan]
+
+    const supabase = getSupabaseAdmin()
+    const { data: payment, error: paymentError } = await supabase
+      .from('wave_payments')
+      .select('*')
+      .eq('id', paymentId)
+      .maybeSingle()
+    if (paymentError) throw paymentError
+    if (!payment) {
+      res.status(404).json({ error: 'Paiement introuvable.' })
+      return
+    }
+    if (payment.status === 'succeeded') {
+      res.status(200).json({ status: 'succeeded' })
+      return
+    }
+
+    // Renouvellement anticipé : la période s'ajoute à la fin en cours (voir
+    // nextSubscription — même règle que le paiement Wave automatique).
+    const { data: currentSub } = await supabase
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', payment.shop_id)
+      .maybeSingle()
+    const next = nextSubscription({ current: currentSub, paidPlan: plan })
+    const periodEnd = next.periodEnd
+
+    const { error: updatePaymentError } = await supabase
+      .from('wave_payments')
+      .update({
+        status: 'succeeded',
+        plan,
+        amount: verifiedPlan.priceXof,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', paymentId)
+    if (updatePaymentError) throw updatePaymentError
+
+    const { error: upsertSubError } = await supabase
+      .from('shop_subscriptions')
+      .upsert(
+        { shop_id: payment.shop_id, plan: next.plan, status: 'active', current_period_end: periodEnd },
+        { onConflict: 'shop_id' },
+      )
+    if (upsertSubError) throw upsertSubError
+
+    try {
+      const { data: shop } = await supabase.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()
+      const ownerId = shop?.owner_id
+      const { data: ownerData } = ownerId ? await supabase.auth.admin.getUserById(ownerId) : { data: { user: null } }
+      const rootDomain = process.env.VITE_ROOT_DOMAIN
+      const origin = rootDomain ? `https://${rootDomain}` : `${(req.headers['x-forwarded-proto'] as string) ?? 'https'}://${req.headers.host}`
+      if (shop && ownerData.user?.email) {
+        await sendEmail({
+          to: ownerData.user.email,
+          subject: `Bienvenue dans Bitiko ${verifiedPlan.label} — ${shop.name}`,
+          html: proActivatedEmailHtml({
+            origin,
+            shopName: shop.name,
+            periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            planLabel: verifiedPlan.label,
+          }),
+        })
+      }
+    } catch (emailErr) {
+      console.error('admin approve-payment: confirmation email failed', emailErr)
+    }
+
+    await logAdminAudit({
+      actorUserId: admin.id,
+      actorEmail: admin.email,
+      action: 'payment_approve',
+      targetShopId: payment.shop_id,
+      details: { paymentId, plan, amount: verifiedPlan.priceXof },
+    })
+    res.status(200).json({ status: 'succeeded' })
+  } catch (err) {
+    console.error('admin approve-payment failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** For a claimed payment that never actually shows up in Wave's transaction list. */
+async function handlePaymentReject(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    const admin = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
+    if (!admin) {
+      res.status(403).json({ error: 'Accès réservé.' })
+      return
+    }
+
+    const { paymentId, reason } = req.body ?? {}
+    if (typeof paymentId !== 'string' || !paymentId) {
+      res.status(400).json({ error: 'paymentId manquant.' })
+      return
+    }
+    const cleanReason = typeof reason === 'string' ? reason.trim().slice(0, 300) : ''
+
+    const supabase = getSupabaseAdmin()
+    const { error } = await supabase
+      .from('wave_payments')
+      .update({ status: 'failed', rejection_reason: cleanReason || null })
+      .eq('id', paymentId)
+      .eq('status', 'pending')
+    if (error) throw error
+
+    await logAdminAudit({
+      actorUserId: admin.id,
+      actorEmail: admin.email,
+      action: 'payment_reject',
+      details: { paymentId, reason: cleanReason || null },
+    })
+    res.status(200).json({ status: 'failed' })
+  } catch (err) {
+    console.error('admin reject-payment failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Countries
+// ---------------------------------------------------------------------------
+
+/** Opens/closes a country for merchants (`countries.is_enabled`). Sénégal is
+ *  the home market and can never be turned off. */
+async function handleCountrySet(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCountries(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent les pays.' })
+      return
+    }
+
+    const { code, enabled } = (req.body ?? {}) as { code?: unknown; enabled?: unknown }
+    if (typeof code !== 'string' || !/^[A-Z]{2}$/.test(code)) {
+      res.status(400).json({ error: 'Code pays invalide.' })
+      return
+    }
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+    if (code === 'SN' && !enabled) {
+      res.status(400).json({ error: 'Le Sénégal ne peut pas être désactivé.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: country, error: countryError } = await admin
+      .from('countries')
+      .select('code')
+      .eq('code', code)
+      .maybeSingle()
+    if (countryError) throw countryError
+    if (!country) {
+      res.status(404).json({ error: 'Pays introuvable.' })
+      return
+    }
+
+    const { error } = await admin.from('countries').update({ is_enabled: enabled }).eq('code', code)
+    if (error) throw error
+
+    res.status(200).json({ ok: true, code, enabled })
+  } catch (err) {
+    console.error('platform country-set failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Offre ou prolongation manuelle d'un abonnement (geste commercial, paiement reçu hors Wave). Motif obligatoire, tracé avant l'écriture. */
+async function handleSubscriptionGrant(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const operator = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
+    if (!operator) {
+      res.status(403).json({ error: 'Accès réservé.' })
+      return
+    }
+    const body: { shopId?: unknown; plan?: unknown; days?: unknown; reason?: unknown } = req.body ?? {}
+    if (typeof body.shopId !== 'string' || !UUID_PATTERN.test(body.shopId)) {
+      res.status(400).json({ error: 'Boutique invalide.' })
+      return
+    }
+    if (body.plan !== 'essential' && body.plan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const days = Number(body.days)
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      res.status(400).json({ error: 'La durée doit être comprise entre 1 et 365 jours.' })
+      return
+    }
+    const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 300) : ''
+    if (reason.length < 3) {
+      res.status(400).json({ error: 'Indiquez le motif de cette offre (il est conservé dans le journal).' })
+      return
+    }
+
+    const supabase = getSupabaseAdmin()
+    const { data: shop } = await supabase.from('shops').select('id, name').eq('id', body.shopId).maybeSingle()
+    if (!shop) {
+      res.status(404).json({ error: 'Boutique introuvable.' })
+      return
+    }
+    const { data: currentSub } = await supabase
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', body.shopId)
+      .maybeSingle()
+    const result = grantedSubscription({ current: currentSub, plan: body.plan, days })
+    if (!result.ok) {
+      res.status(409).json({ error: 'Un plan supérieur est déjà actif sur cette boutique : rien n’a été modifié.' })
+      return
+    }
+
+    // La trace d'abord : sans elle, pas d'offre.
+    await logAdminAudit(
+      {
+        actorUserId: operator.id,
+        actorEmail: operator.email,
+        action: 'subscription_grant',
+        targetShopId: body.shopId,
+        details: { plan: result.plan, days, reason, periodEnd: result.periodEnd, previousPlan: currentSub?.plan ?? 'free' },
+      },
+      true,
+    )
+    const { error: upsertError } = await supabase
+      .from('shop_subscriptions')
+      .upsert({ shop_id: body.shopId, plan: result.plan, status: 'active', current_period_end: result.periodEnd }, { onConflict: 'shop_id' })
+    if (upsertError) throw upsertError
+
+    res.status(200).json({ plan: result.plan, periodEnd: result.periodEnd })
+  } catch (err) {
+    console.error('subscription-grant failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** Journal des actions sensibles de l'équipe (propriétaires et administrateurs uniquement). */
+async function handleAuditList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageTeam(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs consultent le journal.' })
+      return
+    }
+    const action = typeof req.query.action_filter === 'string' ? req.query.action_filter : ''
+    const offset = Math.max(0, Number(req.query.offset) || 0)
+    const admin = getSupabaseAdmin()
+    let query = admin
+      .from('admin_audit_log')
+      .select('id, actor_email, action, target_user_id, target_shop_id, details, created_at')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + 49)
+    if (action) query = query.eq('action', action)
+    const { data, error } = await query
+    if (error) throw error
+    const rows = data ?? []
+    const shopIds = [...new Set(rows.map((r) => r.target_shop_id as string | null).filter((id): id is string => !!id))]
+    const shopNames = new Map<string, string>()
+    if (shopIds.length > 0) {
+      const { data: shops } = await admin.from('shops').select('id, name').in('id', shopIds)
+      for (const shop of shops ?? []) shopNames.set(shop.id as string, shop.name as string)
+    }
+    res.status(200).json({
+      entries: rows.map((row) => ({
+        id: row.id as string,
+        actorEmail: row.actor_email as string,
+        action: row.action as string,
+        shopId: (row.target_shop_id as string | null) ?? null,
+        shopName: row.target_shop_id ? (shopNames.get(row.target_shop_id as string) ?? null) : null,
+        details: (row.details ?? {}) as Record<string, unknown>,
+        createdAt: row.created_at as string,
+      })),
+      hasMore: rows.length === 50,
+    })
+  } catch (err) {
+    console.error('audit-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** Suspend ou réactive une boutique. Motif obligatoire à la suspension ; la trace précède toujours l'écriture. */
+async function handleShopSuspension(req: VercelRequest, res: VercelResponse, suspend: boolean) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canSuspendShops(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs suspendent une boutique.' })
+      return
+    }
+    const body: { shopId?: unknown; reason?: unknown } = req.body ?? {}
+    if (typeof body.shopId !== 'string' || !UUID_PATTERN.test(body.shopId)) {
+      res.status(400).json({ error: 'Boutique invalide.' })
+      return
+    }
+    const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 300) : ''
+    if (suspend && reason.length < 3) {
+      res.status(400).json({ error: 'Indiquez le motif de la suspension (il est conservé dans le journal).' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: shop } = await admin.from('shops').select('id, name, suspended_at').eq('id', body.shopId).maybeSingle()
+    if (!shop) {
+      res.status(404).json({ error: 'Boutique introuvable.' })
+      return
+    }
+    if (suspend === Boolean(shop.suspended_at)) {
+      res.status(200).json({ suspendedAt: (shop.suspended_at as string | null) ?? null })
+      return
+    }
+
+    await logAdminAudit(
+      {
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: suspend ? 'shop_suspend' : 'shop_unsuspend',
+        targetShopId: body.shopId,
+        details: reason ? { reason } : {},
+      },
+      true,
+    )
+    const suspendedAt = suspend ? new Date().toISOString() : null
+    const { error } = await admin.from('shops').update({ suspended_at: suspendedAt }).eq('id', body.shopId)
+    if (error) throw error
+    res.status(200).json({ suspendedAt })
+  } catch (err) {
+    console.error('shop-suspension failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

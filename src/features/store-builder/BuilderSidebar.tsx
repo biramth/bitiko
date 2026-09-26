@@ -20,7 +20,7 @@ function SectionIcon({ type, registry, size = 'sm' }: { type: SectionType; regis
   )
 }
 
-const CATEGORY_LABELS = { content: 'Contenu', commerce: 'Commerce' } as const
+const CATEGORY_LABELS = { content: 'Contenu', commerce: 'Commerce', services: 'Services' } as const
 
 export function BuilderSidebar({
   sections,
@@ -32,6 +32,7 @@ export function BuilderSidebar({
   onReorder,
   onAdd,
   availableTypes,
+  capabilities = null,
   templateId,
   maxCustomSections,
   protectedType,
@@ -47,6 +48,10 @@ export function BuilderSidebar({
   /** Restricts the "+ Ajouter un bloc" menu to a subset of section types.
    *  Defaults to all addable types (used for the home page). */
   availableTypes?: SectionType[]
+  /** Capability set of the shop (null = unknown, fail open). Blocks whose
+   *  registry definition requires a missing capability are hidden from the
+   *  "+ Ajouter un bloc" menu — a coiffeur isn't offered a Panier block. */
+  capabilities?: Set<string> | null
   /** The shop's current template — resolves which section types (core plus
    *  whatever that template contributes) show up here. */
   templateId?: string | null
@@ -84,9 +89,12 @@ export function BuilderSidebar({
   const presentTypes = new Set(sections.map((s) => s.type))
   const addableTypes = (availableTypes ?? getAddableSectionTypes(registry)).filter((type) => {
     const def = registry[type]
-    return !!def && !(def.singleton && presentTypes.has(type))
+    if (!def || (def.singleton && presentTypes.has(type))) return false
+    const required = def.capabilities ?? []
+    if (required.length > 0 && capabilities !== null && !required.every((c) => capabilities.has(c))) return false
+    return true
   })
-  const groupedAddable: Record<'content' | 'commerce', SectionType[]> = { content: [], commerce: [] }
+  const groupedAddable: Record<'content' | 'commerce' | 'services', SectionType[]> = { content: [], commerce: [], services: [] }
   for (const type of addableTypes) groupedAddable[registry[type]?.category ?? 'content'].push(type)
 
   // Content blocks (Bannière, Texte, Image, Promotion, FAQ…) are the
@@ -212,7 +220,7 @@ export function BuilderSidebar({
             </button>
             {addMenuOpen && (
               <div className="absolute left-0 right-0 z-20 mt-1.5 max-h-[22rem] overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
-                {(['commerce', 'content'] as const).map((cat) =>
+                {(['commerce', 'content', 'services'] as const).map((cat) =>
                   groupedAddable[cat].length === 0 ? null : (
                     <div key={cat} className="mb-1 last:mb-0">
                       <div className="flex items-center justify-between gap-2 px-2 pb-1 pt-1.5">

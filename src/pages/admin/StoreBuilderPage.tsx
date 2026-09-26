@@ -22,11 +22,14 @@ import { useShopPlan } from '@/features/billing/useShopPlan'
 import type { Plan } from '@/config/plans'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
 import { ThemeEditorPanel } from '@/features/store-builder/ThemeEditorPanel'
-import { TemplateLibraryPanel, isRestoredDesignKey } from '@/features/store-builder/TemplateLibraryPanel'
+import { TemplateLibraryPanel } from '@/features/store-builder/TemplateLibraryPanel'
+import { isRestoredDesignKey } from '@/features/store-builder/templateKeys'
+import { sanitizeSections } from '@/features/store-builder/sanitizeSections'
 import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
@@ -44,6 +47,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
 import { SYSTEM_TEMPLATE_KEYS } from '@/types/builder'
 import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 export function StoreBuilderPage() {
   usePageSeo({ title: 'Personnaliser ma boutique — Bitiko', noindex: true })
@@ -260,16 +264,21 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
  *  the others). This is the "publish the template" action the merchant expects. */
 async function publishStore(shop: Shop, context: PreparedContext, snap: BuilderSnapshot): Promise<unknown> {
   const draft = shop.builder_draft
-  const homeSections: LayoutSection[] =
-    context.kind === 'home' ? snap.sections : draft?.sections ?? shop.layout_sections
+  // Sanitize at write time (PHASE-09): only structurally valid sections are
+  // persisted — render-time sanitizing (SectionList) stays as defense in depth.
+  // Unknown section types are preserved by the sanitizer (forward-compat) and
+  // skipped by the renderer, never executed.
+  const homeSections: LayoutSection[] = sanitizeSections(
+    context.kind === 'home' ? snap.sections : (draft?.sections ?? shop.layout_sections),
+  )
 
   const systemPublished = (key: SystemTemplateKey): LayoutSection[] => {
     const live = context.kind === 'system' && context.key === key ? snap.sections : undefined
-    return (
+    return sanitizeSections(
       live ??
-      draft?.templates?.[key] ??
-      shop.page_templates?.[key]?.published ??
-      buildDefaultSystemTemplate(key)
+        draft?.templates?.[key] ??
+        shop.page_templates?.[key]?.published ??
+        buildDefaultSystemTemplate(key),
     )
   }
 
@@ -627,6 +636,7 @@ function BuilderEditor({
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
+  const capabilities = useStorefrontCapabilities(shop)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
   const canDiscard = builder.dirty || hasStoredDraft
@@ -820,6 +830,7 @@ function BuilderEditor({
             onReorder={builder.reorderSection}
             onAdd={builder.addSection}
             availableTypes={availableTypes}
+            capabilities={capabilities}
             templateId={shop.template_id}
             maxCustomSections={maxCustomSections}
             protectedType={protectedType}
@@ -1106,7 +1117,7 @@ function AppearanceTool({
             onThemeConfigChange={builder.setThemeConfig}
           />
         ) : (
-          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
+          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} previewingVariantKey={previewTemplate?.variantKey ?? null} onPreview={setPreviewTemplate} />
         )}
       </div>
     </div>
@@ -1145,7 +1156,7 @@ function AppearanceTool({
             <button
               type="button"
               onClick={() => setApplyConfirmOpen(true)}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonClass({ size: 'sm' })}
             >
               Appliquer ce style
             </button>
@@ -1244,7 +1255,7 @@ function AppearanceTool({
         title="Appliquer ce style à toute la boutique ?"
         description={
           previewTemplate
-            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${previewTemplate.label}" en brouillon. Vos produits, catégories, commandes et informations restent inchangés — prévisualisez, puis publiez quand vous êtes prêt·e.`
+            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${previewTemplate.label}${previewTemplate.variantLabel ? ` · ${previewTemplate.variantLabel}` : ''}" en brouillon. Vos produits, catégories, commandes et informations restent inchangés — prévisualisez, puis publiez quand vous êtes prêt·e.`
             : ''
         }
         confirmLabel="Appliquer"
@@ -1306,14 +1317,14 @@ function CreatePageDialog({
       size="md"
       footer={
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button type="button" onClick={onClose} className={buttonClass({ variant: 'secondary' })}>
             Annuler
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!title.trim() || pending}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass({ className: 'gap-1.5' })}
           >
             {pending && <Loader2 size={14} className="animate-spin" />}
             Créer la page
@@ -1329,7 +1340,7 @@ function CreatePageDialog({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="À propos"
             autoFocus
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()} mt-1`}
           />
         </div>
         <div>

@@ -9,6 +9,8 @@ export interface ProductFilters {
   categoryId?: string
   sort?: 'recent' | 'price_asc' | 'price_desc'
   page?: number
+  /** Taille de page ; défaut = grille catalogue. Une carte de restaurant en veut davantage. */
+  pageSize?: number
 }
 
 export interface ProductListResult {
@@ -18,8 +20,9 @@ export interface ProductListResult {
 
 export async function listActiveProducts(filters: ProductFilters): Promise<ProductListResult> {
   const page = filters.page ?? 1
-  const from = (page - 1) * PRODUCTS_PAGE_SIZE
-  const to = from + PRODUCTS_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? PRODUCTS_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('products')

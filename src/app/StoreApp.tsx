@@ -6,11 +6,14 @@ import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { StoreShell } from '@/components/ui/StoreShell'
 import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
+import { ShopSuspendedPage } from '@/pages/store/ShopSuspendedPage'
 
 // Each storefront page is its own chunk (StoreLayout already wraps <Outlet/> in
 // a Suspense boundary), so the home page doesn't ship the checkout funnel.
 const HomePage = lazy(() => import('@/pages/store/HomePage').then((m) => ({ default: m.HomePage })))
 const CatalogPage = lazy(() => import('@/pages/store/CatalogPage').then((m) => ({ default: m.CatalogPage })))
+const ServicesPage = lazy(() => import('@/pages/store/ServicesPage').then((m) => ({ default: m.ServicesPage })))
+const BookingPage = lazy(() => import('@/pages/store/BookingPage').then((m) => ({ default: m.BookingPage })))
 const ProductPage = lazy(() => import('@/pages/store/ProductPage').then((m) => ({ default: m.ProductPage })))
 const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ default: m.CartPage })))
 const CheckoutPage = lazy(() => import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
@@ -28,13 +31,14 @@ function StoreIndexRoute() {
 }
 
 export function StoreApp() {
-  const { isLoading, notFound } = useTenant()
+  const { isLoading, notFound, shop } = useTenant()
 
   if (isLoading) {
     return <StoreShell />
   }
 
   if (notFound) return <ShopNotFoundPage />
+  if (shop?.suspended_at) return <ShopSuspendedPage shopName={shop.name} />
 
   return (
     <DraftPreviewProvider>
@@ -42,6 +46,8 @@ export function StoreApp() {
         <Route element={<StoreLayout />}>
           <Route index element={<StoreIndexRoute />} />
           <Route path="catalogue" element={<CatalogPage />} />
+          <Route path="prestations" element={<ServicesPage />} />
+          <Route path="reserver" element={<BookingPage />} />
           <Route path="produits/:slug" element={<ProductPage />} />
           <Route path="panier" element={<CartPage />} />
           <Route path="commande" element={<CheckoutPage />} />

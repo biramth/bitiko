@@ -6,6 +6,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
 import { normalizePrice } from '@/utils/price'
 import type { Category } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 const TEMPLATE_HEADERS = ['nom', 'description', 'prix', 'stock', 'categorie']
 const TEMPLATE_EXAMPLE = ['Robe en wax', 'Description du produit', '18000', '10', 'Vêtements']
@@ -166,7 +167,7 @@ export function ProductImportDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="mt-4 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+            className={buttonClass({ size: 'lg', className: 'mt-4' })}
           >
             Fermer
           </button>
@@ -231,7 +232,7 @@ export function ProductImportDialog({
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               Choisir un autre fichier
             </button>
@@ -239,7 +240,7 @@ export function ProductImportDialog({
               type="button"
               onClick={handleImport}
               disabled={importing || validRows.length === 0}
-              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass({ className: 'gap-1.5' })}
             >
               {importing && <Loader2 size={14} className="animate-spin" />}
               Importer {validRows.length} produit{validRows.length > 1 ? 's' : ''}

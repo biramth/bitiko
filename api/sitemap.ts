@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { SOLUTION_PAGES } from '../src/pages/marketing/solutions/data.js'
 
 const ROOT_DOMAIN = process.env.VITE_ROOT_DOMAIN
 
@@ -7,8 +8,20 @@ function xmlEscape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-function urlEntry(loc: string): string {
-  return `  <url><loc>${xmlEscape(loc)}</loc></url>`
+function urlEntry(loc: string, opts?: { lastmod?: string; changefreq?: string; priority?: string }): string {
+  const extra = [
+    opts?.lastmod ? `<lastmod>${opts.lastmod}</lastmod>` : '',
+    opts?.changefreq ? `<changefreq>${opts.changefreq}</changefreq>` : '',
+    opts?.priority ? `<priority>${opts.priority}</priority>` : '',
+  ].join('')
+  return `  <url><loc>${xmlEscape(loc)}</loc>${extra}</url>`
+}
+
+const SOLUTION_SLUGS = SOLUTION_PAGES.map((page) => page.slug)
+
+/** AAAA-MM-JJ d'une date ISO (format attendu par <lastmod>), ou undefined si absente / invalide. */
+function dateOnly(value: unknown): string | undefined {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined
 }
 
 function isPlatformHost(host: string): boolean {
@@ -16,7 +29,24 @@ function isPlatformHost(host: string): boolean {
 }
 
 function robotsBody(origin: string): string {
-  return ['User-agent: *', 'Allow: /', '', `Sitemap: ${origin}/sitemap.xml`, ''].join('\n')
+  return [
+    'User-agent: *',
+    'Allow: /',
+    // Le crawl des espaces privés ne sert à rien (ils portent déjà noindex
+    // via usePageSeo) — on économise le budget de crawl pour les pages
+    // publiques qui rapportent du trafic.
+    'Disallow: /api/',
+    'Disallow: /admin/',
+    'Disallow: /plateforme/',
+    'Disallow: /panier',
+    'Disallow: /commande',
+    'Disallow: /compte',
+    'Disallow: /auth/',
+    'Disallow: /*?preview=',
+    '',
+    `Sitemap: ${origin}/sitemap.xml`,
+    '',
+  ].join('\n')
 }
 
 /**
@@ -48,9 +78,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     urls.push(
       // Note: /admin/login (which replaced /inscription) is noindex —
       // see LoginPage.tsx's usePageSeo call — so it isn't listed here.
-      urlEntry(`${origin}/`),
-      urlEntry(`${origin}/legal/cgu`),
-      urlEntry(`${origin}/legal/confidentialite`),
+      urlEntry(`${origin}/`, { changefreq: 'daily', priority: '1.0' }),
+      ...SOLUTION_SLUGS.map((slug) =>
+        urlEntry(`${origin}/solutions/${slug}`, { changefreq: 'weekly', priority: '0.8' }),
+      ),
+      urlEntry(`${origin}/legal/cgu`, { changefreq: 'yearly', priority: '0.3' }),
+      urlEntry(`${origin}/legal/confidentialite`, { changefreq: 'yearly', priority: '0.3' }),
     )
   } else {
     const supabaseUrl = process.env.VITE_SUPABASE_URL
@@ -58,7 +91,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
-      urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`))
+      urls.push(
+        urlEntry(`${origin}/`, { changefreq: 'daily', priority: '1.0' }),
+        urlEntry(`${origin}/catalogue`, { changefreq: 'daily', priority: '0.8' }),
+        urlEntry(`${origin}/prestations`, { changefreq: 'daily', priority: '0.8' }),
+        urlEntry(`${origin}/reserver`, { changefreq: 'weekly', priority: '0.5' }),
+      )
 
       const isSubdomain = !!ROOT_DOMAIN && host.endsWith(`.${ROOT_DOMAIN}`)
       const slug = isSubdomain ? host.slice(0, -(ROOT_DOMAIN!.length + 1)) : null
@@ -70,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const [{ data: products }, { data: pages }] = await Promise.all([
             supabase
               .from('products')
-              .select('slug')
+              .select('slug, updated_at')
               .eq('shop_id', shop.id)
               .eq('active', true),
             supabase
@@ -81,10 +119,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ])
 
           for (const product of products ?? []) {
-            urls.push(urlEntry(`${origin}/produits/${product.slug}`))
+            urls.push(urlEntry(`${origin}/produits/${product.slug}`, { lastmod: dateOnly(product.updated_at), changefreq: 'weekly', priority: '0.6' }))
           }
           for (const page of pages ?? []) {
-            urls.push(urlEntry(`${origin}/pages/${page.slug}`))
+            urls.push(urlEntry(`${origin}/pages/${page.slug}`, { changefreq: 'weekly', priority: '0.5' }))
           }
         }
       }

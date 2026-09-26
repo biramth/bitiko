@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Plus, Search, ShoppingBag } from 'lucide-react'
+import { Download, Plus, Search, ShoppingBag } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { getOrderStatusCounts, listOrders, updateOrderStatus } from '@/services/order.service'
+import { getOrderStatusCounts, listOrders, listOrdersForExport, updateOrderStatus } from '@/services/order.service'
+import { buildOrdersCsv } from '@/features/orders/ordersCsv'
+import { downloadTextFile, exportFilename } from '@/features/finance/exportCsv'
+import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils/format'
 import {
   ORDER_STATUS_ACTION_LABELS,
@@ -92,6 +96,28 @@ export function OrdersPage() {
     },
   })
 
+  const toast = useToast()
+  const [exporting, setExporting] = useState(false)
+  const exportOrders = async () => {
+    if (!shop) return
+    setExporting(true)
+    try {
+      const rows = await listOrdersForExport(shop.id, statusFilter === 'all' ? undefined : statusFilter)
+      if (rows.length === 0) {
+        toast.error('Aucune commande à exporter.')
+        return
+      }
+      downloadTextFile(
+        exportFilename('commandes', shop.name, statusFilter === 'all' ? 'toutes' : statusFilter),
+        buildOrdersCsv(rows, shop.currency),
+      )
+    } catch {
+      toast.error('Export impossible pour le moment.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const orders = data?.orders ?? []
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ORDERS_PAGE_SIZE)) : 1
 
@@ -101,12 +127,17 @@ export function OrdersPage() {
         title="Commandes"
         subtitle="Suivez et traitez les commandes reçues via WhatsApp et la boutique."
         actions={
-          <Link
-            to="/admin/commandes/nouvelle"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-          >
-            <Plus size={15} aria-hidden /> Nouvelle commande
-          </Link>
+          <>
+            <Button variant="secondary" icon={<Download size={15} aria-hidden />} loading={exporting} onClick={exportOrders}>
+              Exporter (Excel)
+            </Button>
+            <Link
+              to="/admin/commandes/nouvelle"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+            >
+              <Plus size={15} aria-hidden /> Nouvelle commande
+            </Link>
+          </>
         }
       />
 

@@ -23,10 +23,17 @@ export function InlineLinkPopover({
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(url)
+  // The draft tracks the committed URL: when the parent commits a new one
+  // (after our own `onCommit`, or an undo), the field resets to it. Adjusted
+  // during render (React's "adjust state when props change" pattern) rather
+  // than in an effect, so no extra render pass is scheduled for the reset.
+  const [draftFor, setDraftFor] = useState(url)
+  if (url !== draftFor) {
+    setDraftFor(url)
+    setDraft(url)
+  }
   const anchorRef = useRef<HTMLDivElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => setDraft(url), [url])
 
   useEffect(() => {
     if (!open) return

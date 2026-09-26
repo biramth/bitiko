@@ -1,5 +1,6 @@
 import { TriangleAlert } from 'lucide-react'
 import { Dialog } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -40,26 +41,18 @@ export function ConfirmDialog({
       title={title}
       description={description}
       footer={
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-          >
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <Button variant="secondary" onClick={onClose} disabled={pending}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={isDanger ? 'danger' : 'primary'}
             onClick={onConfirm}
-            disabled={pending || confirmDisabled}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 ${
-              isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-600 hover:bg-brand-700'
-            }`}
+            disabled={confirmDisabled}
+            loading={pending}
           >
-            {pending && <TriangleAlert size={15} className="animate-pulse" aria-hidden />}
             {pending ? pendingLabel ?? `${confirmLabel}…` : confirmLabel}
-          </button>
+          </Button>
         </div>
       }
     >

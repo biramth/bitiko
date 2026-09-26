@@ -60,6 +60,13 @@ export interface PlatformShop {
   plan_status: string
   owner_id: string
   owner_email: string | null
+  country_code: string
+  business_type: string | null
+  /** Plan tel qu'enregistré (Pro même échu) ; `plan` est le plan effectif. */
+  subscribed_plan: string
+  period_end: string | null
+  last_order_at: string | null
+  suspended_at: string | null
 }
 
 export async function getPlatformShops(): Promise<PlatformShop[]> {
@@ -214,4 +221,55 @@ export interface CampaignSendResult {
 
 export function deleteCampaign(id: string): Promise<{ ok: true }> {
   return platformFetch('/api/admin/campaigns/delete', { method: 'POST', body: JSON.stringify({ id }) })
+}
+
+/** Opens/closes a country for merchants (super-admin "Pays" tool). */
+export function setCountryEnabled(code: string, enabled: boolean): Promise<{ ok: true; code: string; enabled: boolean }> {
+  return platformFetch('/api/admin/countries/set', { method: 'POST', body: JSON.stringify({ code, enabled }) })
+}
+
+/** Offre ou prolonge un abonnement payant (motif obligatoire, conservé dans le journal). */
+export function grantSubscription(input: { shopId: string; plan: 'essential' | 'pro'; days: number; reason: string }): Promise<{ plan: string; periodEnd: string }> {
+  return platformFetch('/api/admin/grant-subscription', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export interface AuditEntry {
+  id: string
+  actorEmail: string
+  action: string
+  shopId: string | null
+  shopName: string | null
+  details: Record<string, unknown>
+  createdAt: string
+}
+
+export function listAuditLog(params: { action?: string; offset?: number } = {}): Promise<{ entries: AuditEntry[]; hasMore: boolean }> {
+  const query = new URLSearchParams()
+  if (params.action) query.set('action_filter', params.action)
+  if (params.offset) query.set('offset', String(params.offset))
+  const suffix = query.toString()
+  return platformFetch(`/api/admin/audit-log${suffix ? `?${suffix}` : ''}`)
+}
+
+export function setShopSuspended(shopId: string, suspended: boolean, reason?: string): Promise<{ suspendedAt: string | null }> {
+  return platformFetch(suspended ? '/api/admin/suspend-shop' : '/api/admin/unsuspend-shop', { method: 'POST', body: JSON.stringify({ shopId, reason }) })
+}
+
+export interface PlatformHealth {
+  generated_at: string
+  pending_events: number
+  stuck_events: number
+  oldest_pending_event: string | null
+  failed_runs_7d: number
+  skipped_runs_7d: Record<string, number>
+  recent_failures: { created_at: string; event_type: string; shop_name: string | null; error: string }[]
+  campaign_failures: { name: string; sent_at: string; failed_count: number; recipient_count: number }[]
+  stale_payments: number
+  suspended_shops: number
+}
+
+export async function getPlatformHealth(): Promise<PlatformHealth> {
+  const { data, error } = await supabase.rpc('get_platform_health')
+  if (error) throw new Error(error.message)
+  return data as unknown as PlatformHealth
 }

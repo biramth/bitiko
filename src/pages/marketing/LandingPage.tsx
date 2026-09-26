@@ -1,68 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  ArrowRight,
-  Check,
-  ChefHat,
-  ChevronDown,
-  Clock,
-  CreditCard,
-  Gift,
-  MapPinned,
-  Menu,
-  MessageCircle,
-  MessageCircleMore,
-  Minus,
-  Package,
-  Palette,
-  Phone,
-  Plus,
-  Shirt,
-  ShoppingBag,
-  ShoppingCart,
-  Smartphone,
-  Sparkles,
-  Store,
-  Wallet,
-  Wand2,
-  X,
-  Zap,
-} from 'lucide-react'
-import { Logo } from '@/components/ui/Logo'
-import { SocialIcon } from '@/components/ui/SocialIcon'
+import { ArrowRight, Check, Clock, Gift, Minus, Phone, Play, Plus, ShoppingCart, Smartphone, Wallet, X, Zap } from 'lucide-react'
+import { PLANS } from '@/config/plans'
+import { IconTile } from '@/components/ui/IconTile'
 import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
-
-/** Consistent, premium icon treatment shared by every card grid on the page —
- * a soft gradient tile instead of a flat tint, so icons read as designed
- * artwork rather than default library glyphs dropped onto a colored square. */
-function IconTile({
-  icon: Icon,
-  tone = 'brand',
-  size = 'md',
-  gradient,
-}: {
-  icon: typeof Store
-  tone?: 'brand' | 'dark' | 'gold'
-  size?: 'md' | 'lg'
-  /** Escape hatch for a one-off gradient (e.g. a distinct color per card in a grid) instead of a shared tone. */
-  gradient?: string
-}) {
-  const tones = {
-    brand: 'from-brand-500 to-brand-700 text-white shadow-brand-900/15',
-    dark: 'from-ink-800 to-ink-950 text-white shadow-ink-900/20',
-    gold: 'from-gold-300 to-gold-500 text-ink-900 shadow-gold-900/10',
-  }
-  const sizes = size === 'lg' ? 'h-14 w-14 rounded-2xl' : 'h-11 w-11 rounded-xl'
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center bg-gradient-to-br shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${sizes} ${gradient ?? tones[tone]}`}
-    >
-      <Icon size={size === 'lg' ? 24 : 19} strokeWidth={1.75} aria-hidden />
-    </span>
-  )
-}
+import { useSoftwareStructuredData } from '@/hooks/useSoftwareStructuredData'
+import { Audiences, DemoVideo, FeatureGroups, HeroShots, Tour } from './landing/Sections'
+import { shopCategories, solutions, westAfrica } from './landing/content'
+import { faq } from './landing/faq'
+import { Reveal, SectionEyebrow } from './landing/ui'
+import { SiteFooter, SiteNav } from './landing/Chrome'
 
 /** Counts up from 0 to `target` once the element scrolls into view — the
  * small "alive" detail both reference sites use on their stat strips. */
@@ -104,209 +53,33 @@ function CountUpValue({ target, suffix = '' }: { target: number; suffix?: string
   )
 }
 
-const features = [
-  {
-    icon: Store,
-    title: 'Un vrai catalogue qui vend 24h/24',
-    description:
-      'Photos, prix, catégories, stock — tout est organisé, beau et accessible depuis n\'importe quel téléphone. Tes clients regardent, comparent et commandent la nuit.',
-  },
-  {
-    icon: MessageCircleMore,
-    title: 'Chaque commande arrive sur ton WhatsApp',
-    description:
-      'Pas besoin de downloader une appli. Le client commande en ligne, tu reçois un message formaté avec le nom, les produits, le total, la ville. Tu confirmes en 2 secondes.',
-  },
-  {
-    icon: Package,
-    title: 'Fini de vendre du stock épuisé',
-    description:
-      'La commande passe → le stock baisse automatiquement. Zéro risque de vendre deux fois le même article. Alerte quand le stock est bas.',
-  },
-  {
-    icon: MapPinned,
-    title: 'Livraison selon tes règles',
-    description:
-      'Crée tes secteurs (Dakar, Rufisque, Thiès…) avec tes tarifs. Le client choisit sa ville, le prix s\'applique. Livraison offerte au-dessus d\'un montant — c\'est toi qui décides.',
-  },
-  {
-    icon: CreditCard,
-    title: 'Espèces ou mobile money — le choix est au client',
-    description:
-      'Paiement à la livraison, Wave, Orange Money. Tu valides les détails directement sur WhatsApp, pas de plateforme de paiement compliquée à configurer.',
-  },
-  {
-    icon: Wand2,
-    title: 'Une boutique qui te ressemble',
-    description:
-      'Thème, bannière, mise en page — personnalise ta boutique en quelques clics avec l\'éditeur visuel. Aucune compétence technique requise.',
-  },
-]
-
-const shopCategories = [
-  'Mode & textiles',
-  'Restauration & livraison',
-  'Beauté & cosmétiques',
-  'Artisanat & créations',
-  'Électronique',
-  'Épicerie',
-  'Décoration',
-  'Librairie & papeterie',
-]
-
-const solutions = [
-  {
-    icon: Shirt,
-    gradient: 'from-rose-400 to-rose-600 shadow-rose-900/15',
-    title: 'Mode & textiles',
-    description:
-      'Robes, pagnes, chaussures — chaque produit a ses photos, son prix, sa taille. Le client ne te pose plus 10 fois les mêmes questions sur WhatsApp.',
-    products: 'Robes • Pagnes • Bijoux • Chaussures',
-  },
-  {
-    icon: ChefHat,
-    gradient: 'from-amber-400 to-orange-600 shadow-orange-900/15',
-    title: 'Restauration & livraison',
-    description:
-      'Le client choisit son quartier, sa ville, valide son menu. Tu reçois la commande formatée, tu prépares, tu livres. Simple.',
-    products: 'Plats • Boissons • Menus • Packages',
-  },
-  {
-    icon: Sparkles,
-    gradient: 'from-fuchsia-400 to-purple-600 shadow-purple-900/15',
-    title: 'Beauté & cosmétiques',
-    description:
-      'Tes produits se vendent la nuit — toi tu dors. Le matin, tu lis tes commandes et tu organises les livraisons. Stock toujours à jour.',
-    products: 'Crèmes • Maquillage • Soin • Parfums',
-  },
-  {
-    icon: Palette,
-    gradient: 'from-teal-400 to-emerald-600 shadow-emerald-900/15',
-    title: 'Artisanat & créations',
-    description:
-      'Chaque pièce est unique. Bitiko lui donne une vitrine à la hauteur — photos HD, description, stock. Paiement à la livraison pour les pièces de confiance.',
-    products: 'Sculptures • Tissages • Poterie • Bijoux artisanaux',
-  },
-]
-
-const testimonials = [
-  {
-    quote: 'Je ne note plus rien sur un carnet. La commande arrive sur mon WhatsApp avec tout — nom, produits, total, quartier. Je n\'ai plus qu\'à confirmer.',
-    name: 'Fatou Diop',
-    role: 'Boutique de vêtements, Dakar',
-    plan: 'Pro',
-  },
-  {
-    quote: 'J\'avais peur que ce soit compliqué. En 20 minutes ma boutique était en ligne avec mes 8 produits. Le lendemain, j\'avais déjà ma première commande.',
-    name: 'Aïssatou Ndiaye',
-    role: 'Cosmétiques, Thiès',
-    plan: 'Découverte',
-  },
-  {
-    quote: 'Mes clients me trouvent en ligne, commandent la nuit, et je reçois tout le matin. Ma sœur s\'occupe de la livraison, moi du stock.',
-    name: 'Modou Fall',
-    role: 'Boutique de quartier, Rufisque',
-    plan: 'Pro',
-  },
-]
-
 const comparisonRows = [
-  { before: 'Envoyer des photos une par une sur WhatsApp', after: 'Catalogue en ligne avec photos HD, prix et stock' },
-  { before: 'Tenir un carnet de commandes à la main', after: 'Chaque commande est enregistrée et numérotée automatiquement' },
-  { before: 'Vendre du stock épuisé sans le savoir', after: 'Stock synchronisé en temps réel + alertes' },
-  { before: 'Calculer les totaux et frais de livraison à la main', after: 'Total recalculé automatiquement — zéro erreur' },
-  { before: 'Perdre des commandes dans les DMs WhatsApp', after: 'Toutes les commandes triées par statut, claires et archivées' },
-  { before: 'Demander « t\'es dans quel quartier ? » à chaque client', after: 'Le client choisit sa ville, le tarif s\'applique' },
-]
-
-const faq = [
-  {
-    question: 'Est-ce que Bitiko est vraiment gratuit ?',
-    answer:
-      'Oui. Le plan Découverte est 100% gratuit, sans engagement et sans carte bancaire. Tu peux avoir une boutique en ligne fonctionnelle avec 15 produits, commandes sur WhatsApp et livraison. Essentiel à 3 000 F ajoute le builder complet et 50 produits ; Pro à 10 000 F débloque les outils avancés et les produits illimités.',
-  },
-  {
-    question: 'Comment les clients paient-ils ?',
-    answer:
-      'Les deux options principales : espèces à la livraison (le plus courant en Afrique de l\'Ouest) ou mobile money — Wave, Orange Money. Le client paie selon ce que tu actives. Tu confirmes le paiement avec lui sur WhatsApp, pas besoin de passer par un prestataire tiers.',
-  },
-  {
-    question: 'Est-ce que je dois être développeur ?',
-    answer:
-      'Non. Crée ton compte, choisis un nom, ajoute tes produits avec leurs photos — c\'est tout. Pas de ligne de code. Si tu sais envoyer une photo sur WhatsApp, tu sais utiliser Bitiko.',
-  },
-  {
-    question: 'Comment ça marche pour la livraison ?',
-    answer:
-      'Tu définis tes secteurs (par exemple Dakar, Rufisque, Thiès) et le tarif par secteur. À l\'intérieur de chaque secteur, tu listes les villes. Au checkout, le client choisit sa ville et le tarif s\'applique automatiquement. Tu peux aussi activer la livraison gratuite au-delà d\'un certain montant.',
-  },
-  {
-    question: 'Qui peut voir ma boutique ?',
-    answer:
-      'Avec tous les plans, ta boutique est publique sur son sous-domaine bitiko.shop. La personnalisation de base est disponible gratuitement ; les images de catégories sont disponibles avec Essentiel et Pro, et la marque Bitiko se retire avec Pro.',
-  },
-  {
-    question: 'Mes données sont-elles sécurisées ?',
-    answer:
-      'Chaque boutique est complètement isolée. Toi seul(e) peux voir tes produits, tes commandes et tes paramètres. Personne d\'autre — ni les autres vendeurs de Bitiko, ni nous. Nous n\'avons accès à aucune de tes données.',
-  },
-  {
-    question: 'Est-ce que je paye une commission sur mes ventes ?',
-    answer:
-      'Non. Zéro commission. Quoi que tu vendes, tu gardes 100% du prix. Le plan gratuit est vraiment gratuit, puis Essentiel coûte 3 000 F/mois et Pro 10 000 F/mois — rien de plus sur tes revenus.',
-  },
+  { before: 'Envoyer des photos une par une sur WhatsApp', after: 'Catalogue en ligne avec photos, prix, stock et lien à partager' },
+  { before: 'Se mettre d\'accord sur une heure par messages, oublier un rendez-vous', after: 'Le client réserve un créneau libre, tu confirmes d\'un clic' },
+  { before: 'Tenir un carnet de commandes et de rendez-vous à la main', after: 'Chaque commande et réservation est enregistrée et numérotée automatiquement' },
+  { before: 'Vendre du stock épuisé, doubler des rendez-vous sans le savoir', after: 'Stock et planning synchronisés en temps réel + alertes' },
+  { before: 'Faire ses comptes sur un cahier en fin de mois', after: 'Recettes comptées automatiquement, dépenses en 6 champs, bilan en PDF ou Excel' },
+  { before: 'Demander « t\'es dans quel quartier ? » à chaque client', after: 'Le client choisit sa ville, le tarif de livraison s\'applique' },
 ]
 
 /* ─────────────────────── Components ────────────────────────── */
 
-/** Fades + slides an element up once it scrolls into view — applied across
- * every section so the page feels alive while scrolling, not just on load. */
-function Reveal({
-  children,
-  delay = 0,
-  className = '',
+function FaqItem({
+  question,
+  answer,
+  open,
+  onToggle,
 }: {
-  children: React.ReactNode
-  delay?: number
-  className?: string
+  question: string
+  answer: string
+  open: boolean
+  onToggle: () => void
 }) {
-  const [visible, setVisible] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -60px 0px' },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={ref}
-      className={`transition-all duration-700 ease-out ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'} motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${className}`}
-      style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false)
   return (
     <div className="group border-b border-ink-900/10">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
@@ -318,196 +91,6 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
         <p className="overflow-hidden pr-10 text-sm leading-relaxed text-ink-700/70">
           <span className="block pb-5">{answer}</span>
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function SectionEyebrow({ children, light }: { children: string; light?: boolean }) {
-  return (
-    <p className={`mb-4 text-center font-mono text-sm font-semibold uppercase tracking-[0.2em] ${light ? 'text-gold-400' : 'text-brand-600'}`}>
-      {children}
-    </p>
-  )
-}
-
-const produitLinks = [
-  { label: 'Boutique en ligne', href: '#fonctionnalites', description: 'Catalogue, panier, checkout' },
-  { label: 'Commandes WhatsApp', href: '#fonctionnalites', description: 'Chaque vente arrive sur ton WhatsApp' },
-  { label: 'Zones de livraison', href: '#fonctionnalites', description: 'Secteurs, villes, tarifs automatiques' },
-  { label: 'Tableau de bord', href: '#fonctionnalites', description: 'Suivi des ventes et du stock' },
-]
-
-/* ─────────────────────── Nav ─────────────────────────────── */
-
-function Nav() {
-  const [produitOpen, setProduitOpen] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const produitRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (produitRef.current && !produitRef.current.contains(e.target as Node)) setProduitOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [])
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  return (
-    <header
-      className={`sticky top-0 z-50 px-3 pt-3 transition-all duration-300 sm:px-4 ${
-        scrolled ? 'pb-3 backdrop-blur-xl [mask-image:linear-gradient(to_bottom,black_70%,transparent)]' : ''
-      }`}
-    >
-      <div
-        className={`mx-auto flex h-16 items-center justify-between px-4 transition-all duration-300 lg:px-6 ${
-          scrolled
-            ? 'max-w-4xl rounded-full border border-sand-200 bg-white/95 shadow-lg shadow-ink-900/[0.06] backdrop-blur-md'
-            : 'max-w-6xl rounded-full border border-transparent bg-transparent'
-        }`}
-      >
-        {/* Left: logo + desktop center links */}
-        <div className="flex items-center gap-8">
-          <Link to="/" className="shrink-0 transition-opacity hover:opacity-80">
-            <Logo size={20} />
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-ink-700 lg:flex" aria-label="Navigation principale">
-            <div className="relative" ref={produitRef} onMouseEnter={() => setProduitOpen(true)} onMouseLeave={() => setProduitOpen(false)}>
-              <button type="button" onClick={() => setProduitOpen((v) => !v)} aria-expanded={produitOpen} className="flex items-center gap-1 transition-opacity hover:opacity-70">
-                Produit
-                <ChevronDown size={14} className={`transition-transform ${produitOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {produitOpen && (
-                <div className="absolute left-0 top-full z-30 mt-3 w-72 rounded-2xl border border-sand-200 bg-white p-2 shadow-xl">
-                  {produitLinks.map(({ label, href, description }) => (
-                    <a key={label} href={href} onClick={() => setProduitOpen(false)} className="block rounded-xl px-3 py-2.5 hover:bg-sand-50">
-                      <span className="block text-sm font-medium text-ink-900">{label}</span>
-                      <span className="block text-xs text-ink-700/75">{description}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-            <a href="#fonctionnalites" className="transition-opacity hover:opacity-70">Fonctionnalités</a>
-            <a href="#tarifs" className="transition-opacity hover:opacity-70">Tarifs</a>
-          </nav>
-        </div>
-
-        {/* Right: auth buttons (desktop) */}
-        <div className="hidden items-center gap-2 lg:flex">
-          <Link to="/admin/login" className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-800 transition-opacity hover:opacity-70">
-            Connexion
-          </Link>
-          <Link to="/admin/login" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-            Créer ma boutique <ArrowRight size={15} aria-hidden />
-          </Link>
-        </div>
-
-        {/* Mobile: hamburger */}
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-900 lg:hidden"
-          onClick={() => setMobileOpen((v) => !v)}
-          aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={mobileOpen}
-        >
-          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="border-t border-sand-100 bg-white px-4 pb-4 pt-3 lg:hidden">
-          <div className="space-y-1">
-            <a href="#fonctionnalites" onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Fonctionnalités</a>
-            <a href="#solutions" onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Solutions</a>
-            <a href="#tarifs" onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Tarifs</a>
-            <a href="#faq" onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">FAQ</a>
-          </div>
-          <div className="mt-3 flex flex-col gap-2 border-t border-sand-100 pt-3">
-            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full border border-sand-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800">Connexion</Link>
-            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer ma boutique</Link>
-          </div>
-        </div>
-      )}
-    </header>
-  )
-}
-
-/* ─────────────────── Phone Mockup ──────────────────────────── */
-
-function PhoneMockup() {
-  // Decorative product illustration, not content: hidden from assistive tech
-  // (which also exempts its tiny illustrative text from contrast checks).
-  return (
-    <div aria-hidden="true" className="mx-auto mt-12 w-[260px] sm:w-[300px] lg:mt-0 lg:w-[320px]">
-      <div className="relative animate-float overflow-hidden rounded-[2rem] border-[3px] border-ink-800 bg-white shadow-2xl shadow-brand-900/10">
-        {/* Status bar */}
-        <div className="flex items-center justify-between bg-ink-800 px-5 pb-2 pt-3 text-[10px] font-medium text-white">
-          <span>9:41</span>
-          <div className="flex gap-1">
-            <span className="h-2 w-2 rounded-full bg-white/60" />
-            <span className="h-2 w-2 rounded-full bg-white/60" />
-          </div>
-        </div>
-        {/* Shop header */}
-        <div className="border-b border-gray-100 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-bold text-brand-700">B</div>
-            <div>
-              <p className="text-xs font-bold text-ink-900">Boutique Chez Fatou</p>
-              <p className="text-[10px] text-ink-700">fatou.bitiko.shop</p>
-            </div>
-          </div>
-        </div>
-        {/* Products */}
-        <div className="grid grid-cols-2 gap-2 p-3">
-          {[
-            { name: 'Robe wax', price: '12 500 F', color: 'bg-brand-100' },
-            { name: 'Pagne bazin', price: '8 000 F', color: 'bg-ink-100' },
-            { name: 'Sandales', price: '5 500 F', color: 'bg-gold-300' },
-            { name: 'Sac à main', price: '7 000 F', color: 'bg-sand-200' },
-          ].map((p) => (
-            <div key={p.name} className="overflow-hidden rounded-xl border border-gray-100">
-              <div className={`flex h-20 items-center justify-center ${p.color}`}>
-                <ShoppingCart size={16} className="text-ink-800/30" />
-              </div>
-              <div className="px-2.5 py-2">
-                <p className="text-[10px] font-semibold text-ink-900">{p.name}</p>
-                <p className="text-[10px] font-bold text-brand-600">{p.price}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Cart bar */}
-        <div className="mx-3 mb-3 flex items-center justify-between rounded-xl bg-brand-600 px-3 py-2.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white">
-            <ShoppingBag size={12} /> Panier
-          </div>
-          <span className="rounded-full bg-white/30 px-2 py-0.5 text-[10px] font-bold text-white">2 items</span>
-        </div>
-      </div>
-      {/* WhatsApp bubble floating — independent drift timing so it doesn't move in lockstep with the phone. */}
-      <div className="absolute right-2 top-[55%] z-10 w-[190px] rotate-2 animate-float-slow rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 shadow-lg [animation-delay:-3s] sm:right-[-20px] lg:right-[-30px]">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[8px] text-white">
-            <MessageCircle size={8} />
-          </span>
-          <span className="text-[8px] font-bold text-emerald-800">WhatsApp</span>
-        </div>
-        <p className="text-[8px] leading-tight text-emerald-900/80">
-          🛒 <strong>2× Robe wax — 25 000 F</strong><br />
-          📍 Parcelles Assainies<br />
-          ✅ Commande reçue — confirme ton paiement Wave
         </p>
       </div>
     </div>
@@ -621,11 +204,14 @@ function SquiggleUnderline() {
 
 export function LandingPage() {
   usePageSeo({
-    title: 'Bitiko — Crée ta boutique en ligne, vends sur WhatsApp',
+    title: 'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
     description:
-      "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
+      "Bitiko donne à chaque activité sa présence en ligne : boutique, rendez-vous avec horaires par jour, réservation de tables et finances simples (bilan PDF et Excel) — adaptée à ton métier, pilotée depuis ton téléphone. Fait pour l'Afrique de l'Ouest, gratuit pour commencer.",
+    image: 'https://bitiko.shop/og/home.jpg',
+    canonicalUrl: 'https://bitiko.shop/',
   })
   useFaqStructuredData(faq)
+  useSoftwareStructuredData()
   const { promo, isLoading: promoLoading } = useLandingPromo()
   const promoDate = formatPromoDate(promo?.expires_at ?? null)
 
@@ -654,7 +240,7 @@ export function LandingPage() {
         // was this page's layout shift (and its LCP element).
         <div className="min-h-[33px] sm:min-h-[37px]" aria-hidden />
       ) : null}
-      <Nav />
+      <SiteNav />
 
       <main className="relative mx-auto w-full">
         {/* ── HERO ── */}
@@ -666,39 +252,40 @@ export function LandingPage() {
               className="mx-auto mb-6 hidden w-fit animate-fade-up items-center gap-1.5 rounded-3xl border border-sand-200 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-700 shadow-[inset_0_-2px_0_#E7E0D4] transition-colors hover:bg-sand-100 lg:inline-flex"
             >
               <Zap size={13} className="text-brand-500" aria-hidden />
-              Pour les commerçants d'Afrique de l'Ouest
+              Commerces et services d'Afrique de l'Ouest
               <ArrowRight size={12} className="text-ink-700" aria-hidden />
             </a>
-            <h1 className="mx-auto max-w-[600px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.4rem]">
-              Ton commerce mérite mieux qu'un{' '}
+            <h1 className="mx-auto max-w-[620px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.3rem]">
+              Vends, réserve et gère ton activité.{' '}
               <span className="relative inline-block whitespace-nowrap">
-                fil WhatsApp
+                Un seul outil
                 <SquiggleUnderline />
               </span>
               .
             </h1>
             <p className="mx-auto mt-5 max-w-[540px] animate-fade-up text-[15px] leading-relaxed text-[#605958] [animation-delay:200ms] sm:text-base lg:mx-0">
-              Bitiko transforme ton téléphone en vraie boutique en ligne : catalogue, panier, et chaque commande qui atterrit directement sur ton WhatsApp. Aucun code, aucune carte bancaire, aucune commission — juste plus de ventes.
+              Bitiko est la plateforme tout-en-un des commerces et des services d’Afrique de l’Ouest : boutique en ligne, rendez-vous, réservation de tables et finances. Tes clients commandent ou réservent seuls, tu es prévenu tout de suite. Aucun code, aucune carte bancaire, aucune commission.
             </p>
             <div className="mb-8 mt-8 flex animate-fade-up flex-col items-center gap-3 [animation-delay:300ms] sm:flex-row lg:justify-start">
               <Link to="/admin/login" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
-                Créer ma boutique gratuitement
+                Créer mon espace gratuitement
                 <ArrowRight size={16} aria-hidden />
               </Link>
-              <a href="#marche" className="inline-flex w-full items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100 sm:w-auto">
-                Comment ça marche
+              <a href="#demo" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100 sm:w-auto">
+                <Play size={15} className="text-brand-600" aria-hidden />
+                Voir la démo
               </a>
             </div>
             <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/75 [animation-delay:400ms] lg:justify-start">
-              {['0 F pour lancer', 'Zéro commission', '15 produits offerts', 'Sans carte bancaire'].map((t) => (
+              {['0 F pour lancer', 'Zéro commission', 'Prêt en 2 minutes', 'Sans carte bancaire'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} className="text-brand-500" aria-hidden /> {t}
                 </span>
               ))}
             </div>
           </div>
-          <div className="animate-fade-up [animation-delay:250ms]">
-            <PhoneMockup />
+          <div className="animate-fade-up [animation-delay:250ms] lg:w-[560px] lg:shrink-0">
+            <HeroShots />
           </div>
         </section>
 
@@ -726,6 +313,12 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* ── DEUX FAÇONS DE TRAVAILLER ── */}
+        <Audiences />
+
+        {/* ── DEMO VIDEO ── */}
+        <DemoVideo />
+
         {/* ── STATS STRIP ── */}
         <section className="border-y border-sand-200 bg-white">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 py-8 sm:grid-cols-4 sm:py-10">
@@ -733,7 +326,7 @@ export function LandingPage() {
               { icon: Clock, target: 2, suffix: ' min', label: 'Mise en ligne' },
               { icon: ShoppingCart, target: 3, suffix: ' clics', label: 'Pour commander' },
               { icon: Wallet, target: 0, suffix: ' F', label: 'Pour commencer' },
-              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Votre boutique vend' },
+              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Votre activité vend' },
             ].map(({ icon: Icon, target, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center">
                 <IconTile icon={Icon} tone="gold" />
@@ -750,24 +343,24 @@ export function LandingPage() {
         <section className="border-b border-sand-200 bg-white">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Le problème</SectionEyebrow>
+              <SectionEyebrow>Le constat</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Pendant que tu gères tes commandes à la main, tes clients sont en ligne.
+                Ton activité mérite mieux qu'un carnet et 200 messages non lus.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Chaque matin tu reçois des dizaines de messages. Tu dois tout noter, calculer les totaux, garder en mémoire qui a payé. Il y a mieux.
+                Tes clients sont en ligne, pas ton organisation. Chaque commande, chaque rendez-vous, chaque compte passe par ta mémoire. Bitiko remet tout au même endroit.
               </p>
             </Reveal>
             <div className="grid gap-8 lg:grid-cols-2">
               <Reveal className="rounded-2xl border border-red-200 bg-red-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-red-500">Vendre sans Bitiko</p>
+                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-red-500">Gérer sans Bitiko</p>
                 <ul className="space-y-3.5">
                   {[
                     'Envoyer des photos un par un sur WhatsApp — le client perd patience',
-                    'Noter les commandes sur un carnet — des erreurs, des oublis',
+                    'Noter les commandes et rendez-vous sur un carnet — des erreurs, des oublis',
                     'Calculer les totaux à la main — tu te trompes, le client se plaint',
-                    'Vendre un article que tu n\'as plus en stock',
-                    'Perdre des commandes dans la masse de messages',
+                    'Vendre un article que tu n\'as plus en stock / doubler un rendez-vous',
+                    'Perdre des commandes et réservations dans la masse de messages',
                     'Demander « tu es dans quel quartier ? » à chaque client',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3 text-sm font-medium text-ink-700/80">
@@ -777,15 +370,15 @@ export function LandingPage() {
                 </ul>
               </Reveal>
               <Reveal delay={120} className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-emerald-600">Vendre avec Bitiko</p>
+                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-emerald-600">Gérer avec Bitiko</p>
                 <ul className="space-y-3.5">
                   {[
-                    'Un vrai catalogue en ligne — ton client voit, compare, commande à 23h',
-                    'La commande arrive sur ton WhatsApp formatée : nom, produits, total',
-                    'Stock mis à jour automatiquement — plus de vente d\'articles épuisés',
+                    'Un vrai catalogue en ligne — ton client voit, compare, commande ou réserve à 23h',
+                    'Commande sur ton WhatsApp, formatée ; rendez-vous par email et dans ton agenda',
+                    'Stock et planning mis à jour automatiquement — plus de double réservation ni rupture',
                     'Secteurs et villes avec tarifs — le client choisit, le prix s\'applique',
-                    'Dashboard des ventes — tu vois tout sans ouvrir un carnet',
-                    'Lien à partager sur WhatsApp, Facebook, Instagram — la boutique vit 24h/24',
+                    'Dashboard unifié — tu vois ventes, rendez-vous, stock et finances sans ouvrir un carnet',
+                    'Lien à partager sur WhatsApp, Facebook, Instagram — ton activité vit 24h/24',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
@@ -801,49 +394,28 @@ export function LandingPage() {
         </section>
 
         {/* ── FEATURES ── */}
-        <section id="fonctionnalites" className="border-b border-sand-200">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
-            <Reveal className="text-center">
-              <SectionEyebrow>Fonctionnalités</SectionEyebrow>
-              <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Tout ce qu'il faut pour vendre en ligne.
-                <span className="block mt-1 text-brand-600">Rien de plus.</span>
-              </h2>
-              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Chaque fonctionnalité existe parce qu'un commerçant en avait besoin. Pas de superflu, pas de compliqué.
-              </p>
-            </Reveal>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {features.map(({ icon: Icon, title, description }, i) => (
-                <Reveal key={title} delay={i * 80}>
-                  <div className="group h-full rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
-                    <IconTile icon={Icon} />
-                    <h3 className="mt-5 font-heading text-sm font-semibold text-ink-900">{title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FeatureGroups />
+
+        {/* ── VISITE GUIDÉE (captures réelles) ── */}
+        <Tour />
 
         {/* ── WHATSAPP FLOW SHOWPIECE ── */}
         <section className="border-b border-sand-200 bg-white">
           <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Commande sur WhatsApp</SectionEyebrow>
+              <SectionEyebrow>Alertes & WhatsApp</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Le client commande en ligne. Tu reçois tout sur WhatsApp.
+                Le client commande ou réserve en ligne. Tu es prévenu tout de suite.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Zéro appli à télécharger, zéro dashboard à apprendre. Si tu sais lire un message WhatsApp, tu sais gérer tes commandes Bitiko.
+                Zéro appli à télécharger. Les commandes arrivent sur ton WhatsApp, les demandes de rendez-vous et de table par email et dans ton agenda.
               </p>
             </Reveal>
             <div className="grid gap-8 sm:grid-cols-3 sm:items-start">
               {[
-                { step: '1', title: 'Le client choisit ses produits', desc: 'Il parcourt ton catalogue, ajoute au panier, choisit sa ville et son mode de paiement.' },
-                { step: '2', title: 'La commande est enregistrée', desc: 'Stock décrémenté, frais de livraison calculés, total validé — tout se passe côté serveur en 1 seconde.' },
-                { step: '3', title: 'Tu reçois le message', desc: 'Un message formaté sur WhatsApp avec le nom, les produits, le total, la ville. Tu confirmes en répondant "OK".' },
+                { step: '1', title: 'Le client choisit', desc: 'Il parcourt ton catalogue, ajoute au panier ou réserve un créneau, choisit sa ville et son mode de paiement.' },
+                { step: '2', title: 'L\'opération est enregistrée', desc: 'Stock décrémenté ou créneau réservé, frais calculés, total validé — tout côté serveur en 1 seconde.' },
+                { step: '3', title: 'Tu es prévenu', desc: 'Commande : un message WhatsApp formaté (nom, détails, total, ville). Rendez-vous ou table : un email et la demande dans ton agenda, à confirmer d\'un clic.' },
               ].map(({ step, title, desc }, i) => (
                 <Reveal key={step} delay={i * 120} className="relative text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-lg font-bold text-white shadow-md">{step}</div>
@@ -856,24 +428,23 @@ export function LandingPage() {
             <Reveal delay={200} className="mx-auto mt-12 max-w-sm overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50 shadow-md">
               <div className="flex items-center gap-2 bg-emerald-600 px-4 py-2.5">
                 <Phone size={14} className="text-white" />
-                <span className="text-xs font-bold text-white">Nouvelle commande — Boutique Chez Fatou</span>
+                <span className="text-xs font-bold text-white">Nouvelle commande — Wax &amp; Style</span>
               </div>
               <div className="p-4">
                 <div className="rounded-xl bg-white p-3 shadow-sm">
                   <p className="text-xs leading-relaxed text-ink-900">
-                    🛒 <strong>Nouvelle commande #0017</strong><br />
+                    🛒 <strong>Nouvelle commande #0042</strong><br />
                     👤 Awa Mbaye — 77 123 45 67<br />
                     📍 Parcelles Assainies, Dakar<br />
                     ━━━━━━━━━━━━━━<br />
-                    2× Robe wax dentelle — 25 000 F<br />
-                    1× Sandales cuir — 5 500 F<br />
+                    2× Robe wax Aminata — 50 000 F<br />
+                    Livraison — 1 500 F<br />
                     ━━━━━━━━━━━━━━<br />
-                    📦 Livraison (Rufisque) — 2 000 F<br />
-                    💰 <strong>Total — 32 500 F</strong><br />
-                    💳 Paiement — Espèces à la livraison
+                    💰 <strong>Total — 51 500 F</strong><br />
+                    💳 Paiement — Wave
                   </p>
                 </div>
-                <p className="mt-2 text-[10px] text-emerald-700/60">Message reçu par le commerçant sur WhatsApp</p>
+                <p className="mt-2 text-[10px] text-emerald-700/60">Exemple de message reçu par le commerçant sur WhatsApp</p>
               </div>
             </Reveal>
           </div>
@@ -883,22 +454,25 @@ export function LandingPage() {
         <section id="solutions" className="border-b border-sand-200">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Une boutique pour chaque commerce</SectionEyebrow>
+              <SectionEyebrow>Pour chaque métier</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Bitiko s'adapte à ton activité, pas l'inverse.
-            </h2>
+              </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Que tu vendes des vêtements, des plats, des cosmétiques ou de l'artisanat — la structure est la même, le résultat aussi.
+                Vêtements, plats, cosmétiques, coiffure, réparation : ton espace et ta page publique suivent ton métier, avec des modèles prêts à l'emploi.
               </p>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2">
-              {solutions.map(({ icon: Icon, gradient, title, description, products }, i) => (
+              {solutions.map(({ icon: Icon, tint, title, description, tags, slug }, i) => (
                 <Reveal key={title} delay={i * 80}>
                   <div className="group h-full rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
-                    <IconTile icon={Icon} gradient={gradient} size="lg" />
+                    <IconTile icon={Icon} tint={tint} size="lg" />
                     <h3 className="mt-4 font-heading text-base font-semibold text-ink-900">{title}</h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
-                    <p className="mt-3 text-xs font-medium text-brand-600">{products}</p>
+                    <p className="mt-3 text-xs font-medium text-brand-600">{tags}</p>
+                    <Link to={`/solutions/${slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800">
+                      Découvrir la solution <ArrowRight size={14} aria-hidden />
+                    </Link>
                   </div>
                 </Reveal>
               ))}
@@ -941,30 +515,22 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* ── TESTIMONIALS ── */}
+        {/* ── PENSÉ POUR L'AFRIQUE DE L'OUEST ── */}
         <section className="border-b border-sand-200">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Ce qu'ils en disent</SectionEyebrow>
+              <SectionEyebrow>Pensé pour ici</SectionEyebrow>
               <h2 className="mx-auto mb-14 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Des commerçants qui ont fait le switch.
+                Fait pour la façon dont tu travailles vraiment.
               </h2>
             </Reveal>
-            <div className="grid gap-6 sm:grid-cols-3">
-              {testimonials.map(({ quote, name, role, plan }, i) => (
-                <Reveal key={name} delay={i * 100}>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {westAfrica.map(({ icon: Icon, title, description }, i) => (
+                <Reveal key={title} delay={i * 80}>
                   <div className="h-full rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
-                    <div className="flex gap-1 text-gold-400">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <svg key={s} viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                      ))}
-                    </div>
-                    <p className="mt-4 text-sm leading-relaxed text-ink-700/80">"{quote}"</p>
-                    <div className="mt-5 border-t border-sand-100 pt-4">
-                      <p className="text-sm font-semibold text-ink-900">{name}</p>
-                      <p className="text-xs text-ink-700">{role}</p>
-                      <span className="mt-2 inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700">Plan {plan}</span>
-                    </div>
+                    <IconTile icon={Icon} />
+                    <h3 className="mt-5 font-heading text-sm font-semibold text-ink-900">{title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
                   </div>
                 </Reveal>
               ))}
@@ -978,18 +544,18 @@ export function LandingPage() {
             <Reveal className="text-center">
               <SectionEyebrow light>Comment ça marche</SectionEyebrow>
               <h2 className="mx-auto mb-14 max-w-[700px] font-heading text-3xl font-semibold text-white sm:text-4xl lg:text-5xl">
-                De l'inscription à la première commande, en 3 étapes.
+                De l'inscription au premier client, en 3 étapes.
               </h2>
             </Reveal>
             <div className="grid gap-10 sm:grid-cols-3">
               {[
-                { n: '1', title: 'Crée ta boutique', desc: 'Choisis un nom, un sous-domaine, un numéro WhatsApp. 2 minutes.' },
-                { n: '2', title: 'Ajoute tes produits', desc: 'Photos, prix, stock. En 30 secondes par produit.' },
-                { n: '3', title: 'Partage ton lien', desc: 'WhatsApp, Facebook, Instagram, bouche-à-oreille. Ta boutique vend 24h/24.' },
+                { n: '1', title: 'Décris ton activité', desc: 'Boutique, salon, restaurant… Nom, pays, WhatsApp. Bitiko te propose un modèle adapté à ton métier.' },
+                { n: '2', title: 'Ajoute ton offre', desc: 'Produits, prestations, tarifs, horaires. Tu peux importer ton catalogue en CSV.' },
+                { n: '3', title: 'Partage ton lien', desc: 'WhatsApp, Instagram, Facebook, bouche-à-oreille. Tes premiers clients commandent ou réservent seuls.' },
               ].map(({ n, title, desc }, i) => (
                 <Reveal key={n} delay={i * 120} className="relative text-center">
                   {i < 2 && <span className="absolute left-[calc(50%+2rem)] top-6 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-gold-400/40 to-gold-400/10 sm:block" />}
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-gold-400 to-gold-300 text-lg font-bold text-ink-900 shadow-lg">{n}</div>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold-400 text-lg font-bold text-ink-900 ring-2 ring-inset ring-gold-500/50 shadow-lg shadow-gold-400/30">{n}</div>
                   <h3 className="mt-5 font-heading text-base font-semibold text-white">{title}</h3>
                   <p className="mt-2 text-sm text-ink-100/70">{desc}</p>
                 </Reveal>
@@ -1000,14 +566,14 @@ export function LandingPage() {
 
         {/* ── PRICING ── */}
         <section id="tarifs" className="border-b border-sand-200">
-          <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:py-32">
+          <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
               <SectionEyebrow>Tarifs</SectionEyebrow>
               <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Investis dans ton commerce.
+                Un prix simple. Pas de commission.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Zéro commission. Zéro frais cachés. Tu gardes 100% de tes revenus.
+                Commence gratuitement, passe à un plan payant quand ton activité grandit. Tu gardes 100% de tes ventes.
               </p>
             </Reveal>
             <div className="grid gap-6 lg:grid-cols-3">
@@ -1022,12 +588,12 @@ export function LandingPage() {
                   <div className="my-6 h-px w-full bg-sand-100" />
                   <ul className="space-y-3">
                     {[
-                      'Boutique en ligne complète',
-                      'Commandes sur WhatsApp',
-                      'Jusqu\'à 15 produits actifs',
-                      'Livraison par secteurs & villes',
-                      'Espace client mobile-first',
-                      '1 utilisateur',
+                      'Vitrine en ligne complète',
+                      `${PLANS.free.maxActiveProducts} produits et ${PLANS.free.maxActiveServices} prestations actifs`,
+                      `Rendez-vous et réservations en ligne (${PLANS.free.maxMonthlyBookings} demandes / mois)`,
+                      'Commandes sur WhatsApp, livraison par secteurs',
+                      'Finances : bilan du mois, export Excel et PDF',
+                      `Équipe de ${PLANS.free.maxTeamMembers} personnes`,
                     ].map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
                         <Check size={15} className="mt-0.5 shrink-0 text-brand-500" aria-hidden />
@@ -1036,7 +602,7 @@ export function LandingPage() {
                     ))}
                   </ul>
                   <Link to="/admin/login" className="mt-8 block w-full rounded-[100px] border border-brand-600 py-3.5 text-center text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50">
-                    Créer ma boutique
+                    Créer mon espace
                   </Link>
                 </div>
               </Reveal>
@@ -1051,10 +617,18 @@ export function LandingPage() {
                   {promo?.plan === 'essential' && (
                     <p className="mt-1 text-center text-xs font-medium text-brand-700">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
                   )}
-                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour structurer sa boutique.</p>
+                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour structurer son activité.</p>
                   <div className="my-6 h-px w-full bg-brand-100" />
                   <ul className="space-y-3">
-                    {['Tout le plan Découverte, plus :', 'Jusqu’à 50 produits actifs', 'Builder complet et pages personnalisées', 'Images de catégories et promotions', 'Analytics standard et import CSV'].map((f, i) => (
+                    {[
+                      'Tout le plan Découverte, plus :',
+                      `${PLANS.essential.maxActiveProducts} produits et ${PLANS.essential.maxActiveServices} prestations actifs`,
+                      `${PLANS.essential.maxMonthlyBookings} demandes de rendez-vous / mois, équipe de ${PLANS.essential.maxTeamMembers}`,
+                      'Finances : 12 mois d’historique, saisies illimitées',
+                      'Builder complet et pages personnalisées',
+                      'Images de catégories et promotions',
+                      'Analytics standard et import CSV',
+                    ].map((f, i) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm"><Check size={15} className="mt-0.5 shrink-0 text-brand-500" aria-hidden /><span className={i === 0 ? 'font-semibold text-ink-900' : 'text-ink-700/80'}>{f}</span></li>
                     ))}
                   </ul>
@@ -1075,15 +649,16 @@ export function LandingPage() {
                   {promo?.plan === 'pro' && (
                     <p className="mt-1 text-center text-xs font-medium text-gold-300">{promo.label}{promoDate ? ` — jusqu’au ${promoDate}` : ''}</p>
                   )}
-                  <p className="mt-2 text-center text-sm text-white/70">Pour les boutiques qui tournent.</p>
+                  <p className="mt-2 text-center text-sm text-white/70">Pour les activités qui tournent.</p>
                   <div className="my-6 h-px w-full bg-white/20" />
                   <ul className="space-y-3">
                     {[
                       'Tout le plan Essentiel, plus :',
-                      'Produits illimités',
-                      'Store builder — personnalise ta page',
-                      'Supprime le logo Bitiko',
-                      '5 utilisateurs',
+                      'Produits, prestations, équipe et rendez-vous illimités',
+                      'Finances : comparaison entre périodes, historique complet',
+                      'Personnalisation illimitée et styles avancés',
+                      'Bilan et vitrine sans logo Bitiko',
+                      'Analytics avancées',
                       'Support prioritaire',
                     ].map((f, i) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
@@ -1098,7 +673,7 @@ export function LandingPage() {
                 </div>
               </Reveal>
             </div>
-            <p className="mt-8 text-center text-xs text-ink-700">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente.</p>
+            <p className="mt-8 text-center text-xs text-ink-700">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente. Abonnement renouvelé à la main, sans prélèvement automatique.</p>
           </div>
         </section>
 
@@ -1112,7 +687,21 @@ export function LandingPage() {
               </h2>
             </Reveal>
             <Reveal delay={100} className="mx-auto mt-10 max-w-xl">
-              {faq.map((item) => <FaqItem key={item.question} {...item} />)}
+              {(() => {
+                const [openIndex, setOpenIndex] = useState<number | null>(null)
+                return (
+                  <>
+                    {faq.map((item, index) => (
+                      <FaqItem
+                        key={item.question}
+                        {...item}
+                        open={openIndex === index}
+                        onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+                      />
+                    ))}
+                  </>
+                )
+              })()}
             </Reveal>
           </div>
         </section>
@@ -1122,13 +711,13 @@ export function LandingPage() {
           <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:py-32">
             <Reveal>
               <h2 className="mx-auto max-w-[650px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Prêt à vendre en ligne ?
+                Prêt à remplir ton carnet de commandes et ton agenda ?
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ink-700/70">
-                Crée ta boutique gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
+                Lance ton activité gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
               </p>
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-                Créer ma boutique gratuitement <ArrowRight size={16} aria-hidden />
+                Créer mon espace gratuitement <ArrowRight size={16} aria-hidden />
               </Link>
               <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700">
                 {['0 F pour lancer', 'Zéro commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (
@@ -1140,65 +729,7 @@ export function LandingPage() {
         </section>
       </main>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-sand-200 py-16">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 text-sm min-[480px]:grid-cols-2 sm:px-6 lg:grid-cols-4">
-          <div className="hidden lg:block">
-            <Logo size={20} />
-            <p className="mt-6 text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
-          </div>
-          <div>
-            <p className="mb-5 text-sm font-semibold text-ink-900">Solution</p>
-            <ul className="flex flex-col gap-2.5">
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Catalogue & produits</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Commandes WhatsApp</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Livraison par secteurs</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Dashboard de vente</a></li>
-            </ul>
-          </div>
-          <div>
-            <p className="mb-5 text-sm font-semibold text-ink-900">Bitiko</p>
-            <ul className="flex flex-col gap-2.5">
-              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Connexion</Link></li>
-              <li><Link to="/admin/login" className="text-ink-700 transition-colors hover:text-ink-900">Créer une boutique</Link></li>
-              <li><a href="#tarifs" className="text-ink-700 transition-colors hover:text-ink-900">Tarifs</a></li>
-              <li><a href="#faq" className="text-ink-700 transition-colors hover:text-ink-900">FAQ</a></li>
-              <li>
-                <a
-                  href="https://www.instagram.com/bitiko.shop/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700 transition-colors hover:text-ink-900"
-                >
-                  <SocialIcon platform="instagram" size={14} /> Instagram
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.tiktok.com/@bitiko.shop"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-ink-700 transition-colors hover:text-ink-900"
-                >
-                  <SocialIcon platform="tiktok" size={14} /> TikTok
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <p className="mb-5 text-sm font-semibold text-ink-900">Ressources</p>
-            <ul className="flex flex-col gap-2.5">
-              <li><a href="#solutions" className="text-ink-700 transition-colors hover:text-ink-900">Pour chaque commerce</a></li>
-              <li><a href="#marche" className="text-ink-700 transition-colors hover:text-ink-900">Comment ça marche</a></li>
-              <li><a href="#fonctionnalites" className="text-ink-700 transition-colors hover:text-ink-900">Fonctionnalités</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-10 flex flex-col items-center gap-1 text-center lg:hidden">
-          <Logo size={18} />
-          <p className="text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

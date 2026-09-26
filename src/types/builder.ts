@@ -22,6 +22,13 @@ export type CoreSectionType =
   | 'checkout'
   | 'flexible'
   | 'testimonials'
+  // Service sections
+  | 'services'
+  | 'featured_services'
+  | 'appointments'
+  | 'team'
+  | 'reservations'
+  | 'menu'
 
 /** Section types a specific template contributes on top of the core set
  *  (see `TEMPLATE_EXTRA_SECTIONS` in `features/store-builder/templateSections.ts`).
@@ -332,6 +339,51 @@ export interface TestimonialsSectionConfig {
   headingStyle?: TextStyleOverride
 }
 
+// ── Service section configs (PHASE-07+) ──
+
+export interface ServicesSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
+  sort: 'manual' | 'price_asc' | 'price_desc' | 'duration_asc' | 'duration_desc'
+  limit: number
+  enableFilters?: boolean
+}
+
+export interface FeaturedServicesSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
+  serviceIds: string[]
+}
+
+export interface AppointmentsSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showTeam: boolean
+  defaultDuration: number // minutes
+}
+
+export interface TeamSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  layout: 'grid' | 'list' | 'carousel'
+}
+
+export interface ReservationsSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showAvailability: boolean
+}
+
+export interface MenuSectionConfig {
+  heading: string
+  headingStyle?: TextStyleOverride
+  showPrices: boolean
+  limit?: number
+  sort?: 'manual' | 'price_asc' | 'price_desc' | 'recent'
+}
+
 export type SectionConfigMap = {
   announcement: AnnouncementBarSectionConfig
   header: HeaderSectionConfig
@@ -350,10 +402,27 @@ export type SectionConfigMap = {
   lookbook: LookbookSectionConfig
   flexible: FlexibleSectionConfig
   testimonials: TestimonialsSectionConfig
+  // Service sections
+  services: ServicesSectionConfig
+  featured_services: FeaturedServicesSectionConfig
+  appointments: AppointmentsSectionConfig
+  team: TeamSectionConfig
+  reservations: ReservationsSectionConfig
+  menu: MenuSectionConfig
 }
 
 export type LayoutSection = {
-  [K in SectionType]: { id: string; type: K; visible: boolean; config: SectionConfigMap[K] }
+  [K in SectionType]: {
+    id: string
+    type: K
+    visible: boolean
+    config: SectionConfigMap[K]
+    /** Capabilities required to display this section (PHASE-07+). Absent/empty =
+     *  always displayed (all legacy sections). The renderer hides a section when
+     *  the shop's business type lacks any listed capability — this is how a
+     *  coiffeur frontstore drops e-commerce blocks without code branches. */
+    capabilities?: string[]
+  }
 }[SectionType]
 
 export type FontChoice = 'sora-inter' | 'inter' | 'sora'
@@ -441,4 +510,46 @@ export interface StoreTemplate {
   themeColor: string
   themeConfig: ThemeConfig
   layout: StoreTemplateLayout
+  /** Style presets of this template (Shopify-style: one Barber template,
+   *  several looks). The base design itself is the implicit first choice —
+   *  `variants` only holds the alternatives. A resolved template (see
+   *  `resolveTemplateVariant`) carries `variantKey`/`variantLabel` but keeps
+   *  the base `key`, so `shop.template_id` always stays a known template. */
+  variants?: TemplateVariant[]
+  /** Set on resolved templates only — never on catalog entries. */
+  variantKey?: string
+  variantLabel?: string
+}
+
+/** One alternative look of a template: same pages and blocks, different
+ *  theme. Previewing/applying a variant flows through the exact same
+ *  StoreTemplate path as the base design. */
+export interface TemplateVariant {
+  key: string
+  label: string
+  description?: string
+  swatch: [string, string]
+  themeColor: string
+  themeConfig: ThemeConfig
+}
+
+/** Resolves a template + variant choice to a renderable StoreTemplate: the
+ *  base layout with the variant's theme. Unknown/empty variant key returns
+ *  the base design unchanged (with any previous resolution cleared). */
+export function resolveTemplateVariant(
+  template: StoreTemplate,
+  variantKey: string | null | undefined,
+): StoreTemplate {
+  const { variantKey: _droppedKey, variantLabel: _droppedLabel, ...base } = template
+  if (!variantKey) return { ...base }
+  const variant = template.variants?.find((v) => v.key === variantKey)
+  if (!variant) return { ...base }
+  return {
+    ...base,
+    variantKey: variant.key,
+    variantLabel: variant.label,
+    swatch: variant.swatch,
+    themeColor: variant.themeColor,
+    themeConfig: variant.themeConfig,
+  }
 }

@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabaseClient'
-import { compressImageFile } from '@/utils/image'
+import { DEFAULT_COUNTRY_CODE, getCountryPreset } from '@/config/countries'
+import { resolveBusinessTypeId } from '@/services/businessType.service'
+import { compressImageFile, makeThumbFile } from '@/utils/image'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import type { Shop, TenantContext } from '@/types'
@@ -57,6 +59,9 @@ export interface CreateShopInput {
   slug: string
   whatsappNumber: string
   currency?: string
+  /** The country the shop operates in (ISO 3166-1 alpha-2, drives phone
+   *  format + currency when the latter isn't set). Defaults to 'SN'. */
+  countryCode?: string
   /** Genre template key (mode, epicerie, beaute, tech) picked during onboarding. */
   templateId?: string
   /** The merchant's onboarding answers — when present, the storefront is
@@ -94,6 +99,13 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
     ? generateStorefront({ template: generatedSource, answers: input.profile, palette: input.palette })
     : null
 
+  // Link the referential business type when it exists (PHASE-05 compat: the
+  // legacy TEXT column stays authoritative until every flow writes the FK).
+  // Best-effort — creation never fails on this lookup (backfill covers gaps).
+  const vertical = generatedSource.vertical
+  const businessTypeId = await resolveBusinessTypeId(vertical)
+  const businessTypeLink = businessTypeId ? { business_type_id: businessTypeId } : {}
+
   const { data, error } = await supabase
     .from('shops')
     .insert({
@@ -101,7 +113,9 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       name: input.name,
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
-      currency: input.currency ?? 'XOF',
+      currency: input.currency ?? getCountryPreset(input.countryCode).currencyCode,
+      country_code: input.countryCode ?? DEFAULT_COUNTRY_CODE,
+      ...businessTypeLink,
       ...(generated
         ? {
             onboarding_responses: input.profile,
@@ -165,14 +179,45 @@ async function uploadShopAsset(shopId: string, file: File, baseName: string): Pr
   return `${data.publicUrl}?v=${Date.now()}`
 }
 
-export async function uploadShopLogo(shopId: string, file: File): Promise<string> {
+export async function uploadShopLogo(shopId: string, file: File): Promise<{ url: string; thumbUrl: string | null }> {
   // Free plan: no server-side transforms — shrink at the source (the video
   // uploader below shares the pipe and must stay untouched).
-  return uploadShopAsset(shopId, await compressImageFile(file), 'logo')
+  return uploadShopLogoBanner(shopId, file, 'logo')
 }
 
-export async function uploadShopBanner(shopId: string, file: File): Promise<string> {
-  return uploadShopAsset(shopId, await compressImageFile(file), 'banner')
+export async function uploadShopBanner(shopId: string, file: File): Promise<{ url: string; thumbUrl: string | null }> {
+  return uploadShopLogoBanner(shopId, file, 'banner')
+}
+
+/** Logo/bannière + sa vignette 400px (header 32px, hero responsive). Même
+ *  chemin écrasé à chaque envoi (upsert) donc cache court + `?v=` commun aux
+ *  deux URLs pour invalider d'un coup. */
+async function uploadShopLogoBanner(
+  shopId: string,
+  file: File,
+  baseName: 'logo' | 'banner',
+): Promise<{ url: string; thumbUrl: string | null }> {
+  const optimized = await compressImageFile(file)
+  const ext = optimized.name.split('.').pop()
+  const fullPath = `${shopId}/${baseName}.${ext}`
+  const thumb = await makeThumbFile(file)
+  const thumbPath = thumb ? `${shopId}/${baseName}-thumb.webp` : null
+
+  const [{ error: fullError }, { error: thumbError }] = await Promise.all([
+    supabase.storage.from(SHOP_ASSETS_BUCKET).upload(fullPath, optimized, { upsert: true, cacheControl: '3600' }),
+    thumb && thumbPath
+      ? supabase.storage.from(SHOP_ASSETS_BUCKET).upload(thumbPath, thumb, { upsert: true, cacheControl: '3600' })
+      : Promise.resolve({ error: null }),
+  ])
+  if (fullError) throw fullError
+  if (thumbError) throw thumbError
+
+  const v = Date.now()
+  const { data } = supabase.storage.from(SHOP_ASSETS_BUCKET).getPublicUrl(fullPath)
+  const thumbUrl = thumbPath
+    ? `${supabase.storage.from(SHOP_ASSETS_BUCKET).getPublicUrl(thumbPath).data.publicUrl}?v=${v}`
+    : null
+  return { url: `${data.publicUrl}?v=${v}`, thumbUrl }
 }
 
 /** Image for a builder block (image/promo sections) — one file per section id,

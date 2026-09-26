@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { LogOut, Mail, Package } from 'lucide-react'
+import { LogOut, Mail, MessageCircle, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { listMyOrders } from '@/services/order.service'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, whatsappHref } from '@/utils/format'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/config/constants'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -19,6 +21,7 @@ export function AccountPage() {
   const { shop } = useTenant()
   const { user, loading: authLoading, signOut } = useAuth()
   usePageSeo({ title: shop ? `Mon compte — ${shop.name}` : 'Mon compte', noindex: true, siteName: shop?.name })
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
 
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -33,14 +36,25 @@ export function AccountPage() {
     enabled: !!shop?.id && !!user?.email,
   })
 
-  const requestCode = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const [resent, setResent] = useState(false)
+
+  const sendCode = async (): Promise<boolean> => {
     setSending(true)
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({ email: email.trim() })
     setSending(false)
     if (error) setError('Envoi impossible. Vérifiez l’adresse email.')
-    else setStep('code')
+    return !error
+  }
+
+  const requestCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (await sendCode()) setStep('code')
+  }
+
+  const resendCode = async () => {
+    setResent(false)
+    if (await sendCode()) setResent(true)
   }
 
   const verifyCode = async (e: React.FormEvent) => {
@@ -67,20 +81,23 @@ export function AccountPage() {
         </p>
         {step === 'email' ? (
           <form onSubmit={requestCode} className="mt-6 space-y-3">
+            <label htmlFor="account-email" className="sr-only">Adresse email</label>
             <input
+              id="account-email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.com"
               autoComplete="email"
-              className="w-full rounded-lg border border-[var(--shop-text)]/15 bg-transparent px-4 py-3 text-base text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/35 focus:border-[var(--shop-text)] focus:outline-none"
+              className="w-full border border-[var(--shop-text)]/15 bg-transparent px-4 py-3 text-base text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/35 focus:border-[var(--shop-text)] focus:outline-none"
+              style={{ borderRadius: 'var(--shop-radius)' }}
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={sending}
-              className="w-full rounded-lg bg-[var(--shop-button)] py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="w-full bg-[var(--shop-button)] py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
               style={{ borderRadius: 'var(--shop-radius)' }}
             >
               {sending ? 'Envoi…' : 'Recevoir mon code'}
@@ -91,22 +108,34 @@ export function AccountPage() {
             <p className="text-center text-sm text-[var(--shop-text)]/60">
               Code envoyé à <span className="font-semibold text-[var(--shop-text)]">{email}</span>
             </p>
+            <label htmlFor="account-code" className="sr-only">Code reçu par email</label>
             <input
+              id="account-code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Code à 6 chiffres"
               inputMode="numeric"
               autoComplete="one-time-code"
-              className="w-full rounded-lg border border-[var(--shop-text)]/15 bg-transparent px-4 py-3 text-center text-base tracking-[0.3em] text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+              className="w-full border border-[var(--shop-text)]/15 bg-transparent px-4 py-3 text-center text-base tracking-[0.3em] text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+              style={{ borderRadius: 'var(--shop-radius)' }}
             />
-            {error && <p className="text-center text-sm text-red-600">{error}</p>}
+            {error && <p role="alert" className="text-center text-sm text-red-600">{error}</p>}
+            {resent && !error && <p role="status" className="text-center text-sm text-emerald-600">Nouveau code envoyé.</p>}
             <button
               type="submit"
               disabled={verifying || !code.trim()}
-              className="w-full rounded-lg bg-[var(--shop-button)] py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="w-full bg-[var(--shop-button)] py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
               style={{ borderRadius: 'var(--shop-radius)' }}
             >
               {verifying ? 'Vérification…' : 'Voir mes commandes'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void resendCode()}
+              disabled={sending}
+              className="w-full text-center text-sm text-[var(--shop-text)]/60 underline underline-offset-2 disabled:opacity-60"
+            >
+              {sending ? 'Envoi…' : 'Renvoyer le code'}
             </button>
             <button
               type="button"
@@ -114,6 +143,7 @@ export function AccountPage() {
                 setStep('email')
                 setCode('')
                 setError(null)
+                setResent(false)
               }}
               className="w-full text-center text-sm text-[var(--shop-text)]/60 underline underline-offset-2"
             >
@@ -135,7 +165,8 @@ export function AccountPage() {
         <button
           type="button"
           onClick={() => void signOut()}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--shop-text)]/15 px-3 py-2 text-sm font-medium text-[var(--shop-text)]"
+          className="inline-flex shrink-0 items-center gap-1.5 border border-[var(--shop-text)]/15 px-3 py-2 text-sm font-medium text-[var(--shop-text)]"
+          style={{ borderRadius: 'var(--shop-radius)' }}
         >
           <LogOut size={14} aria-hidden /> Déconnexion
         </button>
@@ -144,13 +175,18 @@ export function AccountPage() {
       <h2 className="mt-8 font-heading text-base font-bold text-[var(--shop-text)]">Mes commandes</h2>
       {ordersLoading && <Spinner />}
       {!ordersLoading && (orders?.length ?? 0) === 0 && (
-        <EmptyState icon={Package} title="Aucune commande liée à cet email" />
+        <EmptyState
+          icon={Package}
+          title="Aucune commande liée à cet email"
+          description="Vos commandes apparaissent ici quand vous renseignez cet email au moment de commander."
+        />
       )}
       <ul className="mt-4 space-y-3">
         {(orders ?? []).map((order) => (
           <li
             key={order.id}
-            className="rounded-2xl border border-[var(--shop-text)]/10 bg-[var(--shop-bg)] p-4"
+            className="border border-[var(--shop-text)]/10 bg-[var(--shop-bg)] p-4"
+            style={{ borderRadius: 'var(--shop-radius)' }}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -176,14 +212,28 @@ export function AccountPage() {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-right text-sm font-bold text-[var(--shop-text)]">
-              Total {formatCurrency(Number(order.total), shop.currency)}
-            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              {shop.whatsapp_number ? (
+                <a
+                  href={`${whatsappHref(shop.whatsapp_number)}?text=${encodeURIComponent(`Bonjour, une question sur ma commande ${order.order_number}.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--shop-text)]/70 underline underline-offset-2 hover:text-[var(--shop-text)]"
+                >
+                  <MessageCircle size={13} aria-hidden /> Une question ? Écrire au vendeur
+                </a>
+              ) : (
+                <span />
+              )}
+              <p className="text-sm font-bold text-[var(--shop-text)]">
+                Total {formatCurrency(Number(order.total), shop.currency)}
+              </p>
+            </div>
           </li>
         ))}
       </ul>
       <Link
-        to="/catalogue"
+        to={vocab.catalogHref}
         className="mt-6 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2"
       >
         Continuer mes achats →

@@ -195,3 +195,19 @@ textarea:focus-visible {
   color: rgba(23, 21, 46, 0.35);
   pointer-events: none;
 }
+
+/* Images en fondu (voir FadeImage) : invisibles tant qu'elles ne sont pas chargées et décodées, puis fondu court.
+   La transition couvre aussi transform : les cartes gardent leur zoom au survol. */
+img[data-fade] {
+  transition:
+    opacity 0.35s ease,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+img[data-fade]:not([data-loaded]) {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  img[data-fade] {
+    transition: none;
+  }
+}

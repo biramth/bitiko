@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,17 +8,24 @@ import {
   Briefcase,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
   Globe,
   ImageIcon,
-  Info,
+  LayoutTemplate,
   Lock,
   Mail,
   MapPin,
   MessageCircle,
   Package,
+  Palette,
   Pencil,
   Phone,
   Scissors,
+  Shirt,
+  ShoppingBag,
+  ShoppingBasket,
+  Smartphone,
   Sparkles,
   Store,
   Truck,
@@ -29,12 +36,15 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
+import { TemplateThumbnail } from '@/features/store-builder/TemplateThumbnail'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
+import { listEnabledCountries } from '@/services/country.service'
+import { getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
 import { ensureReadableAccent } from '@/utils/color'
@@ -50,6 +60,9 @@ import {
 } from '@/features/onboarding/storeProfile'
 import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
+import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
+import { fetchBusinessCapabilities } from '@/services/businessType.service'
+import { fetchTemplateContents, fetchTemplateSlugsForTypeSlug, mergeDbTemplates, resolvePickerTemplates } from '@/services/template.service'
 import { slugify } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber, validatePhoneNumber } from '@/utils/phone'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -57,15 +70,47 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { trackEvent } from '@/lib/analytics'
+import { buttonClass } from '@/components/ui/styles'
 
-const STEPS = [
-  { number: 1, label: 'Tes infos' },
-  { number: 2, label: 'Boutique' },
-  { number: 3, label: 'Commerce' },
-  { number: 4, label: 'Détails' },
-  { number: 5, label: 'Logo' },
-  { number: 6, label: 'Récap' },
-] as const
+const STEPS: { number: number; label: string; icon: LucideIcon }[] = [
+  { number: 1, label: 'Activité', icon: Briefcase },
+  { number: 2, label: 'Offre', icon: ShoppingBag },
+  { number: 3, label: 'Vitrine', icon: Palette },
+  { number: 4, label: 'Coordonnées', icon: User },
+  { number: 5, label: 'Récap', icon: ClipboardCheck },
+]
+
+const STEP_SUBTITLES: Record<number, string> = {
+  1: 'Nom, page et contact — l’essentiel pour exister.',
+  2: 'Ce que tu proposes et comment tu vends.',
+  3: 'Style, description, logo : donne envie.',
+  4: 'Pour te joindre et lier ton compte.',
+  5: 'Un dernier coup d’œil avant le lancement.',
+}
+
+/** Compact step title: the step icon inline with the step name. */
+function StepHeader({ step }: { step: number }) {
+  const meta = STEPS[step - 1]
+  if (!meta) return null
+  const StepIcon = meta.icon
+  return (
+    <div>
+      <p className="flex items-center gap-2 font-heading text-base font-bold text-ink-900">
+        <StepIcon size={17} className="shrink-0 text-brand-600" aria-hidden />
+        {meta.label}
+      </p>
+      <p className="mt-0.5 text-xs text-gray-500">{STEP_SUBTITLES[step]}</p>
+    </div>
+  )
+}
+
+/** One icon per business vertical for the commerce picker cards. */
+const VERTICAL_ICONS: Record<string, LucideIcon> = {
+  mode: Shirt,
+  epicerie: ShoppingBasket,
+  beaute: Sparkles,
+  tech: Smartphone,
+}
 
 const fieldClass =
   'w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
@@ -95,7 +140,7 @@ function ChoicePills<T extends string>({
   onChange: (key: T) => void
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {options.map((option) => {
         const selected = value === option.key
         const Icon = option.icon
@@ -155,7 +200,7 @@ function ToggleTile({
 }
 
 export function OnboardingPage() {
-  usePageSeo({ title: 'Créer ta boutique — Bitiko', noindex: true })
+  usePageSeo({ title: 'Créer ton espace — Bitiko', noindex: true })
   const { user } = useAuth()
   const { data: existingShop, isLoading: shopLoading } = useMyShop()
   const { data: allShops } = useMyShops()
@@ -173,6 +218,15 @@ export function OnboardingPage() {
   const [lastName, setLastName] = useState('')
   const [personalPhone, setPersonalPhone] = useState('')
   const [personalAddress, setPersonalAddress] = useState('')
+  const [countryCode, setCountryCode] = useState('SN')
+
+  const { data: enabledCountries = [] } = useQuery({
+    queryKey: ['countries-enabled'],
+    queryFn: listEnabledCountries,
+  })
+  const country = getCountryPreset(countryCode)
+  const countryOptions: { code: string; name: string }[] =
+    enabledCountries.length > 0 ? enabledCountries : [{ code: country.code, name: country.name }]
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -181,13 +235,74 @@ export function OnboardingPage() {
   const [businessType, setBusinessType] = useState(availableVerticals()[0]?.key ?? '')
   const [templateId, setTemplateId] = useState(templatesForVertical(businessType)[0]?.key ?? STORE_TEMPLATES[0].key)
 
+  // Activity picker sourced from the DB referential (types with an active
+  // template), legacy hardcoded list as fail-open fallback.
+  const typeOptions = useBusinessTypeOptions()
+
+  // Template slugs + capabilities compatible with the chosen type (DB-driven,
+  // Template ≠ Business Type). Null = legacy fallback (fail-open).
+  const [compatSlugs, setCompatSlugs] = useState<string[] | null>(null)
+  const [typeCaps, setTypeCaps] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setCompatSlugs(null)
+    setTypeCaps(null)
+    Promise.all([fetchTemplateSlugsForTypeSlug(businessType), fetchBusinessCapabilities(businessType)])
+      .then(([slugs, caps]) => {
+        if (!active) return
+        setCompatSlugs(slugs)
+        setTypeCaps(caps)
+      })
+      .catch(() => {
+        if (!active) return
+        setCompatSlugs(null)
+        setTypeCaps(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [businessType])
+
+  // Surcharge sans déploiement (admin plateforme) — échec = catalogue code.
+  const { data: dbContents = [] } = useQuery({
+    queryKey: ['template-contents'],
+    queryFn: fetchTemplateContents,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+
+  const typeTemplates = mergeDbTemplates(resolvePickerTemplates(compatSlugs, businessType), dbContents)
+
+  // Quand la liste compatible arrive (ou change de type), le défaut suit le
+  // premier gabarit proposé au lieu de rester sur un choix périmé.
+  useEffect(() => {
+    if (typeTemplates.length > 0 && !typeTemplates.some((t) => t.key === templateId)) {
+      setTemplateId(typeTemplates[0]!.key)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compatSlugs, businessType, dbContents])
+
   const handleSelectVertical = (vertical: string) => {
     setBusinessType(vertical)
+    // Template defaults follow once compatSlugs reload (effect above); set an
+    // immediate legacy fallback so the choice never lags behind the click.
     const first = templatesForVertical(vertical)[0]
     if (first) setTemplateId(first.key)
   }
   const [profile, setProfile] = useState<StoreProfileAnswers>(EMPTY_STORE_PROFILE)
   const updateProfile = (patch: Partial<StoreProfileAnswers>) => setProfile((prev) => ({ ...prev, ...patch }))
+
+  // Sale toggles only make sense for types that sell/deliver — a coiffeur never
+  // sees "Livraison à domicile". Null (unknown) fails open to today's toggles.
+  const showToggle = (code: string) => typeCaps === null || typeCaps.includes(code)
+  const saleToggles: { icon: LucideIcon; checked: boolean; flip: () => void; label: string; cap: string }[] = [
+    { icon: Truck, checked: profile.homeDelivery, flip: () => updateProfile({ homeDelivery: !profile.homeDelivery }), label: 'Livraison à domicile', cap: 'HAS_DELIVERY' },
+    { icon: Banknote, checked: profile.payOnDelivery, flip: () => updateProfile({ payOnDelivery: !profile.payOnDelivery }), label: 'Paiement à la livraison', cap: 'HAS_ORDERS' },
+    { icon: Zap, checked: profile.expressDelivery, flip: () => updateProfile({ expressDelivery: !profile.expressDelivery }), label: 'Livraison express', cap: 'HAS_DELIVERY' },
+    { icon: Scissors, checked: profile.madeToOrder, flip: () => updateProfile({ madeToOrder: !profile.madeToOrder }), label: 'Préparé sur commande', cap: 'HAS_PRODUCTS' },
+  ].filter((t) => showToggle(t.cap))
   const updateFaq = (index: number, field: keyof StoreFaqItem, value: string) =>
     setProfile((prev) => ({
       ...prev,
@@ -258,11 +373,11 @@ export function OnboardingPage() {
         throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
       }
       const ownerId = freshUserData.user.id
-      const personalPhoneCheck = normalizePhoneNumber(personalPhone)
+      const personalPhoneCheck = normalizePhoneNumber(personalPhone, countryCode)
       if (!personalPhoneCheck.ok || !personalPhoneCheck.value) {
         throw new Error(PHONE_ERROR_MESSAGES[personalPhoneCheck.error ?? 'invalid_length'])
       }
-      const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+      const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
       if (!whatsappCheck.ok || !whatsappCheck.value) {
         throw new Error(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       }
@@ -271,19 +386,21 @@ export function OnboardingPage() {
         lastName,
         phone: personalPhoneCheck.value,
         address: personalAddress,
+        countryCode,
       })
       let shop = await createShop({
         ownerId,
         name: name.trim(),
         slug,
         whatsappNumber: whatsappCheck.value,
+        countryCode,
         templateId,
         profile,
         palette: logoPalette,
       })
       if (logoFile) {
-        const logoUrl = await uploadShopLogo(shop.id, logoFile)
-        shop = await updateShop(shop.id, { logo_url: logoUrl })
+        const { url, thumbUrl } = await uploadShopLogo(shop.id, logoFile)
+        shop = await updateShop(shop.id, { logo_url: url, logo_thumb_url: thumbUrl })
       }
       return shop
     },
@@ -297,7 +414,7 @@ export function OnboardingPage() {
       // The `tour` param makes the admin open the welcome guided tour once.
       navigate('/admin?tour=welcome', { replace: true })
     },
-    onError: (err: Error) => setError(err?.message || 'Impossible de créer la boutique. Réessayez.'),
+    onError: (err: Error) => setError(err?.message || 'Impossible de créer ton espace. Réessayez.'),
   })
 
   if (shopLoading || rolePending) return <PageLoader />
@@ -310,8 +427,8 @@ export function OnboardingPage() {
   if ((allShops?.length ?? 0) >= 5) return <Navigate to="/admin" replace />
   if (existingShop && !creatingAdditional) return <Navigate to="/admin" replace />
 
-  const selectedTemplate = STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
-  const selectedVertical = VERTICAL_BY_KEY[businessType]
+  const selectedTemplate = typeTemplates.find((template) => template.key === templateId) ?? STORE_TEMPLATES.find((template) => template.key === templateId) ?? STORE_TEMPLATES[0]
+  const selectedVertical = typeOptions.find((o) => o.key === businessType) ?? VERTICAL_BY_KEY[businessType]
   // The recap shows the color actually applied: a light logo color is deepened
   // so white text on it stays readable.
   const effectiveThemeColor = logoPalette?.primary
@@ -326,26 +443,25 @@ export function OnboardingPage() {
         ? 'checking'
         : availability
 
-  const step1Valid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone)
+  const infosValid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone, countryCode)
 
-  const step2Valid =
+  const boutiqueValid =
     name.trim().length > 0 &&
     (slugStatus === 'available' || slugStatus === 'error') &&
     !!slug &&
-    validatePhoneNumber(whatsappNumber)
+    validatePhoneNumber(whatsappNumber, countryCode)
 
-  const step3Valid = !!businessType && !!templateId
+  const commerceValid = !!businessType && !!templateId
 
-  const step4Valid = profile.description.trim().length > 0
+  const vitrineValid = profile.description.trim().length > 0
 
   const canGoNext =
-    (step === 1 && step1Valid) ||
-    (step === 2 && step2Valid) ||
-    (step === 3 && step3Valid) ||
-    (step === 4 && step4Valid) ||
-    step === 5
+    (step === 1 && boutiqueValid) ||
+    (step === 2 && commerceValid) ||
+    (step === 3 && vitrineValid) ||
+    (step === 4 && infosValid)
 
-  const canSubmit = step1Valid && step2Valid && step3Valid && step4Valid
+  const canSubmit = boutiqueValid && commerceValid && vitrineValid && infosValid
 
   const fullShopUrl = `https://${slug || '…'}.${DISPLAY_ROOT_DOMAIN}`
 
@@ -359,33 +475,44 @@ export function OnboardingPage() {
       <div className="relative w-full max-w-2xl rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8 lg:p-10">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <Logo size={40} withWordmark={false} />
-          <h1 className="font-heading text-xl font-bold text-ink-900">Créons ta boutique</h1>
+          <h1 className="font-heading text-xl font-bold text-ink-900">Créons ton espace</h1>
           <p className="max-w-md text-sm text-gray-500">
-            Quelques étapes rapides et ta boutique est prête.
+            Quelques étapes rapides et ton activité est en ligne.
           </p>
         </div>
 
-        <div className="mb-3 flex items-center justify-center">
-          {STEPS.map((s, i) => (
-            <div key={s.number} className="flex items-center">
-              <div
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  step === s.number
-                    ? 'bg-brand-600 text-white'
-                    : step > s.number
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 text-gray-400'
-                }`}
-              >
-                {step > s.number ? <Check size={14} className="text-white" /> : s.number}
+        <div className="mb-2 flex items-start justify-center">
+          {STEPS.map((s, i) => {
+            const StepIcon = s.icon
+            const done = step > s.number
+            const active = step === s.number
+            return (
+              <div key={s.number} className="flex items-start">
+                <div className="flex w-12 flex-col items-center gap-1 sm:w-16">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      active
+                        ? 'bg-brand-600 text-white'
+                        : done
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {done ? <Check size={14} className="text-white" /> : <StepIcon size={14} aria-hidden />}
+                  </div>
+                  <span
+                    className={`text-center text-[10px] font-medium leading-tight ${
+                      active ? 'text-ink-900' : done ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && <span className="mx-0.5 mt-4 h-px w-4 shrink-0 bg-gray-200 sm:w-8" />}
               </div>
-              {i < STEPS.length - 1 && <span className="mx-1 h-px w-4 shrink-0 bg-gray-200 sm:w-6" />}
-            </div>
-          ))}
+            )
+          })}
         </div>
-        <p className="mb-8 text-center text-xs font-medium text-gray-400">
-          Étape {step} sur {STEPS.length} — <span className="text-ink-900">{STEPS[step - 1]?.label}</span>
-        </p>
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
@@ -393,17 +520,15 @@ export function OnboardingPage() {
           onSubmit={(e) => {
             e.preventDefault()
             setError(null)
-            if (step === 6 && canSubmit) {
+            if (step === 5 && canSubmit) {
               mutation.mutate()
             }
           }}
           className="space-y-5"
         >
-          {step === 1 && (
+          {step === 4 && (
             <>
-              <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User size={15} className="text-gray-400" aria-hidden /> Tes coordonnées
-              </p>
+              <StepHeader step={4} />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -435,6 +560,30 @@ export function OnboardingPage() {
               </div>
 
               <div>
+                <label htmlFor="countryCode" className="block text-sm font-medium text-gray-700">
+                  Pays de ta boutique
+                </label>
+                <div className="relative mt-1">
+                  <Globe size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+                  <select
+                    id="countryCode"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className={fieldClass}
+                  >
+                    {countryOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Il définit le format des numéros et la devise de ta boutique.
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="personalPhone" className="block text-sm font-medium text-gray-700">
                   Téléphone personnel
                 </label>
@@ -446,13 +595,13 @@ export function OnboardingPage() {
                     type="tel"
                     value={personalPhone}
                     onChange={(e) => setPersonalPhone(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={fieldClass}
                   />
                 </div>
-                {personalPhone.trim() && !normalizePhoneNumber(personalPhone).ok ? (
+                {personalPhone.trim() && !normalizePhoneNumber(personalPhone, countryCode).ok ? (
                   <p className="mt-1 text-xs text-red-600">
-                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(personalPhone).error ?? 'invalid_length']}
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(personalPhone, countryCode).error ?? 'invalid_length']}
                   </p>
                 ) : (
                   <p className="mt-1 text-xs text-gray-500">
@@ -484,16 +633,17 @@ export function OnboardingPage() {
                   <Mail size={15} className="shrink-0 text-gray-400" aria-hidden />
                   <span className="truncate">{user?.email ?? '—'}</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Ce compte sera lié à ta boutique.</p>
+                <p className="mt-1 text-xs text-gray-500">Ce compte sera lié à ton espace.</p>
               </div>
             </>
           )}
 
-          {step === 2 && (
+          {step === 1 && (
             <>
+              <StepHeader step={1} />
               <div>
                 <label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
-                  Nom de ta boutique
+                  Nom de ton activité
                 </label>
                 <div className="relative mt-1">
                   <Store size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
@@ -514,7 +664,7 @@ export function OnboardingPage() {
 
               <div>
                 <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
-                  Adresse de ta boutique
+                  Adresse de ta page
                 </label>
                 <div className="mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors focus-within:border-brand-400">
                   <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs text-gray-500">
@@ -584,32 +734,31 @@ export function OnboardingPage() {
                     type="tel"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={fieldClass}
                   />
                 </div>
-                {whatsappNumber.trim() && !normalizePhoneNumber(whatsappNumber).ok ? (
+                {whatsappNumber.trim() && !normalizePhoneNumber(whatsappNumber, countryCode).ok ? (
                   <p className="mt-1 text-xs text-red-600">
-                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber).error ?? 'invalid_length']}
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber, countryCode).error ?? 'invalid_length']}
                   </p>
                 ) : (
-                  <p className="mt-1 text-xs text-gray-500">
-                    C'est ce numéro qui recevra les commandes. Il peut être différent de ton numéro personnel.
-                  </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  C'est ce numéro qui recevra commandes et réservations. Il peut être différent de ton numéro personnel.
+                </p>
                 )}
               </div>
             </>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <div className="space-y-5">
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Store size={15} className="text-gray-400" aria-hidden /> Quel type de commerce ?
-                </label>
+                <StepHeader step={2} />
                 <div className="mt-2 grid grid-cols-2 gap-2.5">
-                  {availableVerticals().map((vertical) => {
+                  {typeOptions.map((vertical) => {
                     const selected = businessType === vertical.key
+                    const VerticalIcon = VERTICAL_ICONS[vertical.key] ?? Store
                     return (
                       <button
                         key={vertical.key}
@@ -620,9 +769,12 @@ export function OnboardingPage() {
                           selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <span className="flex items-center justify-between">
-                          <span className="block text-sm font-semibold text-ink-900">{vertical.label}</span>
-                          {selected && <Check size={14} className="text-brand-700" aria-hidden />}
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <VerticalIcon size={16} className={`shrink-0 ${selected ? 'text-brand-700' : 'text-gray-400'}`} aria-hidden />
+                            <span className="block text-sm font-semibold text-ink-900">{vertical.label}</span>
+                          </span>
+                          {selected && <Check size={14} className="shrink-0 text-brand-700" aria-hidden />}
                         </span>
                         <span className="mt-0.5 block text-xs leading-snug text-gray-500">{vertical.description}</span>
                       </button>
@@ -630,26 +782,78 @@ export function OnboardingPage() {
                   })}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Le type de commerce définit la structure de ta boutique. Modifiable plus tard dans « Personnaliser ».
+                  Ton activité définit ton espace : boutique, rendez-vous, services. Modifiable plus tard dans « Personnaliser ».
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
+                {saleToggles.length > 0 ? (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {saleToggles.map((t) => (
+                      <ToggleTile
+                        key={t.label}
+                        icon={t.icon}
+                        checked={t.checked}
+                        onChange={t.flip}
+                        label={t.label}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Ce type d'activité ne passe ni par la livraison ni par le paiement à la livraison — tu pourras
+                    détailler ton offre à l'étape suivante.
+                  </p>
+                )}
               </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <div className="space-y-5">
               <div>
-                <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                  <Info size={15} className="text-gray-400" aria-hidden /> Ta boutique en détail
-                </p>
+                <StepHeader step={3} />
                 <p className="mt-1 text-xs text-gray-500">
                   Tes réponses servent à créer une vitrine qui te ressemble. Tu pourras tout modifier plus tard.
                 </p>
               </div>
 
               <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <LayoutTemplate size={15} className="text-gray-400" aria-hidden /> Quel style pour ton espace ?
+                </label>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {typeTemplates.map((template) => {
+                    const selected = templateId === template.key
+                    return (
+                      <button
+                        key={template.key}
+                        type="button"
+                        onClick={() => setTemplateId(template.key)}
+                        aria-pressed={selected}
+                        className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                          selected ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <TemplateThumbnail template={template} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <span className="block truncate text-sm font-semibold text-ink-900">{template.label}</span>
+                            {selected && <Check size={14} className="shrink-0 text-brand-700" aria-hidden />}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-snug text-gray-500">{template.description}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Modifiable à tout moment dans « Personnaliser ».</p>
+              </div>
+
+              <div>
                 <label htmlFor="shopDescription" className="block text-sm font-medium text-gray-700">
-                  Décris ta boutique en une phrase
+                  Décris ton activité en une phrase
                 </label>
                 <textarea
                   id="shopDescription"
@@ -664,7 +868,7 @@ export function OnboardingPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">À qui s'adresse ta boutique ?</label>
+                <label className="block text-sm font-medium text-gray-700">À qui t'adresses-tu ?</label>
                 <div className="mt-2">
                   <ChoicePills options={AUDIENCE_OPTIONS} value={profile.audience} onChange={(audience) => updateProfile({ audience })} />
                 </div>
@@ -677,36 +881,12 @@ export function OnboardingPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Comment vends-tu ?</label>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <ToggleTile
-                    icon={Truck}
-                    checked={profile.homeDelivery}
-                    onChange={(homeDelivery) => updateProfile({ homeDelivery })}
-                    label="Livraison à domicile"
-                  />
-                  <ToggleTile
-                    icon={Banknote}
-                    checked={profile.payOnDelivery}
-                    onChange={(payOnDelivery) => updateProfile({ payOnDelivery })}
-                    label="Paiement à la livraison"
-                  />
-                  <ToggleTile
-                    icon={Zap}
-                    checked={profile.expressDelivery}
-                    onChange={(expressDelivery) => updateProfile({ expressDelivery })}
-                    label="Livraison express"
-                  />
-                  <ToggleTile
-                    icon={Scissors}
-                    checked={profile.madeToOrder}
-                    onChange={(madeToOrder) => updateProfile({ madeToOrder })}
-                    label="Préparé sur commande"
-                  />
-                </div>
-              </div>
-
+              <details className="group rounded-xl border border-gray-200">
+                <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium text-gray-700">
+                  Aller plus loin (optionnel)
+                  <ChevronDown size={15} className="text-gray-400 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="space-y-5 border-t border-gray-100 px-4 py-4">
               <div>
                 <label htmlFor="story" className="block text-sm font-medium text-gray-700">
                   Parle de ton histoire (optionnel)
@@ -753,14 +933,16 @@ export function OnboardingPage() {
                   </p>
                 )}
               </div>
+                </div>
+              </details>
             </div>
           )}
 
-          {step === 5 && (
+          {step === 3 && (
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ta boutique
-              </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <ImageIcon size={15} className="text-gray-400" aria-hidden /> Logo de ton activité
+                </label>
               <p className="mt-1 text-xs text-gray-500">Optionnel — tu pourras l'ajouter plus tard dans Réglages.</p>
               <div className="mt-3 flex items-start gap-4">
                 <label className="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-brand-400 hover:bg-brand-50/30">
@@ -792,7 +974,7 @@ export function OnboardingPage() {
                             style={{ backgroundColor: logoPalette.secondary ?? undefined }}
                             aria-hidden
                           />
-                          Couleurs de la boutique mises à jour à partir de ton logo — modifiables plus tard.
+                          Couleurs de ton espace mises à jour à partir de ton logo — modifiables plus tard.
                         </p>
                       ) : (
                         <p className="mt-0.5 text-xs text-gray-500">Image prête à être utilisée.</p>
@@ -809,7 +991,7 @@ export function OnboardingPage() {
                     <p className="text-xs leading-relaxed text-gray-500">
                       Formats .png ou .jpg acceptés.<br />
                       Image carrée recommandée (256 × 256 px).<br />
-                      Sans logo, seul le nom de ta boutique est affiché.
+                      Sans logo, seul le nom de ton activité est affiché.
                     </p>
                   )}
                 </div>
@@ -817,49 +999,16 @@ export function OnboardingPage() {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 5 && (
             <div className="space-y-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <Users size={15} className="text-gray-400" aria-hidden /> Vérifie les informations avant de créer
-              </p>
+              <StepHeader step={5} />
 
               <div className="overflow-hidden rounded-xl border border-sand-200">
                 <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Tes coordonnées</p>
+                  <p className="text-sm font-semibold text-ink-900">Ton activité</p>
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    <Pencil size={12} aria-hidden /> Modifier
-                  </button>
-                </div>
-                <div className="space-y-2.5 px-4 py-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Nom et prénom</span>
-                    <span className="truncate text-right font-medium text-ink-900">
-                      {firstName.trim()} {lastName.trim()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Téléphone personnel</span>
-                    <span className="truncate text-right font-medium text-ink-900">{personalPhone}</span>
-                  </div>
-                  {personalAddress.trim() && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-500">Adresse</span>
-                      <span className="truncate text-right font-medium text-ink-900">{personalAddress.trim()}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-sand-200">
-                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ta boutique</p>
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
                     className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
                   >
                     <Pencil size={12} aria-hidden /> Modifier
@@ -878,9 +1027,65 @@ export function OnboardingPage() {
                     <span className="text-gray-500">WhatsApp</span>
                     <span className="truncate text-right font-medium text-ink-900">{whatsappNumber}</span>
                   </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ton offre</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Type de commerce</span>
+                    <span className="text-gray-500">Type d'activité</span>
                     <span className="truncate text-right font-medium text-ink-900">{selectedVertical?.label ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Ventes</span>
+                    <span className="text-right text-xs">
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {profile.homeDelivery && <Chip>Livraison à domicile</Chip>}
+                        {profile.payOnDelivery && <Chip>Paiement à la livraison</Chip>}
+                        {profile.expressDelivery && <Chip>Livraison express</Chip>}
+                        {profile.madeToOrder && <Chip>Sur commande</Chip>}
+                        {!profile.homeDelivery && !profile.payOnDelivery && !profile.expressDelivery && !profile.madeToOrder && (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Ta vitrine</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Description</span>
+                    <span className="truncate text-right font-medium text-ink-900">{profile.description.trim()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Clients</span>
+                    <span className="text-right font-medium text-ink-900">{AUDIENCE_LABELS[profile.audience]}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Positionnement</span>
+                    <span className="text-right font-medium text-ink-900">{PRICE_RANGE_LABELS[profile.priceRange]}</span>
                   </div>
                   {logoPalette?.primary && (
                     <div className="flex justify-between gap-4">
@@ -903,47 +1108,6 @@ export function OnboardingPage() {
                       <span className="text-right font-medium text-ink-900">Sans logo</span>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-sand-200">
-                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-ink-900">Ta boutique en détail</p>
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    <Pencil size={12} aria-hidden /> Modifier
-                  </button>
-                </div>
-                <div className="space-y-2.5 px-4 py-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Description</span>
-                    <span className="truncate text-right font-medium text-ink-900">{profile.description.trim()}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Clients</span>
-                    <span className="text-right font-medium text-ink-900">{AUDIENCE_LABELS[profile.audience]}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Positionnement</span>
-                    <span className="text-right font-medium text-ink-900">{PRICE_RANGE_LABELS[profile.priceRange]}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Ventes</span>
-                    <span className="text-right text-xs">
-                      <span className="flex flex-wrap justify-end gap-1">
-                        {profile.homeDelivery && <Chip>Livraison à domicile</Chip>}
-                        {profile.payOnDelivery && <Chip>Paiement à la livraison</Chip>}
-                        {profile.expressDelivery && <Chip>Livraison express</Chip>}
-                        {profile.madeToOrder && <Chip>Sur commande</Chip>}
-                        {!profile.homeDelivery && !profile.payOnDelivery && !profile.expressDelivery && !profile.madeToOrder && (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </span>
-                    </span>
-                  </div>
                   {profile.story.trim() && (
                     <div className="flex justify-between gap-4">
                       <span className="text-gray-500">Histoire</span>
@@ -956,6 +1120,41 @@ export function OnboardingPage() {
                       {completedFaqCount > 0 ? `${completedFaqCount} question${completedFaqCount > 1 ? 's' : ''}` : '—'}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-sand-200">
+                <div className="flex items-center justify-between bg-sand-50/70 px-4 py-2.5">
+                  <p className="text-sm font-semibold text-ink-900">Tes coordonnées</p>
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil size={12} aria-hidden /> Modifier
+                  </button>
+                </div>
+                <div className="space-y-2.5 px-4 py-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Nom et prénom</span>
+                    <span className="truncate text-right font-medium text-ink-900">
+                      {firstName.trim()} {lastName.trim()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Téléphone personnel</span>
+                    <span className="truncate text-right font-medium text-ink-900">{personalPhone}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Pays</span>
+                    <span className="truncate text-right font-medium text-ink-900">{country.name}</span>
+                  </div>
+                  {personalAddress.trim() && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500">Adresse</span>
+                      <span className="truncate text-right font-medium text-ink-900">{personalAddress.trim()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -977,9 +1176,9 @@ export function OnboardingPage() {
               </button>
             )}
 
-            {step < 6 && <div className="flex-1" />}
+            {step < 5 && <div className="flex-1" />}
 
-            {step < 6 ? (
+            {step < 5 ? (
               <button
                 type="button"
                 disabled={!canGoNext}
@@ -987,7 +1186,7 @@ export function OnboardingPage() {
                   setError(null)
                   setStep((s) => s + 1)
                 }}
-                className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClass({ size: 'lg', className: 'shrink-0' })}
               >
                 Suivant <ArrowRight size={15} aria-hidden />
               </button>
@@ -1001,7 +1200,7 @@ export function OnboardingPage() {
                 }}
                 className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {mutation.isPending ? 'Création…' : 'Confirmer et créer ma boutique'}
+                {mutation.isPending ? 'Création…' : 'Confirmer et créer mon espace'}
               </button>
             )}
           </div>

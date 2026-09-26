@@ -5,6 +5,7 @@ import { readableTextColor } from '@/features/categories/categoryTile'
 import type { Shop } from '@/types'
 import type { CategoriesSectionConfig, CategoriesLayout, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { thumbSrcSet } from '@/utils/image'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useInlineEdit } from '../inline/useInlineEdit'
@@ -13,6 +14,7 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const TILE_THEMES = [
   'bg-[var(--shop-tertiary-button)] text-[var(--shop-tertiary-button-text)]',
@@ -100,11 +102,13 @@ export function CategoriesRenderer({ shop, config, themeConfig, sectionId, edita
               }}
             >
               {category.image_url && (
-                <img
-                  src={category.image_url}
+                <FadeImage
+                  src={category.thumb_url ?? category.image_url}
                   alt=""
                   loading="lazy"
                   decoding="async"
+                  srcSet={thumbSrcSet(category.thumb_url, category.image_url)}
+                  sizes="(max-width: 640px) 70vw, 25vw"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               )}

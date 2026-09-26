@@ -5,6 +5,9 @@ import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
+import { sanitizeSections, sectionVisibleWithRegistry } from '@/features/store-builder/sanitizeSections'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { StoreNotFoundPage } from './StoreNotFoundPage'
 import type { StorePage } from '@/types/pages'
@@ -20,6 +23,8 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   const slug = pageSlug ? pageSlug.replace(/^pages\//, '').replace(/\/+$/, '') : routeSlug
   const { shop } = useTenant()
   const isDraftPreview = useIsDraftPreview()
+  const capabilities = useStorefrontCapabilities(shop)
+  const vocab = getStorefrontVocabulary(capabilities)
 
   // Keyed by slug so "loading" can be derived during render (comparing the
   // last-resolved slug against the current one) instead of toggled with a
@@ -62,8 +67,8 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   }, [isDraftPreview])
 
   usePageSeo({
-    title: page ? `${page.title} — ${shop?.name ?? 'Boutique'}` : (shop?.name ? `${shop.name} — Boutique en ligne` : 'Boutique en ligne'),
-    description: page?.seo_description ?? page?.seo_title ?? shop?.description ?? undefined,
+    title: page ? `${page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
+    description: page?.seo_description ?? shop?.description ?? undefined,
     siteName: shop?.name,
   })
 
@@ -87,11 +92,12 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   return (
     <div className="mx-auto py-6">
       <h1 className="sr-only">{page?.title}</h1>
-      {sections.map((section) => {
+      {sanitizeSections(sections).map((section) => {
         const def = registry[section.type]
         const Renderer = def?.Renderer
         if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
+        if (!sectionVisibleWithRegistry(section, def.capabilities, capabilities)) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>
         return (

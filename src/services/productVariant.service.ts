@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
-import { compressImageFile } from '@/utils/image'
+import { compressImageFile, makeThumbFile } from '@/utils/image'
 import type { ProductVariant } from '@/types'
 
 export type VariantInput = Pick<
@@ -7,6 +7,7 @@ export type VariantInput = Pick<
   'product_id' | 'name' | 'sku' | 'price' | 'stock' | 'active' | 'sort_order'
 > & {
   image_url?: string | null
+  thumb_url?: string | null
 }
 
 export async function listVariants(productId: string): Promise<ProductVariant[]> {
@@ -66,22 +67,37 @@ export async function uploadVariantImage(
 ): Promise<ProductVariant> {
   const optimized = await compressImageFile(file)
   const ext = optimized.name.split('.').pop()
-  const path = `${productId}/variants/${crypto.randomUUID()}.${ext}`
+  const id = crypto.randomUUID()
+  const path = `${productId}/variants/${id}.${ext}`
+  const thumb = await makeThumbFile(file)
+  const thumbPath = thumb ? `${productId}/variants/${id}-thumb.webp` : null
 
-  const { error: uploadError } = await supabase.storage
-    .from(VARIANT_IMAGE_BUCKET)
-    .upload(path, optimized, { cacheControl: '3600', upsert: false })
-  if (uploadError) throw uploadError
+  // UUID paths are immutable: 1-year browser/CDN cache.
+  const [{ error: fullError }, { error: thumbError }] = await Promise.all([
+    supabase.storage
+      .from(VARIANT_IMAGE_BUCKET)
+      .upload(path, optimized, { cacheControl: '31536000', upsert: false }),
+    thumb && thumbPath
+      ? supabase.storage
+          .from(VARIANT_IMAGE_BUCKET)
+          .upload(thumbPath, thumb, { cacheControl: '31536000', upsert: false })
+      : Promise.resolve({ error: null }),
+  ])
+  if (fullError) throw fullError
+  if (thumbError) throw thumbError
 
   const { data: publicUrlData } = supabase.storage
     .from(VARIANT_IMAGE_BUCKET)
     .getPublicUrl(path)
+  const thumbUrl = thumbPath
+    ? supabase.storage.from(VARIANT_IMAGE_BUCKET).getPublicUrl(thumbPath).data.publicUrl
+    : null
 
-  return updateVariant(variantId, { image_url: publicUrlData.publicUrl })
+  return updateVariant(variantId, { image_url: publicUrlData.publicUrl, thumb_url: thumbUrl })
 }
 
 /** Clears a variant's photo (the storage object is left in place — the copy
  *  in Storage is cheap; removing it would require tracking the storage path). */
 export async function clearVariantImage(variantId: string): Promise<void> {
-  await updateVariant(variantId, { image_url: null })
+  await updateVariant(variantId, { image_url: null, thumb_url: null })
 }

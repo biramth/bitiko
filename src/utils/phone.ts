@@ -1,5 +1,5 @@
 /**
- * Senegalese phone number normalization/validation.
+ * Country-aware phone number normalization/validation (Sénégal par défaut).
  *
  * Users type numbers in many shapes ("77 123 45 67", "77-123-45-67",
  * "771234567", "+221 77 123 45 67", "00221 77 123 45 67"...). Everything
@@ -9,76 +9,98 @@
  *   storage format  -> "+221771234567"
  *   display format  -> "+221 77 123 45 67"
  *
- * Mirrored server-side by `public.normalize_sn_phone()` (see
- * supabase/migrations/0054_normalize_phone_numbers.sql), which is the
- * backstop for writes that don't go through this frontend code.
+ * Local formats are read in the shop's country (`countryCode`, default SN)
+ * using the presets of src/config/countries.ts — the client mirror of the
+ * `countries` table. Mirrored server-side by `public.normalize_phone()`
+ * (supabase/migrations/0128_countries_and_generic_phones.sql), the backstop
+ * for writes that don't go through this frontend code.
  */
-
-const COUNTRY_CODE = '221'
-const NATIONAL_LENGTH = 9
-// Senegalese numbers start with 3 (fixed line) or 7 (mobile).
-const NATIONAL_RE = /^[37]\d{8}$/
+import { COUNTRY_PRESETS, DEFAULT_COUNTRY_CODE, getCountryPreset } from '@/config/countries'
 
 export type PhoneErrorCode = 'empty' | 'invalid_characters' | 'invalid_length' | 'invalid_prefix'
 
 export interface PhoneNormalizationResult {
   ok: boolean
-  /** Canonical "+221XXXXXXXXX" form, or null when normalization failed. */
+  /** Canonical "+<indicatif><numéro national>" form, or null when normalization failed. */
   value: string | null
   error?: PhoneErrorCode
 }
 
-export function normalizePhoneNumber(input: string): PhoneNormalizationResult {
-  if (!input || !input.trim()) {
-    return { ok: false, value: null, error: 'empty' }
-  }
+const fail = (error: PhoneErrorCode): PhoneNormalizationResult => ({ ok: false, value: null, error })
+
+export function normalizePhoneNumber(input: string, countryCode: string = DEFAULT_COUNTRY_CODE): PhoneNormalizationResult {
+  if (!input || !input.trim()) return fail('empty')
+
+  const country = getCountryPreset(countryCode)
+  const dial = country.dialCode.replace('+', '')
+  const nationalRe = new RegExp(country.nationalRegex)
 
   // Drop spaces, dots, dashes and parentheses; "00" prefix means "+".
   let cleaned = input.trim().replace(/[\s.\-()]/g, '')
-  if (cleaned.startsWith('00')) {
-    cleaned = `+${cleaned.slice(2)}`
-  }
+  if (cleaned.startsWith('00')) cleaned = `+${cleaned.slice(2)}`
 
   const hasPlus = cleaned.startsWith('+')
-  const rest = hasPlus ? cleaned.slice(1) : cleaned
-  if (!/^\d+$/.test(rest)) {
-    return { ok: false, value: null, error: 'invalid_characters' }
-  }
+  const digits = hasPlus ? cleaned.slice(1) : cleaned
+  if (!/^\d+$/.test(digits)) return fail('invalid_characters')
 
   let national: string
-  if (rest.startsWith(COUNTRY_CODE) && rest.length === COUNTRY_CODE.length + NATIONAL_LENGTH) {
-    national = rest.slice(COUNTRY_CODE.length)
-  } else if (!hasPlus && rest.length === NATIONAL_LENGTH + 1 && rest.startsWith('0')) {
-    // Local habit of dialling with a leading trunk "0" (not part of the plan).
-    national = rest.slice(1)
-  } else if (!hasPlus && rest.length === NATIONAL_LENGTH) {
-    national = rest
+  if (hasPlus) {
+    if (!digits.startsWith(dial) || digits.length !== dial.length + country.nationalNumberLength) {
+      return fail('invalid_length')
+    }
+    national = digits.slice(dial.length)
+  } else if (digits.startsWith(country.trunkPrefix) && digits.length === country.nationalNumberLength + 1) {
+    // Local habit of dialling with a leading trunk prefix (not part of the plan).
+    national = digits.slice(1)
+  } else if (digits.length === country.nationalNumberLength) {
+    national = digits
+  } else if (
+    digits.startsWith(dial) &&
+    digits.length === dial.length + country.nationalNumberLength &&
+    nationalRe.test(digits.slice(dial.length))
+  ) {
+    // Full international number typed without the "+", e.g. "221771234567".
+    national = digits.slice(dial.length)
   } else {
-    return { ok: false, value: null, error: 'invalid_length' }
+    return fail('invalid_length')
   }
 
-  if (!NATIONAL_RE.test(national)) {
-    return { ok: false, value: null, error: 'invalid_prefix' }
+  if (!nationalRe.test(national)) return fail('invalid_prefix')
+  return { ok: true, value: `${country.dialCode}${national}` }
+}
+
+export function validatePhoneNumber(input: string, countryCode: string = DEFAULT_COUNTRY_CODE): boolean {
+  return normalizePhoneNumber(input, countryCode).ok
+}
+
+/** Message d'erreur affichable, ou null quand le numéro est valide pour le pays. */
+export function validatePhoneInput(input: string, countryCode: string = DEFAULT_COUNTRY_CODE): string | null {
+  if (!input.trim()) return PHONE_ERROR_MESSAGES.empty
+  const result = normalizePhoneNumber(input, countryCode)
+  if (result.ok) return null
+  const country = getCountryPreset(countryCode)
+  if (result.error === 'invalid_length' || result.error === 'invalid_prefix') {
+    return `Numéro invalide pour ${country.name} : ${country.dialCode} suivi de ${country.nationalNumberLength} chiffres.`
   }
-
-  return { ok: true, value: `+${COUNTRY_CODE}${national}` }
+  return PHONE_ERROR_MESSAGES[result.error ?? 'invalid_length']
 }
 
-export function validatePhoneNumber(input: string): boolean {
-  return normalizePhoneNumber(input).ok
-}
-
-/** Formats a canonical "+221XXXXXXXXX" number for display: "+221 XX XXX XX XX". */
+/** Formats a canonical number for display: "+221 77 123 45 67", "+225 07 12 34 56"… */
 export function formatPhoneNumberForDisplay(canonical: string): string {
   const match = /^\+221([37]\d{8})$/.exec(canonical)
-  if (!match) return canonical
-  const n = match[1]
-  return `+221 ${n.slice(0, 2)} ${n.slice(2, 5)} ${n.slice(5, 7)} ${n.slice(7, 9)}`
+  if (match) {
+    const n = match[1]
+    return `+221 ${n.slice(0, 2)} ${n.slice(2, 5)} ${n.slice(5, 7)} ${n.slice(7, 9)}`
+  }
+  const country = COUNTRY_PRESETS.find((c) => canonical.startsWith(c.dialCode) && canonical.length === c.dialCode.length + c.nationalNumberLength)
+  if (!country) return canonical
+  const national = canonical.slice(country.dialCode.length)
+  return `${country.dialCode} ${national.replace(/(\d{2})(?=\d)/g, '$1 ').trim()}`
 }
 
 export const PHONE_ERROR_MESSAGES: Record<PhoneErrorCode, string> = {
   empty: 'Le numéro de téléphone est requis.',
   invalid_characters: 'Le numéro ne doit contenir que des chiffres (espaces et tirets acceptés).',
-  invalid_length: 'Le numéro doit comporter 9 chiffres (ex. 77 123 45 67).',
-  invalid_prefix: 'Numéro sénégalais invalide : il doit commencer par 7 (mobile) ou 3 (fixe).',
+  invalid_length: 'Numéro invalide : vérifiez le nombre de chiffres (ex. 77 123 45 67).',
+  invalid_prefix: 'Numéro invalide : le début du numéro ne correspond pas au pays.',
 }

@@ -26,10 +26,15 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { getImpersonation } from '@/lib/supportSession'
-import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY, availableVerticals } from '@/config/storeTemplates'
+import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
+import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
+import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
+import { listEnabledCountries } from '@/services/country.service'
+import { getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { deleteAccount } from '@/services/account.service'
 import { BillingForShop } from './BillingPage'
 import { TeamSection } from '@/features/shop-settings/TeamSection'
@@ -55,6 +60,7 @@ import { Lock } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { DeliverySecteur } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD', 'GBP', 'CAD']
 
@@ -69,7 +75,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { key: 'facturation', label: 'Facturation', icon: CreditCard },
-  { key: 'equipe', label: 'Équipe', icon: Users },
+  { key: 'equipe', label: 'Accès collaborateurs', icon: Users },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -263,7 +269,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={nameStatus === 'saving' || !fullName.trim() || !nameDirty}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {nameStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
             </button>
@@ -297,7 +303,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={emailStatus === 'saving' || !email.trim() || email.trim() === user?.email}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {emailStatus === 'saving' ? 'Envoi…' : "Changer l'e-mail"}
             </button>
@@ -351,7 +357,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={passwordStatus === 'saving' || !newPassword || !confirmPassword}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {passwordStatus === 'saving' ? 'Enregistrement…' : hasPassword ? 'Changer le mot de passe' : 'Ajouter un mot de passe'}
             </button>
@@ -427,10 +433,21 @@ export function SettingsPage() {
   const { data: shop, isLoading } = useMyShop()
   const { section: sectionParam } = useParams<{ section: string }>()
   const { role: shopRole, isLoading: roleLoading } = useShopRole()
+  const { capabilities } = useWorkspaceModules()
 
   if (isLoading || roleLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!SECTIONS.some((s) => s.key === sectionParam)) {
+    return <Navigate to="/admin/parametres/general" replace />
+  }
+  // Livraison & stock n'existe que pour les métiers qui livrent ou vendent
+  // (masqué de la nav le cas échéant — garde-fou anti lien direct).
+  if (
+    sectionParam === 'shipping' &&
+    capabilities !== null &&
+    !capabilities.has('HAS_DELIVERY') &&
+    !capabilities.has('HAS_PRODUCTS')
+  ) {
     return <Navigate to="/admin/parametres/general" replace />
   }
   // Billing + team are owner-only (also hidden from the nav for staff).
@@ -467,13 +484,18 @@ function SettingsForm({
   const [name, setName] = useState(shop.name)
   const [description, setDescription] = useState(shop.description ?? '')
   const [businessType, setBusinessType] = useState(shop.business_type ?? '')
+  // Activity picker sourced from the DB referential, legacy list as fallback.
+  const typeOptions = useBusinessTypeOptions()
   const [whatsappNumber, setWhatsappNumber] = useState(shop.whatsapp_number)
   const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
+  const [countryCode, setCountryCode] = useState(shop.country_code ?? 'SN')
   const [currency, setCurrency] = useState(shop.currency)
   const [address, setAddress] = useState(shop.address ?? '')
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(shop.social_links ?? {})
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url)
+  const [logoThumbUrl, setLogoThumbUrl] = useState<string | null>(shop.logo_thumb_url ?? null)
   const [bannerUrl, setBannerUrl] = useState<string | null>(shop.banner_url)
+  const [bannerThumbUrl, setBannerThumbUrl] = useState<string | null>(shop.banner_thumb_url ?? null)
   const [themeColor, setThemeColor] = useState(shop.theme_color)
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(
     shop.free_delivery_threshold != null ? String(Number(shop.free_delivery_threshold)) : '',
@@ -485,6 +507,17 @@ function SettingsForm({
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { data: enabledCountries = [] } = useQuery({
+    queryKey: ['countries-enabled'],
+    queryFn: listEnabledCountries,
+  })
+  const country = getCountryPreset(countryCode)
+  const countryOptions: { code: string; name: string }[] = enabledCountries.map((c) => ({ code: c.code, name: c.name }))
+  if (!countryOptions.some((c) => c.code === countryCode)) {
+    // A shop may still sit on a country that got disabled — keep it selectable/editable.
+    countryOptions.unshift({ code: country.code, name: country.name })
+  }
+
   // Tracks whether the form actually differs from what's saved, so
   // "Enregistrer" stops looking clickable once there's nothing to save —
   // it used to stay enabled at all times, inviting no-op saves.
@@ -495,11 +528,14 @@ function SettingsForm({
       businessType,
       whatsappNumber,
       paymentInstructions,
+      countryCode,
       currency,
       address,
       socialLinks,
       logoUrl,
+      logoThumbUrl,
       bannerUrl,
+      bannerThumbUrl,
       themeColor,
       freeDeliveryThreshold,
       lowStockThreshold,
@@ -648,8 +684,8 @@ function SettingsForm({
   })
 
   const saveMutation = useMutation({
-    mutationFn: () => {
-      const phone = normalizePhoneNumber(whatsappNumber)
+    mutationFn: async () => {
+      const phone = normalizePhoneNumber(whatsappNumber, countryCode)
       if (!phone.ok || !phone.value) {
         throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       }
@@ -661,12 +697,16 @@ function SettingsForm({
         }
         threshold = parsed.value
       }
+      // Keep the referential FK in sync with the TEXT column (best-effort).
+      const businessTypeId = await resolveBusinessTypeId(businessType || null)
       return updateShop(shop.id, {
         name: name.trim(),
         description: description.trim() || null,
         business_type: businessType || null,
+        ...(businessTypeId ? { business_type_id: businessTypeId } : {}),
         whatsapp_number: phone.value,
         payment_instructions: paymentInstructions.trim() || null,
+        country_code: countryCode,
         currency: normalizeCurrency(currency),
         address: address.trim() || null,
         social_links: Object.fromEntries(
@@ -675,7 +715,9 @@ function SettingsForm({
             .filter(([, url]) => url),
         ),
         logo_url: logoUrl,
+        logo_thumb_url: logoThumbUrl,
         banner_url: bannerUrl,
+        banner_thumb_url: bannerThumbUrl,
         theme_color: themeColor,
         free_delivery_threshold: threshold,
         low_stock_threshold: Number(lowStockThreshold) || 0,
@@ -704,7 +746,7 @@ function SettingsForm({
       navigate('/admin/parametres/general')
       return
     }
-    const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+    const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
     if (!whatsappCheck.ok) {
       setError(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       navigate('/admin/parametres/contact')
@@ -737,8 +779,9 @@ function SettingsForm({
     setUploadingLogo(true)
     setError(null)
     try {
-      const url = await uploadShopLogo(shop.id, file)
+      const { url, thumbUrl } = await uploadShopLogo(shop.id, file)
       setLogoUrl(url)
+      setLogoThumbUrl(thumbUrl)
       // Recalcul silencieux des couleurs depuis le logo : un accent lisible
       // (assombri jusqu'à ce qu'un texte blanc tienne dessus) et une teinte
       // secondaire pastel, en préservant les choix déjà faits dans
@@ -771,8 +814,9 @@ function SettingsForm({
     setUploadingBanner(true)
     setError(null)
     try {
-      const url = await uploadShopBanner(shop.id, file)
+      const { url, thumbUrl } = await uploadShopBanner(shop.id, file)
       setBannerUrl(url)
+      setBannerThumbUrl(thumbUrl)
     } catch {
       setError("Échec de l'envoi de la bannière.")
     } finally {
@@ -849,8 +893,8 @@ function SettingsForm({
                   className={inputClass}
                 >
                   <option value="">Non renseigné</option>
-                  {availableVerticals().map((vertical) => (
-                    <option key={vertical.key} value={vertical.key}>{vertical.label}</option>
+                  {typeOptions.map((option) => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-gray-500">
@@ -911,7 +955,10 @@ function SettingsForm({
                   {logoUrl && (
                     <button
                       type="button"
-                      onClick={() => setLogoUrl(null)}
+                      onClick={() => {
+                        setLogoUrl(null)
+                        setLogoThumbUrl(null)
+                      }}
                       className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <Trash2 size={14} /> Retirer
@@ -955,7 +1002,10 @@ function SettingsForm({
                   {bannerUrl && (
                     <button
                       type="button"
-                      onClick={() => setBannerUrl(null)}
+                      onClick={() => {
+                        setBannerUrl(null)
+                        setBannerThumbUrl(null)
+                      }}
                       className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <Trash2 size={14} /> Retirer
@@ -1011,6 +1061,34 @@ function SettingsForm({
           {section === 'contact' && (
             <Card icon={Phone} title="Contact & devise" description="Comment vos clients vous joignent et paient.">
               <div>
+                <label htmlFor="countryCode" className="block text-sm font-medium text-gray-700">
+                  Pays
+                </label>
+                <select
+                  id="countryCode"
+                  value={countryCode}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setCountryCode(next)
+                    const preset = getCountryPreset(next)
+                    if (currency.trim() === '' || currency === country.currencyCode) {
+                      setCurrency(preset.currencyCode)
+                    }
+                  }}
+                  className={inputClass}
+                >
+                  {countryOptions.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Définit le format des numéros acceptés sur vos pages. La devise suit automatiquement (modifiable ci-dessous).
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700">
                   Numéro WhatsApp
                 </label>
@@ -1022,7 +1100,7 @@ function SettingsForm({
                     required
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={inputClass}
                   />
                   {whatsappNumber.replace(/[^0-9]/g, '') && (

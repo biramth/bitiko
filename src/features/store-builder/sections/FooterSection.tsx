@@ -3,14 +3,29 @@ import { MapPin, MessageCircle, Store } from 'lucide-react'
 import type { Shop } from '@/types'
 import type { FooterSectionConfig } from '@/types/builder'
 import { Logo } from '@/components/ui/Logo'
-import { SocialIcon, socialLabel } from '@/components/ui/SocialIcon'
+import { SocialIcon } from '@/components/ui/SocialIcon'
 import { resolveTextStyle } from '@/config/textStyle'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
+import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 import { ensureReadableAccent } from '@/utils/color'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
+
+/** Accessible name for a storefront social link. Lives next to its only
+ *  caller (not exported) so the shared icon file stays components-only. */
+function socialLabel(platform: string): string {
+  return (
+    {
+      facebook: 'Facebook',
+      instagram: 'Instagram',
+      tiktok: 'TikTok',
+      x: 'X (Twitter)',
+    } as Record<string, string>
+  )[platform] ?? platform
+}
 
 /** The storefront footer. Lives here (not inline in StoreLayout) so it has the
  *  same Renderer/Editor split as every other section, and can switch between
@@ -32,6 +47,7 @@ export function FooterRenderer({
   editable: boolean
 }) {
   const patch = useInlineEdit(sectionId)
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const layout = footer.layout ?? 'columns'
   const shopName = shop?.name ?? 'Boutique'
   // Unset, the footer's background derives from the shop's own primary color
@@ -47,7 +63,7 @@ export function FooterRenderer({
   const brandMark = (
     <div className="flex items-center gap-2.5 text-lg font-bold" style={{ fontFamily: 'var(--shop-font-heading)' }}>
       {shop?.logo_url ? (
-        <img src={shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
+        <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : (
         <Store size={20} aria-hidden />
       )}
@@ -99,11 +115,11 @@ export function FooterRenderer({
 
   const catalogueCta = (
     <Link
-      to="/catalogue"
+      to={vocab.booking?.href ?? vocab.catalogHref}
       style={{ borderRadius: 'var(--shop-radius)' }}
       className="inline-flex items-center gap-1.5 bg-[var(--footer-button)] px-4 py-2 text-sm font-semibold text-[var(--footer-button-text)] transition-opacity hover:opacity-90"
     >
-      Voir tout le catalogue →
+      {vocab.booking ? vocab.booking.label : catalogCtaLabel(vocab)} →
     </Link>
   )
 

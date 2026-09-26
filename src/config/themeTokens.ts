@@ -40,11 +40,16 @@ export function themeConfigToCssVars(themeColor: string, config: ThemeConfig): R
   const font = FONT_CSS[config.font] ?? FONT_CSS['sora-inter']
   const textColor = config.textColor || DEFAULT_THEME_CONFIG.textColor
   const accent = themeColor || '#d9612e'
+  const background = config.backgroundColor || DEFAULT_THEME_CONFIG.backgroundColor
   return {
     '--shop-accent': accent,
     '--shop-secondary': config.secondaryColor || DEFAULT_THEME_CONFIG.secondaryColor,
     '--shop-text': textColor,
-    '--shop-bg': config.backgroundColor || DEFAULT_THEME_CONFIG.backgroundColor,
+    '--shop-bg': background,
+    // Cartes (prestations, équipe…) : un voile du texte sur le fond et un
+    // filet du texte, donc lisibles aussi bien en clair qu'en thème sombre.
+    '--shop-surface': `color-mix(in srgb, ${textColor} 4%, ${background})`,
+    '--shop-border': `color-mix(in srgb, ${textColor} 12%, transparent)`,
     '--shop-button': config.buttonColor || accent,
     '--shop-button-text': config.buttonTextColor || '#ffffff',
     '--shop-secondary-button': config.secondaryButtonColor || 'transparent',

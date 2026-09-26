@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, Eye, History, Pencil, Save, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { templatesForVertical } from '@/config/storeTemplates'
+import { fetchCompatibleTemplateSlugs, fetchTemplateContents, mergeDbTemplates, resolvePickerTemplates } from '@/services/template.service'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
+import { TemplateThumbnail } from '@/features/store-builder/TemplateThumbnail'
+import { resolveTemplateVariant } from '@/types/builder'
 import {
   createSavedTheme,
   deleteSavedTheme,
@@ -19,16 +21,8 @@ import type { Shop } from '@/types'
 import type { SavedTheme } from '@/types/savedTheme'
 import type { PublishHistoryEntry } from '@/types/publishHistory'
 import { SYSTEM_TEMPLATE_KEYS, type StoreTemplate } from '@/types/builder'
-
-/** Marks a `StoreTemplate` synthesized from a merchant's own saved theme or
- *  a past publish (see `savedThemeToTemplate`/`historyEntryToTemplate`)
- *  rather than one of the built-in per-vertical templates — applying one
- *  must skip onboarding-profile personalization and never overwrite the
- *  shop's vertical (see StoreBuilderPage's buildTarget). */
-export const SAVED_THEME_KEY_PREFIX = 'saved:'
-export const HISTORY_KEY_PREFIX = 'history:'
-export const isSavedThemeKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX)
-export const isRestoredDesignKey = (key: string) => key.startsWith(SAVED_THEME_KEY_PREFIX) || key.startsWith(HISTORY_KEY_PREFIX)
+import { HISTORY_KEY_PREFIX, SAVED_THEME_KEY_PREFIX } from './templateKeys'
+import { controlClass } from '@/components/ui/styles'
 
 /** What "the current design" means for saving a personal style: the shop's
  *  live, published design — not an in-progress unsaved draft, which the
@@ -45,6 +39,41 @@ function currentPublishedSnapshot(shop: Shop) {
 }
 
 const historyDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+/** One look of a template: two-color dot + label. Clicking previews it live. */
+function VariantSwatch({
+  active,
+  swatch,
+  label,
+  title,
+  onSelect,
+}: {
+  active: boolean
+  swatch: [string, string]
+  label: string
+  title?: string
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      title={title}
+      aria-pressed={active}
+      className={`flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs font-medium transition-colors ${
+        active
+          ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500'
+          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      <span className="flex h-4 w-7 overflow-hidden rounded-full border border-black/10" aria-hidden>
+        <span className="h-full w-1/2" style={{ backgroundColor: swatch[0] }} />
+        <span className="h-full w-1/2" style={{ backgroundColor: swatch[1] }} />
+      </span>
+      {label}
+    </button>
+  )
+}
 
 function historyEntryToTemplate(entry: PublishHistoryEntry, businessType: string | null): StoreTemplate {
   return {
@@ -84,41 +113,6 @@ function savedThemeToTemplate(theme: SavedTheme, businessType: string | null): S
       not_found: theme.templates.not_found,
     },
   }
-}
-
-/** A tiny CSS-only storefront mockup so a template reads as "a real shop", not a color swatch.
- *  Uses the template's home layout to pick the mockup composition. */
-function TemplateThumbnail({ template }: { template: StoreTemplate }) {
-  const [accent, secondary] = template.swatch
-  const hasCategories = template.layout.home.some((s) => s.type === 'categories')
-
-  return (
-    <div
-      className="h-16 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white"
-      style={{ fontFamily: template.themeConfig.font === 'inter' ? 'Inter, sans-serif' : undefined }}
-    >
-      <div className="flex h-2.5 items-center justify-between bg-white px-1.5">
-        <span className="h-1 w-3 rounded-full" style={{ backgroundColor: template.themeColor }} />
-        <span className="h-1 w-1 rounded-full bg-gray-300" />
-      </div>
-      <div className="h-5 w-full" style={{ background: `linear-gradient(135deg, ${accent}, ${secondary})` }} />
-      <div className="flex gap-1 p-1.5">
-        {hasCategories ? (
-          <>
-            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: template.themeColor }} />
-            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: secondary }} />
-            <span className="h-6 flex-1 rounded-sm" style={{ backgroundColor: template.themeConfig.textColor, opacity: 0.15 }} />
-          </>
-        ) : (
-          <>
-            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
-            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
-            <span className="h-6 flex-1 rounded-sm bg-gray-100" />
-          </>
-        )}
-      </div>
-    </div>
-  )
 }
 
 function SavedThemeRow({
@@ -177,16 +171,38 @@ function SavedThemeRow({
 export function TemplateLibraryPanel({
   shop,
   previewingKey,
+  previewingVariantKey = null,
   onPreview,
 }: {
   shop: Shop
   /** Key of the template currently shown in the live preview, if any. */
   previewingKey: string | null
+  /** Variant of that template (null = base design). */
+  previewingVariantKey?: string | null
   onPreview: (template: StoreTemplate) => void
 }) {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const templates = templatesForVertical(shop.business_type)
+  // DB-driven compatibility (Template ≠ Business Type): a new mapping surfaces
+  // a template to another type with zero code change. Fail-open to the legacy
+  // per-vertical list while loading or on error — never an empty picker.
+  const { data: compatSlugs } = useQuery({
+    queryKey: ['template-compat', shop.id],
+    queryFn: () => fetchCompatibleTemplateSlugs(shop.id),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+  // Surcharge sans déploiement (admin plateforme → templates.content) :
+  // échec silencieux = catalogue code, jamais de picker vide.
+  const { data: dbContents = [] } = useQuery({
+    queryKey: ['template-contents'],
+    queryFn: fetchTemplateContents,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+  const templates = mergeDbTemplates(resolvePickerTemplates(compatSlugs ?? null, shop.business_type), dbContents)
   const vertical = shop.business_type ? VERTICAL_BY_KEY[shop.business_type] : undefined
 
   const { data: savedThemes = [] } = useQuery({
@@ -204,8 +220,12 @@ export function TemplateLibraryPanel({
     throwOnError: false,
   })
 
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
+  /** Chosen look per template (variant key, absent = base design). Choosing a
+   *  variant previews it immediately in the live preview — l'embarras du
+   *  choix, style Shopify. */
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [renaming, setRenaming] = useState<SavedTheme | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [deleting, setDeleting] = useState<SavedTheme | null>(null)
@@ -266,35 +286,70 @@ export function TemplateLibraryPanel({
       <div className="space-y-3">
         {templates.map((template) => {
           const isCurrent = shop.template_id === template.key
-          const isPreviewing = previewingKey === template.key
+          const chosenVariant = selectedVariants[template.key] || null
+          const resolved = resolveTemplateVariant(template, chosenVariant)
+          const isPreviewing =
+            previewingKey === template.key && (previewingVariantKey ?? null) === (resolved.variantKey ?? null)
+          const chooseVariant = (variantKey: string | null) => {
+            setSelectedVariants((prev) => ({ ...prev, [template.key]: variantKey ?? '' }))
+            onPreview(resolveTemplateVariant(template, variantKey))
+          }
           return (
-            <button
+            <div
               key={template.key}
-              type="button"
-              onClick={() => onPreview(template)}
-              aria-pressed={isPreviewing}
-              className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left hover:border-brand-300 hover:bg-brand-50/40 ${
+              className={`rounded-xl border p-3 ${
                 isPreviewing ? 'border-brand-500 ring-1 ring-brand-500' : isCurrent ? 'border-brand-300 bg-brand-50/40' : 'border-gray-200'
               }`}
             >
-              <TemplateThumbnail template={template} />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
-                  {isCurrent && (
-                    <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
-                      Actuel
+              <button
+                type="button"
+                onClick={() => chooseVariant(chosenVariant)}
+                aria-pressed={isPreviewing}
+                className="flex w-full items-center gap-3 text-left"
+              >
+                <TemplateThumbnail template={resolved} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="block text-sm font-semibold text-gray-900">
+                      {template.label}
+                      {resolved.variantLabel ? ` · ${resolved.variantLabel}` : ''}
                     </span>
-                  )}
-                  {isPreviewing && (
-                    <span className="flex items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                      <Eye size={10} aria-hidden /> Aperçu
-                    </span>
-                  )}
+                    {isCurrent && (
+                      <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                        Actuel
+                      </span>
+                    )}
+                    {isPreviewing && (
+                      <span className="flex items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        <Eye size={10} aria-hidden /> Aperçu
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-xs text-gray-500">{template.description}</span>
                 </span>
-                <span className="block text-xs text-gray-500">{template.description}</span>
-              </span>
-            </button>
+              </button>
+              {(template.variants?.length ?? 0) > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-gray-100 pt-2.5" role="group" aria-label={`Styles ${template.label}`}>
+                  <VariantSwatch
+                    active={chosenVariant === null}
+                    swatch={template.swatch}
+                    label="Original"
+                    title={template.description}
+                    onSelect={() => chooseVariant(null)}
+                  />
+                  {template.variants!.map((variant) => (
+                    <VariantSwatch
+                      key={variant.key}
+                      active={chosenVariant === variant.key}
+                      swatch={variant.swatch}
+                      label={variant.label}
+                      title={variant.description ?? variant.label}
+                      onSelect={() => chooseVariant(variant.key)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )
         })}
       </div>
@@ -396,7 +451,7 @@ export function TemplateLibraryPanel({
           value={saveName}
           onChange={(e) => setSaveName(e.target.value)}
           placeholder="Ex. Édition Ramadan"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()}`}
         />
       </ConfirmDialog>
 
@@ -415,7 +470,7 @@ export function TemplateLibraryPanel({
           autoFocus
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()}`}
         />
       </ConfirmDialog>
 

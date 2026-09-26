@@ -27,6 +27,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 /* ── Inline text editor (#1) ─────────────────────────────────────────── */
 
@@ -112,6 +113,7 @@ function EditCategoryDialog({
     description: string
     color: string | null
     imageUrl: string | null
+    thumbUrl: string | null
   }) => void
   isPending: boolean
   isPro: boolean
@@ -124,6 +126,7 @@ function EditCategoryDialog({
   const [description, setDescription] = useState(category?.description ?? '')
   const [color, setColor] = useState(category?.color ?? null)
   const [imageUrl, setImageUrl] = useState(category?.image_url ?? null)
+  const [thumbUrl, setThumbUrl] = useState(category?.thumb_url ?? null)
   const [uploadingImage, setUploadingImage] = useState(false)
 
   if (!category) return null
@@ -131,8 +134,9 @@ function EditCategoryDialog({
   const handleFileSelected = async (file: File) => {
     setUploadingImage(true)
     try {
-      const url = await uploadCategoryImage(category.id, file)
+      const { url, thumbUrl: nextThumb } = await uploadCategoryImage(category.id, file)
       setImageUrl(url)
+      setThumbUrl(nextThumb)
     } catch {
       toast.error('Impossible de télécharger l\'image.')
     } finally {
@@ -152,7 +156,7 @@ function EditCategoryDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -165,10 +169,11 @@ function EditCategoryDialog({
                 description: description.trim(),
                 color,
                 imageUrl,
+                thumbUrl,
               })
             }
             disabled={isPending || !name.trim()}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Enregistrement…' : 'Enregistrer'}
           </button>
@@ -181,7 +186,7 @@ function EditCategoryDialog({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           />
         </div>
         <div>
@@ -203,7 +208,7 @@ function EditCategoryDialog({
             rows={3}
             maxLength={160}
             placeholder="Ex : Vêtements tendance pour femme…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           />
           <p className="mt-1 text-xs text-gray-500">{description.length}/160</p>
         </div>
@@ -217,7 +222,10 @@ function EditCategoryDialog({
             onLockedFeature={onLockedFeature}
             onColorChange={setColor}
             onFileSelected={(file) => void handleFileSelected(file)}
-            onRemoveImage={() => setImageUrl(null)}
+            onRemoveImage={() => {
+              setImageUrl(null)
+              setThumbUrl(null)
+            }}
           />
         </div>
       </div>
@@ -255,7 +263,7 @@ function MergeDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -263,7 +271,7 @@ function MergeDialog({
             type="button"
             onClick={() => onMerge(sourceId, targetId)}
             disabled={isPending || !sourceId || !targetId || sourceId === targetId}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Fusion…' : 'Fusionner'}
           </button>
@@ -276,7 +284,7 @@ function MergeDialog({
           <select
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           >
             <option value="">Choisir…</option>
             {categories.map((c) => (
@@ -292,7 +300,7 @@ function MergeDialog({
           <select
             value={targetId}
             onChange={(e) => setTargetId(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           >
             <option value="">Choisir…</option>
             {categories.filter((c) => c.id !== sourceId).map((c) => (
@@ -339,7 +347,7 @@ function MoveDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -347,7 +355,7 @@ function MoveDialog({
             type="button"
             onClick={() => onMove(targetId)}
             disabled={isPending || !targetId}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Déplacement…' : 'Déplacer'}
           </button>
@@ -357,7 +365,7 @@ function MoveDialog({
       <select
         value={targetId}
         onChange={(e) => setTargetId(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+        className={`${controlClass()}`}
       >
         <option value="">Choisir une catégorie cible…</option>
         {categories.filter((c) => !excludeIds.includes(c.id)).map((c) => (
@@ -448,6 +456,7 @@ export function CategoriesPage() {
       description: string
       color: string | null
       imageUrl: string | null
+      thumbUrl: string | null
     }) =>
       updateCategory(id, {
         name: data.name,
@@ -456,6 +465,7 @@ export function CategoriesPage() {
         description: data.description || null,
         color: hasPaidPlan ? data.color || null : data.color && availableColors.includes(data.color) ? data.color : null,
         image_url: hasPaidPlan ? data.imageUrl || null : null,
+        thumb_url: hasPaidPlan ? data.thumbUrl || null : null,
       }),
     onSuccess: () => {
       setEditTarget(null)
@@ -564,7 +574,7 @@ export function CategoriesPage() {
             <button
               type="button"
               onClick={() => setMergeOpen(true)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               Fusionner
             </button>
@@ -664,7 +674,7 @@ export function CategoriesPage() {
                         <span className="text-sm font-medium text-gray-900 group-hover:underline">
                           {category.image_url ? (
                             <span className="mr-1.5 inline-block h-5 w-5 overflow-hidden rounded align-[-4px]">
-                              <img src={category.image_url} alt="" className="h-full w-full object-cover" />
+                              <img src={category.thumb_url ?? category.image_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                             </span>
                           ) : category.color ? (
                             <span
@@ -734,7 +744,7 @@ export function CategoriesPage() {
                   setMoveTargetIds([...selectedIds])
                   setMoveOpen(true)
                 }}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className={buttonClass({ variant: 'secondary' })}
               >
                 Déplacer les produits vers…
               </button>

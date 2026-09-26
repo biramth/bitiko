@@ -89,13 +89,33 @@ export interface PlatformMember {
 
 const MANAGE_TEAM_ROLES: PlatformRole[] = ['owner', 'admin']
 const MANAGE_PAYMENTS_ROLES: PlatformRole[] = ['owner', 'admin', 'dev']
+const MANAGE_COUNTRIES_ROLES: PlatformRole[] = ['owner', 'admin']
+
+/** Suspendre / réactiver une boutique : décision de propriétaire ou d'administrateur. */
+export function canSuspendShops(role: PlatformRole): boolean {
+  return MANAGE_TEAM_ROLES.includes(role)
+}
 
 export function canManageTeam(role: PlatformRole): boolean {
   return MANAGE_TEAM_ROLES.includes(role)
 }
 
+/** Roles allowed to edit the business catalog (types, capabilities, mappings).
+ *  Same bar as team management: owner/admin only — a wrong capability mapping
+ *  reshapes every workspace and frontstore of that business type. */
+const MANAGE_CATALOG_ROLES: PlatformRole[] = ['owner', 'admin']
+
+export function canManageCatalog(role: PlatformRole): boolean {
+  return MANAGE_CATALOG_ROLES.includes(role)
+}
+
 export function canManagePayments(role: PlatformRole): boolean {
   return MANAGE_PAYMENTS_ROLES.includes(role)
+}
+
+/** Opening/closing countries is a platform-owner decision, like the team. */
+export function canManageCountries(role: PlatformRole): boolean {
+  return MANAGE_COUNTRIES_ROLES.includes(role)
 }
 
 /**

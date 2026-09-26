@@ -6,6 +6,7 @@ import {
   resolveDeliveryFee,
   resolveZoneDeliveryFee,
   slugify,
+  timeAgo,
   whatsappHref,
 } from './format'
 
@@ -96,5 +97,20 @@ describe('delivery fees', () => {
   it('applies zone fees with the shop threshold', () => {
     expect(resolveZoneDeliveryFee(shop, 4000, 1500)).toBe(1500)
     expect(resolveZoneDeliveryFee(shop, 6000, 1500)).toBe(0)
+  })
+})
+
+describe('timeAgo', () => {
+  const now = new Date('2026-09-26T12:00:00Z')
+  it('gradue les durées récentes', () => {
+    expect(timeAgo('2026-09-26T11:59:30Z', now)).toBe('à l’instant')
+    expect(timeAgo('2026-09-26T11:20:00Z', now)).toBe('il y a 40 min')
+    expect(timeAgo('2026-09-26T07:00:00Z', now)).toBe('il y a 5 h')
+    expect(timeAgo('2026-09-25T09:00:00Z', now)).toBe('hier')
+    expect(timeAgo('2026-09-22T12:00:00Z', now)).toBe('il y a 4 j')
+  })
+  it('repasse à la date au-delà d’une semaine ou pour une date future', () => {
+    expect(timeAgo('2026-09-01T12:00:00Z', now)).toBe(new Date('2026-09-01T12:00:00Z').toLocaleDateString('fr-FR'))
+    expect(timeAgo('2026-09-27T12:00:00Z', now)).toBe(new Date('2026-09-27T12:00:00Z').toLocaleDateString('fr-FR'))
   })
 })

@@ -12,6 +12,7 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -48,7 +49,7 @@ export function LookbookRenderer({ config, themeConfig, sectionId, editable = fa
                 className={`w-full overflow-hidden bg-sand-100 ${i % 2 === 0 ? 'aspect-[3/4]' : 'aspect-square'}`}
                 style={{ borderRadius: 'var(--shop-radius)' }}
               >
-                <img src={img.imageUrl!} alt={img.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                <FadeImage src={img.imageUrl!} alt={img.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               </div>
               {img.caption.trim() && <figcaption className="mt-2 text-xs text-[var(--shop-text)]/60" style={resolveTextStyle(config.captionStyle)}>{img.caption}</figcaption>}
             </figure>
@@ -62,7 +63,7 @@ export function LookbookRenderer({ config, themeConfig, sectionId, editable = fa
                 className={`w-full overflow-hidden bg-sand-100 ${i === 0 ? 'aspect-[4/5] sm:aspect-[3/4]' : 'aspect-square'}`}
                 style={{ borderRadius: 'var(--shop-radius)' }}
               >
-                <img src={img.imageUrl!} alt={img.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                <FadeImage src={img.imageUrl!} alt={img.caption} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               </div>
               {img.caption.trim() && <figcaption className="mt-2 text-xs text-[var(--shop-text)]/60" style={resolveTextStyle(config.captionStyle)}>{img.caption}</figcaption>}
             </figure>
@@ -122,7 +123,7 @@ function LookbookImageSlot({
     <div className="flex gap-3 rounded-lg border border-gray-200 p-3">
       <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-sand-50">
         {image.imageUrl ? (
-          <img src={image.imageUrl} alt="" className="h-full w-full object-cover" />
+          <FadeImage src={image.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-gray-300">
             <ImageOff size={20} aria-hidden />

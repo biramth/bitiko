@@ -22,12 +22,23 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/(.*)", "has": [{ "type": "host", "value": "www.bitiko.shop" }], "destination": "https://bitiko.shop/$1", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/robots.txt", "destination": "/api/sitemap?kind=robots" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap?kind=sitemap" },
-    { "source": "/api/admin/pending-payments", "destination": "/api/admin/payments?action=pending" },
-    { "source": "/api/admin/approve-payment", "destination": "/api/admin/payments?action=approve" },
-    { "source": "/api/admin/reject-payment", "destination": "/api/admin/payments?action=reject" },
+    { "source": "/", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/home.html" },
+    { "source": "/solutions/:slug", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/solutions-:slug.html" },
+    { "source": "/legal/cgu", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/legal-cgu.html" },
+    { "source": "/legal/confidentialite", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/legal-confidentialite.html" },
+    { "source": "/api/admin/pending-payments", "destination": "/api/admin/platform?action=payment-pending" },
+    { "source": "/api/admin/approve-payment", "destination": "/api/admin/platform?action=payment-approve" },
+    { "source": "/api/admin/grant-subscription", "destination": "/api/admin/platform?action=subscription-grant" },
+    { "source": "/api/admin/audit-log", "destination": "/api/admin/platform?action=audit-list" },
+    { "source": "/api/admin/suspend-shop", "destination": "/api/admin/platform?action=shop-suspend" },
+    { "source": "/api/admin/unsuspend-shop", "destination": "/api/admin/platform?action=shop-unsuspend" },
+    { "source": "/api/admin/reject-payment", "destination": "/api/admin/platform?action=payment-reject" },
     { "source": "/api/admin/team", "destination": "/api/admin/platform?action=team-list" },
     { "source": "/api/admin/team/add", "destination": "/api/admin/platform?action=team-add" },
     { "source": "/api/admin/team/update", "destination": "/api/admin/platform?action=team-update" },
@@ -41,11 +52,24 @@
     { "source": "/api/admin/campaigns/delete", "destination": "/api/admin/platform?action=campaign-delete" },
     { "source": "/api/admin/promos", "destination": "/api/admin/platform?action=promo-list" },
     { "source": "/api/admin/promos/save", "destination": "/api/admin/platform?action=promo-save" },
+    { "source": "/api/admin/business-types", "destination": "/api/admin/platform?action=biztype-list" },
+    { "source": "/api/admin/business-types/save", "destination": "/api/admin/platform?action=biztype-save" },
+    { "source": "/api/admin/business-types/capabilities", "destination": "/api/admin/platform?action=biztype-capabilities" },
+    { "source": "/api/admin/templates", "destination": "/api/admin/platform?action=template-list" },
+    { "source": "/api/admin/templates/save", "destination": "/api/admin/platform?action=template-save" },
+    { "source": "/api/admin/templates/compat", "destination": "/api/admin/platform?action=template-compat" },
+    { "source": "/api/admin/templates/delete", "destination": "/api/admin/platform?action=template-delete" },
+    { "source": "/api/admin/countries/set", "destination": "/api/admin/platform?action=country-set" },
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
+    { "source": "/api/booking-notify", "destination": "/api/onboarding?action=booking-notify" },
+    { "source": "/api/automation-kick", "destination": "/api/onboarding?action=automation-kick" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },
     { "source": "/api/request-pro-upgrade", "destination": "/api/account?action=upgrade" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "crons": [{ "path": "/api/cron/renewal-reminders", "schedule": "0 9 * * *" }]
+  "crons": [
+    { "path": "/api/cron/renewal-reminders", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/automation-dispatch", "schedule": "0 8 * * *" }
+  ]
 }

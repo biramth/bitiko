@@ -11,6 +11,7 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { resolveTextStyle } from '@/config/textStyle'
 import { FocalPointPicker } from './FocalPointPicker'
 import { VideoUploadField } from './VideoUploadField'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -31,7 +32,7 @@ export function ImageRenderer({ config, sectionId, editable = false }: { config:
           className="h-full w-full object-cover"
         />
       ) : (
-        <img
+        <FadeImage
           src={config.imageUrl}
           alt={config.caption}
           loading="lazy"

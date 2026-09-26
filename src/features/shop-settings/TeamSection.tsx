@@ -15,6 +15,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useToast } from '@/components/ui/Toast'
 import type { Shop } from '@/types'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 const ROLES: ShopMemberRole[] = ['manager', 'vendeur']
 
@@ -94,7 +95,7 @@ export function TeamSection({ shop }: { shop: Shop }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="collegue@exemple.com"
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           />
         </label>
         <label>
@@ -114,7 +115,7 @@ export function TeamSection({ shop }: { shop: Shop }) {
         <button
           type="submit"
           disabled={inviteMutation.isPending || !email.trim()}
-          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          className={buttonClass({ className: 'gap-1.5' })}
         >
           <MailPlus size={15} aria-hidden /> Inviter
         </button>

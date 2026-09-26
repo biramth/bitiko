@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { HelpCircle, Sparkles, X } from 'lucide-react'
-import { useGuidedTour } from './GuidedTourProvider'
+import { useGuidedTour } from './useGuidedTour'
 import { GUIDED_TOURS } from './tours'
 
 /** Bottom-right help button opening the list of guided tours. Hidden while a

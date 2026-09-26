@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, ImageOff, Search, Star } from 'lucide-react'
-import { useFeaturedProducts, useShopProducts } from '@/features/products/useProducts'
+import { FEATURED_FALLBACK_COUNT, useFeaturedProducts, useShopProducts } from '@/features/products/useProducts'
 import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
@@ -14,6 +14,7 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId, editable = false }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
@@ -36,16 +37,16 @@ export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId,
         </InlineStyleToolbar>
       {(config.layout ?? 'grid') === 'carousel' ? (
         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
-          {products.map((product) => (
+          {products.map((product, index) => (
             <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+          {products.map((product, index) => (
+            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
           ))}
         </div>
       )}
@@ -121,6 +122,7 @@ export function FeaturedProductsEditor({
 
       <div>
         <span className={editorLabelClass}>Produits sélectionnés ({config.productIds.length})</span>
+        <p className={`mt-1 ${editorHelpClass}`}>Aucun produit coché = les {FEATURED_FALLBACK_COUNT} plus récents.</p>
         <div className="relative mt-1.5">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
           <input
@@ -138,7 +140,7 @@ export function FeaturedProductsEditor({
           )}
           {products.map((product) => {
             const selected = config.productIds.includes(product.id)
-            const cover = product.images[0]?.public_url
+            const cover = product.images[0]?.thumb_url ?? product.images[0]?.public_url
             return (
               <button
                 key={product.id}
@@ -150,7 +152,7 @@ export function FeaturedProductsEditor({
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-sand-100">
                   {cover ? (
-                    <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    <FadeImage src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <ImageOff size={14} className="text-gray-300" />
                   )}

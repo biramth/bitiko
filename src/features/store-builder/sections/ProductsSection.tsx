@@ -8,6 +8,7 @@ import { ProductCard } from '@/features/products/ProductCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ContactShopLink } from '../components/ContactShopLink'
 import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { ProductFilters } from '@/services/product.service'
 import type { Shop } from '@/types'
@@ -77,6 +78,10 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
       { replace: true },
     )
   }
+
+  // Une section d'accueil vide n'apporte rien au visiteur : on la masque
+  // (le commerçant, lui, la voit dans l'éditeur pour la remplir).
+  if (!fullToolbox && !editable && !isLoading && !isError && products.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
@@ -167,23 +172,24 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
         <EmptyState
           icon={PackageSearch}
           title={search ? 'Aucun produit trouvé' : 'Aucun produit pour le moment'}
-          description={search ? `Aucun résultat pour « ${search} ».` : undefined}
+          description={search ? `Aucun résultat pour « ${search} ».` : 'Revenez bientôt, ou contactez-nous pour en savoir plus.'}
+          action={search ? undefined : <ContactShopLink shop={shop} />}
         />
       )}
       {!isLoading && products.length > 0 && (
         <>
           {(config.layout ?? 'grid') === 'carousel' ? (
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
-              {products.map((product) => (
+              {products.map((product, index) => (
                 <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                  <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+                  <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+              {products.map((product, index) => (
+                <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
               ))}
             </div>
           )}

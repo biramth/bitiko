@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
+import { isCronAuthorized } from '../_lib/cronAuth.js'
 import { renewalReminderEmailHtml } from '../_lib/emailTemplates.js'
 import { PLANS } from '../../src/config/plans.js'
 
@@ -24,13 +25,9 @@ function formatPrice(amount: number, currency: string | null | undefined): strin
  * cadence — one send per shop per expiry, no extra tracking column needed.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const auth = req.headers.authorization
-    if (auth !== `Bearer ${cronSecret}`) {
-      res.status(401).json({ error: 'Unauthorized' })
-      return
-    }
+  if (!isCronAuthorized(req.headers.authorization)) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
   }
 
   try {

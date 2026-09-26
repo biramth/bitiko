@@ -9,6 +9,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Lock } from 'lucide-react'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
+import { buttonClass } from '@/components/ui/styles'
 
 /**
  * Landing point for the "reset password" email link, which carries a
@@ -154,7 +155,7 @@ export function ResetPasswordPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass({ size: 'lg', fullWidth: true })}
           >
             {submitting ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
           </button>

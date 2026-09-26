@@ -35,4 +35,5 @@ const lookbook: SectionDefinition = {
  */
 export const TEMPLATE_EXTRA_SECTIONS: Record<string, SectionRegistry> = {
   mode: { lookbook },
+  minimal: { lookbook },
 }

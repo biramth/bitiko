@@ -10,6 +10,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import { trackEvent } from '@/lib/analytics'
 import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
 import { PlatformAwareRedirect } from '@/features/platform/PlatformAwareRedirect'
+import { buttonClass } from '@/components/ui/styles'
 
 const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 
@@ -224,7 +225,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={checkingEmail || (TURNSTILE_ENABLED && !turnstileToken)}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass({ size: 'lg', fullWidth: true })}
             >
               {checkingEmail ? 'Vérification…' : 'Continuer'}
               {!checkingEmail && <ArrowRight size={15} aria-hidden />}
@@ -277,7 +278,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass({ size: 'lg', fullWidth: true })}
             >
               {loading ? 'Connexion…' : 'Se connecter'}
               {!loading && <ArrowRight size={15} aria-hidden />}
@@ -333,7 +334,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading || !acceptedTerms}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass({ size: 'lg', fullWidth: true })}
             >
               {loading ? 'Création…' : 'Créer mon compte'}
               {!loading && <ArrowRight size={15} aria-hidden />}

@@ -44,3 +44,30 @@ export async function compressImageFile(
     return file
   }
 }
+
+/** Dimensions de la vignette servie aux cartes, grilles et listes admin. */
+export const THUMB_MAX_DIM = 400
+export const THUMB_QUALITY = 0.78
+
+/**
+ * Génère la vignette d'un fichier destiné à l'upload, via le même pipeline
+ * que le fichier pleine taille. Retourne `null` quand il n'y a rien à
+ * générer (SVG/GIF retournés intacts, fichier illisible) — l'appelant sert
+ * alors le fichier pleine taille. Ne jette jamais.
+ */
+export async function makeThumbFile(file: File): Promise<File | null> {
+  const thumb = await compressImageFile(file, { maxDim: THUMB_MAX_DIM, quality: THUMB_QUALITY })
+  return thumb !== file ? thumb : null
+}
+
+/**
+ * Construit le `srcSet` thumb 400w / full 1600w pour une image dont les deux
+ * versions existent. Retourne `undefined` quand il n'y a que le fichier
+ * pleine taille (anciennes images) — l'appelant sert alors `src` seul.
+ */
+export function thumbSrcSet(
+  thumbUrl: string | null | undefined,
+  fullUrl: string,
+): string | undefined {
+  return thumbUrl && thumbUrl !== fullUrl ? `${thumbUrl} 400w, ${fullUrl} 1600w` : undefined
+}

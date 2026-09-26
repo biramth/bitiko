@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ImageOff, Package, Pencil, Plus, Search, Tags, Trash2, Upload, X } from 'lucide-react'
+import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { canAccess } from '@/features/shop-settings/permissions'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
@@ -23,6 +25,7 @@ import { ProductImportDialog } from './ProductImportDialog'
 import { CategoriesPage } from './CategoriesPage'
 import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 /** Advertised price: "À partir de X" when variants are priced differently. */
 function priceLabel(product: ProductWithRelations, currency: string): string {
@@ -72,12 +75,15 @@ function InlineField({
   display,
   label,
   min = 0,
+  readOnly = false,
   onSave,
 }: {
   value: number
   display: React.ReactNode
   label: string
   min?: number
+  /** Rôle sans droit d'écriture sur le catalogue : la valeur s'affiche, sans édition. */
+  readOnly?: boolean
   onSave: (next: number) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -88,6 +94,8 @@ function InlineField({
     setEditing(false)
     if (!Number.isNaN(next) && next >= min && next !== value) onSave(next)
   }
+
+  if (readOnly) return <span>{display}</span>
 
   if (!editing) {
     return (
@@ -172,6 +180,8 @@ export function ProductsPage() {
   const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
   const lowStockThreshold = shop?.low_stock_threshold ?? 5
+  const { role } = useShopRole()
+  const readOnly = !canAccess(role, 'catalog_write')
 
   const [searchParams, setSearchParams] = useSearchParams()
   const tab: CatalogTab = searchParams.get('tab') === 'categories' ? 'categories' : 'produits'
@@ -268,11 +278,11 @@ export function ProductsPage() {
         title="Produits"
         subtitle="Gérez vos produits, leur stock et leur visibilité."
         actions={
-          <div className="flex items-center gap-2">
+          readOnly ? undefined : <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setImportOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               <Upload size={16} /> Importer (CSV)
             </button>
@@ -392,7 +402,7 @@ export function ProductsPage() {
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       {product.images[0] ? (
-                        <img src={product.images[0].public_url} alt="" className="h-full w-full object-cover" />
+                        <img src={product.images[0].thumb_url ?? product.images[0].public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-gray-300">
                           <ImageOff size={16} />
@@ -403,6 +413,8 @@ export function ProductsPage() {
                       <p className="truncate font-medium text-gray-900">{product.name}</p>
                       {product.category && <p className="truncate text-xs text-gray-500">{product.category.name}</p>}
                     </div>
+                    {!readOnly && (
+
                     <div className="flex shrink-0 items-center gap-3">
                       <Link
                         to={`/admin/produits/${product.id}`}
@@ -419,16 +431,19 @@ export function ProductsPage() {
                         <Trash2 size={16} />
                       </button>
                     </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-4 text-sm">
                       <InlineField
+                        readOnly={readOnly}
                         value={product.price}
                         label={`Modifier le prix de ${product.name}`}
                         display={<span className="font-medium text-gray-900">{priceLabel(product, currency)}</span>}
                         onSave={(price) => quickUpdate.mutate({ id: product.id, updates: { price } })}
                       />
                       <InlineField
+                        readOnly={readOnly}
                         value={product.stock}
                         label={`Modifier le stock de ${product.name}`}
                         min={0}
@@ -449,6 +464,7 @@ export function ProductsPage() {
                       />
                     </div>
                     <button
+                      disabled={readOnly}
                       onClick={() => toggleActive.mutate({ id: product.id, active: !product.active })}
                       className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         product.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
@@ -479,7 +495,7 @@ export function ProductsPage() {
                     <td className="flex items-center gap-3 px-4 py-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                         {product.images[0] ? (
-                          <img src={product.images[0].public_url} alt="" className="h-full w-full object-cover" />
+                          <img src={product.images[0].thumb_url ?? product.images[0].public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-gray-300">
                             <ImageOff size={16} />
@@ -495,6 +511,7 @@ export function ProductsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <InlineField
+                        readOnly={readOnly}
                         value={product.price}
                         label={`Modifier le prix de ${product.name}`}
                         display={priceLabel(product, currency)}
@@ -503,6 +520,7 @@ export function ProductsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <InlineField
+                        readOnly={readOnly}
                         value={product.stock}
                         label={`Modifier le stock de ${product.name}`}
                         min={0}
@@ -524,7 +542,8 @@ export function ProductsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => toggleActive.mutate({ id: product.id, active: !product.active })}
+                        disabled={readOnly}
+                      onClick={() => toggleActive.mutate({ id: product.id, active: !product.active })}
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           product.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
                         }`}
@@ -533,6 +552,8 @@ export function ProductsPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
+                      {!readOnly && (
+
                       <div className="flex items-center gap-3">
                         <Link
                           to={`/admin/produits/${product.id}`}
@@ -549,6 +570,7 @@ export function ProductsPage() {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))}

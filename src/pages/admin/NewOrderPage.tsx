@@ -20,6 +20,7 @@ import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySec
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { formatCurrency, resolveDeliveryFee, resolveZoneDeliveryFee } from '@/utils/format'
+import { phonePlaceholder } from '@/config/countries'
 import { formatPhoneNumberForDisplay, normalizePhoneNumber, PHONE_ERROR_MESSAGES } from '@/utils/phone'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
 import { formatOptionsInline, resolveSelection, type OptionValues } from '@/utils/productOptions'
@@ -38,6 +39,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { OptionField, PaymentMethod } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cod: 'Espèces à la livraison',
@@ -122,7 +124,7 @@ export function NewOrderPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const phone = normalizePhoneNumber(customerPhone)
+      const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
       if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
@@ -155,7 +157,7 @@ export function NewOrderPage() {
       setFormError('Le nom du client est requis.')
       return
     }
-    const phone = normalizePhoneNumber(customerPhone)
+    const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return
@@ -231,7 +233,7 @@ export function NewOrderPage() {
 
   const sendWhatsApp = () => {
     if (!success || !shop) return
-    const normalized = normalizePhoneNumber(customerPhone)
+    const normalized = normalizePhoneNumber(customerPhone, shop?.country_code)
     const message = buildWhatsAppMessage({
       orderNumber: success.orderNumber,
       items: success.items,
@@ -384,7 +386,7 @@ export function NewOrderPage() {
                     setCustomerPhone(e.target.value)
                     setPhoneError(null)
                   }}
-                  placeholder="77 123 45 67"
+                  placeholder={phonePlaceholder(shop?.country_code)}
                   autoComplete="tel"
                   className={`${INPUT_CLASS} ${phoneError ? 'border-red-500' : ''}`}
                 />
@@ -541,7 +543,7 @@ export function NewOrderPage() {
                 <button
                   type="button"
                   onClick={handleAddLine}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                  className={buttonClass({ className: 'mt-4 gap-1.5' })}
                 >
                   <Plus size={14} aria-hidden /> Ajouter au panier
                 </button>
@@ -725,7 +727,7 @@ export function NewOrderPage() {
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={buttonClass({ size: 'lg', className: 'shrink-0' })}
             >
               {mutation.isPending ? (
                 <Loader2 size={15} className="animate-spin" aria-hidden />

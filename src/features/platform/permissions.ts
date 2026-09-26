@@ -2,7 +2,7 @@
  * Platform-team roles and what each one can do.
  *
  * This is the frontend mirror of the server-side gates in
- * api/admin/payments.ts and api/admin/platform.ts — the server is the source
+ * api/admin/platform.ts — the server is the source
  * of truth (a member cannot self-promote), this only decides which tools the
  * workspace *shows*. Keep the two in sync when adding a role or capability.
  */
@@ -17,6 +17,10 @@ export type PlatformCapability =
   | 'manage_team'
   | 'support_access'
   | 'delete_users'
+  | 'manage_business_types'
+  | 'manage_countries'
+  | 'suspend_shops'
+  | 'view_health'
 
 export interface PlatformRoleInfo {
   key: PlatformRole
@@ -32,9 +36,9 @@ export const PLATFORM_ROLES: PlatformRoleInfo[] = [
 ]
 
 const CAPABILITIES: Record<PlatformRole, PlatformCapability[]> = {
-  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
-  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'],
-  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access'],
+  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries', 'suspend_shops', 'view_health'],
+  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries', 'suspend_shops', 'view_health'],
+  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access', 'view_health'],
   marketing: ['view_analytics', 'view_shops', 'send_campaigns'],
 }
 
@@ -46,6 +50,10 @@ export const CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   manage_team: 'Gérer l’équipe',
   support_access: 'Accès support aux boutiques',
   delete_users: 'Supprimer des comptes utilisateurs',
+  manage_business_types: 'Gérer les types d’activité et capabilities',
+  manage_countries: 'Gérer les pays',
+  suspend_shops: 'Suspendre et réactiver des boutiques',
+  view_health: 'Consulter la santé technique',
 }
 
 export function roleLabel(role: PlatformRole | null | undefined): string {

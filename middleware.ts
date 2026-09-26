@@ -4,9 +4,10 @@ import { next, rewrite } from '@vercel/edge'
  * Link-preview crawlers (WhatsApp, Facebook, Twitter/X, Slack, Telegram,
  * LinkedIn, Discord…) don't execute JavaScript, so they would only ever see
  * the generic "Bitiko" tags baked into index.html. This edge middleware
- * catches their requests for real storefront URLs — home, catalogue, product,
- * custom page — and rewrites them to the dynamic OG generator (/api/og),
- * which builds per-shop/per-product tags. Real visitors and JS-rendering
+ * catches their requests for real URLs — platform pages (home, solutions,
+ * legal) as well as storefront URLs (home, catalogue, product, custom
+ * page) — and rewrites them to the dynamic OG generator (/api/og),
+ * which builds per-page tags. Real visitors and JS-rendering
  * search engines (Googlebot) are left untouched: they still get the static
  * SPA through the normal rewrite, with zero added latency.
  */
@@ -30,5 +31,14 @@ export default function middleware(request: Request): Response {
 }
 
 export const config = {
-  matcher: ['/', '/catalogue', '/produits/:path*', '/pages/:path*'],
+  matcher: [
+    '/',
+    '/solutions/:path*',
+    '/legal/:path*',
+    '/catalogue',
+    '/prestations',
+    '/reserver',
+    '/produits/:path*',
+    '/pages/:path*',
+  ],
 }

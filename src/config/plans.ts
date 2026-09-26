@@ -40,6 +40,21 @@ export interface Plan {
    * photo, so up to 4 total photos with the main one). `null` = unlimited.
    */
   maxVariants: number | null
+  /** Prestations actives (métiers de service). Miroir de plan_limits MAX_ACTIVE_SERVICES. */
+  maxActiveServices: number | null
+  /** Équipiers actifs affichés en vitrine. Miroir de MAX_TEAM_MEMBERS. */
+  maxTeamMembers: number | null
+  /** Demandes de rendez-vous/réservation en ligne par mois. Miroir de MAX_MONTHLY_BOOKINGS. */
+  maxMonthlyBookings: number | null
+  /** Saisies (dépenses / recettes) par mois dans le journal de gestion. Miroir de MAX_MONTHLY_FINANCE_ENTRIES. */
+  maxMonthlyFinanceEntries: number | null
+  /** Historique consultable dans le bilan, en mois (`null` = illimité). Ergonomie côté interface : les données restent celles du commerçant. */
+  financeHistoryMonths: number | null
+  /** Export du bilan : aucun, tableur (CSV), ou bilan PDF imprimable en plus. Généré dans le navigateur du commerçant
+   *  (aucun coût serveur) : ouvert à tous les plans ; le levier payant reste l'historique, la comparaison et le plafond de saisies. */
+  financeExport: 'none' | 'csv' | 'pdf'
+  /** Comparaison avec la période précédente et synthèse annuelle. */
+  financeComparison: boolean
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -47,7 +62,9 @@ export const PLANS: Record<PlanKey, Plan> = {
     key: 'free',
     label: 'Découverte',
     priceXof: 0,
-    maxActiveProducts: 15,
+    // Single source of truth: public.plan_limits (MAX_ACTIVE_PRODUCTS). This
+    // mirror must stay in sync — the DB trigger enforces the table value.
+    maxActiveProducts: 8,
     storeBuilderAccess: true,
     advancedBuilder: false,
     removableBranding: false,
@@ -57,6 +74,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: 3,
     maxProductImages: 4,
     maxVariants: 2,
+    maxActiveServices: 6,
+    maxTeamMembers: 2,
+    maxMonthlyBookings: 40,
+    maxMonthlyFinanceEntries: 30,
+    financeHistoryMonths: 1,
+    financeExport: 'pdf',
+    financeComparison: false,
   },
   essential: {
     key: 'essential',
@@ -72,6 +96,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: 10,
     maxProductImages: null,
     maxVariants: null,
+    maxActiveServices: 30,
+    maxTeamMembers: 8,
+    maxMonthlyBookings: 300,
+    maxMonthlyFinanceEntries: null,
+    financeHistoryMonths: 12,
+    financeExport: 'pdf',
+    financeComparison: false,
   },
   pro: {
     key: 'pro',
@@ -87,6 +118,13 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: null,
     maxProductImages: null,
     maxVariants: null,
+    maxActiveServices: null,
+    maxTeamMembers: null,
+    maxMonthlyBookings: null,
+    maxMonthlyFinanceEntries: null,
+    financeHistoryMonths: null,
+    financeExport: 'pdf',
+    financeComparison: true,
   },
 }
 
@@ -104,6 +142,14 @@ export function effectivePlanKey(subscription: ShopSubscription | null | undefin
 
 export function effectivePlan(subscription: ShopSubscription | null | undefined): Plan {
   return PLANS[effectivePlanKey(subscription)]
+}
+
+export function canAddService(plan: Plan, currentActiveCount: number): boolean {
+  return plan.maxActiveServices === null || currentActiveCount < plan.maxActiveServices
+}
+
+export function canAddTeamMember(plan: Plan, currentActiveCount: number): boolean {
+  return plan.maxTeamMembers === null || currentActiveCount < plan.maxTeamMembers
 }
 
 export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {
@@ -146,3 +192,14 @@ export function canAddVariant(plan: Plan, currentVariantCount: number): boolean 
 export const WAVE_PRO_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.pro.priceXof}`
 
 export const WAVE_ESSENTIAL_PAYMENT_LINK = `https://pay.wave.com/m/M_sn_yfwhqTcuOc61/c/sn/?amount=${PLANS.essential.priceXof}`
+
+/** Display metadata for plan keys coming back as raw strings (DB rows,
+ *  webhook payloads). Kept here — a components-free module — rather than next
+ *  to the platform panels that render them, so those files stay
+ *  components-only (React fast-refresh rule). */
+export const PLAN_LABELS: Record<string, string> = { free: 'Gratuit', essential: 'Essentiel', pro: 'Pro' }
+export const PLAN_BADGE: Record<string, string> = {
+  free: 'bg-gray-100 text-gray-700',
+  essential: 'bg-blue-100 text-blue-800',
+  pro: 'bg-brand-100 text-brand-800',
+}

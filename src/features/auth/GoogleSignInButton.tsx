@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GoogleIcon } from '@/components/ui/GoogleIcon'
 import { useAuth } from './AuthContext'
 import { trackEvent } from '@/lib/analytics'
+import { buttonClass } from '@/components/ui/styles'
 
 export function GoogleSignInButton({
   label = 'Continuer avec Google',
@@ -32,7 +33,7 @@ export function GoogleSignInButton({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+        className={buttonClass({ variant: 'secondary', size: 'lg', fullWidth: true })}
       >
         <GoogleIcon size={18} />
         {loading ? 'Redirection…' : label}

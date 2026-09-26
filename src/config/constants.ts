@@ -5,6 +5,7 @@ export const PRODUCTS_PAGE_SIZE = 12
 export const ADMIN_PRODUCTS_PAGE_SIZE = 20
 export const ORDERS_PAGE_SIZE = 20
 export const CUSTOMERS_PAGE_SIZE = 20
+export const SERVICES_PAGE_SIZE = 12
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: 'En attente',

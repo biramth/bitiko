@@ -15,6 +15,10 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
+import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { thumbSrcSet } from '@/utils/image'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 export function HeroRenderer({
   shop,
@@ -42,7 +46,13 @@ export function HeroRenderer({
   const showBanner = config.showBanner && !!shop.banner_url && layout !== 'text-only'
   const side = showBanner && layout === 'image-side'
   const centered = layout === 'text-only'
-  const primaryLabel = config.primaryButtonLabel?.trim() || 'Découvrir la boutique'
+  // Le bouton principal suit le métier : « Prendre rendez-vous » / « Réserver une
+  // table » quand le libellé n'a pas été personnalisé (un libellé choisi par le
+  // commerçant garde sa cible historique, le catalogue).
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
+  const customPrimaryLabel = config.primaryButtonLabel?.trim()
+  const bookingPrimary = !customPrimaryLabel && vocab.booking ? vocab.booking : null
+  const primaryLabel = customPrimaryLabel || bookingPrimary?.label || 'Découvrir la boutique'
   const whatsappLabel = config.whatsappButtonLabel?.trim() || 'Nous contacter'
 
   // The banner image itself is a shop-level asset (Réglages → Apparence), not
@@ -67,10 +77,12 @@ export function HeroRenderer({
           className="h-full w-full object-cover"
         />
       ) : (
-        <img
+        <FadeImage
           src={shop.banner_url!}
           alt=""
           fetchPriority="high"
+          srcSet={thumbSrcSet(shop.banner_thumb_url, shop.banner_url!)}
+          sizes={side ? '(max-width: 768px) 100vw, 50vw' : '100vw'}
           className="h-full w-full object-cover"
           style={{ objectPosition: `${config.bannerFocalX ?? 50}% ${config.bannerFocalY ?? 50}%` }}
         />
@@ -128,7 +140,7 @@ export function HeroRenderer({
       )}
       <div className={`mt-6 flex flex-wrap items-center gap-3 ${centered ? 'justify-center' : ''}`}>
         <Link
-          to="/catalogue"
+          to={bookingPrimary?.href ?? vocab.catalogHref}
           style={{ borderRadius: 'var(--shop-radius)' }}
           className="inline-flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 sm:w-auto"
         >

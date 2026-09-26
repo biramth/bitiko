@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { CapabilityGate, RequirePlatformMember } from '@/features/platform/RequirePlatformMember'
 import { ProtectedRoute } from './ProtectedRoute'
+import { RequireCapabilities } from './RequireCapabilities'
+import { RequireArea } from './RequireArea'
 import { RequireShop } from './RequireShop'
 
 // The landing page and both shells are lazy like every other page: a landing
@@ -60,6 +62,26 @@ const NewOrderPage = lazy(() =>
 const CustomersPage = lazy(() =>
   import('@/pages/admin/CustomersPage').then((m) => ({ default: m.CustomersPage })),
 )
+const ServicesPage = lazy(() =>
+  import('@/pages/admin/ServicesPage').then((m) => ({ default: m.ServicesPage })),
+)
+const AppointmentsPage = lazy(() =>
+  import('@/pages/admin/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })),
+)
+const FinancePage = lazy(() => import('@/pages/admin/FinancePage').then((m) => ({ default: m.FinancePage })))
+const OrderPrintPage = lazy(() =>
+  import('@/pages/admin/OrderPrintPage').then((m) => ({ default: m.OrderPrintPage })),
+)
+const BilanPrintPage = lazy(() =>
+  import('@/pages/admin/BilanPrintPage').then((m) => ({ default: m.BilanPrintPage })),
+)
+const NotificationsPage = lazy(() =>
+  import('@/pages/admin/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
+)
+const TeamPage = lazy(() => import('@/pages/admin/TeamPage').then((m) => ({ default: m.TeamPage })))
+const ReservationsPage = lazy(() =>
+  import('@/pages/admin/ReservationsPage').then((m) => ({ default: m.ReservationsPage })),
+)
 const SettingsPage = lazy(() =>
   import('@/pages/admin/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -84,9 +106,26 @@ const PlatformCampaignsPage = lazy(() =>
 const PlatformPromosPage = lazy(() =>
   import('@/pages/platform/PlatformPromosPage').then((m) => ({ default: m.PlatformPromosPage })),
 )
+const PlatformHealthPage = lazy(() =>
+  import('@/pages/platform/PlatformHealthPage').then((m) => ({ default: m.PlatformHealthPage })),
+)
+const PlatformAuditPage = lazy(() =>
+  import('@/pages/platform/PlatformAuditPage').then((m) => ({ default: m.PlatformAuditPage })),
+)
 const PlatformTeamPage = lazy(() =>
   import('@/pages/platform/PlatformTeamPage').then((m) => ({ default: m.PlatformTeamPage })),
 )
+const PlatformCountriesPage = lazy(() =>
+  import('@/pages/platform/PlatformCountriesPage').then((m) => ({ default: m.PlatformCountriesPage })),
+)
+const PlatformBusinessTypesPage = lazy(() =>
+  import('@/pages/platform/PlatformBusinessTypesPage').then((m) => ({ default: m.PlatformBusinessTypesPage })),
+)
+const PlatformTemplatesPage = lazy(() =>
+  import('@/pages/platform/PlatformTemplatesPage').then((m) => ({ default: m.PlatformTemplatesPage })),
+)
+
+const SolutionPage = lazy(() => import('@/pages/marketing/SolutionPage').then((m) => ({ default: m.SolutionPage })))
 
 const standalone = (page: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{page}</Suspense>
@@ -102,6 +141,7 @@ export function PlatformRoutes() {
       <Route path="inscription" element={<Navigate to="/admin/login" replace />} />
       <Route path="mot-de-passe-oublie" element={standalone(<ForgotPasswordPage />)} />
       <Route path="reinitialiser-mot-de-passe" element={standalone(<ResetPasswordPage />)} />
+      <Route path="solutions/:slug" element={standalone(<SolutionPage />)} />
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
@@ -146,10 +186,50 @@ export function PlatformRoutes() {
               )}
             />
             <Route
+              path="plateforme/pays"
+              element={standalone(
+                <CapabilityGate capability="manage_countries">
+                  <PlatformCountriesPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
               path="plateforme/equipe"
               element={standalone(
                 <CapabilityGate capability="manage_team">
                   <PlatformTeamPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/journal"
+              element={standalone(
+                <CapabilityGate capability="manage_team">
+                  <PlatformAuditPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/sante"
+              element={standalone(
+                <CapabilityGate capability="view_health">
+                  <PlatformHealthPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/types"
+              element={standalone(
+                <CapabilityGate capability="manage_business_types">
+                  <PlatformBusinessTypesPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/gabarits"
+              element={standalone(
+                <CapabilityGate capability="manage_business_types">
+                  <PlatformTemplatesPage />
                 </CapabilityGate>,
               )}
             />
@@ -161,30 +241,69 @@ export function PlatformRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="onboarding" element={standalone(<OnboardingPage />)} />
           <Route element={<RequireShop />}>
+            {/* Bilan imprimable : hors du layout admin (pas de menu à l'impression). */}
+            <Route element={<RequireArea area="finance" />}>
+              <Route path="gestion/bilan" element={standalone(<BilanPrintPage />)} />
+            </Route>
+            <Route element={<RequireCapabilities capabilities={['HAS_ORDERS']} />}>
+              <Route path="commandes/:id/imprimer" element={standalone(<OrderPrintPage />)} />
+            </Route>
             <Route element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
-              <Route path="produits" element={standalone(<ProductsPage />)} />
-              <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
-              <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
-              {/* Catégories lives as a tab of Produits now (?tab=categories) —
-                  the create-category form stays its own page, but the list
-                  itself no longer has a standalone route. */}
-              <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
-              <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
-              <Route path="commandes" element={standalone(<OrdersPage />)} />
-              <Route path="commandes/nouvelle" element={standalone(<NewOrderPage />)} />
-              <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
-              <Route path="clients" element={standalone(<CustomersPage />)} />
-              <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              <Route element={<RequireCapabilities capabilities={['HAS_PRODUCTS']} />}>
+                <Route path="produits" element={standalone(<ProductsPage />)} />
+                <Route element={<RequireArea area="catalog_write" />}>
+                  <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
+                  <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+                  <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
+                </Route>
+                {/* Catégories lives as a tab of Produits now (?tab=categories) —
+                    the create-category form stays its own page, but the list
+                    itself no longer has a standalone route. */}
+                <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_ORDERS']} />}>
+                <Route path="commandes" element={standalone(<OrdersPage />)} />
+                <Route path="commandes/nouvelle" element={standalone(<NewOrderPage />)} />
+                <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_CUSTOMERS']} />}>
+                <Route path="clients" element={standalone(<CustomersPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_SERVICES']} />}>
+                <Route path="prestations" element={standalone(<ServicesPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_APPOINTMENTS']} />}>
+                <Route path="rendez-vous" element={standalone(<AppointmentsPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_TEAM']} />}>
+                <Route path="equipe" element={standalone(<TeamPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_RESERVATIONS']} />}>
+                <Route path="reservations" element={standalone(<ReservationsPage />)} />
+              </Route>
+              <Route element={<RequireArea area="finance" />}>
+                <Route path="gestion" element={standalone(<FinancePage />)} />
+              </Route>
+              <Route element={<RequireArea area="customize" />}>
+                <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
+                  <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+                </Route>
+              </Route>
               {/* Facturation moved into Paramètres (one less top-level nav
                   group in production, where it was the only item under
                   "Développer"). Kept as a redirect — Wave's own success/error
                   URLs and every internal link were updated, but this catches
                   anything external (an old bookmark, a cached email). */}
               <Route path="facturation" element={<Navigate to="/admin/parametres/facturation" replace />} />
-              <Route path="parametres">
-                <Route index element={<Navigate to="general" replace />} />
-                <Route path=":section" element={standalone(<SettingsPage />)} />
+              <Route element={<RequireArea area="settings" />}>
+                <Route path="parametres">
+                  <Route index element={<Navigate to="general" replace />} />
+                  <Route element={<RequireArea area="notifications" />}>
+                    <Route path="notifications" element={standalone(<NotificationsPage />)} />
+                  </Route>
+                  <Route path=":section" element={standalone(<SettingsPage />)} />
+                </Route>
               </Route>
             </Route>
           </Route>

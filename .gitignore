@@ -37,3 +37,10 @@ supabase/.branches
 
 # Local MCP config
 .mcp.json
+
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# Visuels marketing : fichiers temporaires de génération
+scripts/marketing/.tmp*/

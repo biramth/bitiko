@@ -37,6 +37,307 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          end_at: string
+          id: string
+          notes: string | null
+          service_duration: number | null
+          service_id: string | null
+          service_name: string | null
+          service_price: number | null
+          shop_id: string
+          start_at: string
+          status: string
+          team_member_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          end_at: string
+          id?: string
+          notes?: string | null
+          service_duration?: number | null
+          service_id?: string | null
+          service_name?: string | null
+          service_price?: number | null
+          shop_id: string
+          start_at: string
+          status?: string
+          team_member_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          end_at?: string
+          id?: string
+          notes?: string | null
+          service_duration?: number | null
+          service_id?: string | null
+          service_name?: string | null
+          service_price?: number | null
+          shop_id?: string
+          start_at?: string
+          status?: string
+          team_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          channel: string
+          created_at: string
+          enabled: boolean
+          event_type: string
+          id: string
+          shop_id: string
+          template: { subject?: string; body?: string }
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          shop_id: string
+          template?: { subject?: string; body?: string }
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          shop_id?: string
+          template?: { subject?: string; body?: string }
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_entries: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          id: string
+          kind: string
+          label: string
+          note: string | null
+          payment_method: string | null
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          kind: string
+          label: string
+          note?: string | null
+          payment_method?: string | null
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          kind?: string
+          label?: string
+          note?: string | null
+          payment_method?: string | null
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_settings: {
+        Row: {
+          close_time: string
+          closed_dates: string[]
+          max_days_ahead: number
+          open_days: number[]
+          open_time: string
+          reservation_minutes: number
+          shop_id: string
+          slot_minutes: number
+          table_capacity: number
+          timezone: string
+          updated_at: string
+          weekly_hours: Json | null
+        }
+        Insert: {
+          close_time?: string
+          closed_dates?: string[]
+          max_days_ahead?: number
+          open_days?: number[]
+          open_time?: string
+          reservation_minutes?: number
+          shop_id: string
+          slot_minutes?: number
+          table_capacity?: number
+          timezone?: string
+          updated_at?: string
+          weekly_hours?: Json | null
+        }
+        Update: {
+          close_time?: string
+          closed_dates?: string[]
+          max_days_ahead?: number
+          open_days?: number[]
+          open_time?: string
+          reservation_minutes?: number
+          shop_id?: string
+          slot_minutes?: number
+          table_capacity?: number
+          timezone?: string
+          updated_at?: string
+          weekly_hours?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_settings_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: true
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          metadata: Json
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_business_types: {
+        Row: {
+          template_id: string
+          business_type_id: string
+          created_at: string
+        }
+        Insert: {
+          template_id: string
+          business_type_id: string
+          created_at?: string
+        }
+        Update: {
+          template_id?: string
+          business_type_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          description: string | null
+          status: string
+          content: Json | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          description?: string | null
+          status?: string
+          content?: Json | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          description?: string | null
+          status?: string
+          content?: Json | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
@@ -45,10 +346,12 @@ export type Database = {
           emoji: string | null
           id: string
           image_url: string | null
+          kind: string
           name: string
           position: number
           shop_id: string
           slug: string
+          thumb_url: string | null
         }
         Insert: {
           color?: string | null
@@ -57,10 +360,12 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          kind?: string
           name: string
           position?: number
           shop_id: string
           slug: string
+          thumb_url?: string | null
         }
         Update: {
           color?: string | null
@@ -69,10 +374,12 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          kind?: string
           name?: string
           position?: number
           shop_id?: string
           slug?: string
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -441,6 +748,77 @@ export type Database = {
           },
         ]
       }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          currency_code: string
+          dial_code: string
+          is_enabled: boolean
+          name: string
+          national_number_length: number
+          national_regex: string
+          timezone: string
+          trunk_prefix: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_code: string
+          dial_code: string
+          is_enabled?: boolean
+          name: string
+          national_number_length: number
+          national_regex: string
+          timezone?: string
+          trunk_prefix?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_code?: string
+          dial_code?: string
+          is_enabled?: boolean
+          name?: string
+          national_number_length?: number
+          national_regex?: string
+          timezone?: string
+          trunk_prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "countries_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      currencies: {
+        Row: {
+          code: string
+          created_at: string
+          decimal_digits: number
+          name: string
+          symbol: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          decimal_digits: number
+          name: string
+          symbol: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          decimal_digits?: number
+          name?: string
+          symbol?: string
+        }
+        Relationships: []
+      }
       product_images: {
         Row: {
           created_at: string
@@ -449,6 +827,8 @@ export type Database = {
           public_url: string
           sort_order: number
           storage_path: string
+          thumb_path: string | null
+          thumb_url: string | null
         }
         Insert: {
           created_at?: string
@@ -457,6 +837,8 @@ export type Database = {
           public_url: string
           sort_order?: number
           storage_path: string
+          thumb_path?: string | null
+          thumb_url?: string | null
         }
         Update: {
           created_at?: string
@@ -465,6 +847,8 @@ export type Database = {
           public_url?: string
           sort_order?: number
           storage_path?: string
+          thumb_path?: string | null
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -488,6 +872,7 @@ export type Database = {
           sku: string | null
           sort_order: number
           stock: number
+          thumb_url: string | null
         }
         Insert: {
           active?: boolean
@@ -500,6 +885,7 @@ export type Database = {
           sku?: string | null
           sort_order?: number
           stock?: number
+          thumb_url?: string | null
         }
         Update: {
           active?: boolean
@@ -512,6 +898,7 @@ export type Database = {
           sku?: string | null
           sort_order?: number
           stock?: number
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -586,9 +973,176 @@ export type Database = {
           },
         ]
       }
+      reservations: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string | null
+          party_size: number
+          shop_id: string
+          source: string
+          start_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          notes?: string | null
+          party_size?: number
+          shop_id: string
+          source?: string
+          start_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          notes?: string | null
+          party_size?: number
+          shop_id?: string
+          source?: string
+          start_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          active: boolean
+          category_id: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          name: string
+          price: number
+          shop_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name: string
+          price?: number
+          shop_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name?: string
+          price?: number
+          shop_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          active: boolean
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          rating: number | null
+          role: string
+          shop_id: string
+          show_contact: boolean
+          sort_order: number
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          rating?: number | null
+          role?: string
+          shop_id: string
+          show_contact?: boolean
+          sort_order?: number
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          rating?: number | null
+          role?: string
+          shop_id?: string
+          show_contact?: boolean
+          sort_order?: number
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
+          country_code: string
           created_at: string
           first_name: string | null
           id: string
@@ -598,6 +1152,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          country_code?: string
           created_at?: string
           first_name?: string | null
           id: string
@@ -607,6 +1162,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          country_code?: string
           created_at?: string
           first_name?: string | null
           id?: string
@@ -687,9 +1243,12 @@ export type Database = {
       shops: {
         Row: {
           address: string | null
+          banner_thumb_url: string | null
           banner_url: string | null
           builder_draft: BuilderDraft | null
           business_type: string | null
+          business_type_id: string | null
+          country_code: string
           created_at: string
           currency: string
           delivery_fee: number
@@ -698,14 +1257,17 @@ export type Database = {
           ga_measurement_id: string | null
           id: string
           layout_sections: LayoutSection[]
+          logo_thumb_url: string | null
           logo_url: string | null
           low_stock_threshold: number
           name: string
           onboarding_responses: StoreProfileAnswers | null
+          organization_id: string | null
           owner_id: string
           page_templates: SystemTemplateMap
           payment_instructions: string | null
           slug: string
+          suspended_at: string | null
           social_links: Record<string, string>
           template_id: string | null
           theme_color: string
@@ -715,9 +1277,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          banner_thumb_url?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
+          business_type_id?: string | null
+          country_code?: string
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -726,14 +1291,17 @@ export type Database = {
           ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
+          logo_thumb_url?: string | null
           logo_url?: string | null
           low_stock_threshold?: number
           name: string
           onboarding_responses?: StoreProfileAnswers | null
+          organization_id?: string | null
           owner_id: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug: string
+          suspended_at?: string | null
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -743,9 +1311,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          banner_thumb_url?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
+          business_type_id?: string | null
+          country_code?: string
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -754,14 +1325,17 @@ export type Database = {
           ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
+          logo_thumb_url?: string | null
           logo_url?: string | null
           low_stock_threshold?: number
           name?: string
           onboarding_responses?: StoreProfileAnswers | null
+          organization_id?: string | null
           owner_id?: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug?: string
+          suspended_at?: string | null
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -969,9 +1543,40 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      team_members_public: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          name: string | null
+          phone: string | null
+          rating: number | null
+          role: string | null
+          shop_id: string | null
+          sort_order: number | null
+          specialty: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      business_type_capability_codes: {
+        Args: { p_slug: string }
+        Returns: string[]
+      }
+      shop_business_type_slug: {
+        Args: { p_shop_id: string }
+        Returns: string
+      }
+      shop_template_slugs: {
+        Args: { p_shop_id: string }
+        Returns: string[]
+      }
+      organization_role: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       get_platform_orders: {
         Args: { p_limit?: number }
         Returns: {
@@ -1007,8 +1612,15 @@ export type Database = {
           whatsapp_number: string
           owner_id: string
           owner_email: string | null
+          country_code: string
+          business_type: string | null
+          subscribed_plan: string
+          period_end: string | null
+          last_order_at: string | null
+          suspended_at: string | null
         }[]
       }
+      get_platform_health: { Args: never; Returns: Json }
       get_platform_stats: { Args: never; Returns: Json }
       get_shop_visit_stats: {
         Args: { p_shop_id: string }
@@ -1120,6 +1732,126 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_appointment: {
+        Args: {
+          p_customer_name: string
+          p_customer_phone: string
+          p_service_id: string
+          p_shop_id: string
+          p_start_at: string
+          p_team_member_id?: string | null
+        }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          end_at: string
+          id: string
+          notes: string | null
+          service_duration: number | null
+          service_id: string | null
+          service_name: string | null
+          service_price: number | null
+          shop_id: string
+          start_at: string
+          status: string
+          team_member_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finance_revenue_by_month: {
+        Args: { p_from: string; p_shop_id: string; p_to: string }
+        Returns: { amount: number; entries: number; month: string; source: string }[]
+      }
+      finance_top_items: {
+        Args: { p_from: string; p_limit?: number; p_shop_id: string; p_to: string }
+        Returns: { amount: number; kind: string; name: string; quantity: number }[]
+      }
+      get_booking_slots: {
+        Args: { p_date: string; p_service_id: string; p_shop_id: string; p_team_member_id: string | null }
+        Returns: { slot_start: string }[]
+      }
+      get_reservation_slots: {
+        Args: { p_date: string; p_party_size: number; p_shop_id: string }
+        Returns: { slot_start: string }[]
+      }
+      create_reservation: {
+        Args: {
+          p_customer_name: string
+          p_customer_phone: string
+          p_party_size: number
+          p_shop_id: string
+          p_start_at: string
+        }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string | null
+          party_size: number
+          shop_id: string
+          source: string
+          start_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_appointment_status: {
+        Args: { p_appointment_id: string; p_status: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          end_at: string
+          id: string
+          notes: string | null
+          service_id: string | null
+          shop_id: string
+          start_at: string
+          status: string
+          team_member_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "appointments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_reservation_status: {
+        Args: { p_reservation_id: string; p_status: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string | null
+          party_size: number
+          shop_id: string
+          source: string
+          start_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reservations"
           isOneToOne: true
           isSetofReturn: false
         }

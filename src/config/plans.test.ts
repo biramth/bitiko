@@ -5,6 +5,8 @@ import {
   canAddProduct,
   canAddProductImage,
   canAddSection,
+  canAddService,
+  canAddTeamMember,
   canAddVariant,
   effectivePlan,
   effectivePlanKey,
@@ -40,16 +42,17 @@ describe('effectivePlan', () => {
   it('defaults to the free plan', () => {
     const plan = effectivePlan(null)
     expect(plan.key).toBe('free')
-    expect(plan.maxActiveProducts).toBe(15)
+    // Mirrors public.plan_limits (single source is the DB trigger) — see plans.ts.
+    expect(plan.maxActiveProducts).toBe(8)
     expect(plan.storeBuilderAccess).toBe(true)
     expect(plan.advancedBuilder).toBe(false)
   })
 })
 
 describe('canAddProduct', () => {
-  it('blocks the free plan at its 15-product cap', () => {
-    expect(canAddProduct(PLANS.free, 15)).toBe(false)
-    expect(canAddProduct(PLANS.free, 14)).toBe(true)
+  it('blocks the free plan at its 8-product cap', () => {
+    expect(canAddProduct(PLANS.free, 8)).toBe(false)
+    expect(canAddProduct(PLANS.free, 7)).toBe(true)
     expect(canAddProduct(PLANS.free, 0)).toBe(true)
   })
 
@@ -106,5 +109,36 @@ describe('canAddVariant', () => {
   it('never limits paid plans', () => {
     expect(canAddVariant(PLANS.essential, 999)).toBe(true)
     expect(canAddVariant(PLANS.pro, 999)).toBe(true)
+  })
+})
+describe('plafonds métiers de service', () => {
+  it('free < essentiel < pro, pro illimité', () => {
+    expect(PLANS.free.maxActiveServices).toBe(6)
+    expect(PLANS.essential.maxActiveServices).toBe(30)
+    expect(PLANS.pro.maxActiveServices).toBeNull()
+    expect(PLANS.free.maxTeamMembers).toBe(2)
+    expect(PLANS.pro.maxMonthlyBookings).toBeNull()
+  })
+
+  it('canAddService / canAddTeamMember respectent le plafond', () => {
+    expect(canAddService(PLANS.free, 5)).toBe(true)
+    expect(canAddService(PLANS.free, 6)).toBe(false)
+    expect(canAddService(PLANS.pro, 10_000)).toBe(true)
+    expect(canAddTeamMember(PLANS.free, 2)).toBe(false)
+    expect(canAddTeamMember(PLANS.essential, 7)).toBe(true)
+  })
+})
+
+describe('outils de gestion par plan', () => {
+  it('l’export (CSV + PDF, généré dans le navigateur) est ouvert à tous ; l’historique, la comparaison et les saisies différencient les plans', () => {
+    expect(PLANS.free.financeHistoryMonths).toBe(1)
+    expect(PLANS.free.financeExport).toBe('pdf')
+    expect(PLANS.essential.financeExport).toBe('pdf')
+    expect(PLANS.free.maxMonthlyFinanceEntries).toBe(30)
+    expect(PLANS.essential.financeHistoryMonths).toBe(12)
+    expect(PLANS.essential.maxMonthlyFinanceEntries).toBeNull()
+    expect(PLANS.pro.financeExport).toBe('pdf')
+    expect(PLANS.pro.financeHistoryMonths).toBeNull()
+    expect(PLANS.pro.financeComparison).toBe(true)
   })
 })

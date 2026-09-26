@@ -5,11 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/prerender/prerender.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "template:new": "node scripts/new-template.mjs",
+    "marketing:serve": "vite build --config scripts/marketing/vite.config.ts && vite preview --config scripts/marketing/vite.config.ts",
+    "marketing:shots": "node scripts/marketing/shots.mjs",
+    "marketing:video": "node scripts/marketing/video.mjs",
+    "marketing:og": "node scripts/marketing/og.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -26,6 +32,8 @@
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/papaparse": "^5.5.2",

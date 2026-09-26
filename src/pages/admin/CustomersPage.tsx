@@ -20,6 +20,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Pagination } from '@/components/ui/Pagination'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 const SEGMENTS: CustomerSegment[] = ['all', 'new', 'inactive', 'top']
 
@@ -218,7 +219,7 @@ export function CustomersPage() {
             <button
               type="button"
               onClick={() => setEditing(null)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               Annuler
             </button>
@@ -226,7 +227,7 @@ export function CustomersPage() {
               type="button"
               onClick={() => updateMutation.mutate()}
               disabled={updateMutation.isPending}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {updateMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
             </button>
@@ -240,7 +241,7 @@ export function CustomersPage() {
               id="customer-name"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none"
+              className={`${controlClass()} mt-1`}
             />
           </div>
           <div>
@@ -249,7 +250,7 @@ export function CustomersPage() {
               id="customer-address"
               value={editAddress}
               onChange={(e) => setEditAddress(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none"
+              className={`${controlClass()} mt-1`}
             />
           </div>
           {updateMutation.isError && <p className="text-sm text-red-600">L'enregistrement a échoué. Réessayez.</p>}

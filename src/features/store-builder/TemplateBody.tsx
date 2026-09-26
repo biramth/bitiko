@@ -1,5 +1,6 @@
 import { useTenant } from '@/features/tenant/TenantContext'
 import { SectionList } from './SectionList'
+import { useStorefrontCapabilities } from './useStorefrontCapabilities'
 import { useEffectiveTemplateConfig } from './useEffectiveShopConfig'
 import type { SystemTemplateKey } from '@/types/builder'
 
@@ -9,6 +10,7 @@ import type { SystemTemplateKey } from '@/types/builder'
 export function TemplateBody({ template }: { template: SystemTemplateKey }) {
   const { shop } = useTenant()
   const { bodySections, themeConfig, isDraftPreview, inlineEditable } = useEffectiveTemplateConfig(shop, template)
+  const capabilities = useStorefrontCapabilities(shop)
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window
 
   if (!shop) return null
@@ -21,6 +23,7 @@ export function TemplateBody({ template }: { template: SystemTemplateKey }) {
         themeConfig={themeConfig}
         isEmbeddedPreview={isEmbeddedPreview}
         inlineEditable={inlineEditable}
+        capabilities={capabilities}
       />
     </div>
   )

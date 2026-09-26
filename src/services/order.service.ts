@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { kickAutomations } from '@/services/bookingNotify.service'
 import { ORDERS_PAGE_SIZE } from '@/config/constants'
 import { parseOrderOptions } from '@/utils/productOptions'
 import type { CartItem, Order, OrderStatus, OrderWithItems, PaymentMethod } from '@/types'
@@ -68,6 +69,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const rows = data as CreateOrderRpcRow[]
   if (!rows || rows.length === 0) throw new Error('La commande n\'a pas pu être créée.')
 
+  // Prévient le marchand tout de suite (email d'alerte) au lieu d'attendre le cron quotidien.
+  void kickAutomations(input.shopId)
+
   return {
     orderId: rows[0].order_id,
     orderNumber: rows[0].order_number,
@@ -113,6 +117,29 @@ export async function listOrders(
   return { orders: (data ?? []) as Order[], total: count ?? 0 }
 }
 
+/** Toutes les commandes (filtrées par statut), articles compris, pour l'export tableur. Plafonné pour rester léger. */
+export async function listOrdersForExport(
+  shopId: string,
+  status?: OrderStatus,
+  limit = 5000,
+): Promise<(Order & { items: { product_name: string; variant_name: string | null; quantity: number }[] })[]> {
+  const pageSize = 500
+  const rows: (Order & { items: { product_name: string; variant_name: string | null; quantity: number }[] })[] = []
+  for (let from = 0; from < limit; from += pageSize) {
+    let query = supabase
+      .from('orders')
+      .select('*, items:order_items(product_name, variant_name, quantity)')
+      .eq('shop_id', shopId)
+    if (status) query = query.eq('status', status)
+    const { data, error } = await query.order('created_at', { ascending: false }).range(from, from + pageSize - 1)
+    if (error) throw error
+    const batch = (data ?? []) as typeof rows
+    rows.push(...batch)
+    if (batch.length < pageSize) break
+  }
+  return rows
+}
+
 export async function getOrderById(id: string): Promise<OrderWithItems | null> {
   const { data, error } = await supabase
     .from('orders')
@@ -154,7 +181,9 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     p_status: status,
   })
   if (error) throw error
-  return data as Order
+  const order = data as Order
+  void kickAutomations(order.shop_id)
+  return order
 }
 
 /** Internal note, never shown to the customer. */

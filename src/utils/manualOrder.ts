@@ -35,7 +35,7 @@ export function toManualProduct(p: ProductWithRelations): ManualProduct {
     slug: p.slug,
     price: Number(p.price),
     stock: p.stock,
-    imageUrl: p.images[0]?.public_url ?? null,
+    imageUrl: p.images[0]?.thumb_url ?? p.images[0]?.public_url ?? null,
     variants: p.variants.map((v) => ({
       id: v.id,
       name: v.name,

@@ -13,6 +13,7 @@ import { formatCurrency } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
+import { buttonClass } from '@/components/ui/styles'
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -45,7 +46,38 @@ function useIsTouchPrimary() {
 /** Desktop fallback for "Payer avec Wave": the payment link itself only
  *  does anything useful on a phone with the Wave app installed, so this
  *  renders it as a QR code (encoding the same link, amount included) to
- *  scan instead of opening a dead page in a new tab. */
+ *  scan instead of opening a dead page in a new tab. The QR state lives in
+ *  `WaveQrBody`, keyed by link — `Dialog` unmounts its children on close, so
+ *  each opening starts from a clean state without a synchronous reset inside
+ *  the generation effect. */
+function WaveQrBody({ paymentLink, planLabel }: { paymentLink: string; planLabel: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    QRCode.toDataURL(paymentLink, { width: 288, margin: 1, color: { dark: '#17152e', light: '#ffffff' } })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url)
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [paymentLink])
+
+  return (
+    <div className="flex h-64 w-full max-w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
+      {qrDataUrl ? (
+        <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
+      ) : (
+        <Loader2 size={28} className="animate-spin text-gray-300" aria-hidden />
+      )}
+    </div>
+  )
+}
+
 function WaveQrDialog({
   open,
   onClose,
@@ -59,16 +91,6 @@ function WaveQrDialog({
   planLabel: string
   amountLabel: string
 }) {
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    setQrDataUrl(null)
-    QRCode.toDataURL(paymentLink, { width: 288, margin: 1, color: { dark: '#17152e', light: '#ffffff' } })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null))
-  }, [open, paymentLink])
-
   return (
     <Dialog open={open} onClose={onClose} title={`Payer avec Wave — ${planLabel}`}>
       <div className="flex flex-col items-center gap-4 text-center">
@@ -76,13 +98,7 @@ function WaveQrDialog({
           Ouvre l'app Wave sur ton téléphone et scanne ce code pour payer{' '}
           <strong className="text-gray-900">{amountLabel}</strong> et activer le plan {planLabel}.
         </p>
-        <div className="flex h-64 w-full max-w-64 items-center justify-center rounded-xl border border-gray-200 bg-white p-3">
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt={`QR code de paiement Wave — ${planLabel}`} className="h-full w-full" />
-          ) : (
-            <Loader2 size={28} className="animate-spin text-gray-300" aria-hidden />
-          )}
-        </div>
+        <WaveQrBody key={paymentLink} paymentLink={paymentLink} planLabel={planLabel} />
         <p className="text-xs text-gray-400">
           Une fois le paiement effectué, reviens ici et envoie la capture de ton reçu Wave avec « Envoyer ma preuve de paiement ».
         </p>
@@ -221,17 +237,23 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 `Jusqu'à ${tier.maxActiveProducts} produits actifs`,
                 `Personnalisation de base (${tier.maxCustomSections} blocs de contenu)`,
                 'Commandes via WhatsApp',
+                `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
+                `Finances : bilan du mois, export Excel et PDF, ${tier.maxMonthlyFinanceEntries} saisies / mois`,
               ]
             : key === 'essential'
               ? [
                   'Jusqu’à 50 produits actifs',
                   `Builder complet (${tier.maxCustomSections} blocs de contenu) et pages personnalisées`,
                   'Analytics standard et import CSV',
+                  `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
+                  'Finances : 12 mois d’historique et saisies illimitées',
                 ]
               : [
                   'Produits illimités',
                   'Personnalisation illimitée (blocs et pages) et styles avancés',
                   'Analytics avancées et branding retiré',
+                  'Prestations, équipiers et rendez-vous en ligne illimités',
+                  'Finances : comparaison entre périodes, historique complet, bilan sans mention Bitiko',
                 ]
 
           return (
@@ -249,6 +271,8 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 <p className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">Plan actuel</p>
               ) : key === 'free' ? (
                 <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Disponible au démarrage</p>
+              ) : key === 'essential' && planKey === 'pro' ? (
+                <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Inclus dans votre plan Pro</p>
               ) : pendingManualRequest ? (
                 <div className="mt-5 space-y-1 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700">
                   <div className="flex items-center justify-center gap-2"><Clock size={14} /> Preuve envoyée — vérification en cours (sous 24 h)</div>
@@ -261,11 +285,11 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                       <CreditCard size={15} /> Payer avec Wave
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setQrDialogPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <button type="button" onClick={() => setQrDialogPlan(key)} className={buttonClass({ size: 'lg', fullWidth: true })}>
                       <CreditCard size={15} /> Payer avec Wave
                     </button>
                   )}
-                  <button type="button" onClick={() => setProofPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <button type="button" onClick={() => setProofPlan(key)} className={buttonClass({ variant: 'secondary', size: 'lg', fullWidth: true })}>
                     <CheckCircle2 size={14} />
                     Envoyer ma preuve de paiement
                   </button>
