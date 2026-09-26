@@ -17,6 +17,12 @@ export interface DashboardStats {
   averageOrderValue: number
   topProducts: { name: string; quantity: number; revenue: number }[]
   recentOrders: Order[]
+  /** Commandes qui attendent une action du commerçant (à confirmer, à encaisser, à livrer), les plus anciennes d'abord. */
+  ordersToProcess: Order[]
+  /** Nombre total de commandes en attente d'action (la liste ci-dessus est plafonnée). */
+  ordersToProcessCount: number
+  /** Produits actifs en rupture ou sous le seuil d'alerte, les plus urgents d'abord. */
+  stockAlerts: { id: string; name: string; stock: number }[]
 }
 
 async function countProducts(
@@ -59,6 +65,9 @@ export async function getDashboardStats(
     sales,
     recentOrders,
     visits,
+    ordersToProcess,
+    ordersToProcessCount,
+    stockAlerts,
   ] = await Promise.all([
     countProducts(shopId),
     countProducts(shopId, { active: true }),
@@ -85,11 +94,35 @@ export async function getDashboardStats(
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.rpc('get_shop_visit_stats', { p_shop_id: shopId }),
+    // À confirmer d'abord (le client attend une réponse), puis à encaisser / livrer.
+    Promise.all([
+      supabase.from('orders').select('*').eq('shop_id', shopId).eq('status', 'pending').order('created_at', { ascending: true }).limit(6),
+      supabase.from('orders').select('*').eq('shop_id', shopId).in('status', ['confirmed', 'paid']).order('created_at', { ascending: true }).limit(6),
+    ]).then(([pending, rest]) => ({
+      error: pending.error ?? rest.error,
+      data: [...(pending.data ?? []), ...(rest.data ?? [])].slice(0, 6),
+    })),
+    supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('shop_id', shopId)
+      .in('status', ['pending', 'confirmed', 'paid']),
+    supabase
+      .from('products')
+      .select('id, name, stock')
+      .eq('shop_id', shopId)
+      .eq('active', true)
+      .lte('stock', lowStockThreshold)
+      .order('stock', { ascending: true })
+      .limit(6),
   ])
 
   if (revenueToday.error) throw revenueToday.error
   if (sales.error) throw sales.error
   if (recentOrders.error) throw recentOrders.error
+  if (ordersToProcess.error) throw ordersToProcess.error
+  if (ordersToProcessCount.error) throw ordersToProcessCount.error
+  if (stockAlerts.error) throw stockAlerts.error
   // Visit stats are a nice-to-have; never fail the whole dashboard over them.
   const visitStats = visits.error ? null : (visits.data?.[0] ?? null)
 
@@ -126,5 +159,8 @@ export async function getDashboardStats(
     averageOrderValue: totalOrders > 0 ? salesTotal / (sales.data.length || 1) : 0,
     topProducts,
     recentOrders: (recentOrders.data ?? []) as Order[],
+    ordersToProcess: (ordersToProcess.data ?? []) as Order[],
+    ordersToProcessCount: ordersToProcessCount.count ?? 0,
+    stockAlerts: (stockAlerts.data ?? []) as { id: string; name: string; stock: number }[],
   }
 }

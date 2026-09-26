@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop, useMyShops } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { canAccess, type Area } from '@/features/shop-settings/permissions'
 import { getOrderStatusCounts } from '@/services/order.service'
 import { countPendingAppointments } from '@/services/appointment.service'
 import { countPendingReservations } from '@/services/reservation.service'
@@ -127,26 +128,26 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   // blocks the data anyway; this just avoids dead-end pages). Unknown role
   // (still loading) keeps everything visible to avoid flicker for owners.
   const { role: shopRole } = useShopRole()
-  // Les chiffres de l'activité restent au propriétaire et aux managers.
+  // Chaque rôle ne voit que ce qu'il peut utiliser (voir permissions.ts) : finances et vitrine hors du vendeur.
+  const NAV_AREAS: Record<string, Area> = { finance: 'finance', customize: 'customize' }
   const groups = allGroups
-    .map((group) => ({ ...group, items: group.items.filter((item) => !(item.key === 'finance' && shopRole === 'vendeur')) }))
+    .map((group) => ({ ...group, items: group.items.filter((item) => !NAV_AREAS[item.key] || canAccess(shopRole, NAV_AREAS[item.key])) }))
     .filter((group) => group.items.length > 0)
+  const showSettings = canAccess(shopRole, 'settings')
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
   // Livraison & stock n'a de sens qu'avec livraison ou catalogue : un salon
   // 100 % rendez-vous ne le voit ni ici ni dans la page Paramètres.
   const showShippingSection =
     capabilities === null || capabilities.has('HAS_DELIVERY') || capabilities.has('HAS_PRODUCTS')
-  const visibleSettingsSections = (
-    shopRole && shopRole !== 'owner'
-      ? settingsSections.filter(
-          (s) =>
-            s.to !== '/admin/parametres/facturation' &&
-            s.to !== '/admin/parametres/equipe' &&
-            s.to !== '/admin/parametres/notifications',
-        )
-      : settingsSections
-  ).filter((s) => s.key !== 'shipping' || showShippingSection)
+  const SETTINGS_AREAS: Record<string, Area> = {
+    '/admin/parametres/facturation': 'billing',
+    '/admin/parametres/equipe': 'team_settings',
+    '/admin/parametres/notifications': 'notifications',
+  }
+  const visibleSettingsSections = settingsSections
+    .filter((s) => !SETTINGS_AREAS[s.to] || canAccess(shopRole, SETTINGS_AREAS[s.to]))
+    .filter((s) => s.key !== 'shipping' || showShippingSection)
 
   // Accordéon unique : un seul groupe ouvert à la fois, suit la navigation.
   // La route active rouvre son groupe ; un clic manuel ne vit que jusqu'à la
@@ -282,7 +283,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
           ),
         )}
 
-        {collapsed ? (
+        {showSettings && (collapsed ? (
           <Link
             to="/admin/parametres"
             aria-label="Paramètres"
@@ -312,8 +313,8 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
               className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
             />
           </button>
-        )}
-        {!collapsed && settingsExpanded && (
+        ))}
+        {showSettings && !collapsed && settingsExpanded && (
           <div className="flex flex-col gap-1.5">
             {SETTINGS_GROUPS.map(({ label, keys }) => {
               const items = visibleSettingsSections.filter((s) => keys.includes(s.key))

@@ -4,6 +4,7 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { CapabilityGate, RequirePlatformMember } from '@/features/platform/RequirePlatformMember'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RequireCapabilities } from './RequireCapabilities'
+import { RequireArea } from './RequireArea'
 import { RequireShop } from './RequireShop'
 
 // The landing page and both shells are lazy like every other page: a landing
@@ -68,6 +69,9 @@ const AppointmentsPage = lazy(() =>
   import('@/pages/admin/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })),
 )
 const FinancePage = lazy(() => import('@/pages/admin/FinancePage').then((m) => ({ default: m.FinancePage })))
+const OrderPrintPage = lazy(() =>
+  import('@/pages/admin/OrderPrintPage').then((m) => ({ default: m.OrderPrintPage })),
+)
 const BilanPrintPage = lazy(() =>
   import('@/pages/admin/BilanPrintPage').then((m) => ({ default: m.BilanPrintPage })),
 )
@@ -213,17 +217,24 @@ export function PlatformRoutes() {
           <Route path="onboarding" element={standalone(<OnboardingPage />)} />
           <Route element={<RequireShop />}>
             {/* Bilan imprimable : hors du layout admin (pas de menu à l'impression). */}
-            <Route path="gestion/bilan" element={standalone(<BilanPrintPage />)} />
+            <Route element={<RequireArea area="finance" />}>
+              <Route path="gestion/bilan" element={standalone(<BilanPrintPage />)} />
+            </Route>
+            <Route element={<RequireCapabilities capabilities={['HAS_ORDERS']} />}>
+              <Route path="commandes/:id/imprimer" element={standalone(<OrderPrintPage />)} />
+            </Route>
             <Route element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
               <Route element={<RequireCapabilities capabilities={['HAS_PRODUCTS']} />}>
                 <Route path="produits" element={standalone(<ProductsPage />)} />
-                <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
-                <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+                <Route element={<RequireArea area="catalog_write" />}>
+                  <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
+                  <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+                  <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
+                </Route>
                 {/* Catégories lives as a tab of Produits now (?tab=categories) —
                     the create-category form stays its own page, but the list
                     itself no longer has a standalone route. */}
-                <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
                 <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
               </Route>
               <Route element={<RequireCapabilities capabilities={['HAS_ORDERS']} />}>
@@ -246,9 +257,13 @@ export function PlatformRoutes() {
               <Route element={<RequireCapabilities capabilities={['HAS_RESERVATIONS']} />}>
                 <Route path="reservations" element={standalone(<ReservationsPage />)} />
               </Route>
-              <Route path="gestion" element={standalone(<FinancePage />)} />
-              <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
-                <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              <Route element={<RequireArea area="finance" />}>
+                <Route path="gestion" element={standalone(<FinancePage />)} />
+              </Route>
+              <Route element={<RequireArea area="customize" />}>
+                <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
+                  <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+                </Route>
               </Route>
               {/* Facturation moved into Paramètres (one less top-level nav
                   group in production, where it was the only item under
@@ -256,10 +271,14 @@ export function PlatformRoutes() {
                   URLs and every internal link were updated, but this catches
                   anything external (an old bookmark, a cached email). */}
               <Route path="facturation" element={<Navigate to="/admin/parametres/facturation" replace />} />
-              <Route path="parametres">
-                <Route index element={<Navigate to="general" replace />} />
-                <Route path="notifications" element={standalone(<NotificationsPage />)} />
-                <Route path=":section" element={standalone(<SettingsPage />)} />
+              <Route element={<RequireArea area="settings" />}>
+                <Route path="parametres">
+                  <Route index element={<Navigate to="general" replace />} />
+                  <Route element={<RequireArea area="notifications" />}>
+                    <Route path="notifications" element={standalone(<NotificationsPage />)} />
+                  </Route>
+                  <Route path=":section" element={standalone(<SettingsPage />)} />
+                </Route>
               </Route>
             </Route>
           </Route>

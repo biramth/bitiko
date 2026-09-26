@@ -3,8 +3,9 @@ import type { Bilan, FinanceEntry } from './bilan'
 
 /** Séparateur « ; » et BOM UTF-8 : Excel (réglages français) ouvre le fichier directement,
  *  accents compris, sans assistant d'import. */
+export const CSV_BOM = '﻿'
 const SEPARATOR = ';'
-const BOM = '﻿'
+const BOM = CSV_BOM
 
 function cell(value: string | number | null | undefined): string {
   const text = value === null || value === undefined ? '' : String(value)
@@ -13,7 +14,7 @@ function cell(value: string | number | null | undefined): string {
   return /[";\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
-function line(cells: (string | number | null | undefined)[]): string {
+export function csvLine(cells: (string | number | null | undefined)[]): string {
   return cells.map(cell).join(SEPARATOR)
 }
 
@@ -26,11 +27,11 @@ export function frenchDate(iso: string): string {
 /** Journal complet : une ligne par dépense ou recette saisie. */
 export function buildEntriesCsv(entries: FinanceEntry[]): string {
   const rows = [
-    line(['Date', 'Type', 'Catégorie', 'Libellé', 'Montant', 'Mode de paiement', 'Note']),
+    csvLine(['Date', 'Type', 'Catégorie', 'Libellé', 'Montant', 'Mode de paiement', 'Note']),
     ...[...entries]
       .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
       .map((e) =>
-        line([
+        csvLine([
           frenchDate(e.entry_date),
           e.kind === 'income' ? 'Recette' : 'Dépense',
           categoryLabel(e.category),
@@ -48,26 +49,26 @@ export function buildEntriesCsv(entries: FinanceEntry[]): string {
 export function buildBilanCsv(input: { shopName: string; periodLabel: string; currency: string; bilan: Bilan }): string {
   const { shopName, periodLabel, currency, bilan } = input
   const rows: string[] = [
-    line(['Bilan simple', shopName]),
-    line(['Période', periodLabel]),
-    line(['Devise', currency]),
+    csvLine(['Bilan simple', shopName]),
+    csvLine(['Période', periodLabel]),
+    csvLine(['Devise', currency]),
     '',
-    line(['RÉSUMÉ', 'Montant']),
-    line(['Recettes', bilan.totals.revenue]),
-    line(['Dépenses', bilan.totals.expenses]),
-    line([bilan.totals.result >= 0 ? 'Bénéfice' : 'Perte', bilan.totals.result]),
-    line(['Marge (%)', bilan.totals.margin ?? '']),
+    csvLine(['RÉSUMÉ', 'Montant']),
+    csvLine(['Recettes', bilan.totals.revenue]),
+    csvLine(['Dépenses', bilan.totals.expenses]),
+    csvLine([bilan.totals.result >= 0 ? 'Bénéfice' : 'Perte', bilan.totals.result]),
+    csvLine(['Marge (%)', bilan.totals.margin ?? '']),
     '',
-    line(['RECETTES', 'Montant', 'Nombre']),
-    line(['Ventes en ligne (commandes payées ou livrées)', bilan.revenueBySource.orders.amount, bilan.revenueBySource.orders.count]),
-    line(['Prestations terminées', bilan.revenueBySource.appointments.amount, bilan.revenueBySource.appointments.count]),
-    line(['Recettes saisies à la main', bilan.revenueBySource.manual.amount, bilan.revenueBySource.manual.count]),
+    csvLine(['RECETTES', 'Montant', 'Nombre']),
+    csvLine(['Ventes en ligne (commandes payées ou livrées)', bilan.revenueBySource.orders.amount, bilan.revenueBySource.orders.count]),
+    csvLine(['Prestations terminées', bilan.revenueBySource.appointments.amount, bilan.revenueBySource.appointments.count]),
+    csvLine(['Recettes saisies à la main', bilan.revenueBySource.manual.amount, bilan.revenueBySource.manual.count]),
     '',
-    line(['DÉPENSES PAR CATÉGORIE', 'Montant', 'Part (%)']),
-    ...bilan.expensesByCategory.map((c) => line([c.label, c.amount, c.share])),
+    csvLine(['DÉPENSES PAR CATÉGORIE', 'Montant', 'Part (%)']),
+    ...bilan.expensesByCategory.map((c) => csvLine([c.label, c.amount, c.share])),
     '',
-    line(['MOIS PAR MOIS', 'Recettes', 'Dépenses', 'Résultat']),
-    ...bilan.months.map((m) => line([m.month.slice(0, 7), m.revenue, m.expenses, m.result])),
+    csvLine(['MOIS PAR MOIS', 'Recettes', 'Dépenses', 'Résultat']),
+    ...bilan.months.map((m) => csvLine([m.month.slice(0, 7), m.revenue, m.expenses, m.result])),
   ]
   return BOM + rows.join('\r\n') + '\r\n'
 }

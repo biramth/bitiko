@@ -114,6 +114,29 @@ export async function listOrders(
   return { orders: (data ?? []) as Order[], total: count ?? 0 }
 }
 
+/** Toutes les commandes (filtrées par statut), articles compris, pour l'export tableur. Plafonné pour rester léger. */
+export async function listOrdersForExport(
+  shopId: string,
+  status?: OrderStatus,
+  limit = 5000,
+): Promise<(Order & { items: { product_name: string; variant_name: string | null; quantity: number }[] })[]> {
+  const pageSize = 500
+  const rows: (Order & { items: { product_name: string; variant_name: string | null; quantity: number }[] })[] = []
+  for (let from = 0; from < limit; from += pageSize) {
+    let query = supabase
+      .from('orders')
+      .select('*, items:order_items(product_name, variant_name, quantity)')
+      .eq('shop_id', shopId)
+    if (status) query = query.eq('status', status)
+    const { data, error } = await query.order('created_at', { ascending: false }).range(from, from + pageSize - 1)
+    if (error) throw error
+    const batch = (data ?? []) as typeof rows
+    rows.push(...batch)
+    if (batch.length < pageSize) break
+  }
+  return rows
+}
+
 export async function getOrderById(id: string): Promise<OrderWithItems | null> {
   const { data, error } = await supabase
     .from('orders')
