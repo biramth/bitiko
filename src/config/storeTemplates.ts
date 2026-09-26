@@ -87,6 +87,15 @@ function services(overrides: Partial<Extract<LayoutSection, { type: 'services' }
   }
 }
 
+function featuredServices(overrides: Partial<Extract<LayoutSection, { type: 'featured_services' }>['config']> = {}): LayoutSection {
+  return {
+    id: createSectionId('featured_services'),
+    type: 'featured_services',
+    visible: true,
+    config: { heading: 'Nos coups de cœur', serviceIds: [], ...overrides },
+  }
+}
+
 function team(overrides: Partial<Extract<LayoutSection, { type: 'team' }>['config']> = {}): LayoutSection {
   return {
     id: createSectionId('team'),
@@ -599,6 +608,302 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         footer(),
       ],
       ...systemLayout('Toutes nos créations'),
+    },
+  },
+  {
+    key: 'bistrot',
+    vertical: 'restauration',
+    label: 'Bistrot',
+    description: 'Ardoise et craie — bistrot de quartier, ambiance feutrée.',
+    swatch: ['#d97706', '#201a17'],
+    themeColor: '#d97706',
+    themeConfig: baseTheme({ secondaryColor: '#3a2f28', textColor: '#faf7f2', backgroundColor: '#201a17', buttonColor: '#d97706', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Bistrot de quartier',
+          heading: 'Comme à la maison, en mieux',
+          subheading: 'Plats du jour à l’ardoise, vins vivants, service sourire.',
+        }),
+        text({
+          heading: 'L’ardoise du jour',
+          body: 'Chaque matin, le chef écrit la carte selon le marché. Passe nous voir ou réserve ta table.',
+          align: 'center',
+        }),
+        menu({ heading: 'La carte' }),
+        reservations({ heading: 'Réserver une table' }),
+        testimonials({ heading: 'Les habitués' }),
+        footer(),
+      ],
+      ...systemLayout('À emporter'),
+    },
+  },
+  {
+    key: 'minimal',
+    vertical: 'mode',
+    label: 'Minimal',
+    description: 'Noir et blanc, sans détour — la mode épurée.',
+    swatch: ['#111111', '#ffffff'],
+    themeColor: '#111111',
+    themeConfig: baseTheme({ secondaryColor: '#f5f5f5', textColor: '#111111', backgroundColor: '#ffffff', buttonColor: '#111111', font: 'inter', textScale: 'base', radius: 'none', contentWidth: 'narrow' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Nouvelle collection',
+          heading: 'Moins, mais mieux',
+          subheading: 'Des essentiels bien coupés, en matières durables.',
+          showBanner: false,
+        }),
+        categories({ heading: 'Vestiaire' }),
+        products({ heading: 'Les essentiels', limit: 8 }),
+        text({
+          heading: 'Notre engagement',
+          body: 'Zéro solde, zéro gaspillage : des pièces intemporelles, produites en petites séries.',
+          align: 'center',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Les essentiels'),
+    },
+  },
+  {
+    key: 'onglerie',
+    vertical: 'beaute',
+    label: 'Onglerie',
+    description: 'Bar à ongles — coloré, joyeux, poses parfaites.',
+    swatch: ['#c026d3', '#fdf4ff'],
+    themeColor: '#c026d3',
+    themeConfig: baseTheme({ secondaryColor: '#fae8ff', textColor: '#2e1a33', backgroundColor: '#fffafd', buttonColor: '#c026d3', font: 'sora', textScale: 'base', radius: 'full', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Bar à ongles',
+          heading: 'Des ongles qui claquent',
+          subheading: 'Manucure, nail art, poses — repars avec des mains de star.',
+        }),
+        featuredServices({ heading: 'Nos poses stars' }),
+        services({ heading: 'La carte des soins' }),
+        appointments({ heading: 'Réserver ma pose' }),
+        testimonials({ heading: 'Elles adorent' }),
+        footer(),
+      ],
+      ...systemLayout('Nos produits'),
+    },
+  },
+  {
+    key: 'primeur',
+    vertical: 'epicerie',
+    label: 'Primeur',
+    description: 'Fruits et légumes — le marché en ligne.',
+    swatch: ['#16a34a', '#f0fdf4'],
+    themeColor: '#16a34a',
+    themeConfig: baseTheme({ secondaryColor: '#dcfce7', textColor: '#14532d', backgroundColor: '#fdfffb', buttonColor: '#16a34a', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'wide' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Arrivage du matin',
+          heading: 'Frais du marché, livré chez toi',
+          subheading: 'Fruits, légumes et crémerie, choisis à l’aube au marché.',
+        }),
+        promo({
+          heading: 'Le panier de la semaine',
+          body: 'Un assortiment de saison au meilleur prix, chaque lundi.',
+          buttonLabel: 'Voir le panier',
+        }),
+        categories({ heading: 'L’étal' }),
+        products({ heading: 'Fraîcheur du jour', limit: 16 }),
+        text({
+          heading: 'Nos producteurs',
+          body: 'Une dizaine de fermes partenaires à moins de 50 km.',
+          align: 'center',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Fraîcheur du jour'),
+    },
+  },
+  {
+    key: 'repair',
+    vertical: 'tech',
+    label: 'Atelier Repair',
+    description: 'Réparation et reconditionné — diagnostiqué, garanti.',
+    swatch: ['#4338ca', '#eef2ff'],
+    themeColor: '#4338ca',
+    themeConfig: baseTheme({ secondaryColor: '#e0e7ff', textColor: '#1e1b4b', backgroundColor: '#fafbff', buttonColor: '#4338ca', font: 'inter', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Atelier de réparation',
+          heading: 'Réparé, pas jeté',
+          subheading: 'Diagnostic gratuit, devis en 24 h, garantie 6 mois.',
+        }),
+        text({
+          heading: 'Comment ça marche',
+          body: 'Dépose ton appareil ou envoie-le nous : diagnostic gratuit, réparation après ton accord, test complet avant restitution.',
+          align: 'center',
+        }),
+        products({ heading: 'Reconditionnés garantis', limit: 8 }),
+        categories({ heading: 'Par appareil' }),
+        promo({
+          heading: '-20% sur les écrans ce mois-ci',
+          body: 'Écrans de smartphones remplacés par nos techniciens.',
+          buttonLabel: 'En profiter',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Reconditionnés garantis'),
+    },
+  },
+  {
+    key: 'scandi',
+    vertical: 'deco',
+    label: 'Scandinave',
+    description: 'Blanc et bois clair — déco douce et lumineuse.',
+    swatch: ['#8a6d3b', '#fffdf9'],
+    themeColor: '#8a6d3b',
+    themeConfig: baseTheme({ secondaryColor: '#f5efe4', textColor: '#292524', backgroundColor: '#fffdf9', buttonColor: '#8a6d3b', font: 'inter', textScale: 'base', radius: 'full', contentWidth: 'wide' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Esprit nordique',
+          heading: 'Le calme à la maison',
+          subheading: 'Bois clair, lin lavé, lumière douce : moins de bruit, plus de vie.',
+        }),
+        products({ heading: 'Nouveautés', limit: 12 }),
+        text({
+          heading: 'Nos matières',
+          body: 'Chêne massif, lin européen, céramique artisanale : des matières qui vieillissent bien.',
+          align: 'center',
+        }),
+        categories({ heading: 'Par pièce' }),
+        footer(),
+      ],
+      ...systemLayout('Nouveautés'),
+    },
+  },
+  {
+    key: 'apothicaire',
+    vertical: 'cosmetiques',
+    label: 'Apothicaire',
+    description: 'Remèdes et soins — herboristerie vintage.',
+    swatch: ['#3f6212', '#faf6ec'],
+    themeColor: '#3f6212',
+    themeConfig: baseTheme({ secondaryColor: '#e9e0c8', textColor: '#292524', backgroundColor: '#faf6ec', buttonColor: '#3f6212', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Herboristerie',
+          heading: 'Les remèdes de nos grands-mères',
+          subheading: 'Tisanes, huiles et soins simples, aux plantes du jardin.',
+        }),
+        featuredProducts({ heading: 'Remèdes phares' }),
+        text({
+          heading: 'Nos cueillettes',
+          body: 'Plantes séchées lentement, huiles pressées à froid, savons surgras à froid.',
+          align: 'center',
+        }),
+        categories({ heading: 'Par besoin' }),
+        products({ heading: 'L’herboristerie' }),
+        footer(),
+      ],
+      ...systemLayout('L’herboristerie'),
+    },
+  },
+  {
+    key: 'cave',
+    vertical: 'epicerie_fine',
+    label: 'Cave & Terroir',
+    description: 'Bordeaux sombre — vins et produits du terroir.',
+    swatch: ['#991b1b', '#171210'],
+    themeColor: '#991b1b',
+    themeConfig: baseTheme({ secondaryColor: '#3f2323', textColor: '#f5ede4', backgroundColor: '#171210', buttonColor: '#991b1b', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Caveau',
+          heading: 'Des vins qui racontent un lieu',
+          subheading: 'Vignerons indépendants, vieux millésimes et accords gourmands.',
+        }),
+        products({ heading: 'La cave', limit: 12 }),
+        text({
+          heading: 'Nos accords',
+          body: 'Chaque vin est goûté et accompagné de son accord fromage ou charcuterie.',
+          align: 'center',
+        }),
+        promo({
+          heading: 'Coffrets dégustation',
+          body: 'Trois bouteilles, un livret, zéro faute de goût.',
+          buttonLabel: 'Découvrir',
+        }),
+        footer(),
+      ],
+      ...systemLayout('La cave'),
+    },
+  },
+  {
+    key: 'jardin',
+    vertical: 'fleurs_cadeaux',
+    label: 'Jardin',
+    description: 'Botanique — plantes, bouquets champêtres et abonnements.',
+    swatch: ['#15803d', '#f7fef9'],
+    themeColor: '#15803d',
+    themeConfig: baseTheme({ secondaryColor: '#dcfce7', textColor: '#14532d', backgroundColor: '#f7fef9', buttonColor: '#15803d', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Pépinière & fleurs',
+          heading: 'Fais entrer le jardin',
+          subheading: 'Plantes d’intérieur increvables, bouquets champêtres, abonnements.',
+        }),
+        categories({ heading: 'Occasions' }),
+        featuredProducts({ heading: 'Bouquets de saison' }),
+        text({
+          heading: 'L’abonnement fleurs',
+          body: 'Un bouquet frais chaque semaine au bureau ou à la maison, sans y penser.',
+          align: 'center',
+        }),
+        products({ heading: 'La pépinière' }),
+        footer(),
+      ],
+      ...systemLayout('La pépinière'),
+    },
+  },
+  {
+    key: 'galerie',
+    vertical: 'artisanat',
+    label: 'Galerie',
+    description: 'Murs blancs — l’atelier exposé comme une galerie.',
+    swatch: ['#111111', '#ffffff'],
+    themeColor: '#111111',
+    themeConfig: baseTheme({ secondaryColor: '#f5f5f5', textColor: '#111111', backgroundColor: '#ffffff', buttonColor: '#111111', font: 'inter', textScale: 'lg', radius: 'none', contentWidth: 'wide' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Exposition en cours',
+          heading: 'L’atelier s’expose',
+          subheading: 'Pièces uniques présentées comme des œuvres — numérotées, signées.',
+          showBanner: false,
+        }),
+        products({ heading: 'Œuvres disponibles', limit: 8 }),
+        text({
+          heading: 'L’artiste',
+          body: 'Chaque pièce est numérotée, signée et accompagnée de son certificat.',
+          align: 'center',
+        }),
+        testimonials({ heading: 'Collectionneurs' }),
+        footer(),
+      ],
+      ...systemLayout('Œuvres disponibles'),
     },
   },
 ]

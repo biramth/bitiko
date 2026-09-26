@@ -18,6 +18,13 @@ describe('business groups (10 groupes)', () => {
     ])
   })
 
+  it('offers at least two templates per group', () => {
+    for (const vertical of availableVerticals()) {
+      const templates = templatesForVertical(vertical.key)
+      expect(templates.length, vertical.key).toBeGreaterThanOrEqual(2)
+    }
+  })
+
   it('returns the exact template first for each group', () => {
     expect(templatesForVertical('restauration')[0]?.key).toBe('restauration')
     expect(templatesForVertical('artisanat')[0]?.key).toBe('artisanat')
@@ -33,6 +40,7 @@ describe('business groups (10 groupes)', () => {
       'coiffure',
       'barber',
       'institut',
+      'onglerie',
     ])
   })
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   ArrowRight,
@@ -60,7 +60,7 @@ import type { StoreBrandPalette } from '@/features/onboarding/generateStorefront
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
 import { fetchBusinessCapabilities } from '@/services/businessType.service'
-import { fetchTemplateSlugsForTypeSlug, resolvePickerTemplates } from '@/services/template.service'
+import { fetchTemplateContents, fetchTemplateSlugsForTypeSlug, mergeDbTemplates, resolvePickerTemplates } from '@/services/template.service'
 import { slugify } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber, validatePhoneNumber } from '@/utils/phone'
 import { isValidSlug, DISPLAY_ROOT_DOMAIN } from '@/lib/tenant'
@@ -252,7 +252,16 @@ export function OnboardingPage() {
     }
   }, [businessType])
 
-  const typeTemplates = resolvePickerTemplates(compatSlugs, businessType)
+  // Surcharge sans déploiement (admin plateforme) — échec = catalogue code.
+  const { data: dbContents = [] } = useQuery({
+    queryKey: ['template-contents'],
+    queryFn: fetchTemplateContents,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+
+  const typeTemplates = mergeDbTemplates(resolvePickerTemplates(compatSlugs, businessType), dbContents)
 
   const handleSelectVertical = (vertical: string) => {
     setBusinessType(vertical)

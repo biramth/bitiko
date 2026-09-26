@@ -92,6 +92,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleBizTypeSave(req, res)
     case 'biztype-capabilities':
       return handleBizTypeCapabilities(req, res)
+    case 'template-list':
+      return handleTemplateList(req, res)
+    case 'template-save':
+      return handleTemplateSave(req, res)
+    case 'template-compat':
+      return handleTemplateCompat(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -140,7 +146,7 @@ async function logAudit(
   entry: {
     actorUserId: string
     actorEmail: string
-    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save' | 'promo_save'
+    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save' | 'promo_save' | 'template_save'
     targetUserId?: string
     targetShopId?: string
     details?: Record<string, unknown>
@@ -1403,6 +1409,218 @@ async function handleBizTypeCapabilities(req: VercelRequest, res: VercelResponse
     res.status(200).json({ saved: true })
   } catch (err) {
     console.error('platform biztype-capabilities failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue gabarits : templates + compatibilités types, owner/admin only.
+// `content` (jsonb) surcharge le gabarit code sans déploiement ; NULL = le
+// code fait foi. Slugs immuables, retrait via status=deprecated.
+// ---------------------------------------------------------------------------
+
+const TEMPLATE_STATUSES = ['active', 'deprecated', 'draft'] as const
+
+async function requireCatalogMember(req: VercelRequest, res: VercelResponse): Promise<PlatformMember | null> {
+  const member = await requireMember(req, res)
+  if (!member) return null
+  if (!canManageCatalog(member.role)) {
+    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue gabarits.' })
+    return null
+  }
+  return member
+}
+
+async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    if (!(await requireCatalogMember(req, res))) return
+    const admin = getSupabaseAdmin()
+    const { data: templates, error: templatesError } = await admin
+      .from('templates')
+      .select('id, slug, name, description, status, content, updated_at')
+      .order('slug')
+    if (templatesError) throw templatesError
+    const { data: types, error: typesError } = await admin
+      .from('business_types')
+      .select('id, slug, name')
+      .eq('status', 'active')
+      .order('slug')
+    if (typesError) throw typesError
+    const { data: mappings, error: mapError } = await admin
+      .from('template_business_types')
+      .select('template_id, business_type_id')
+    if (mapError) throw mapError
+    res.status(200).json({ templates: templates ?? [], types: types ?? [], mappings: mappings ?? [] })
+  } catch (err) {
+    console.error('platform template-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { id, slug, name, description, status, content, create } = (req.body ?? {}) as {
+      id?: unknown
+      slug?: unknown
+      name?: unknown
+      description?: unknown
+      status?: unknown
+      content?: unknown
+      create?: unknown
+    }
+    const cleanName = typeof name === 'string' ? name.trim() : ''
+    if (!cleanName) {
+      res.status(400).json({ error: 'Le nom est requis.' })
+      return
+    }
+    if (!(TEMPLATE_STATUSES as readonly unknown[]).includes(status)) {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+    if (content !== null && content !== undefined && (typeof content !== 'object' || Array.isArray(content))) {
+      res.status(400).json({ error: 'Le contenu doit être un objet JSON ou null.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    if (create) {
+      const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
+      if (!SLUG_RE.test(cleanSlug)) {
+        res.status(400).json({ error: 'Slug invalide (minuscules, chiffres, tirets bas).' })
+        return
+      }
+      const { data, error } = await admin
+        .from('templates')
+        .insert({
+          slug: cleanSlug,
+          name: cleanName,
+          description: typeof description === 'string' ? description.trim() || null : null,
+          status: status as string,
+          content: (content ?? null) as never,
+        })
+        .select('id')
+        .single()
+      if (error) {
+        if (error.code === '23505') {
+          res.status(409).json({ error: 'Ce slug existe déjà.' })
+          return
+        }
+        throw error
+      }
+      await logAudit({
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: 'template_save',
+        details: { slug: cleanSlug },
+      })
+      res.status(200).json({ saved: true, id: (data as { id: string }).id })
+      return
+    }
+
+    if (typeof id !== 'string' || !id) {
+      res.status(400).json({ error: 'Identifiant manquant.' })
+      return
+    }
+    const { data, error } = await admin
+      .from('templates')
+      .update({
+        name: cleanName,
+        description: typeof description === 'string' ? description.trim() || null : null,
+        status: status as string,
+        content: (content ?? null) as never,
+      })
+      .eq('id', id)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { id, status },
+    })
+    res.status(200).json({ saved: true, id })
+  } catch (err) {
+    console.error('platform template-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireCatalogMember(req, res)
+    if (!member) return
+    const { templateId, typeIds } = (req.body ?? {}) as { templateId?: unknown; typeIds?: unknown }
+    if (typeof templateId !== 'string' || !templateId) {
+      res.status(400).json({ error: 'Gabarit manquant.' })
+      return
+    }
+    if (!Array.isArray(typeIds) || !typeIds.every((t): t is string => typeof t === 'string')) {
+      res.status(400).json({ error: 'Types invalides.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: templateRow, error: templateError } = await admin
+      .from('templates')
+      .select('id')
+      .eq('id', templateId)
+      .maybeSingle()
+    if (templateError) throw templateError
+    if (!templateRow) {
+      res.status(404).json({ error: 'Gabarit introuvable.' })
+      return
+    }
+    if (typeIds.length > 0) {
+      const { data: typeRows, error: typesError } = await admin
+        .from('business_types')
+        .select('id')
+        .in('id', typeIds)
+      if (typesError) throw typesError
+      if ((typeRows ?? []).length !== typeIds.length) {
+        res.status(400).json({ error: "Un type d'activité est introuvable." })
+        return
+      }
+    }
+
+    const { error: deleteError } = await admin
+      .from('template_business_types')
+      .delete()
+      .eq('template_id', templateId)
+    if (deleteError) throw deleteError
+    if (typeIds.length > 0) {
+      const { error: insertError } = await admin.from('template_business_types').insert(
+        typeIds.map((business_type_id) => ({ template_id: templateId, business_type_id })),
+      )
+      if (insertError) throw insertError
+    }
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'template_save',
+      details: { templateId, typeIds },
+    })
+    res.status(200).json({ saved: true })
+  } catch (err) {
+    console.error('platform template-compat failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

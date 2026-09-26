@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, Eye, History, Pencil, Save, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchCompatibleTemplateSlugs, resolvePickerTemplates } from '@/services/template.service'
+import { fetchCompatibleTemplateSlugs, fetchTemplateContents, mergeDbTemplates, resolvePickerTemplates } from '@/services/template.service'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -192,7 +192,16 @@ export function TemplateLibraryPanel({
     retry: false,
     throwOnError: false,
   })
-  const templates = resolvePickerTemplates(compatSlugs ?? null, shop.business_type)
+  // Surcharge sans déploiement (admin plateforme → templates.content) :
+  // échec silencieux = catalogue code, jamais de picker vide.
+  const { data: dbContents = [] } = useQuery({
+    queryKey: ['template-contents'],
+    queryFn: fetchTemplateContents,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    throwOnError: false,
+  })
+  const templates = mergeDbTemplates(resolvePickerTemplates(compatSlugs ?? null, shop.business_type), dbContents)
   const vertical = shop.business_type ? VERTICAL_BY_KEY[shop.business_type] : undefined
 
   const { data: savedThemes = [] } = useQuery({

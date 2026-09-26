@@ -8,6 +8,7 @@ export type AdminAuditAction =
   | 'payment_approve'
   | 'payment_reject'
   | 'promo_save'
+  | 'template_save'
 
 /**
  * Records a sensitive backoffice action in admin_audit_log (service-role only,

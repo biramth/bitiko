@@ -100,6 +100,9 @@ const PlatformTeamPage = lazy(() =>
 const PlatformBusinessTypesPage = lazy(() =>
   import('@/pages/platform/PlatformBusinessTypesPage').then((m) => ({ default: m.PlatformBusinessTypesPage })),
 )
+const PlatformTemplatesPage = lazy(() =>
+  import('@/pages/platform/PlatformTemplatesPage').then((m) => ({ default: m.PlatformTemplatesPage })),
+)
 
 const standalone = (page: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{page}</Suspense>
@@ -171,6 +174,14 @@ export function PlatformRoutes() {
               element={standalone(
                 <CapabilityGate capability="manage_business_types">
                   <PlatformBusinessTypesPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/gabarits"
+              element={standalone(
+                <CapabilityGate capability="manage_business_types">
+                  <PlatformTemplatesPage />
                 </CapabilityGate>,
               )}
             />

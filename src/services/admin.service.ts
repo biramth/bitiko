@@ -152,3 +152,58 @@ export async function saveBusinessTypeCapabilities(typeId: string, codes: string
   })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'Impossible d’enregistrer les capabilities.')}
+
+// ---------------------------------------------------------------------------
+// Catalogue gabarits : templates + compatibilités (owner/admin plateforme).
+// ---------------------------------------------------------------------------
+
+export interface AdminTemplate {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  status: 'active' | 'deprecated' | 'draft'
+  content: Record<string, unknown> | null
+  updated_at: string
+}
+
+export interface TemplateCatalog {
+  templates: AdminTemplate[]
+  types: { id: string; slug: string; name: string }[]
+  mappings: { template_id: string; business_type_id: string }[]
+}
+
+export async function listTemplateCatalog(): Promise<TemplateCatalog> {
+  const res = await fetch('/api/admin/templates', { headers: await authHeader() })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible de charger les gabarits.')
+  return body as TemplateCatalog
+}
+
+export async function saveTemplate(input: {
+  id?: string
+  slug?: string
+  name: string
+  description?: string | null
+  status: string
+  content?: Record<string, unknown> | null
+  create: boolean
+}): Promise<string> {
+  const res = await fetch('/api/admin/templates/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(input),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? "Impossible d'enregistrer le gabarit.")
+  return body.id as string
+}
+
+export async function saveTemplateCompat(templateId: string, typeIds: string[]): Promise<void> {
+  const res = await fetch('/api/admin/templates/compat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ templateId, typeIds }),
+  })
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error ?? 'Impossible d’enregistrer les compatibilités.')}

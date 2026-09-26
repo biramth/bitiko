@@ -162,6 +162,7 @@ export type Database = {
           name: string
           description: string | null
           status: string
+          content: Json | null
         }
         Insert: {
           id?: string
@@ -169,6 +170,7 @@ export type Database = {
           name: string
           description?: string | null
           status?: string
+          content?: Json | null
         }
         Update: {
           id?: string
@@ -176,6 +178,7 @@ export type Database = {
           name?: string
           description?: string | null
           status?: string
+          content?: Json | null
         }
         Relationships: []
       }

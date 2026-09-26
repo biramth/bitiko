@@ -6,6 +6,7 @@ import {
   CreditCard,
   Gift,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Mail,
   Menu,
@@ -43,6 +44,7 @@ const TOOLS: Tool[] = [
   { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns' },
   { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team' },
   { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types' },
+  { to: '/plateforme/gabarits', label: 'Gabarits', icon: LayoutTemplate, capability: 'manage_business_types' },
 ]
 
 function LogoMark({ size = 28 }: { size?: number }) {
