@@ -10,19 +10,21 @@ import {
   setAppointmentStatus,
   type AppointmentStatus,
 } from '@/services/appointment.service'
+import { bookingErrorMessage } from '@/services/bookingSettings.service'
 import { listShopServices } from '@/services/service.service'
 import { listShopTeamMembers } from '@/services/teamMember.service'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, localDateIso } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BookingSettingsCard } from '@/features/booking/BookingSettingsCard'
 import { useToast } from '@/components/ui/Toast'
 
 function todayIso(): string {
-  return new Date().toISOString().split('T')[0]
+  return localDateIso()
 }
 
 function formatTime(iso: string): string {
@@ -80,7 +82,6 @@ export function AppointmentsPage() {
       const service = services.find((s) => s.id === serviceId)
       if (!service) throw new Error('Choisissez une prestation.')
       const start = new Date(`${date}T${startTime}:00`)
-      const end = new Date(start.getTime() + service.duration_minutes * 60000)
       return createAppointment({
         shopId: shop!.id,
         serviceId,
@@ -88,7 +89,6 @@ export function AppointmentsPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         startAt: start.toISOString(),
-        endAt: end.toISOString(),
       })
     },
     onSuccess: () => {
@@ -98,7 +98,7 @@ export function AppointmentsPage() {
       setCustomerPhone('')
       toast.success('Rendez-vous enregistré.')
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Créneau indisponible.'),
+    onError: (e) => toast.error(bookingErrorMessage(e)),
   })
 
   if (isLoading) return <Spinner />
@@ -123,6 +123,8 @@ export function AppointmentsPage() {
         }
       />
 
+      <BookingSettingsCard />
+
       <div className="mt-4">
         <label htmlFor="appointments-date" className="text-sm font-medium text-gray-700">Journée</label>
         <input
@@ -143,12 +145,12 @@ export function AppointmentsPage() {
               <li key={rdv.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="font-medium text-gray-900">
-                    {formatTime(rdv.start_at)} · {rdv.service?.name ?? 'Prestation'}
+                    {formatTime(rdv.start_at)} · {rdv.service?.name ?? rdv.service_name ?? 'Prestation'}
                   </p>
                   <p className="text-sm text-gray-500">
                     {rdv.customer_name} · {rdv.customer_phone}
                     {rdv.team_member ? ` · avec ${rdv.team_member.name}` : ''}
-                    {rdv.service ? ` · ${formatCurrency(rdv.service.price, currency)}` : ''}
+                    {rdv.service_price != null || rdv.service ? ` · ${formatCurrency(rdv.service_price ?? rdv.service?.price ?? 0, currency)}` : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

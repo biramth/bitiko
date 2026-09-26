@@ -10,16 +10,19 @@ import {
   setReservationStatus,
   type ReservationStatus,
 } from '@/services/reservation.service'
+import { bookingErrorMessage } from '@/services/bookingSettings.service'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
+import { localDateIso } from '@/utils/format'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { BookingSettingsCard } from '@/features/booking/BookingSettingsCard'
 import { useToast } from '@/components/ui/Toast'
 
 function todayIso(): string {
-  return new Date().toISOString().split('T')[0]
+  return localDateIso()
 }
 
 function formatTime(iso: string): string {
@@ -76,7 +79,7 @@ export function ReservationsPage() {
       setCustomerPhone('')
       toast.success('Réservation enregistrée.')
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Enregistrement impossible.'),
+    onError: (e) => toast.error(bookingErrorMessage(e)),
   })
 
   if (isLoading) return <Spinner />
@@ -100,6 +103,8 @@ export function ReservationsPage() {
           </button>
         }
       />
+
+      <BookingSettingsCard showTables />
 
       <div className="mt-4">
         <label htmlFor="reservations-date" className="text-sm font-medium text-gray-700">Journée</label>

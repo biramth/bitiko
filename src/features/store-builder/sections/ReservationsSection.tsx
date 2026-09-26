@@ -1,7 +1,18 @@
-import { Calendar } from 'lucide-react'
-import { useReservations } from '@/features/reservations/useReservations'
+import { useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { BookingSuccess, SlotGrid } from '@/features/booking/bookingUi'
+import {
+  bookingDateBounds,
+  bookingInputClass,
+  bookingLabelClass,
+  formatSlotTime,
+  useShopBookingSettings,
+} from '@/features/booking/bookingUtils'
 import { Spinner } from '@/components/ui/Spinner'
-import { EmptyState } from '@/components/ui/EmptyState'
+import { createReservation, getReservationSlots } from '@/services/reservation.service'
+import { bookingErrorMessage } from '@/services/bookingSettings.service'
+import { notifyBooking } from '@/services/bookingNotify.service'
+import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { ReservationsSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
@@ -20,16 +31,57 @@ export function ReservationsRenderer({
   editable = false,
 }: { shop: Shop; config: ReservationsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
-  const { isLoading, isError } = useReservations({ shopId: shop.id, date: new Date().toISOString().split('T')[0] })
+  const { data: settings } = useShopBookingSettings(shop.id)
+  const timeZone = settings?.timezone ?? 'Africa/Dakar'
+  const bounds = bookingDateBounds(settings?.max_days_ahead ?? 60)
 
-  if (isLoading) return <Spinner />
-  if (isError) return <div className="text-center py-8 text-red-600">Erreur de chargement des réservations</div>
+  const [partySize, setPartySize] = useState('2')
+  const [date, setDate] = useState('')
+  const [slot, setSlot] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [booked, setBooked] = useState<{ slot: string; party: number } | null>(null)
 
-  const today = new Date().toISOString().split('T')[0]
+  const party = Math.max(1, Math.min(100, Number(partySize) || 1))
 
-  const availableSlots = config.showAvailability
-    ? generateAvailability(today)
-    : []
+  const { data: slots = [], isFetching: slotsLoading, isError: slotsError } = useQuery({
+    queryKey: ['reservation-slots', shop.id, party, date],
+    queryFn: () => getReservationSlots({ shopId: shop.id, partySize: party, date }),
+    enabled: !!date,
+    staleTime: 30 * 1000,
+  })
+
+  const bookMutation = useMutation({
+    mutationFn: async () => {
+      const normalized = normalizePhoneNumber(phone)
+      if (!normalized.ok || !normalized.value) {
+        throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
+      }
+      return createReservation({
+        shopId: shop.id,
+        customerName: name.trim(),
+        customerPhone: normalized.value,
+        partySize: party,
+        startAt: slot,
+      })
+    },
+    onSuccess: (reservation) => {
+      setBooked({ slot: reservation.start_at, party: reservation.party_size })
+      void notifyBooking('reservation', reservation.id)
+    },
+    onError: (e) => setError(bookingErrorMessage(e)),
+  })
+
+  const reset = () => {
+    setBooked(null)
+    setSlot('')
+    setName('')
+    setPhone('')
+    setError(null)
+  }
+
+  const canSubmit = !!slot && name.trim().length > 0 && phone.trim().length > 0 && !bookMutation.isPending && !editable
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
@@ -48,66 +100,116 @@ export function ReservationsRenderer({
         </InlineStyleToolbar>
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-xl border border-[var(--shop-border)] bg-[var(--shop-surface)] p-4">
-          <h3 className="font-semibold text-[var(--shop-text)]">Choisissez votre créneau</h3>
-          <p className="mt-1 text-sm text-[var(--shop-text)]/60">Sélectionnez une date et une heure</p>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {availableSlots.map((slot) => (
-              <button
-                key={`${slot.date}-${slot.time}`}
-                className={`p-4 rounded-xl border-2 transition-all text-center ${
-                  slot.available
-                    ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100'
-                    : 'border-red-200 bg-red-50 opacity-50 cursor-not-allowed'
-                }`}
-                disabled={!slot.available}
-              >
-                <div className="font-medium text-[var(--shop-text)]">{slot.label}</div>
-                <div className={`text-sm ${slot.available ? 'text-emerald-700' : 'text-red-700'}`}>
-                  {slot.available ? 'Disponible' : 'Complet'}
-                </div>
-              </button>
-            ))}
+      {booked ? (
+        <BookingSuccess
+          title="Demande envoyée !"
+          detail={`Table pour ${booked.party} — ${new Date(booked.slot).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(booked.slot, timeZone)}. Vous serez contacté·e pour confirmation.`}
+          onReset={reset}
+        />
+      ) : (
+        <form
+          className="space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!canSubmit) return
+            setError(null)
+            bookMutation.mutate()
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="resa-party" className={bookingLabelClass}>Couverts</label>
+              <input
+                id="resa-party"
+                type="number"
+                min={1}
+                max={100}
+                value={partySize}
+                onChange={(e) => {
+                  setPartySize(e.target.value)
+                  setSlot('')
+                }}
+                style={{ borderRadius: 'var(--shop-radius)' }}
+                className={bookingInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="resa-date" className={bookingLabelClass}>Jour</label>
+              <input
+                id="resa-date"
+                type="date"
+                min={bounds.min}
+                max={bounds.max}
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value)
+                  setSlot('')
+                }}
+                style={{ borderRadius: 'var(--shop-radius)' }}
+                className={bookingInputClass}
+              />
+            </div>
           </div>
-        </div>
 
-        {availableSlots.length === 0 && (
-          <EmptyState
-            icon={Calendar}
-            title="Aucun créneau disponible"
-            description="Tous les créneaux sont complets pour aujourd'hui."
-          />
-        )}
-      </div>
+          {date && (
+            <div>
+              <p className={bookingLabelClass}>{config.showAvailability ? 'Créneaux disponibles' : 'Horaires'}</p>
+              {slotsLoading && <Spinner />}
+              {slotsError && <p className="text-sm text-red-600">Impossible de charger les créneaux.</p>}
+              {!slotsLoading && !slotsError && slots.length === 0 && (
+                <p className="text-sm text-[var(--shop-text)]/60">Aucune table disponible ce jour-là. Essayez une autre date ou moins de couverts.</p>
+              )}
+              {!slotsLoading && slots.length > 0 && <SlotGrid slots={slots} timeZone={timeZone} value={slot} onChange={setSlot} />}
+            </div>
+          )}
+
+          {slot && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="resa-name" className={bookingLabelClass}>Votre nom</label>
+                <input
+                  id="resa-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                  className={bookingInputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="resa-phone" className={bookingLabelClass}>Téléphone</label>
+                <input
+                  id="resa-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
+                  placeholder="77 123 45 67"
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                  className={bookingInputClass}
+                />
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            style={{ borderRadius: 'var(--shop-radius)' }}
+            className="bg-[var(--shop-button)] px-6 py-3 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {bookMutation.isPending ? 'Envoi…' : editable ? 'Aperçu — réservation désactivée' : 'Demander cette table'}
+          </button>
+        </form>
+      )}
     </section>
   )
-}
-
-function generateAvailability(date: string) {
-  const slots = []
-  const startHour = 12 // 12h
-  const endHour = 22 // 22h
-  const interval = 30 // minutes
-
-  for (let hour = startHour; hour < endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += interval) {
-      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-      const slotTime = hour * 60 + minute
-      const now = new Date()
-      const currentMinutes = now.getHours() * 60 + now.getMinutes()
-
-      slots.push({
-        date,
-        time: timeStr,
-        label: timeStr,
-        available: slotTime > currentMinutes && Math.random() > 0.3, // Simulated availability
-      })
-    }
-  }
-
-  return slots
 }
 
 export function ReservationsEditor({ config, onChange }: SectionEditorProps<ReservationsSectionConfig>) {
@@ -127,8 +229,11 @@ export function ReservationsEditor({ config, onChange }: SectionEditorProps<Rese
             onChange={(e) => onChange({ ...config, showAvailability: e.target.checked })}
             className="accent-brand-600"
           />
-          Afficher la disponibilité en temps réel
+          Titrer la liste « Créneaux disponibles »
         </label>
+        <p className={`mt-1 ${editorHelpClass}`}>
+          Les créneaux affichés sont toujours les places réellement libres. Horaires et capacité : Réservations → Horaires de réservation.
+        </p>
       </div>
     </div>
   )

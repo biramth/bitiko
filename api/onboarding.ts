@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 import { sendEmail } from './_lib/resendEmail.js'
-import { welcomeEmailHtml } from './_lib/emailTemplates.js'
+import { bookingNotificationEmailHtml, welcomeEmailHtml } from './_lib/emailTemplates.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -136,6 +136,96 @@ async function handleSendWelcomeEmail(req: VercelRequest, res: VercelResponse) {
   res.status(200).json({ sent: true })
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** Une demande n'est notifiable que juste après sa création : l'endpoint est
+ *  public (le visiteur n'a aucun compte), il ne doit pas servir à rejouer
+ *  d'anciens rendez-vous. */
+const BOOKING_NOTIFY_WINDOW_MS = 10 * 60 * 1000
+
+/**
+ * Prévient le commerçant (email) d'une nouvelle demande de rendez-vous ou de
+ * réservation. Appelé sans authentification par la vitrine juste après la prise
+ * de réservation : la demande existe déjà en base (RPC durcies), cette route
+ * ne fait qu'envoyer UN email — `owner_notified_at` est posé atomiquement, donc
+ * un second appel (ou un rejeu) ne renvoie rien.
+ */
+async function handleBookingNotify(req: VercelRequest, res: VercelResponse) {
+  const { kind, id } = req.body ?? {}
+  if ((kind !== 'appointment' && kind !== 'reservation') || typeof id !== 'string' || !UUID_RE.test(id)) {
+    res.status(400).json({ error: 'Demande invalide.' })
+    return
+  }
+
+  const admin = getSupabaseAdmin()
+  const table = kind === 'appointment' ? 'appointments' : 'reservations'
+  const since = new Date(Date.now() - BOOKING_NOTIFY_WINDOW_MS).toISOString()
+  const { data: claimed, error } = await admin
+    .from(table)
+    .update({ owner_notified_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('owner_notified_at', null)
+    .gt('created_at', since)
+    .select('*')
+  if (error) throw error
+  const booking = claimed?.[0] as
+    | {
+        shop_id: string
+        customer_name: string
+        customer_phone: string
+        start_at: string
+        service_name?: string | null
+        party_size?: number
+      }
+    | undefined
+  if (!booking) {
+    res.status(200).json({ sent: false })
+    return
+  }
+
+  const { data: shop } = await admin.from('shops').select('name, owner_id').eq('id', booking.shop_id).maybeSingle()
+  if (!shop) {
+    res.status(200).json({ sent: false })
+    return
+  }
+  const { data: ownerData } = await admin.auth.admin.getUserById(shop.owner_id as string)
+  const to = ownerData.user?.email
+  if (!to) {
+    res.status(200).json({ sent: false })
+    return
+  }
+  const { data: settings } = await admin
+    .from('booking_settings')
+    .select('timezone')
+    .eq('shop_id', booking.shop_id)
+    .maybeSingle()
+  const timeZone = (settings?.timezone as string | undefined) ?? 'Africa/Dakar'
+  const whenLabel = new Date(booking.start_at).toLocaleString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone,
+  })
+  const rootDomain = process.env.VITE_ROOT_DOMAIN
+  const origin = rootDomain ? `https://${rootDomain}` : 'https://bitiko.shop'
+
+  await sendEmail({
+    to,
+    subject: `${kind === 'appointment' ? 'Nouveau rendez-vous' : 'Nouvelle réservation'} — ${shop.name as string}`,
+    html: bookingNotificationEmailHtml({
+      origin,
+      shopName: shop.name as string,
+      kind,
+      customerName: booking.customer_name,
+      customerPhone: booking.customer_phone,
+      whenLabel,
+      detail: kind === 'appointment' ? (booking.service_name ?? 'Prestation') : `Table pour ${booking.party_size ?? '?'}`,
+    }),
+  })
+  res.status(200).json({ sent: true })
+}
+
 /**
  * Onboarding-time endpoint (check-email + welcome email), consolidated into
  * one function to stay under the Hobby plan's function limit — the rewrites
@@ -153,6 +243,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (action) {
       case 'welcome':
         await handleSendWelcomeEmail(req, res)
+        return
+      case 'booking-notify':
+        await handleBookingNotify(req, res)
         return
       default:
         await handleCheckEmail(req, res)

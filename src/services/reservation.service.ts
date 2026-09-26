@@ -75,3 +75,18 @@ export async function setReservationStatus(id: string, status: ReservationStatus
   if (error) throw error
   return data as ReservationRow
 }
+
+/** Débuts de créneaux de table libres (ISO) pour un nombre de couverts. */
+export async function getReservationSlots(input: {
+  shopId: string
+  partySize: number
+  date: string
+}): Promise<string[]> {
+  const { data, error } = await supabase.rpc('get_reservation_slots', {
+    p_shop_id: input.shopId,
+    p_party_size: input.partySize,
+    p_date: input.date,
+  })
+  if (error) throw error
+  return (data ?? []).map((row) => row.slot_start)
+}

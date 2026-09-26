@@ -53,7 +53,8 @@ export async function listUpcomingAppointments(shopId: string, limit = 8): Promi
   return (data ?? []) as AppointmentWithRelations[]
 }
 
-/** Prise de rendez-vous (invité ou backoffice) — anti double-réservation serveur. */
+/** Prise de rendez-vous (invité ou backoffice). La durée, les horaires et la
+ *  disponibilité sont décidés par le serveur (fin = début + durée prestation). */
 export async function createAppointment(input: {
   shopId: string
   serviceId: string
@@ -61,7 +62,6 @@ export async function createAppointment(input: {
   customerName: string
   customerPhone: string
   startAt: string
-  endAt: string
 }): Promise<AppointmentRow> {
   const { data, error } = await supabase.rpc('create_appointment', {
     p_shop_id: input.shopId,
@@ -70,7 +70,6 @@ export async function createAppointment(input: {
     p_customer_name: input.customerName,
     p_customer_phone: input.customerPhone,
     p_start_at: input.startAt,
-    p_end_at: input.endAt,
   })
   if (error) throw error
   return data as AppointmentRow
@@ -83,4 +82,21 @@ export async function setAppointmentStatus(id: string, status: AppointmentStatus
   })
   if (error) throw error
   return data as AppointmentRow
+}
+
+/** Débuts de créneaux libres (ISO) pour une prestation un jour donné. */
+export async function getBookingSlots(input: {
+  shopId: string
+  serviceId: string
+  teamMemberId?: string | null
+  date: string
+}): Promise<string[]> {
+  const { data, error } = await supabase.rpc('get_booking_slots', {
+    p_shop_id: input.shopId,
+    p_service_id: input.serviceId,
+    p_team_member_id: input.teamMemberId ?? null,
+    p_date: input.date,
+  })
+  if (error) throw error
+  return (data ?? []).map((row) => row.slot_start)
 }

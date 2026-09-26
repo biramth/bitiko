@@ -388,3 +388,37 @@ export function teamWelcomeEmailHtml({
       : 'Une question sur tes nouveaux accès ? Réponds directement à cet email.',
   })
 }
+
+/** Nouvelle demande de rendez-vous / réservation, envoyée au commerçant. Layout
+ *  simple (notification transactionnelle) ; tout ce qui vient du visiteur est
+ *  échappé. */
+export function bookingNotificationEmailHtml({
+  origin,
+  shopName,
+  kind,
+  customerName,
+  customerPhone,
+  whenLabel,
+  detail,
+}: {
+  origin: string
+  shopName: string
+  kind: 'appointment' | 'reservation'
+  customerName: string
+  customerPhone: string
+  whenLabel: string
+  /** Prestation (rendez-vous) ou nombre de couverts (réservation). */
+  detail: string
+}): string {
+  const title = kind === 'appointment' ? 'Nouvelle demande de rendez-vous' : 'Nouvelle demande de réservation'
+  const path = kind === 'appointment' ? '/admin/rendez-vous' : '/admin/reservations'
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#17152e;line-height:1.6;">
+    <p><strong>${title}</strong> pour ${escapeHtml(shopName)} :</p>
+    <ul>
+      <li>${escapeHtml(detail)}</li>
+      <li>Quand : ${escapeHtml(whenLabel)}</li>
+      <li>Client·e : ${escapeHtml(customerName)} — ${escapeHtml(customerPhone)}</li>
+    </ul>
+    <p><a href="${escapeHtml(origin + path)}" style="color:#c2481c;">Ouvrir mon agenda pour confirmer</a></p>
+  </div>`
+}

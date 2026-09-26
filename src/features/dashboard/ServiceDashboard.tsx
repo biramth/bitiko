@@ -17,10 +17,10 @@ import {
   listUpcomingReservations,
   type ReservationStatus,
 } from '@/services/reservation.service'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, localDateIso } from '@/utils/format'
 
 function todayIso(): string {
-  return new Date().toISOString().split('T')[0]
+  return localDateIso()
 }
 
 function formatTime(iso: string): string {
@@ -108,8 +108,10 @@ export function ServiceDashboard({
   })
 
   const activeServices = services.filter((s) => s.active)
-  const pendingAppointments = appointmentsToday.filter((a) => a.status === 'pending').length
-  const pendingReservations = reservationsToday.filter((r) => r.status === 'pending').length
+  const liveAppointmentsToday = appointmentsToday.filter((a) => a.status !== 'cancelled')
+  const liveReservationsToday = reservationsToday.filter((r) => r.status !== 'cancelled')
+  const pendingAppointments = liveAppointmentsToday.filter((a) => a.status === 'pending').length
+  const pendingReservations = liveReservationsToday.filter((r) => r.status === 'pending').length
 
   return (
     <div className="mt-4">
@@ -118,7 +120,7 @@ export function ServiceDashboard({
           <MiniStat
             icon={CalendarDays}
             label="RDV aujourd'hui"
-            value={String(appointmentsToday.length)}
+            value={String(liveAppointmentsToday.length)}
             hint={pendingAppointments > 0 ? `${pendingAppointments} à confirmer` : undefined}
             to="/admin/rendez-vous"
           />
@@ -127,7 +129,7 @@ export function ServiceDashboard({
           <MiniStat
             icon={BookOpen}
             label="Réservations aujourd'hui"
-            value={String(reservationsToday.length)}
+            value={String(liveReservationsToday.length)}
             hint={pendingReservations > 0 ? `${pendingReservations} à confirmer` : undefined}
             to="/admin/reservations"
           />
@@ -160,7 +162,7 @@ export function ServiceDashboard({
                 {upcomingAppointments.map((rdv) => (
                   <li key={rdv.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <span className="min-w-0 truncate text-gray-800">
-                      {formatTime(rdv.start_at)} · {rdv.service?.name ?? 'Prestation'} — {rdv.customer_name}
+                      {formatTime(rdv.start_at)} · {rdv.service?.name ?? rdv.service_name ?? 'Prestation'} — {rdv.customer_name}
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${APPOINTMENT_STATUS_COLORS[rdv.status as AppointmentStatus] ?? 'bg-gray-100 text-gray-600'}`}
