@@ -134,6 +134,8 @@ export interface Solution {
   title: string
   description: string
   tags: string
+  /** Page de solution détaillée vers laquelle renvoie la carte. */
+  slug: string
 }
 
 export const solutions: Solution[] = [
@@ -143,6 +145,7 @@ export const solutions: Solution[] = [
     title: 'Mode, artisanat & décoration',
     description: 'Chaque pièce a ses photos, son prix, sa taille et son stock. Ta vitrine te ressemble, tes clientes commandent sans te poser dix fois les mêmes questions.',
     tags: 'Robes • Bazin • Bijoux • Créations',
+    slug: 'mode-artisanat',
   },
   {
     icon: Store,
@@ -150,6 +153,7 @@ export const solutions: Solution[] = [
     title: 'Épicerie, restauration & livraison',
     description: 'Ton menu ou ton rayon en ligne, la livraison par quartier, la commande formatée sur WhatsApp. Réservation de tables pour le soir.',
     tags: 'Plats • Courses • Livraison • Tables',
+    slug: 'restaurant',
   },
   {
     icon: LineChart,
@@ -157,6 +161,7 @@ export const solutions: Solution[] = [
     title: 'Beauté & cosmétiques',
     description: 'Tes produits se vendent la nuit, tes soins se réservent en ligne. Stock à jour, clientes relancées, chiffres clairs.',
     tags: 'Soins • Maquillage • Parfums • Rendez-vous',
+    slug: 'salon-coiffure-beaute',
   },
   {
     icon: CalendarClock,
@@ -164,6 +169,7 @@ export const solutions: Solution[] = [
     title: 'Coiffure, spa & bien-être',
     description: 'Prestations, tarifs, rendez-vous avec tes vrais horaires, équipe, galerie. Ton salon se remplit sans que ton téléphone ne sonne.',
     tags: 'Prestations • Rendez-vous • Équipe',
+    slug: 'salon-coiffure-beaute',
   },
   {
     icon: Wand2,
@@ -171,6 +177,7 @@ export const solutions: Solution[] = [
     title: 'Réparation & prestataires',
     description: 'Tes interventions, tes tarifs, tes créneaux. Une vitrine sérieuse qui rassure et qui te fait gagner des clients.',
     tags: 'Interventions • Devis • Créneaux',
+    slug: 'prestataires-services',
   },
   {
     icon: Smartphone,
@@ -178,6 +185,7 @@ export const solutions: Solution[] = [
     title: 'Électronique & multi-activités',
     description: 'Vends des produits ET propose des services : Bitiko gère les deux dans le même espace, avec les mêmes finances.',
     tags: 'Produits • Services • Livraison',
+    slug: 'boutique-en-ligne',
   },
 ]
 

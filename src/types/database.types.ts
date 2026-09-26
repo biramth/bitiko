@@ -351,6 +351,7 @@ export type Database = {
           position: number
           shop_id: string
           slug: string
+          thumb_url: string | null
         }
         Insert: {
           color?: string | null
@@ -364,6 +365,7 @@ export type Database = {
           position?: number
           shop_id: string
           slug: string
+          thumb_url?: string | null
         }
         Update: {
           color?: string | null
@@ -377,6 +379,7 @@ export type Database = {
           position?: number
           shop_id?: string
           slug?: string
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -824,6 +827,8 @@ export type Database = {
           public_url: string
           sort_order: number
           storage_path: string
+          thumb_path: string | null
+          thumb_url: string | null
         }
         Insert: {
           created_at?: string
@@ -832,6 +837,8 @@ export type Database = {
           public_url: string
           sort_order?: number
           storage_path: string
+          thumb_path?: string | null
+          thumb_url?: string | null
         }
         Update: {
           created_at?: string
@@ -840,6 +847,8 @@ export type Database = {
           public_url?: string
           sort_order?: number
           storage_path?: string
+          thumb_path?: string | null
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -863,6 +872,7 @@ export type Database = {
           sku: string | null
           sort_order: number
           stock: number
+          thumb_url: string | null
         }
         Insert: {
           active?: boolean
@@ -875,6 +885,7 @@ export type Database = {
           sku?: string | null
           sort_order?: number
           stock?: number
+          thumb_url?: string | null
         }
         Update: {
           active?: boolean
@@ -887,6 +898,7 @@ export type Database = {
           sku?: string | null
           sort_order?: number
           stock?: number
+          thumb_url?: string | null
         }
         Relationships: [
           {
@@ -1231,6 +1243,7 @@ export type Database = {
       shops: {
         Row: {
           address: string | null
+          banner_thumb_url: string | null
           banner_url: string | null
           builder_draft: BuilderDraft | null
           business_type: string | null
@@ -1244,6 +1257,7 @@ export type Database = {
           ga_measurement_id: string | null
           id: string
           layout_sections: LayoutSection[]
+          logo_thumb_url: string | null
           logo_url: string | null
           low_stock_threshold: number
           name: string
@@ -1263,6 +1277,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          banner_thumb_url?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
@@ -1276,6 +1291,7 @@ export type Database = {
           ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
+          logo_thumb_url?: string | null
           logo_url?: string | null
           low_stock_threshold?: number
           name: string
@@ -1295,6 +1311,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          banner_thumb_url?: string | null
           banner_url?: string | null
           builder_draft?: BuilderDraft | null
           business_type?: string | null
@@ -1308,6 +1325,7 @@ export type Database = {
           ga_measurement_id?: string | null
           id?: string
           layout_sections?: LayoutSection[]
+          logo_thumb_url?: string | null
           logo_url?: string | null
           low_stock_threshold?: number
           name?: string

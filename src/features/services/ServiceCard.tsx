@@ -15,6 +15,8 @@ export function ServiceCard({ service, currency }: ServiceCardProps) {
           <img
             src={service.images[0]}
             alt={service.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform group-hover:scale-105"
           />
         </div>

@@ -106,7 +106,7 @@ export function MenuRenderer({
 }
 
 function MenuRow({ item, currency, showPrices }: { item: ProductWithRelations; currency: string; showPrices: boolean }) {
-  const cover = item.images[0]?.public_url
+  const cover = item.images[0]?.thumb_url ?? item.images[0]?.public_url
   const soldOut = item.stock <= 0
   const { min, hasRange } = priceRange(item)
   return (

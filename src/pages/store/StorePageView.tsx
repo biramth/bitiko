@@ -68,7 +68,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
 
   usePageSeo({
     title: page ? `${page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
-    description: page?.seo_description ?? page?.seo_title ?? shop?.description ?? undefined,
+    description: page?.seo_description ?? shop?.description ?? undefined,
     siteName: shop?.name,
   })
 

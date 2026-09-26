@@ -63,7 +63,7 @@ export function FooterRenderer({
   const brandMark = (
     <div className="flex items-center gap-2.5 text-lg font-bold" style={{ fontFamily: 'var(--shop-font-heading)' }}>
       {shop?.logo_url ? (
-        <img src={shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
+        <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : (
         <Store size={20} aria-hidden />
       )}

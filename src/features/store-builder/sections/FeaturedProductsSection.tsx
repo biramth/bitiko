@@ -139,7 +139,7 @@ export function FeaturedProductsEditor({
           )}
           {products.map((product) => {
             const selected = config.productIds.includes(product.id)
-            const cover = product.images[0]?.public_url
+            const cover = product.images[0]?.thumb_url ?? product.images[0]?.public_url
             return (
               <button
                 key={product.id}

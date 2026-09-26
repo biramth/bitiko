@@ -95,8 +95,8 @@ export function CategoryFormPage() {
       if (imageFile && isPro) {
         setUploadingImage(true)
         try {
-          const url = await uploadCategoryImage(category.id, imageFile)
-          await updateCategory(category.id, { image_url: url })
+          const { url, thumbUrl } = await uploadCategoryImage(category.id, imageFile)
+          await updateCategory(category.id, { image_url: url, thumb_url: thumbUrl })
         } finally {
           setUploadingImage(false)
         }

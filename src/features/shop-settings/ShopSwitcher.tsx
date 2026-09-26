@@ -44,7 +44,7 @@ export function ShopSwitcher({ onSelect }: { onSelect?: () => void }) {
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
           {shop.logo_url ? (
-            <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
+            <img src={shop.logo_thumb_url ?? shop.logo_url} alt="" className="h-full w-full object-cover" />
           ) : (
             <Store size={16} className="text-gold-400" aria-hidden />
           )}

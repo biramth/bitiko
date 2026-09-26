@@ -10,6 +10,12 @@ de recettes et dépenses, bilan simple exportable en PDF et Excel. Gratuit pour
 commencer, sans commission.
 
 - [Accueil](https://bitiko.shop/)
+- [Boutique en ligne](https://bitiko.shop/solutions/boutique-en-ligne)
+- [Salon de coiffure et beauté](https://bitiko.shop/solutions/salon-coiffure-beaute)
+- [Restaurant et livraison](https://bitiko.shop/solutions/restaurant)
+- [Mode, artisanat et décoration](https://bitiko.shop/solutions/mode-artisanat)
+- [Prestataires de services](https://bitiko.shop/solutions/prestataires-services)
+- [Finances et bilan simple](https://bitiko.shop/solutions/finances-commercants)
 - [Créer son espace](https://bitiko.shop/admin/login)
 - [Tarifs](https://bitiko.shop/#tarifs)
 - [Démo vidéo](https://bitiko.shop/#demo)

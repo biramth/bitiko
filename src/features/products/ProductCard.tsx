@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, ImageOff, Plus } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
+import { thumbSrcSet } from '@/utils/image'
 import { StockBadge } from './StockBadge'
 import { useCart } from '@/features/cart/CartContext'
 import { useToast } from '@/components/ui/Toast'
@@ -18,7 +19,8 @@ export function ProductCard({
   currency: string
   lowStockThreshold?: number
 }) {
-  const cover = product.images[0]?.public_url
+  const full = product.images[0]?.public_url
+  const cover = product.images[0]?.thumb_url ?? full
   const outOfStock = product.stock <= 0
   const hasVariants = product.variants.length > 0
   const variantNames = product.variants
@@ -56,6 +58,8 @@ export function ProductCard({
               alt={product.name}
               loading="lazy"
               decoding="async"
+              srcSet={full ? thumbSrcSet(product.images[0]?.thumb_url, full) : undefined}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
               className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${outOfStock ? 'opacity-50 grayscale' : ''}`}
             />
           ) : (

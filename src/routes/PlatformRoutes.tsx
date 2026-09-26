@@ -125,6 +125,8 @@ const PlatformTemplatesPage = lazy(() =>
   import('@/pages/platform/PlatformTemplatesPage').then((m) => ({ default: m.PlatformTemplatesPage })),
 )
 
+const SolutionPage = lazy(() => import('@/pages/marketing/SolutionPage').then((m) => ({ default: m.SolutionPage })))
+
 const standalone = (page: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{page}</Suspense>
 )
@@ -139,6 +141,7 @@ export function PlatformRoutes() {
       <Route path="inscription" element={<Navigate to="/admin/login" replace />} />
       <Route path="mot-de-passe-oublie" element={standalone(<ForgotPasswordPage />)} />
       <Route path="reinitialiser-mot-de-passe" element={standalone(<ResetPasswordPage />)} />
+      <Route path="solutions/:slug" element={standalone(<SolutionPage />)} />
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />

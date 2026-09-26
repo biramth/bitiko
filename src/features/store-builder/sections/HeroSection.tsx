@@ -16,6 +16,7 @@ import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
 import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { thumbSrcSet } from '@/utils/image'
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 
 export function HeroRenderer({
@@ -79,6 +80,8 @@ export function HeroRenderer({
           src={shop.banner_url!}
           alt=""
           fetchPriority="high"
+          srcSet={thumbSrcSet(shop.banner_thumb_url, shop.banner_url!)}
+          sizes={side ? '(max-width: 768px) 100vw, 50vw' : '100vw'}
           className="h-full w-full object-cover"
           style={{ objectPosition: `${config.bannerFocalX ?? 50}% ${config.bannerFocalY ?? 50}%` }}
         />

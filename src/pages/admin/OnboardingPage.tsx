@@ -399,8 +399,8 @@ export function OnboardingPage() {
         palette: logoPalette,
       })
       if (logoFile) {
-        const logoUrl = await uploadShopLogo(shop.id, logoFile)
-        shop = await updateShop(shop.id, { logo_url: logoUrl })
+        const { url, thumbUrl } = await uploadShopLogo(shop.id, logoFile)
+        shop = await updateShop(shop.id, { logo_url: url, logo_thumb_url: thumbUrl })
       }
       return shop
     },

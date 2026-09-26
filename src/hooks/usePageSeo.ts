@@ -25,6 +25,17 @@ function setMetaTag(attr: 'name' | 'property', key: string, content: string) {
   el.setAttribute('content', content)
 }
 
+/** Image de partage par défaut du document (celle d'index.html), capturée au chargement : les pages de la
+ *  plateforme sans image propre la retrouvent au lieu de la perdre après avoir quitté une page qui en avait une. */
+const DEFAULT_OG_IMAGE =
+  typeof document !== 'undefined'
+    ? (document.head.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.getAttribute('content') ?? null)
+    : null
+
+function removeMetaTag(attr: 'name' | 'property', key: string) {
+  document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)?.remove()
+}
+
 function setCanonical(href: string) {
   let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!link) {
@@ -100,6 +111,8 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl, s
     setCanonical(canonical)
     setMetaTag('property', 'og:url', canonical)
     setMetaTag('property', 'og:site_name', siteName || 'Bitiko')
+    setMetaTag('property', 'og:type', 'website')
+    setMetaTag('property', 'og:locale', 'fr_FR')
 
     if (description) {
       setMetaTag('name', 'description', description)
@@ -108,10 +121,21 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl, s
     }
     setMetaTag('property', 'og:title', title)
     setMetaTag('name', 'twitter:title', title)
-    setMetaTag('name', 'twitter:card', image ? 'summary_large_image' : 'summary')
+    setMetaTag('name', 'twitter:card', image || (!siteName && DEFAULT_OG_IMAGE) ? 'summary_large_image' : 'summary')
     if (image) {
       setMetaTag('property', 'og:image', image)
       setMetaTag('name', 'twitter:image', image)
+    } else {
+      // Sans ça, l'og:image de la page précédente survivait à la navigation
+      // SPA (ex. fiche produit → catalogue gardait la photo du produit dans
+      // les aperçus et les signaux sociaux).
+      if (!siteName && DEFAULT_OG_IMAGE) {
+        setMetaTag('property', 'og:image', DEFAULT_OG_IMAGE)
+        setMetaTag('name', 'twitter:image', DEFAULT_OG_IMAGE)
+      } else {
+        removeMetaTag('property', 'og:image')
+        removeMetaTag('name', 'twitter:image')
+      }
     }
     setMetaTag('name', 'robots', noindex || isDraftPreview ? 'noindex, nofollow' : 'index, follow')
 

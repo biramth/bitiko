@@ -22,9 +22,16 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/(.*)", "has": [{ "type": "host", "value": "www.bitiko.shop" }], "destination": "https://bitiko.shop/$1", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/robots.txt", "destination": "/api/sitemap?kind=robots" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap?kind=sitemap" },
+    { "source": "/", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/home.html" },
+    { "source": "/solutions/:slug", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/solutions-:slug.html" },
+    { "source": "/legal/cgu", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/legal-cgu.html" },
+    { "source": "/legal/confidentialite", "has": [{ "type": "host", "value": "(www\\.)?bitiko\\.shop" }], "destination": "/prerendered/legal-confidentialite.html" },
     { "source": "/api/admin/pending-payments", "destination": "/api/admin/platform?action=payment-pending" },
     { "source": "/api/admin/approve-payment", "destination": "/api/admin/platform?action=payment-approve" },
     { "source": "/api/admin/grant-subscription", "destination": "/api/admin/platform?action=subscription-grant" },

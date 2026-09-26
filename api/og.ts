@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { SOLUTION_PAGES } from '../src/pages/marketing/solutions/data.js'
+import { LEGAL_META } from '../src/seo/legalMeta.js'
 
 const ROOT_DOMAIN = process.env.VITE_ROOT_DOMAIN
 const FALLBACK_CURRENCY = 'XOF'
@@ -34,6 +36,7 @@ function page(title: string, description: string, url: string, image?: string | 
     '<!doctype html><html lang="fr"><head><meta charset="utf-8">',
     `<title>${htmlEscape(title)}</title>`,
     `<meta name="description" content="${htmlEscape(description)}">`,
+    `<link rel="canonical" href="${xmlEscape(url)}">`,
     '<meta property="og:type" content="website">',
     `<meta property="og:site_name" content="${htmlEscape(siteName)}">`,
     '<meta property="og:locale" content="fr_FR">',
@@ -41,6 +44,9 @@ function page(title: string, description: string, url: string, image?: string | 
     `<meta property="og:description" content="${htmlEscape(description)}">`,
     `<meta property="og:url" content="${xmlEscape(url)}">`,
     image ? `<meta property="og:image" content="${xmlEscape(image)}">` : '',
+    image ? '<meta property="og:image:width" content="1200">' : '',
+    image ? '<meta property="og:image:height" content="630">' : '',
+    image ? `<meta property="og:image:alt" content="${htmlEscape(title)}">` : '',
     image ? '<meta name="twitter:card" content="summary_large_image">' : '<meta name="twitter:card" content="summary">',
     `<meta name="twitter:title" content="${htmlEscape(title)}">`,
     `<meta name="twitter:description" content="${htmlEscape(description)}">`,
@@ -52,6 +58,12 @@ function page(title: string, description: string, url: string, image?: string | 
 function isPlatformHost(host: string): boolean {
   return !ROOT_DOMAIN || host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`
 }
+
+/** Métas des pages de solutions et légales : lues à la source (src/), jamais recopiées, pour que l'aperçu
+ *  WhatsApp dise exactement la même chose que l'onglet du navigateur. */
+const SOLUTION_META: Record<string, { title: string; description: string }> = Object.fromEntries(
+  SOLUTION_PAGES.map((page) => [page.slug, { title: page.metaTitle, description: page.metaDescription }]),
+)
 
 /**
  * Dynamic link-preview tags, reached via the edge middleware when a
@@ -82,6 +94,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const path = typeof req.query.path === 'string' ? req.query.path : '/'
 
   if (isPlatformHost(host)) {
+    const cleanPath = path.replace(/\/$/, '') || '/'
+    const solutionSlug = cleanPath.startsWith('/solutions/') ? cleanPath.slice('/solutions/'.length) : null
+    const solution = solutionSlug ? SOLUTION_META[solutionSlug] : undefined
+    if (solution) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+      res.status(200).send(
+        page(solution.title, solution.description, `${origin}/solutions/${solutionSlug}`, `${origin}/og-cover.png`),
+      )
+      return
+    }
+    const legal = LEGAL_META[cleanPath.replace(/^\//, '')]
+    if (legal) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+      res.status(200).send(page(legal.title, legal.description, `${origin}${cleanPath}`, `${origin}/og-cover.png`))
+      return
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     res.status(200).send(

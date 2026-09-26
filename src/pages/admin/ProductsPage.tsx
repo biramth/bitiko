@@ -402,7 +402,7 @@ export function ProductsPage() {
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       {product.images[0] ? (
-                        <img src={product.images[0].public_url} alt="" className="h-full w-full object-cover" />
+                        <img src={product.images[0].thumb_url ?? product.images[0].public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-gray-300">
                           <ImageOff size={16} />
@@ -495,7 +495,7 @@ export function ProductsPage() {
                     <td className="flex items-center gap-3 px-4 py-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                         {product.images[0] ? (
-                          <img src={product.images[0].public_url} alt="" className="h-full w-full object-cover" />
+                          <img src={product.images[0].thumb_url ?? product.images[0].public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-gray-300">
                             <ImageOff size={16} />

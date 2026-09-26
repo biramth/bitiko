@@ -73,6 +73,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 20 | [Landing, CGU et visuels marketing](PHASE-20-landing-legal.md) | Landing commerce + services, vraies captures, vidéo de démo, CGU / confidentialité à jour | 18, 19 | 🟨 EN COURS — 2026-09-26 (à relire avant mise en ligne) |
 | 21 | [Back-office commerçant](PHASE-21-backoffice-commerce.md) | Dashboard commerce, commandes (détail, bon imprimable, export), droits par rôle | 18, 19 | 🟨 EN COURS — 2026-09-26 |
 | 22 | [Alertes marchand et back-office équipe](PHASE-22-alertes-et-backoffice-equipe.md) | Alertes commande/stock par défaut, pilotage plateforme (boutiques, abonnements, journal) | 18, 21 | 🟨 EN COURS — 2026-09-26 (0131–0132 appliquées sur dev, 0133 appliquée sur dev) |
+| 23 | [Référencement (SEO)](PHASE-23-referencement-seo.md) | Prérendu des pages publiques, pages solutions par métier, maillage, données structurées | 20 | 🟨 EN COURS — 2026-09-26 |
 
 ## 4. Livrable de fin de phase (obligatoire, format imposé)
 

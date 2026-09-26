@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { formatCurrency } from '@/utils/format'
+import { thumbSrcSet } from '@/utils/image'
 import { MAX_OPTION_TEXT_LENGTH, parseOptionFields, resolveSelection } from '@/utils/productOptions'
 import { effectivePrice } from '@/utils/productPricing'
 import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBreadcrumbStructuredData'
@@ -35,12 +36,13 @@ import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
-type ProductImage = { public_url: string; id: string }
+type ProductImage = { public_url: string; thumb_url?: string | null; id: string }
 
 /** One selectable photo on the product page: a gallery photo or a variant's
  *  photo (variantId set). The merchant's photo budget (free plan: 3 total —
- *  1 main + 1 per variant) is what feeds this list. */
-type GalleryImage = { public_url: string; id: string; variantId: string | null }
+ *  1 main + 1 per variant) is what feeds this list. thumb_url feeds the
+ *  thumbnail strip; the main view and lightbox keep the full file. */
+type GalleryImage = { public_url: string; thumb_url: string | null; id: string; variantId: string | null }
 
 /** Fullscreen photo viewer opened by clicking the main product image. */
 function ImageLightbox({
@@ -134,7 +136,7 @@ function ProductDetails({
   product: Product & {
     category?: { name: string; slug: string } | null
     images: ProductImage[]
-    variants?: { id: string; name: string; price: number | null; stock: number; active: boolean; image_url?: string | null }[]
+    variants?: { id: string; name: string; price: number | null; stock: number; active: boolean; image_url?: string | null; thumb_url?: string | null }[]
   }
   config: ProductSectionConfig
   currency: string
@@ -163,10 +165,10 @@ function ProductDetails({
   // Gallery = product photos + variant photos (deduped). A variant's photo is
   // shown and highlighted when that variant is selected.
   const galleryImages = useMemo<GalleryImage[]>(() => {
-    const base = product.images.map((img) => ({ public_url: img.public_url, id: img.id, variantId: null as string | null }))
+    const base = product.images.map((img) => ({ public_url: img.public_url, thumb_url: img.thumb_url ?? null, id: img.id, variantId: null as string | null }))
     const variantImgs = variants
       .filter((v) => v.image_url && !base.some((b) => b.public_url === v.image_url))
-      .map((v) => ({ public_url: v.image_url!, id: v.id, variantId: v.id }))
+      .map((v) => ({ public_url: v.image_url!, thumb_url: v.thumb_url ?? v.image_url ?? null, id: v.id, variantId: v.id }))
     return [...base, ...variantImgs]
   }, [product.images, variants])
   if (activeImage >= galleryImages.length) setActiveImage(0)
@@ -257,8 +259,9 @@ function ProductDetails({
       price: displayPrice,
       quantity,
       // The photo the customer is actually looking at, not always the first
-      // one — otherwise the cart/checkout thumbnail "changes" on them.
-      imageUrl: variant?.image_url ?? galleryImages[activeImage]?.public_url ?? galleryImages[0]?.public_url ?? null,
+      // one — otherwise the cart/checkout thumbnail "changes" on them. The
+      // cart shows a tiny thumbnail, so prefer the 400px version.
+      imageUrl: variant?.thumb_url ?? variant?.image_url ?? galleryImages[activeImage]?.thumb_url ?? galleryImages[activeImage]?.public_url ?? galleryImages[0]?.thumb_url ?? galleryImages[0]?.public_url ?? null,
       stock: displayStock,
     })
     trackEvent('add_to_cart', { product_id: product.id, product_name: product.name, value: displayPrice * quantity, currency })
@@ -293,7 +296,7 @@ function ProductDetails({
               >
                 {galleryImages[activeImage] ? (
                   <>
-                    <img src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
+                    <img src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" srcSet={thumbSrcSet(galleryImages[activeImage].thumb_url, galleryImages[activeImage].public_url)} sizes="(max-width: 768px) 100vw, 640px" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
                     <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
@@ -319,7 +322,7 @@ function ProductDetails({
                       }}
                       className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-[var(--shop-button)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
                     >
-                      <img src={img.public_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      <img src={img.thumb_url ?? img.public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -557,7 +560,7 @@ function RecentlyViewedRow({ shop, product, themeConfig }: { shop: Shop; product
       slug: product.slug,
       name: product.name,
       price: product.price,
-      imageUrl: product.images[0]?.public_url ?? null,
+      imageUrl: product.images[0]?.thumb_url ?? product.images[0]?.public_url ?? null,
     }),
     [product.id, product.slug, product.name, product.price, product.images],
   )

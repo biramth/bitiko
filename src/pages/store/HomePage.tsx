@@ -4,6 +4,8 @@ import { SectionList } from '@/features/store-builder/SectionList'
 import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { useJsonLd } from '@/hooks/useJsonLd'
+import { shopJsonLd } from '@/seo/jsonLd'
 
 export function HomePage() {
   const { shop } = useTenant()
@@ -15,6 +17,7 @@ export function HomePage() {
     image: shop?.banner_url ?? shop?.logo_url,
     siteName: shop?.name,
   })
+  useJsonLd('shop-structured-data', shop ? shopJsonLd(shop, `${window.location.origin}/`) : null)
   const { bodySections, themeConfig, isDraftPreview, inlineEditable } = useEffectiveShopConfig(shop)
 
   const isEmbeddedPreview = isDraftPreview && typeof window !== 'undefined' && window.parent !== window

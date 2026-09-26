@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
-import { compressImageFile } from '@/utils/image'
+import { compressImageFile, makeThumbFile } from '@/utils/image'
 import type { Category } from '@/types'
 
 export type CategoryKind = 'product' | 'service'
@@ -44,7 +44,7 @@ export async function createCategory(input: {
 }
 
 export type CategoryUpdate = Partial<
-  Pick<Category, 'name' | 'slug' | 'position' | 'emoji' | 'description' | 'color' | 'image_url'>
+  Pick<Category, 'name' | 'slug' | 'position' | 'emoji' | 'description' | 'color' | 'image_url' | 'thumb_url'>
 >
 
 export async function updateCategory(id: string, updates: CategoryUpdate): Promise<Category> {
@@ -72,18 +72,39 @@ export async function deleteCategory(id: string): Promise<void> {
   if (error) throw error
 }
 
-/** Uploads a cover image for a category and returns its public URL (caller stores it in image_url). */
-export async function uploadCategoryImage(categoryId: string, file: File): Promise<string> {
+/** Uploads a cover image for a category and returns its public URL plus the
+ *  thumbnail URL (null when no thumb applies, e.g. SVG/GIF) — the caller
+ *  stores them in image_url / thumb_url. */
+export async function uploadCategoryImage(
+  categoryId: string,
+  file: File,
+): Promise<{ url: string; thumbUrl: string | null }> {
   const optimized = await compressImageFile(file)
   const ext = optimized.name.split('.').pop()
-  const path = `${categoryId}/${crypto.randomUUID()}.${ext}`
-  const { error: uploadError } = await supabase.storage.from('category-images').upload(path, optimized, {
-    cacheControl: '3600',
-    upsert: false,
-  })
-  if (uploadError) throw uploadError
+  const id = crypto.randomUUID()
+  const path = `${categoryId}/${id}.${ext}`
+  const thumb = await makeThumbFile(file)
+  const thumbPath = thumb ? `${categoryId}/${id}-thumb.webp` : null
+  // UUID paths are immutable: 1-year browser/CDN cache.
+  const [{ error: fullError }, { error: thumbError }] = await Promise.all([
+    supabase.storage.from('category-images').upload(path, optimized, {
+      cacheControl: '31536000',
+      upsert: false,
+    }),
+    thumb && thumbPath
+      ? supabase.storage.from('category-images').upload(thumbPath, thumb, {
+          cacheControl: '31536000',
+          upsert: false,
+        })
+      : Promise.resolve({ error: null }),
+  ])
+  if (fullError) throw fullError
+  if (thumbError) throw thumbError
   const { data } = supabase.storage.from('category-images').getPublicUrl(path)
-  return data.publicUrl
+  const thumbUrl = thumbPath
+    ? supabase.storage.from('category-images').getPublicUrl(thumbPath).data.publicUrl
+    : null
+  return { url: data.publicUrl, thumbUrl }
 }
 
 /** Best-effort cleanup of a category's cover images in storage. */

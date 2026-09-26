@@ -113,6 +113,7 @@ function EditCategoryDialog({
     description: string
     color: string | null
     imageUrl: string | null
+    thumbUrl: string | null
   }) => void
   isPending: boolean
   isPro: boolean
@@ -125,6 +126,7 @@ function EditCategoryDialog({
   const [description, setDescription] = useState(category?.description ?? '')
   const [color, setColor] = useState(category?.color ?? null)
   const [imageUrl, setImageUrl] = useState(category?.image_url ?? null)
+  const [thumbUrl, setThumbUrl] = useState(category?.thumb_url ?? null)
   const [uploadingImage, setUploadingImage] = useState(false)
 
   if (!category) return null
@@ -132,8 +134,9 @@ function EditCategoryDialog({
   const handleFileSelected = async (file: File) => {
     setUploadingImage(true)
     try {
-      const url = await uploadCategoryImage(category.id, file)
+      const { url, thumbUrl: nextThumb } = await uploadCategoryImage(category.id, file)
       setImageUrl(url)
+      setThumbUrl(nextThumb)
     } catch {
       toast.error('Impossible de télécharger l\'image.')
     } finally {
@@ -166,6 +169,7 @@ function EditCategoryDialog({
                 description: description.trim(),
                 color,
                 imageUrl,
+                thumbUrl,
               })
             }
             disabled={isPending || !name.trim()}
@@ -218,7 +222,10 @@ function EditCategoryDialog({
             onLockedFeature={onLockedFeature}
             onColorChange={setColor}
             onFileSelected={(file) => void handleFileSelected(file)}
-            onRemoveImage={() => setImageUrl(null)}
+            onRemoveImage={() => {
+              setImageUrl(null)
+              setThumbUrl(null)
+            }}
           />
         </div>
       </div>
@@ -449,6 +456,7 @@ export function CategoriesPage() {
       description: string
       color: string | null
       imageUrl: string | null
+      thumbUrl: string | null
     }) =>
       updateCategory(id, {
         name: data.name,
@@ -457,6 +465,7 @@ export function CategoriesPage() {
         description: data.description || null,
         color: hasPaidPlan ? data.color || null : data.color && availableColors.includes(data.color) ? data.color : null,
         image_url: hasPaidPlan ? data.imageUrl || null : null,
+        thumb_url: hasPaidPlan ? data.thumbUrl || null : null,
       }),
     onSuccess: () => {
       setEditTarget(null)
@@ -665,7 +674,7 @@ export function CategoriesPage() {
                         <span className="text-sm font-medium text-gray-900 group-hover:underline">
                           {category.image_url ? (
                             <span className="mr-1.5 inline-block h-5 w-5 overflow-hidden rounded align-[-4px]">
-                              <img src={category.image_url} alt="" className="h-full w-full object-cover" />
+                              <img src={category.thumb_url ?? category.image_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                             </span>
                           ) : category.color ? (
                             <span

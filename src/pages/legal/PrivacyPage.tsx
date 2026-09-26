@@ -1,12 +1,13 @@
 import { LegalLayout, LegalSection } from '@/components/legal/LegalLayout'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { LEGAL_META } from '@/seo/legalMeta'
 
 // Ce texte est un point de départ raisonnable pour le lancement pilote de
 // Bitiko, pas un avis juridique. Une relecture par un juriste (droit
 // sénégalais de la protection des données personnelles, encadré par la CDP)
 // est recommandée avant un usage à grande échelle.
 export function PrivacyPage() {
-  usePageSeo({ title: 'Politique de confidentialité — Bitiko' })
+  usePageSeo(LEGAL_META['legal/confidentialite'])
 
   return (
     <LegalLayout title="Politique de confidentialité" updatedAt="26 septembre 2026">

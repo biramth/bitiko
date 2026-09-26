@@ -493,7 +493,9 @@ function SettingsForm({
   const [address, setAddress] = useState(shop.address ?? '')
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(shop.social_links ?? {})
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url)
+  const [logoThumbUrl, setLogoThumbUrl] = useState<string | null>(shop.logo_thumb_url ?? null)
   const [bannerUrl, setBannerUrl] = useState<string | null>(shop.banner_url)
+  const [bannerThumbUrl, setBannerThumbUrl] = useState<string | null>(shop.banner_thumb_url ?? null)
   const [themeColor, setThemeColor] = useState(shop.theme_color)
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(
     shop.free_delivery_threshold != null ? String(Number(shop.free_delivery_threshold)) : '',
@@ -531,7 +533,9 @@ function SettingsForm({
       address,
       socialLinks,
       logoUrl,
+      logoThumbUrl,
       bannerUrl,
+      bannerThumbUrl,
       themeColor,
       freeDeliveryThreshold,
       lowStockThreshold,
@@ -711,7 +715,9 @@ function SettingsForm({
             .filter(([, url]) => url),
         ),
         logo_url: logoUrl,
+        logo_thumb_url: logoThumbUrl,
         banner_url: bannerUrl,
+        banner_thumb_url: bannerThumbUrl,
         theme_color: themeColor,
         free_delivery_threshold: threshold,
         low_stock_threshold: Number(lowStockThreshold) || 0,
@@ -773,8 +779,9 @@ function SettingsForm({
     setUploadingLogo(true)
     setError(null)
     try {
-      const url = await uploadShopLogo(shop.id, file)
+      const { url, thumbUrl } = await uploadShopLogo(shop.id, file)
       setLogoUrl(url)
+      setLogoThumbUrl(thumbUrl)
       // Recalcul silencieux des couleurs depuis le logo : un accent lisible
       // (assombri jusqu'à ce qu'un texte blanc tienne dessus) et une teinte
       // secondaire pastel, en préservant les choix déjà faits dans
@@ -807,8 +814,9 @@ function SettingsForm({
     setUploadingBanner(true)
     setError(null)
     try {
-      const url = await uploadShopBanner(shop.id, file)
+      const { url, thumbUrl } = await uploadShopBanner(shop.id, file)
       setBannerUrl(url)
+      setBannerThumbUrl(thumbUrl)
     } catch {
       setError("Échec de l'envoi de la bannière.")
     } finally {
@@ -947,7 +955,10 @@ function SettingsForm({
                   {logoUrl && (
                     <button
                       type="button"
-                      onClick={() => setLogoUrl(null)}
+                      onClick={() => {
+                        setLogoUrl(null)
+                        setLogoThumbUrl(null)
+                      }}
                       className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <Trash2 size={14} /> Retirer
@@ -991,7 +1002,10 @@ function SettingsForm({
                   {bannerUrl && (
                     <button
                       type="button"
-                      onClick={() => setBannerUrl(null)}
+                      onClick={() => {
+                        setBannerUrl(null)
+                        setBannerThumbUrl(null)
+                      }}
                       className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       <Trash2 size={14} /> Retirer

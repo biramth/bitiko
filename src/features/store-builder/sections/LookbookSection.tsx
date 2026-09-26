@@ -122,7 +122,7 @@ function LookbookImageSlot({
     <div className="flex gap-3 rounded-lg border border-gray-200 p-3">
       <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-sand-50">
         {image.imageUrl ? (
-          <img src={image.imageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={image.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-gray-300">
             <ImageOff size={20} aria-hidden />

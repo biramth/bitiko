@@ -15,11 +15,11 @@ export function ProductPage() {
 
   usePageSeo({
     title: product ? (shop ? `${product.name} — ${shop.name}` : product.name) : 'Produit',
-    description: product?.description ?? undefined,
+    description: product?.description ? product.description.slice(0, 155) : undefined,
     image: product?.images[0]?.public_url,
     siteName: shop?.name,
   })
-  useProductStructuredData(product ?? null, currency)
+  useProductStructuredData(product ?? null, currency, shop?.name)
 
   return <TemplateBody template="product" />
 }

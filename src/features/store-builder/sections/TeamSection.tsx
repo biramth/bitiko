@@ -95,6 +95,8 @@ function TeamCard({ member }: { member: any }) {
           <img
             src={member.avatarUrl}
             alt={member.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform group-hover:scale-105"
           />
         </div>
@@ -133,7 +135,7 @@ function TeamListItem({ member }: { member: any }) {
     <article className="flex items-center gap-4 p-4 rounded-xl border border-[var(--shop-border)] bg-[var(--shop-surface)] group hover:shadow-md">
       <div className="h-16 w-16 shrink-0 rounded-full bg-brand-100 overflow-hidden">
         {member.avatarUrl ? (
-          <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+          <img src={member.avatarUrl} alt={member.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Users className="h-8 w-8 text-brand-600" />

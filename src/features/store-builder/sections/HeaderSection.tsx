@@ -88,7 +88,7 @@ export function HeaderRenderer({
   const logo = (
     <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-[var(--shop-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
       {header.showLogo && shop?.logo_url ? (
-        <img src={shop.logo_url} alt={shopName} className="h-8 w-8 shrink-0 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
+        <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 shrink-0 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : header.showLogo ? (
         <Store size={20} className="shrink-0" aria-hidden />
       ) : null}

@@ -196,7 +196,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
     <div className={`mb-2 flex items-center gap-2 rounded-xl bg-white/5 ${collapsed ? 'justify-center p-2' : 'p-2'}`}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10">
         {shop.logo_url ? (
-          <img src={shop.logo_url} alt="" className="h-full w-full object-cover" />
+          <img src={shop.logo_thumb_url ?? shop.logo_url} alt="" className="h-full w-full object-cover" />
         ) : (
           <Store size={15} className="text-gold-400" aria-hidden />
         )}
