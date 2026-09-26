@@ -2,10 +2,9 @@ import { getSupabaseAdmin } from './supabaseAdmin.js'
 import { sendEmail } from './resendEmail.js'
 import { proActivatedEmailHtml } from './emailTemplates.js'
 import { mirrorStatus } from './payments/engine.js'
-import { PLANS } from '../../src/config/plans.js'
+import { PLANS, type PlanKey } from '../../src/config/plans.js'
+import { nextSubscription } from './subscriptionPeriod.js'
 import type { WaveCheckoutSession } from './wave.js'
-
-const SUBSCRIPTION_PERIOD_DAYS = 30
 
 export type SettleResult = 'succeeded' | 'pending' | 'failed'
 
@@ -31,9 +30,17 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
   if (payment.status === 'succeeded') return 'succeeded'
 
   if (session.payment_status === 'succeeded') {
-    const periodEnd = new Date(Date.now() + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    // La session Wave est l'autorité : elle doit correspondre à ce que NOUS
+    // avons demandé (montant + devise), jamais seulement à la référence.
+    if (Number(session.amount) !== Number(payment.amount) || session.currency !== payment.currency) {
+      console.error('settlePayment: amount/currency mismatch', { clientReference, expected: payment.amount, got: session.amount })
+      throw new Error(`Payment ${clientReference}: amount or currency does not match the checkout session.`)
+    }
 
-    const { error: updatePaymentError } = await admin
+    // Prise en charge atomique : confirm.ts et le webhook peuvent arriver en
+    // même temps ; un seul des deux passe de « pending » à « succeeded » et
+    // applique l'abonnement (pas de double prolongation ni de double email).
+    const { data: claimed, error: claimError } = await admin
       .from('wave_payments')
       .update({
         status: 'succeeded',
@@ -41,18 +48,34 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
         completed_at: new Date().toISOString(),
       })
       .eq('id', payment.id)
-    if (updatePaymentError) throw updatePaymentError
+      .neq('status', 'succeeded')
+      .select('id')
+    if (claimError) throw claimError
+    if (!claimed || claimed.length === 0) return 'succeeded'
 
     // Engine mirror (best-effort, never blocks the money path).
     await mirrorStatus(clientReference, 'succeeded', session.transaction_id ?? null)
 
+    const { data: currentSub } = await admin
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', payment.shop_id)
+      .maybeSingle()
+    const next = nextSubscription({ current: currentSub, paidPlan: payment.plan as PlanKey })
+    const periodEnd = next.periodEnd
+
     const { error: upsertSubError } = await admin
       .from('shop_subscriptions')
       .upsert(
-        { shop_id: payment.shop_id, plan: payment.plan, status: 'active', current_period_end: periodEnd },
+        { shop_id: payment.shop_id, plan: next.plan, status: 'active', current_period_end: periodEnd },
         { onConflict: 'shop_id' },
       )
-    if (upsertSubError) throw upsertSubError
+    if (upsertSubError) {
+      // Argent encaissé mais abonnement non appliqué : on rend la main au
+      // prochain passage (confirm/webhook) en remettant le paiement en attente.
+      await admin.from('wave_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id)
+      throw upsertSubError
+    }
 
     try {
       const { data: shop } = await admin.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()

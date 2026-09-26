@@ -18,6 +18,7 @@ import { recordUsage } from '../_lib/usage.js'
 import { campaignEmailHtml, proActivatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
+import { nextSubscription } from '../_lib/subscriptionPeriod.js'
 
 /**
  * Platform-team serverless endpoint (team management + campaign tool),
@@ -1705,8 +1706,6 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
 // manual Wave verification, audit-trailed approve/reject).
 // ---------------------------------------------------------------------------
 
-const SUBSCRIPTION_PERIOD_DAYS = 30
-
 async function handlePaymentPending(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' })
@@ -1811,18 +1810,15 @@ async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    // Paying while the same plan is still running (e.g. a free promo month)
-    // adds the period on top instead of throwing the remaining days away.
+    // Renouvellement anticipé : la période s'ajoute à la fin en cours (voir
+    // nextSubscription — même règle que le paiement Wave automatique).
     const { data: currentSub } = await supabase
       .from('shop_subscriptions')
       .select('plan, current_period_end')
       .eq('shop_id', payment.shop_id)
       .maybeSingle()
-    const runningUntil =
-      currentSub && currentSub.plan === plan && currentSub.current_period_end
-        ? new Date(currentSub.current_period_end).getTime()
-        : 0
-    const periodEnd = new Date(Math.max(Date.now(), runningUntil) + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const next = nextSubscription({ current: currentSub, paidPlan: plan })
+    const periodEnd = next.periodEnd
 
     const { error: updatePaymentError } = await supabase
       .from('wave_payments')
@@ -1838,7 +1834,7 @@ async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
     const { error: upsertSubError } = await supabase
       .from('shop_subscriptions')
       .upsert(
-        { shop_id: payment.shop_id, plan, status: 'active', current_period_end: periodEnd },
+        { shop_id: payment.shop_id, plan: next.plan, status: 'active', current_period_end: periodEnd },
         { onConflict: 'shop_id' },
       )
     if (upsertSubError) throw upsertSubError

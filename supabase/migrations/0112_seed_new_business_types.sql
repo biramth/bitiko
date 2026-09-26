@@ -1,11 +1,8 @@
--- 0104_seed_new_business_types.sql — Seed 6 new business types for frontend alignment
+-- 0112_seed_new_business_types.sql — Seed 6 new business types for frontend alignment
 -- Matches the landing page solutions + shopCategories
--- Run after 0103_template_catalog.sql
-
--- Disable RLS temporarily for seed
-ALTER TABLE public.business_types DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.business_type_capabilities DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.template_business_types DISABLE ROW LEVEL SECURITY;
+-- Run after 0111. (Le rôle des migrations contourne la RLS : plus de
+-- désactivation/réactivation temporaire des policies, qui laissait les tables
+-- sans RLS si l'exécution s'interrompait.)
 
 -- 1. Insert new business types
 INSERT INTO public.business_types (slug, name, description, icon, status, metadata) VALUES
@@ -128,8 +125,3 @@ SELECT t.id, b.id
 FROM public.templates t, public.business_types b
 WHERE t.slug = 'mode' AND b.slug = 'librairie'
 ON CONFLICT DO NOTHING;
-
--- Re-enable RLS
-ALTER TABLE public.business_types ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.business_type_capabilities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.template_business_types ENABLE ROW LEVEL SECURITY;

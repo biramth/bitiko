@@ -3,6 +3,7 @@ import { assertShopOwner, getSupabaseAdmin, getUserIdFromAuthHeader } from '../_
 import { getDefaultProvider } from '../_lib/payments/registry.js'
 import { recordTransaction } from '../_lib/payments/engine.js'
 import { PLANS, type PlanKey } from '../../src/config/plans.js'
+import { isDowngradePurchase } from '../_lib/subscriptionPeriod.js'
 
 /**
  * Starts a Wave checkout for a shop's paid subscription. Only ever called
@@ -41,6 +42,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const planKey: Exclude<PlanKey, 'free'> = requestedPlan
     const plan = PLANS[planKey]
+
+    // Payer un plan inférieur à celui en cours n'est pas un renouvellement.
+    const { data: currentSub } = await getSupabaseAdmin()
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', shopId)
+      .maybeSingle()
+    if (isDowngradePurchase(currentSub, planKey)) {
+      res.status(409).json({
+        error: `Votre abonnement ${PLANS[currentSub!.plan as PlanKey].label} est encore actif : attendez son échéance avant de passer à ${plan.label}.`,
+      })
+      return
+    }
     const clientReference = `sub_${shopId}_${Date.now()}`
     const host = (req.headers.host ?? '').toString()
     const proto = (req.headers['x-forwarded-proto'] as string) ?? 'https'

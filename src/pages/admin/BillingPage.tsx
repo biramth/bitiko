@@ -264,6 +264,8 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 <p className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-700">Plan actuel</p>
               ) : key === 'free' ? (
                 <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Disponible au démarrage</p>
+              ) : key === 'essential' && planKey === 'pro' ? (
+                <p className="mt-5 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs font-medium text-gray-500">Inclus dans votre plan Pro</p>
               ) : pendingManualRequest ? (
                 <div className="mt-5 space-y-1 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-700">
                   <div className="flex items-center justify-center gap-2"><Clock size={14} /> Preuve envoyée — vérification en cours (sous 24 h)</div>
