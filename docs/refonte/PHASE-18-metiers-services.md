@@ -1,6 +1,6 @@
 # PHASE 18 — Métiers, services et réservations (chantier post-refonte)
 
-> État : 🟨 EN COURS — 2026-09-26 (DEV, code prêt, **migrations 0121 → 0124 non appliquées** sur la base dev, prod non touchée).
+> État : 🟨 EN COURS — 2026-09-26 (DEV, code prêt, **migrations 0121 → 0128 non appliquées** sur la base dev, prod non touchée).
 > Origine : audit du 2026-09-26 sur le chantier « 10 groupes métiers + services + gabarits » (commits `a491480` → `b63b7c9`, migrations 0112–0120), resté hors `PLAN.md`.
 
 ## Objectif
@@ -11,7 +11,7 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
 
 ## Ordre de déploiement (important)
 
-1. Appliquer `0121 → 0124` sur **dev**, puis déployer la preview `develop`.
+1. Appliquer `0121 → 0128` sur **dev**, puis déployer la preview `develop`.
    Le code lit `team_members_public`, `booking_settings`, `get_booking_slots`, `get_reservation_slots` et appelle
    `create_appointment` à 6 arguments : le front déployé **avant** les migrations casse l'équipe vitrine et la réservation.
 2. Recette dev (voir « Recette » ci-dessous), puis prod.
@@ -55,7 +55,23 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
   dans les 10 min suivant sa création).
 - Événements `APPOINTMENT_CREATED` / `RESERVATION_CREATED` dans `business_events` ; `automation-dispatch` planifié (quotidien).
 
-### 18.5 — Hygiène
+### 18.5 — Suite : plafonds, catégories, notifications, multi-pays (`0125` → `0128`)
+- **`0125` plafonds de plan** (valeurs de départ à valider, modifiables par `UPDATE plan_limits` sans migration) :
+  prestations actives free 6 / essentiel 30 / pro ∞ ; équipiers actifs 2 / 8 / ∞ ; demandes en ligne par mois 40 / 300 / ∞
+  (invités seulement : le personnel saisit toujours à la main). Triggers serveur, jauge `PlanLimitBanner`, bouton d'ajout
+  désactivé au plafond, messages d'erreur `plan_limit_exceeded`. Modifier une ligne déjà active n'est jamais bloqué.
+- **`0126` catégories** : `categories.kind` (`product` | `service`), backfill, garde-fou à l'attache ; création de catégories de
+  prestation depuis le formulaire de prestation. Les catégories partagées existantes restent `product`.
+- **`0127` + Notifications** : le propriétaire crée ses règles email (`/admin/parametres/notifications`, RLS owner write, une règle par
+  événement/canal, ≤ 30 règles, gabarit borné, canaux non branchés refusés). Le dispatcher est partagé
+  (`api/_lib/automationDispatch.ts`) et déclenché **tout de suite** après commande / changement de statut / réservation
+  (`/api/automation-kick`, sans attendre le cron quotidien).
+- **`0128` multi-pays** : `normalize_phone(numéro, pays)` (SN, CI, ML, BF, BJ, TG, NE, GN, NG, GH) ; triggers commandes / WhatsApp
+  boutique / profils migrés ; pays et fuseau par boutique dans `booking_settings.country_code` (carte « Horaires de réservation »).
+  Miroir front : `src/config/countries.ts` + `src/utils/phone.ts`. Limite : les numéros sont multi-pays, mais les textes
+  (« Sénégal », message d'erreur SN) et les gabarits restent francophones.
+
+### 18.6 — Hygiène
 - Tests : `src/db/bookingMigrations.test.ts` (PGlite, vrai Postgres en mémoire), `api/_lib/{cronAuth,subscriptionPeriod,bookingEmail}.test.ts`.
 - `test-results/` retiré du suivi git ; README/AGENTS alignés.
 
@@ -70,15 +86,27 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
 
 ## Prod (PHASE-17) — points de vigilance
 
-Prod est en retard de **0098 → 0124**. Avant la bascule, rejouer la chaîne sur un clone de la base prod, en particulier :
+Prod est en retard de **0098 → 0128**. Avant la bascule, rejouer la chaîne sur un clone de la base prod, en particulier :
 `0104` (`drop table if exists plans, country_prices cascade`), `0113` (suppression d'un type métier), `0119`/`0120` (paire qui
 s'annule, résultat net idempotent). Numérotation : aucun fichier `0067`–`0085` dans le dépôt — vérifier que dev/prod n'ont pas de
 schéma appliqué hors dépôt.
 
-## Décisions produit ouvertes (non tranchées, rien d'implémenté)
+## Historique de migrations : état constaté (CLI Supabase, lecture seule, 2026-09-26)
 
-- Plafonds de plan pour prestations / équipe / rendez-vous (aujourd'hui seuls les produits sont plafonnés : un salon n'a pas de levier payant).
-- Catégories : les prestations partagent `categories` avec les produits.
-- Interface marchand pour créer des règles d'automatisation (le moteur tourne, les règles ne se créent que par SQL).
-- Multi-pays : `normalize_sn_phone` et le fuseau `Africa/Dakar` par défaut restent sénégalais.
-- `plan_entitlements` et les prix (`plans.ts`) restent dupliqués côté code.
+- **Dev** (`tlqgcmbdethmhqrablcy`) : historique numérique complet `0001 → 0120`, **avec le même trou 0067–0085**. Dev a donc été
+  construit uniquement à partir des fichiers du dépôt : le trou ne masque aucun schéma nécessaire (aucun fichier de cette plage n'apparaît
+  dans l'historique git : rien n'a été supprimé, la numérotation a simplement sauté).
+- **Prod** (`jebmorovxoxecgixievu`) : historique **mixte**. 68 versions horodatées (`20260914… → 20260924…`, appliquées hors
+  fichiers du dépôt — éditeur SQL / outil de migration) + seulement `0061–0066` et `0086–0088` en numérique ; `0001–0060` et
+  `0089–0097` n'y sont pas enregistrées (leur schéma a pu être appliqué sous forme horodatée : non vérifié).
+  Conséquence : **`supabase db push` vers la prod échoue** (`LegacyDbPushMissingLocalError`, versions distantes absentes du dépôt) et il faut
+  **réconcilier l'historique** avant toute bascule (`supabase migration repair` + vérification du schéma réel), pas seulement rejouer 0098–0128.
+- Non fait : comparaison du schéma réel de prod avec celui de dev (l'accès en lecture au schéma de prod n'a pas été autorisé
+  dans cette session). À faire par le propriétaire du projet : `supabase db dump --linked --schema public` de prod puis diff avec dev,
+  ou clone de prod sur une branche Supabase, avant de rejouer la chaîne.
+
+## Décisions produit encore ouvertes
+
+- Valeurs finales des plafonds de plan 0125 (proposition de départ, pas une décision).
+- Un plan « Business » / prix (`plans.ts` reste la source des prix ; `plan_entitlements` non lu par l'app).
+- Multi-pays : gabarits, textes et devise par pays (seuls téléphones et fuseau sont couverts).

@@ -12,6 +12,7 @@ import {
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
+import { useShopBookingSettings } from '@/features/booking/bookingUtils'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -44,6 +45,8 @@ function CheckoutFlow({
   const { clear } = useCart()
   const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
+  const { data: bookingSettings } = useShopBookingSettings(shop?.id ?? '')
+  const phoneCountry = bookingSettings?.country_code
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -83,7 +86,7 @@ function CheckoutFlow({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const phone = normalizePhoneNumber(customerPhone)
+      const phone = normalizePhoneNumber(customerPhone, phoneCountry)
       if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
@@ -102,7 +105,7 @@ function CheckoutFlow({
       // Optional account hook: links this order to the buyer's email for
       // their future order history. Best-effort, never blocks the flow.
       if (customerEmail.trim()) void setOrderCustomerEmail(result.orderId, customerEmail)
-      const normalizedPhone = normalizePhoneNumber(customerPhone)
+      const normalizedPhone = normalizePhoneNumber(customerPhone, phoneCountry)
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
         items: result.items,
@@ -160,7 +163,7 @@ function CheckoutFlow({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const phone = normalizePhoneNumber(customerPhone)
+    const phone = normalizePhoneNumber(customerPhone, phoneCountry)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return

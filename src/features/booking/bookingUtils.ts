@@ -12,6 +12,7 @@ export function useShopBookingSettings(shopId: string) {
   return useQuery({
     queryKey: ['booking-settings', shopId],
     queryFn: async () => (await getBookingSettings(shopId)) ?? { shop_id: shopId, updated_at: '', ...DEFAULT_BOOKING_SETTINGS },
+    enabled: !!shopId,
     staleTime: 5 * 60 * 1000,
   })
 }

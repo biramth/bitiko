@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { COUNTRIES, COUNTRY_BY_CODE } from '@/config/countries'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Clock } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
@@ -33,6 +34,7 @@ function toFormValues(saved: BookingSettingsRow | null | undefined): BookingSett
   if (!saved) return DEFAULT_BOOKING_SETTINGS
   return {
     timezone: saved.timezone,
+    country_code: saved.country_code,
     open_time: hhmm(saved.open_time),
     close_time: hhmm(saved.close_time),
     open_days: saved.open_days,
@@ -106,6 +108,30 @@ function BookingSettingsForm({
       </button>
       {open && (
         <div className="space-y-4 border-t border-gray-100 p-4">
+          <div>
+            <label htmlFor="bk-country" className="block text-sm font-medium text-gray-700">Pays de la boutique</label>
+            <select
+              id="bk-country"
+              value={form.country_code}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  country_code: e.target.value,
+                  timezone: COUNTRY_BY_CODE[e.target.value]?.timezone ?? form.timezone,
+                })
+              }
+              className={inputClass}
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name} (+{country.dialCode})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Sert à lire les numéros saisis en format local et fixe le fuseau horaire des créneaux.
+            </p>
+          </div>
           <div>
             <p className="text-sm font-medium text-gray-700">Jours d’ouverture</p>
             <div className="mt-2 flex flex-wrap gap-2">
