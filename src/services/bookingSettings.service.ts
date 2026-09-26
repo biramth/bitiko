@@ -8,7 +8,6 @@ export type BookingSettingsInput = Omit<BookingSettingsRow, 'shop_id' | 'updated
  *  valeurs par défaut de la migration 0122 : effective_booking_settings). */
 export const DEFAULT_BOOKING_SETTINGS: BookingSettingsInput = {
   timezone: 'Africa/Dakar',
-  country_code: 'SN',
   open_time: '09:00',
   close_time: '19:00',
   open_days: [1, 2, 3, 4, 5, 6],
@@ -33,9 +32,6 @@ export async function saveBookingSettings(shopId: string, input: BookingSettings
 export function bookingErrorMessage(error: unknown): string {
   const message =
     typeof error === 'object' && error !== null && 'message' in error ? String((error as { message: unknown }).message) : ''
-  if (message.includes('plan_limit_exceeded')) {
-    return 'Ce commerce ne prend plus de demandes en ligne pour le moment. Contactez-le directement.'
-  }
   if (message.includes('no longer available') || message.includes('no table available')) {
     return 'Ce créneau vient d’être pris. Choisissez-en un autre.'
   }

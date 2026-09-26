@@ -85,32 +85,3 @@ describe('formatPhoneNumberForDisplay', () => {
     expect(formatPhoneNumberForDisplay('not-a-number')).toBe('not-a-number')
   })
 })
-
-describe('multi-pays', () => {
-  it('accepte les numéros internationaux des pays supportés, quel que soit le pays de la boutique', () => {
-    expect(normalizePhoneNumber('+225 07 12 34 56 78')).toEqual({ ok: true, value: '+2250712345678' })
-    expect(normalizePhoneNumber('00223 70 12 34 56')).toEqual({ ok: true, value: '+22370123456' })
-    expect(normalizePhoneNumber('+234 803 123 4567', 'CI')).toEqual({ ok: true, value: '+2348031234567' })
-  })
-
-  it('lit les formats locaux dans le pays de la boutique', () => {
-    expect(normalizePhoneNumber('07 12 34 56 78', 'CI')).toEqual({ ok: true, value: '+2250712345678' })
-    expect(normalizePhoneNumber('70 12 34 56', 'ML')).toEqual({ ok: true, value: '+22370123456' })
-    expect(normalizePhoneNumber('0803 123 4567', 'NG')).toEqual({ ok: true, value: '+2348031234567' })
-  })
-
-  it('garde les règles sénégalaises par défaut et refuse un local ivoirien dans une boutique sénégalaise', () => {
-    expect(normalizePhoneNumber('0512345678')).toEqual({ ok: false, value: null, error: 'invalid_prefix' })
-    expect(normalizePhoneNumber('571234567')).toEqual({ ok: false, value: null, error: 'invalid_prefix' })
-  })
-
-  it('refuse un indicatif non supporté ou une longueur invalide', () => {
-    expect(normalizePhoneNumber('+33 6 12 34 56 78').ok).toBe(false)
-    expect(normalizePhoneNumber('+225 07 12').ok).toBe(false)
-  })
-
-  it('formate l’affichage par pays', () => {
-    expect(formatPhoneNumberForDisplay('+221771234567')).toBe('+221 77 123 45 67')
-    expect(formatPhoneNumberForDisplay('+2250712345678')).toBe('+225 07 12 34 56 78')
-  })
-})

@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 /**
- * Tests de comportement des migrations 0114 → 0128 sur un vrai Postgres
+ * Tests de comportement des migrations 0114 → 0124 sur un vrai Postgres
  * (PGlite, en mémoire) avec un schéma minimal : réservations durcies, prix,
  * vie privée équipe, miroir d'abonnement. Aucun accès réseau ni base distante.
  */
@@ -32,19 +32,15 @@ beforeAll(async () => {
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true),'')::uuid $$;
     create table public.shops(id uuid primary key default gen_random_uuid(), owner_id uuid not null);
     create table public.shop_members(shop_id uuid, user_id uuid, role text);
-    create table public.categories(id uuid primary key default gen_random_uuid(), shop_id uuid, name text, position integer default 0);
-    create table public.products(id uuid primary key default gen_random_uuid(), shop_id uuid, category_id uuid references public.categories(id));
+    create table public.categories(id uuid primary key default gen_random_uuid());
     create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at=now(); return new; end $$;
     create table public.business_events(id uuid primary key default gen_random_uuid(), shop_id uuid not null, type text not null, payload jsonb not null default '{}', processed boolean not null default false, occurred_at timestamptz default now());
-    create table public.automation_rules(id uuid primary key default gen_random_uuid(), shop_id uuid not null references public.shops(id), event_type text not null, channel text not null check (channel in ('log','email','whatsapp','sms','push')), template jsonb not null default '{}', enabled boolean not null default false, created_at timestamptz default now(), updated_at timestamptz default now());
     create table public.plans(key text primary key);
-    create table public.plan_limits(plan_key text not null references public.plans(key), code text not null, max_value integer, primary key (plan_key, code));
     insert into public.plans values ('free'),('essential'),('pro');
     create table public.shop_subscriptions(shop_id uuid primary key references public.shops(id), plan text not null, status text not null default 'active', current_period_end timestamptz);
     create table public.subscriptions(id uuid primary key default gen_random_uuid(), shop_id uuid not null unique references public.shops(id), plan_key text not null references public.plans(key), status text not null default 'active', current_period_end timestamptz, updated_at timestamptz default now());
     create table public.subscription_history(id uuid primary key default gen_random_uuid(), subscription_id uuid references public.subscriptions(id), from_plan text, to_plan text not null, reason text, created_at timestamptz default now());
   `)
-  await db.exec(read('0027_enforce_plan_limits_server_side.sql').match(/create or replace function public\.effective_plan_key[\s\S]*?\$\$;/)![0])
   await db.exec(read('0093_shop_members.sql').match(/create or replace function public\.shop_role[\s\S]*?\$\$;/)![0])
   await db.exec(read('0063_normalize_phone_numbers.sql').match(/create or replace function public\.normalize_sn_phone[\s\S]*?\n\$\$;/)![0])
   await db.exec(read('0114_services_foundation.sql'))
@@ -57,10 +53,6 @@ beforeAll(async () => {
   await db.exec(read('0122_booking_hardening.sql'))
   await db.exec(read('0123_subscription_mirror_sync.sql'))
   await db.exec(read('0124_booking_notifications.sql'))
-  await db.exec(read('0125_plan_limits_services.sql'))
-  await db.exec(read('0126_category_kind.sql'))
-  await db.exec(read('0127_automation_rules_owner_write.sql'))
-  await db.exec(read('0128_multi_country_phones.sql'))
 
   serviceId = (await rows<{ id: string }>('select id from services limit 1'))[0].id
   memberId = (await rows<{ id: string }>('select id from team_members limit 1'))[0].id
@@ -76,10 +68,6 @@ describe('migrations 0121 → 0123', () => {
     await db.exec(read('0122_booking_hardening.sql'))
     await db.exec(read('0123_subscription_mirror_sync.sql'))
     await db.exec(read('0124_booking_notifications.sql'))
-    await db.exec(read('0125_plan_limits_services.sql'))
-    await db.exec(read('0126_category_kind.sql'))
-    await db.exec(read('0127_automation_rules_owner_write.sql'))
-    await db.exec(read('0128_multi_country_phones.sql'))
     expect((await rows<{ price: number }>('select price from services'))[0].price).toBe(5000)
   })
 })
@@ -170,108 +158,5 @@ describe('miroir d’abonnement (0123)', () => {
     expect((await rows<{ plan_key: string }>('select plan_key from subscriptions'))[0].plan_key).toBe('pro')
     const history = await rows<{ from_plan: string | null; to_plan: string }>('select from_plan, to_plan from subscription_history order by created_at, to_plan')
     expect(history.map((h) => h.to_plan).sort()).toEqual(['essential', 'pro'])
-  })
-})
-
-describe('plafonds de plan services (0125)', () => {
-  // plan_limits n'est seedé que par 0104 (non chargé ici) : on injecte les valeurs 0125.
-  beforeAll(async () => {
-    // Le test du miroir (0123) a laissé la boutique en Pro : on repart du plan free.
-    await db.exec(`delete from shop_subscriptions where shop_id = '${SHOP}'`)
-  })
-
-  it('bloque la 7e prestation active du plan free mais pas la modification d’une existante', async () => {
-    for (let i = 2; i <= 6; i++) {
-      await db.exec(`insert into services(shop_id,name,price) values ('${SHOP}','S${i}',1000)`)
-    }
-    await expect(db.exec(`insert into services(shop_id,name,price) values ('${SHOP}','S7',1000)`)).rejects.toThrow(/plan_limit_exceeded/)
-    await db.exec(`insert into services(shop_id,name,price,active) values ('${SHOP}','Brouillon',1000,false)`)
-    await db.exec(`update services set price = 2000 where name = 'S2'`)
-    await expect(db.exec(`update services set active = true where name = 'Brouillon'`)).rejects.toThrow(/plan_limit_exceeded/)
-  })
-
-  it('bloque le 3e équipier actif du plan free', async () => {
-    await db.exec(`insert into team_members(shop_id,name) values ('${SHOP}','Bea')`)
-    await expect(db.exec(`insert into team_members(shop_id,name) values ('${SHOP}','Cyr')`)).rejects.toThrow(/plan_limit_exceeded/)
-  })
-
-  it('le plan pro est illimité', async () => {
-    await db.exec(`insert into shop_subscriptions(shop_id, plan, current_period_end) values ('${SHOP}','pro', now() + interval '10 days') on conflict (shop_id) do update set plan='pro', current_period_end = now() + interval '10 days'`)
-    await db.exec(`insert into services(shop_id,name,price) values ('${SHOP}','S8',1000)`)
-    await db.exec(`insert into team_members(shop_id,name) values ('${SHOP}','Cyr')`)
-  })
-
-  it('plafonne les demandes en ligne invitées par mois, pas la saisie du personnel', async () => {
-    await db.exec(`update shop_subscriptions set plan='free', current_period_end = null where shop_id = '${SHOP}'`)
-    await db.exec(`update plan_limits set max_value = 1 where code = 'MAX_MONTHLY_BOOKINGS' and plan_key = 'free'`)
-    await expect(createAppointment('Zed', '70 555 44 33', at('17:00'))).rejects.toThrow(/plan_limit_exceeded/)
-    await db.exec(`set app.uid = '${OWNER}'`)
-    await createAppointment('Staff', '70 555 44 34', at('17:00'))
-    await db.exec(`set app.uid = ''`)
-  })
-})
-
-describe('catégories séparées produits / prestations (0126)', () => {
-  it('interdit de croiser les types à l’attache, sans bloquer l’existant', async () => {
-    await db.exec(`insert into categories(id, shop_id, name, kind) values
-      ('00000000-0000-0000-0000-00000000c001','${SHOP}','Produits','product'),
-      ('00000000-0000-0000-0000-00000000c002','${SHOP}','Coupes','service')`)
-    await db.exec(`update shop_subscriptions set plan = 'pro', current_period_end = now() + interval '10 days' where shop_id = '${SHOP}'`)
-    await db.exec(`update services set category_id = '00000000-0000-0000-0000-00000000c002' where name = 'S2'`)
-    await expect(db.exec(`update services set category_id = '00000000-0000-0000-0000-00000000c001' where name = 'S3'`)).rejects.toThrow(/category kind mismatch/)
-    await db.exec(`insert into products(shop_id, category_id) values ('${SHOP}','00000000-0000-0000-0000-00000000c001')`)
-    await expect(db.exec(`insert into products(shop_id, category_id) values ('${SHOP}','00000000-0000-0000-0000-00000000c002')`)).rejects.toThrow(/category kind mismatch/)
-  })
-})
-
-describe('règles d’automatisation (0127)', () => {
-  it('une règle par événement et canal ; canaux non branchés refusés', async () => {
-    await db.exec(`insert into automation_rules(shop_id,event_type,channel,enabled) values ('${SHOP}','ORDER_CREATED','email',true)`)
-    await expect(db.exec(`insert into automation_rules(shop_id,event_type,channel) values ('${SHOP}','ORDER_CREATED','email')`)).rejects.toThrow(/duplicate key/)
-    await expect(db.exec(`insert into automation_rules(shop_id,event_type,channel,enabled) values ('${SHOP}','ORDER_PAID','whatsapp',true)`)).rejects.toThrow(/not available yet/)
-    await db.exec(`insert into automation_rules(shop_id,event_type,channel,enabled) values ('${SHOP}','ORDER_PAID','whatsapp',false)`)
-  })
-
-  it('plafonne à 30 règles par boutique et borne la taille du gabarit', async () => {
-    for (let i = 0; i < 28; i++) {
-      await db.exec(`insert into automation_rules(shop_id,event_type,channel) values ('${SHOP}','EVT_${i}','log')`)
-    }
-    await expect(db.exec(`insert into automation_rules(shop_id,event_type,channel) values ('${SHOP}','EVT_X','log')`)).rejects.toThrow(/too many automation rules/)
-    await expect(
-      db.exec(`update automation_rules set template = jsonb_build_object('body', repeat('x', 9000)) where event_type = 'EVT_0'`),
-    ).rejects.toThrow(/automation_rules_template_size/)
-  })
-})
-
-describe('téléphones multi-pays (0128)', () => {
-  const norm = async (phone: string, country = 'SN') =>
-    (await rows<{ n: string | null }>(`select normalize_phone('${phone}', '${country}') n`))[0].n
-
-  it('reste identique à normalize_sn_phone pour le Sénégal (valides et invalides)', async () => {
-    for (const phone of ['77 123 45 67', '0771234567', '+221 33 123 45 67', '00221771234567', '221771234567']) {
-      const legacy = (await rows<{ n: string }>(`select normalize_sn_phone('${phone}') n`))[0].n
-      expect(await norm(phone)).toBe(legacy)
-    }
-    for (const phone of ['571234567', '12345', 'abc', '+33612345678']) {
-      await expect(rows(`select normalize_sn_phone('${phone}')`)).rejects.toThrow(/invalid phone/)
-      await expect(norm(phone)).rejects.toThrow(/invalid phone/)
-    }
-  })
-
-  it('accepte l’international des pays supportés et lit le local dans le pays demandé', async () => {
-    expect(await norm('+225 07 12 34 56 78')).toBe('+2250712345678')
-    expect(await norm('07 12 34 56 78', 'CI')).toBe('+2250712345678')
-    expect(await norm('70 12 34 56', 'ML')).toBe('+22370123456')
-    expect(await norm('0803 123 4567', 'NG')).toBe('+2348031234567')
-    expect(await norm('+234 803 123 4567', 'CI')).toBe('+2348031234567')
-  })
-
-  it('les réservations d’une boutique ivoirienne acceptent le format local ivoirien', async () => {
-    await db.exec(`update shop_subscriptions set plan = 'pro', current_period_end = now() + interval '10 days' where shop_id = '${SHOP}'`)
-    await db.exec(`insert into booking_settings(shop_id, country_code, open_days) values ('${SHOP}','CI','{1,2,3,4,5,6,7}') on conflict (shop_id) do update set country_code = 'CI', open_days = '{1,2,3,4,5,6,7}'`)
-    const [row] = await rows<{ customer_phone: string }>(
-      `select customer_phone from create_appointment('${SHOP}','${serviceId}',null,'Kouassi','07 12 34 56 78','${at('13:00')}')`,
-    )
-    expect(row.customer_phone).toBe('+2250712345678')
   })
 })

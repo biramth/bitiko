@@ -54,7 +54,7 @@ export function ReservationsRenderer({
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const normalized = normalizePhoneNumber(phone, settings?.country_code)
+      const normalized = normalizePhoneNumber(phone)
       if (!normalized.ok || !normalized.value) {
         throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
       }

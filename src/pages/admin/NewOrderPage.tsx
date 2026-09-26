@@ -20,7 +20,6 @@ import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySec
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { formatCurrency, resolveDeliveryFee, resolveZoneDeliveryFee } from '@/utils/format'
-import { useShopBookingSettings } from '@/features/booking/bookingUtils'
 import { formatPhoneNumberForDisplay, normalizePhoneNumber, PHONE_ERROR_MESSAGES } from '@/utils/phone'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
 import { formatOptionsInline, resolveSelection, type OptionValues } from '@/utils/productOptions'
@@ -52,8 +51,6 @@ export function NewOrderPage() {
   usePageSeo({ title: 'Nouvelle commande — Bitiko', noindex: true })
   const queryClient = useQueryClient()
   const { data: shop, isLoading: shopLoading } = useMyShop()
-  const { data: bookingSettings } = useShopBookingSettings(shop?.id ?? '')
-  const phoneCountry = bookingSettings?.country_code
   const currency = shop?.currency ?? 'XOF'
 
   const [customerName, setCustomerName] = useState('')
@@ -125,7 +122,7 @@ export function NewOrderPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const phone = normalizePhoneNumber(customerPhone, phoneCountry)
+      const phone = normalizePhoneNumber(customerPhone)
       if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
@@ -158,7 +155,7 @@ export function NewOrderPage() {
       setFormError('Le nom du client est requis.')
       return
     }
-    const phone = normalizePhoneNumber(customerPhone, phoneCountry)
+    const phone = normalizePhoneNumber(customerPhone)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return
@@ -234,7 +231,7 @@ export function NewOrderPage() {
 
   const sendWhatsApp = () => {
     if (!success || !shop) return
-    const normalized = normalizePhoneNumber(customerPhone, phoneCountry)
+    const normalized = normalizePhoneNumber(customerPhone)
     const message = buildWhatsAppMessage({
       orderNumber: success.orderNumber,
       items: success.items,

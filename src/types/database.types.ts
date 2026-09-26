@@ -154,7 +154,6 @@ export type Database = {
       booking_settings: {
         Row: {
           close_time: string
-          country_code: string
           max_days_ahead: number
           open_days: number[]
           open_time: string
@@ -167,7 +166,6 @@ export type Database = {
         }
         Insert: {
           close_time?: string
-          country_code?: string
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string
@@ -180,7 +178,6 @@ export type Database = {
         }
         Update: {
           close_time?: string
-          country_code?: string
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string

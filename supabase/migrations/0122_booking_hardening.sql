@@ -32,8 +32,6 @@ create table if not exists public.booking_settings (
   -- Réservations de table : couverts simultanés max et durée d'occupation.
   table_capacity integer not null default 40 check (table_capacity between 1 and 1000),
   reservation_minutes integer not null default 90 check (reservation_minutes between 30 and 360),
-  -- Pays de la boutique : lecture des numéros saisis en format local (0128).
-  country_code text not null default 'SN' check (country_code ~ '^[A-Z]{2}$'),
   updated_at timestamptz not null default now(),
   check (close_time > open_time),
   check (cardinality(open_days) between 1 and 7)
@@ -85,7 +83,7 @@ set search_path = public
 as $$
   select coalesce(
     (select b from public.booking_settings b where b.shop_id = p_shop_id),
-    row(p_shop_id, 'Africa/Dakar', '09:00'::time, '19:00'::time, '{1,2,3,4,5,6}'::integer[], 30, 60, 40, 90, 'SN', now())::public.booking_settings
+    row(p_shop_id, 'Africa/Dakar', '09:00'::time, '19:00'::time, '{1,2,3,4,5,6}'::integer[], 30, 60, 40, 90, now())::public.booking_settings
   );
 $$;
 
@@ -117,14 +115,22 @@ $$;
 
 revoke all on function public.booking_slot_within_hours(public.booking_settings, timestamptz, integer) from public, anon, authenticated;
 
--- Normalisation du téléphone d'une réservation. Sénégal seul ici ; la migration
--- 0128 redéfinit cette fonction pour lire le pays de la boutique.
+-- Normalisation du téléphone d'une réservation : point d'extension unique (le
+-- pays de la boutique s'y branchera). Le schéma de dev a divergé du dépôt
+-- (normalize_sn_phone remplacé par normalize_phone(numéro, pays)) : la fonction
+-- choisit celle qui existe, résolue à l'exécution (plpgsql), sans dépendance
+-- de création.
 create or replace function public.booking_normalize_phone(p_shop_id uuid, p_phone text)
 returns text
-language sql
+language plpgsql
 stable
 as $$
-  select public.normalize_sn_phone(p_phone);
+begin
+  if to_regprocedure('public.normalize_sn_phone(text)') is not null then
+    return public.normalize_sn_phone(p_phone);
+  end if;
+  return public.normalize_phone(p_phone, 'SN');
+end;
 $$;
 
 revoke all on function public.booking_normalize_phone(uuid, text) from public, anon, authenticated;
