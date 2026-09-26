@@ -210,9 +210,11 @@ export function DashboardPage() {
       <PageHeader
         title="Tableau de bord"
         subtitle={
-          hasCommerce
-            ? 'Vue d’ensemble de votre boutique : ventes, commandes et stock.'
-            : 'Vue d’ensemble de votre activité : rendez-vous, prestations et équipe.'
+          hasCommerce && hasServiceActivity
+            ? 'Ventes, rendez-vous et prestations en un coup d’œil.'
+            : hasCommerce
+              ? 'Vue d’ensemble de votre boutique : ventes, commandes et stock.'
+              : 'Vue d’ensemble de votre activité : rendez-vous, prestations et équipe.'
         }
         actions={
           <>
@@ -292,6 +294,15 @@ export function DashboardPage() {
               : []),
           ]}
         />
+      )}
+
+      {hasCommerce && hasServiceActivity && (
+        <div className="mt-8 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Ventes en ligne</h2>
+          <Link to="/admin/commandes" className="text-sm font-medium text-brand-700">
+            Voir tout
+          </Link>
+        </div>
       )}
 
       {hasCommerce && (

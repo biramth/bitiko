@@ -101,3 +101,26 @@ export function renameGroupsForProfile(
   if (caps === null || caps.has('HAS_PRODUCTS')) return groups
   return groups.map((group) => (group.label === 'Boutique' ? { ...group, label: 'Site' } : group))
 }
+
+/** Orders groups for the business profile. Un métier de service voit
+ *  « Services » juste sous le tableau de bord (son cœur d'activité), puis
+ *  Ventes, Boutique/Site, Équipe. Commerce pur et capabilities inconnues :
+ *  ordre historique inchangé. Tri stable — pure, unit-testée. */
+export function sortGroupsForProfile(
+  groups: { label?: string; items: WorkspaceModule[] }[],
+  caps: Set<string> | null,
+): { label?: string; items: WorkspaceModule[] }[] {
+  if (caps === null) return groups
+  const serviceFirst =
+    caps.has('HAS_SERVICES') || caps.has('HAS_APPOINTMENTS') || caps.has('HAS_RESERVATIONS')
+  if (!serviceFirst) return groups
+  const rank = (label?: string): number => {
+    if (label === undefined) return 0
+    if (label === 'Services') return 1
+    if (label === 'Ventes') return 2
+    if (label === 'Boutique' || label === 'Site') return 3
+    if (label === 'Équipe') return 4
+    return 5
+  }
+  return [...groups].sort((a, b) => rank(a.label) - rank(b.label))
+}

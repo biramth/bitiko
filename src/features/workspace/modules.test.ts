@@ -4,6 +4,7 @@ import {
   groupModules,
   renameGroupsForProfile,
   resolveModules,
+  sortGroupsForProfile,
   type WorkspaceModule,
 } from './modules'
 
@@ -111,5 +112,31 @@ describe('renameGroupsForProfile', () => {
     expect(salon.map((g) => g.label)).toEqual([undefined, 'Services', 'Équipe', 'Site'])
     const unknown = renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, null, { teamAccess: true })), null)
     expect(unknown.map((g) => g.label)).toContain('Boutique')
+  })
+})
+
+describe('sortGroupsForProfile', () => {
+  const labels = (caps: Set<string> | null) =>
+    sortGroupsForProfile(
+      renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true })), caps),
+      caps,
+    ).map((g) => g.label)
+
+  it('keeps the historic order for commerce-only and unknown', () => {
+    expect(labels(COMMERCE_CAPS)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe'])
+    expect(labels(null)).toEqual([undefined, 'Ventes', 'Boutique', 'Services', 'Équipe'])
+  })
+
+  it('puts Services first for a mixed business (salon qui vend)', () => {
+    const caps = new Set([
+      'HAS_SHOP',
+      'HAS_PRODUCTS',
+      'HAS_ORDERS',
+      'HAS_CUSTOMERS',
+      'HAS_SERVICES',
+      'HAS_APPOINTMENTS',
+      'HAS_TEAM',
+    ])
+    expect(labels(caps)).toEqual([undefined, 'Services', 'Ventes', 'Boutique', 'Équipe'])
   })
 })

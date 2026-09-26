@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { fetchShopBusinessTypeSlug, fetchBusinessCapabilities } from '@/services/businessType.service'
-import { WORKSPACE_MODULES, groupModules, renameGroupsForProfile, resolveModules } from './modules'
+import { WORKSPACE_MODULES, groupModules, renameGroupsForProfile, resolveModules, sortGroupsForProfile } from './modules'
 
 /** Workspace navigation derived from `Business Type → Capabilities → Modules`
  *  (+ plan entitlements). For today's commerce shops the output is identical to
@@ -35,7 +35,10 @@ export function useWorkspaceModules() {
   // Sans commerce, le groupe « Boutique » (qui ne contient plus que
   // Personnaliser) devient « Site » : un salon personnalise son site, pas une
   // boutique. Capabilities inconnues = libellés historiques.
-  const groups = renameGroupsForProfile(groupModules(modules), caps ?? null)
+  const groups = sortGroupsForProfile(
+    renameGroupsForProfile(groupModules(modules), caps ?? null),
+    caps ?? null,
+  )
 
   return { modules, groups, capabilities: caps ?? null, isReady: !!shop?.id }
 }
