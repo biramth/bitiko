@@ -29,6 +29,7 @@ interface Tool {
   label: string
   icon: LucideIcon
   capability: PlatformCapability
+  group: 'Pilotage' | 'Croissance' | 'Configuration' | 'Équipe'
   end?: boolean
 }
 
@@ -39,19 +40,21 @@ interface Tool {
  * own route — this is a real back-office, not tabs on a single page.
  */
 const TOOLS: Tool[] = [
-  { to: '/plateforme', label: "Vue d'ensemble", icon: LayoutDashboard, capability: 'view_analytics', end: true },
-  { to: '/plateforme/analytiques', label: 'Analytiques', icon: BarChart3, capability: 'view_analytics' },
-  { to: '/plateforme/boutiques', label: 'Boutiques', icon: Store, capability: 'view_shops' },
-  { to: '/plateforme/paiements', label: 'Paiements', icon: CreditCard, capability: 'manage_payments' },
-  { to: '/plateforme/campagnes', label: 'Campagnes', icon: Mail, capability: 'send_campaigns' },
-  { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns' },
-  { to: '/plateforme/pays', label: 'Pays', icon: Globe, capability: 'manage_countries' },
-  { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team' },
-  { to: '/plateforme/sante', label: 'Santé', icon: Activity, capability: 'view_health' },
-  { to: '/plateforme/journal', label: 'Journal', icon: ScrollText, capability: 'manage_team' },
-  { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types' },
-  { to: '/plateforme/gabarits', label: 'Gabarits', icon: LayoutTemplate, capability: 'manage_business_types' },
+  { to: '/plateforme', label: "Vue d'ensemble", icon: LayoutDashboard, capability: 'view_analytics', group: 'Pilotage', end: true },
+  { to: '/plateforme/analytiques', label: 'Analytiques', icon: BarChart3, capability: 'view_analytics', group: 'Pilotage' },
+  { to: '/plateforme/boutiques', label: 'Boutiques', icon: Store, capability: 'view_shops', group: 'Pilotage' },
+  { to: '/plateforme/paiements', label: 'Paiements', icon: CreditCard, capability: 'manage_payments', group: 'Pilotage' },
+  { to: '/plateforme/campagnes', label: 'Campagnes', icon: Mail, capability: 'send_campaigns', group: 'Croissance' },
+  { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns', group: 'Croissance' },
+  { to: '/plateforme/pays', label: 'Pays', icon: Globe, capability: 'manage_countries', group: 'Configuration' },
+  { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team', group: 'Équipe' },
+  { to: '/plateforme/sante', label: 'Santé', icon: Activity, capability: 'view_health', group: 'Pilotage' },
+  { to: '/plateforme/journal', label: 'Journal', icon: ScrollText, capability: 'manage_team', group: 'Équipe' },
+  { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types', group: 'Configuration' },
+  { to: '/plateforme/gabarits', label: 'Gabarits', icon: LayoutTemplate, capability: 'manage_business_types', group: 'Configuration' },
 ]
+
+const GROUPS: Tool['group'][] = ['Pilotage', 'Croissance', 'Configuration', 'Équipe']
 
 function LogoMark({ size = 28 }: { size?: number }) {
   return (
@@ -82,7 +85,7 @@ export function PlatformLayout() {
   const tools = TOOLS.filter((tool) => can(role, tool.capability))
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+    `flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
     }`
 
@@ -108,13 +111,24 @@ export function PlatformLayout() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-2" aria-label="Outils plateforme">
-        {tools.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={navClass}>
-            <Icon size={18} aria-hidden />
-            {label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 space-y-3 px-3 py-2" aria-label="Outils plateforme">
+        {GROUPS.map((group) => {
+          const items = tools.filter((tool) => tool.group === group)
+          if (items.length === 0) return null
+          return (
+            <div key={group}>
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/35">{group}</p>
+              <div className="space-y-0.5">
+                {items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink key={to} to={to} end={end} className={navClass}>
+                    <Icon size={17} aria-hidden />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </nav>
 
       <div className="space-y-1 border-t border-white/10 px-3 py-3">

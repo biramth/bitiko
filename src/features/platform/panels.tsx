@@ -100,7 +100,7 @@ function buildVisitSeries(rows: PlatformVisitsByDay[] | null) {
   return series
 }
 
-function VisitsChart({ rows }: { rows: PlatformVisitsByDay[] | null }) {
+export function VisitsChart({ rows }: { rows: PlatformVisitsByDay[] | null }) {
   const series = useMemo(() => buildVisitSeries(rows), [rows])
   const max = Math.max(1, ...series.map((d) => d.visits))
 

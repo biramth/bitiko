@@ -271,6 +271,19 @@ export const supabase = {
   rpc: async (name: string, args: Record<string, string>) => {
     if (name === 'get_platform_role') return { data: 'owner', error: null }
     if (name === 'get_platform_shops') return { data: platformShops(), error: null }
+    if (name === 'get_platform_stats') {
+      const day = 86400000
+      return {
+        data: {
+          total_shops: 30, paid_shops: 13, total_products: 214, active_products: 190, total_orders: 612, orders_today: 9,
+          visits_today: 143, visitors_today: 98, visits_7d: 1180, visitors_7d: 760, visits_30d: 4920, visitors_30d: 2610,
+          revenue_by_currency: [{ currency: 'XOF', total: 18450000 }], revenue_today_by_currency: [{ currency: 'XOF', total: 240000 }],
+          visits_by_day: Array.from({ length: 14 }, (_, i) => ({ day: new Date(Date.now() - (13 - i) * day).toISOString().slice(0, 10), visits: 90 + ((i * 37) % 60), visitors: 55 + ((i * 23) % 35) })),
+          top_pages: [], top_shops: [{ slug: 'a', name: 'Salon Awa Beauté', visits: 420 }], top_referrers: [{ referrer: 'instagram.com', visits: 210 }],
+        },
+        error: null,
+      }
+    }
     if (name === 'get_platform_health') {
       return {
         data: {
