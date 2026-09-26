@@ -150,7 +150,7 @@ export function SolutionPage() {
   usePageSeo({
     title: page?.metaTitle ?? 'Bitiko',
     description: page?.metaDescription,
-    image: `${SITE_ORIGIN}/og-cover.png`,
+    image: page ? `${SITE_ORIGIN}/og/solutions-${page.slug}.jpg` : undefined,
     canonicalUrl: page ? `${SITE_ORIGIN}/solutions/${page.slug}` : undefined,
   })
   useJsonLd('solution-page-jsonld', page ? solutionJsonLd(page) : null)

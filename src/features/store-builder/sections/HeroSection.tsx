@@ -18,6 +18,7 @@ import { resolveTextStyle } from '@/config/textStyle'
 import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { thumbSrcSet } from '@/utils/image'
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 export function HeroRenderer({
   shop,
@@ -76,7 +77,7 @@ export function HeroRenderer({
           className="h-full w-full object-cover"
         />
       ) : (
-        <img
+        <FadeImage
           src={shop.banner_url!}
           alt=""
           fetchPriority="high"

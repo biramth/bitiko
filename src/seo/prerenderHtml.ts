@@ -53,7 +53,7 @@ export function renderPrerenderedHtml(template: string, input: PrerenderInput): 
   const scripts = jsonLd.map((data) => `    <script type="application/ld+json">${serializeJsonLd(data)}</script>`).join('\n')
   // Sans JavaScript, les blocs « Reveal » (opacité 0 tant qu'ils ne sont pas vus) resteraient invisibles.
   const noscript =
-    '    <noscript><style>.opacity-0{opacity:1!important}.translate-y-8{transform:none!important}</style></noscript>'
+    '    <noscript><style>.opacity-0{opacity:1!important}.translate-y-8{transform:none!important}img[data-fade]{opacity:1!important}</style></noscript>'
   out = out.replace('</head>', () => `${scripts ? scripts + '\n' : ''}${noscript}\n  </head>`)
 
   return out.replace('<div id="root"></div>', () => `<div id="root">${body}</div>`)

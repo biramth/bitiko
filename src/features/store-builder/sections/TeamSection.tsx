@@ -12,6 +12,7 @@ import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const LAYOUTS: { value: TeamSectionConfig['layout']; label: string; preview: React.ReactNode }[] = [
   { value: 'grid', label: 'Grille', preview: <div className="grid grid-cols-2 gap-1"><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /></div> },
@@ -92,7 +93,7 @@ function TeamCard({ member }: { member: any }) {
     <article className="group bg-[var(--shop-surface)] rounded-2xl border border-[var(--shop-border)] overflow-hidden transition-shadow hover:shadow-xl">
       {member.avatarUrl && (
         <div className="aspect-square relative overflow-hidden">
-          <img
+          <FadeImage
             src={member.avatarUrl}
             alt={member.name}
             loading="lazy"
@@ -135,7 +136,7 @@ function TeamListItem({ member }: { member: any }) {
     <article className="flex items-center gap-4 p-4 rounded-xl border border-[var(--shop-border)] bg-[var(--shop-surface)] group hover:shadow-md">
       <div className="h-16 w-16 shrink-0 rounded-full bg-brand-100 overflow-hidden">
         {member.avatarUrl ? (
-          <img src={member.avatarUrl} alt={member.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+          <FadeImage src={member.avatarUrl} alt={member.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Users className="h-8 w-8 text-brand-600" />

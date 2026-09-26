@@ -35,6 +35,7 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 type ProductImage = { public_url: string; thumb_url?: string | null; id: string }
 
@@ -99,7 +100,7 @@ function ImageLightbox({
         </button>
       )}
 
-      <img
+      <FadeImage
         src={images[activeImage].public_url}
         alt={productName}
         onClick={(e) => e.stopPropagation()}
@@ -296,7 +297,7 @@ function ProductDetails({
               >
                 {galleryImages[activeImage] ? (
                   <>
-                    <img src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" srcSet={thumbSrcSet(galleryImages[activeImage].thumb_url, galleryImages[activeImage].public_url)} sizes="(max-width: 768px) 100vw, 640px" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
+                    <FadeImage src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" srcSet={thumbSrcSet(galleryImages[activeImage].thumb_url, galleryImages[activeImage].public_url)} sizes="(max-width: 768px) 100vw, 640px" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
                     <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] opacity-0 transition-opacity group-hover:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
@@ -322,7 +323,7 @@ function ProductDetails({
                       }}
                       className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-[var(--shop-button)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
                     >
-                      <img src={img.thumb_url ?? img.public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      <FadeImage src={img.thumb_url ?? img.public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -575,7 +576,7 @@ function RecentlyViewedRow({ shop, product, themeConfig }: { shop: Shop; product
           <Link key={item.id} to={`/produits/${item.slug}`} className="group block">
             <div className="aspect-[4/5] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
               {item.imageUrl ? (
-                <img
+                <FadeImage
                   src={item.imageUrl}
                   alt={item.name}
                   loading="lazy"

@@ -8,6 +8,7 @@ import type { BlockEditorProps, BlockRendererProps } from '../blockRegistry'
 import { InlineText } from '../inline/InlineText'
 import { InlineImage } from '../inline/InlineImage'
 import { controlClass } from '@/components/ui/styles'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -26,7 +27,7 @@ export function ImageBlockRenderer({ block, editable = false, onChange, shopId, 
         style={{ borderRadius: 'var(--shop-radius)' }}
       >
         {block.imageUrl ? (
-          <img
+          <FadeImage
             src={block.imageUrl}
             alt={block.caption}
             loading="lazy"

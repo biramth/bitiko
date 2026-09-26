@@ -16,6 +16,7 @@ import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const DEFAULT_LIMIT = 48
 
@@ -113,7 +114,7 @@ function MenuRow({ item, currency, showPrices }: { item: ProductWithRelations; c
     <li>
       <Link to={`/produits/${item.slug}`} className={`group flex items-start gap-3 py-3 ${soldOut ? 'opacity-60' : ''}`}>
         {cover && (
-          <img
+          <FadeImage
             src={cover}
             alt=""
             loading="lazy"

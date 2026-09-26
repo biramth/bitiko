@@ -101,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
       res.status(200).send(
-        page(solution.title, solution.description, `${origin}/solutions/${solutionSlug}`, `${origin}/og-cover.png`),
+        page(solution.title, solution.description, `${origin}/solutions/${solutionSlug}`, `${origin}/og/solutions-${solutionSlug}.jpg`),
       )
       return
     }
@@ -109,17 +109,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (legal) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-      res.status(200).send(page(legal.title, legal.description, `${origin}${cleanPath}`, `${origin}/og-cover.png`))
+      res.status(200).send(page(legal.title, legal.description, `${origin}${cleanPath}`, `${origin}/og/home.jpg`))
       return
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     res.status(200).send(
       page(
-        'Bitiko — Crée ta boutique en ligne, vends sur WhatsApp',
-        "Bitiko te donne une vraie boutique en ligne — catalogue, panier, commandes — et relaie tes ventes directement sur WhatsApp. Fait pour l'Afrique, gratuit pour commencer.",
+        'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
+        'Vends, réserve et gère ton activité avec un seul outil : boutique en ligne, rendez-vous, réservation de tables et finances. Commandes sur WhatsApp. Gratuit pour commencer, sans commission.',
         `${origin}/`,
-        `${origin}/og-cover.png`,
+        `${origin}/og/home.jpg`,
       ),
     )
     return

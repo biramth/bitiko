@@ -20,6 +20,7 @@ import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVoc
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 /** Progress toward the shop's free-delivery threshold — hidden when the shop
  *  hasn't configured one, or once it's already reached (delivery fee is
@@ -128,7 +129,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
           <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex gap-5 py-5">
             <div className="h-24 w-24 shrink-0 overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
               {item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                <FadeImage src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-ink-200">
                   <ImageOff size={24} aria-hidden />

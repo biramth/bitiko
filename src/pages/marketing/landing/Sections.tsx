@@ -5,6 +5,7 @@ import { IconTile } from '@/components/ui/IconTile'
 import demoChapters from '../demoChapters.json'
 import { featureGroups } from './content'
 import { BrowserShot, PhoneShot, Reveal, SectionHeading } from './ui'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 /* ───────────────────────── Hero : captures réelles ───────────────────────── */
 
@@ -365,7 +366,7 @@ function TourRow({ block, reverse }: { block: TourBlock; reverse: boolean }) {
       <Reveal delay={100}>
         {block.document ? (
           <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-lg border border-sand-200 bg-white shadow-xl shadow-brand-900/10">
-            <img src={`/marketing/${block.shot.name}.webp`} alt={block.shot.alt} width={1080} height={1230} loading="lazy" decoding="async" className="block h-auto w-full" />
+            <FadeImage src={`/marketing/${block.shot.name}.webp`} alt={block.shot.alt} width={1080} height={1230} loading="lazy" decoding="async" className="block h-auto w-full" />
           </div>
         ) : (
           <BrowserShot name={block.shot.name} alt={block.shot.alt} />

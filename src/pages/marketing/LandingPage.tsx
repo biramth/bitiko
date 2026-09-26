@@ -207,7 +207,7 @@ export function LandingPage() {
     title: 'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
     description:
       "Bitiko donne à chaque activité sa présence en ligne : boutique, rendez-vous avec horaires par jour, réservation de tables et finances simples (bilan PDF et Excel) — adaptée à ton métier, pilotée depuis ton téléphone. Fait pour l'Afrique de l'Ouest, gratuit pour commencer.",
-    image: 'https://bitiko.shop/og-cover.png',
+    image: 'https://bitiko.shop/og/home.jpg',
     canonicalUrl: 'https://bitiko.shop/',
   })
   useFaqStructuredData(faq)

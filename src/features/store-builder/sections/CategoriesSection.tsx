@@ -14,6 +14,7 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 const TILE_THEMES = [
   'bg-[var(--shop-tertiary-button)] text-[var(--shop-tertiary-button-text)]',
@@ -101,7 +102,7 @@ export function CategoriesRenderer({ shop, config, themeConfig, sectionId, edita
               }}
             >
               {category.image_url && (
-                <img
+                <FadeImage
                   src={category.thumb_url ?? category.image_url}
                   alt=""
                   loading="lazy"

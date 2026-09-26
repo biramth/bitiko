@@ -9,15 +9,19 @@ import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 export function ProductCard({
   product,
   currency,
   lowStockThreshold,
+  priority = false,
 }: {
   product: ProductWithRelations
   currency: string
   lowStockThreshold?: number
+  /** Carte visible dès l'ouverture de la page : image chargée sans délai. */
+  priority?: boolean
 }) {
   const full = product.images[0]?.public_url
   const cover = product.images[0]?.thumb_url ?? full
@@ -53,11 +57,11 @@ export function ProductCard({
       <Link to={`/produits/${product.slug}`} className="block">
         <div className="relative aspect-[4/5] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
           {cover ? (
-            <img
+            <FadeImage
               src={cover}
               alt={product.name}
               loading="lazy"
-              decoding="async"
+              priority={priority}
               srcSet={full ? thumbSrcSet(product.images[0]?.thumb_url, full) : undefined}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
               className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${outOfStock ? 'opacity-50 grayscale' : ''}`}

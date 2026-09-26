@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 /** Fades + slides an element up once it scrolls into view — applied across
  * every section so the page feels alive while scrolling, not just on load. */
@@ -89,7 +90,7 @@ export function PhoneShot({
 }) {
   return (
     <div className={`overflow-hidden rounded-[2rem] border-[3px] border-ink-800 bg-white shadow-2xl shadow-brand-900/15 ${className}`}>
-      <img
+      <FadeImage
         src={`/marketing/${name}.webp`}
         alt={alt}
         width={390}
@@ -124,7 +125,7 @@ export function BrowserShot({
         <span className="h-2.5 w-2.5 rounded-full bg-sand-300" />
         <span className="h-2.5 w-2.5 rounded-full bg-sand-300" />
       </div>
-      <img
+      <FadeImage
         src={`/marketing/${name}.webp`}
         alt={alt}
         width={width}

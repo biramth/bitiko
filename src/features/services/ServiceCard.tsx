@@ -1,6 +1,7 @@
 import { Scissors } from 'lucide-react'
 import type { Service } from '@/features/services/useServices'
 import { formatCurrency } from '@/utils/format'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 interface ServiceCardProps {
   service: Service
@@ -12,7 +13,7 @@ export function ServiceCard({ service, currency }: ServiceCardProps) {
     <article className="group bg-[var(--shop-surface)] rounded-2xl border border-[var(--shop-border)] overflow-hidden transition-shadow hover:shadow-xl">
       {service.images?.[0] && (
         <div className="aspect-square relative overflow-hidden">
-          <img
+          <FadeImage
             src={service.images[0]}
             alt={service.name}
             loading="lazy"

@@ -14,6 +14,7 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { FadeImage } from '@/components/ui/FadeImage'
 
 export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId, editable = false }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
@@ -36,16 +37,16 @@ export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId,
         </InlineStyleToolbar>
       {(config.layout ?? 'grid') === 'carousel' ? (
         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
-          {products.map((product) => (
+          {products.map((product, index) => (
             <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+          {products.map((product, index) => (
+            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
           ))}
         </div>
       )}
@@ -151,7 +152,7 @@ export function FeaturedProductsEditor({
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-sand-100">
                   {cover ? (
-                    <img src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    <FadeImage src={cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <ImageOff size={14} className="text-gray-300" />
                   )}
