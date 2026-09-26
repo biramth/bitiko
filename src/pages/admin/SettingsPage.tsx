@@ -60,6 +60,7 @@ import { Lock } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { DeliverySecteur } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD', 'GBP', 'CAD']
 
@@ -74,7 +75,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { key: 'facturation', label: 'Facturation', icon: CreditCard },
-  { key: 'equipe', label: 'Équipe & accès', icon: Users },
+  { key: 'equipe', label: 'Accès collaborateurs', icon: Users },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -268,7 +269,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={nameStatus === 'saving' || !fullName.trim() || !nameDirty}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {nameStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
             </button>
@@ -302,7 +303,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={emailStatus === 'saving' || !email.trim() || email.trim() === user?.email}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {emailStatus === 'saving' ? 'Envoi…' : "Changer l'e-mail"}
             </button>
@@ -356,7 +357,7 @@ function AccountSection() {
             <button
               type="submit"
               disabled={passwordStatus === 'saving' || !newPassword || !confirmPassword}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {passwordStatus === 'saving' ? 'Enregistrement…' : hasPassword ? 'Changer le mot de passe' : 'Ajouter un mot de passe'}
             </button>

@@ -55,6 +55,59 @@ describe('business groups (10 groupes)', () => {
   })
 })
 
+describe('gabarit hybride Beauté', () => {
+  const types = STORE_TEMPLATE_BY_KEY['beaute']!.layout.home.map((section) => section.type)
+
+  it('réunit prestations, rendez-vous et boutique', () => {
+    expect(types).toEqual(expect.arrayContaining(['services', 'team', 'appointments', 'products']))
+  })
+
+  it('garde le header en premier et le footer en dernier', () => {
+    expect(types[0]).toBe('header')
+    expect(types.at(-1)).toBe('footer')
+  })
+})
+
+describe('gabarits restauration', () => {
+  for (const key of ['restauration', 'bistrot']) {
+    const home = STORE_TEMPLATE_BY_KEY[key]!.layout.home.map((section) => section.type)
+
+    it(`${key} : carte + réservation, sans doublon produits`, () => {
+      expect(home).toEqual(expect.arrayContaining(['menu', 'reservations']))
+      expect(home).not.toContain('products')
+    })
+  }
+})
+
+describe('gabarits salon', () => {
+  for (const key of ['coiffure', 'barber', 'institut', 'onglerie']) {
+    const template = STORE_TEMPLATE_BY_KEY[key]!
+
+    it(`${key} : rendez-vous + rayon boutique, catalogue nommé « La boutique »`, () => {
+      const home = template.layout.home.map((section) => section.type)
+      expect(home).toEqual(expect.arrayContaining(['appointments', 'products']))
+      const catalogue = template.layout.catalogue[0]
+      expect(catalogue?.type === 'products' && catalogue.config.heading).toBe('La boutique')
+    })
+  }
+})
+
+describe('tous les gabarits', () => {
+  for (const template of Object.values(STORE_TEMPLATE_BY_KEY)) {
+    const home = template.layout.home.map((section) => section.type)
+
+    it(`${template.key} : header en tête, footer en pied, du contenu à montrer`, () => {
+      expect(home[0]).toBe('header')
+      expect(home.at(-1)).toBe('footer')
+      expect(home.some((type) => ['products', 'menu', 'services'].includes(type))).toBe(true)
+    })
+
+    it(`${template.key} : la page catalogue liste bien des produits`, () => {
+      expect(template.layout.catalogue[0]?.type).toBe('products')
+    })
+  }
+})
+
 describe('resolveTemplateVariant', () => {
   const barber = STORE_TEMPLATE_BY_KEY['barber']!
 

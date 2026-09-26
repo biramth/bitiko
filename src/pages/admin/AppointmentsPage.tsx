@@ -1,34 +1,60 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, Plus } from 'lucide-react'
+import { CalendarDays, Clock, Copy, Plus, Scissors, User } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import {
-  APPOINTMENT_STATUS_COLORS,
   APPOINTMENT_STATUS_LABELS,
   createAppointment,
   listAppointmentsByDate,
+  listAppointmentsForRange,
   setAppointmentStatus,
   type AppointmentStatus,
+  type AppointmentWithRelations,
 } from '@/services/appointment.service'
-import { bookingErrorMessage } from '@/services/bookingSettings.service'
+import { bookingErrorMessage, getBookingSettings } from '@/services/bookingSettings.service'
+import { isClosedOn, weeklyHoursFromSettings } from '@/features/booking/weeklyHours'
 import { listShopServices } from '@/services/service.service'
 import { listShopTeamMembers } from '@/services/teamMember.service'
 import { formatCurrency, localDateIso } from '@/utils/format'
+import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { SelectField, TextField } from '@/components/ui/Field'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { BookingSettingsCard } from '@/features/booking/BookingSettingsCard'
 import { useToast } from '@/components/ui/Toast'
+import { BookingSettingsCard } from '@/features/booking/BookingSettingsCard'
+import { ContactActions } from '@/features/booking/ContactActions'
+import { DayNavigator } from '@/features/booking/DayNavigator'
+import { WeekStrip } from '@/features/booking/WeekStrip'
+import { StatusActions } from '@/features/booking/StatusActions'
+import { StatusFilter } from '@/features/booking/StatusFilter'
+import { BOOKING_STATUS_HELP, BOOKING_STATUS_TONE, type BookingStatus } from '@/features/booking/bookingStatus'
+import { addDays, countByStatus, formatClock, formatLongDate, groupByLocalDay, startOfWeek } from '@/features/booking/bookingHelpers'
 
-function todayIso(): string {
-  return localDateIso()
+const STATUS_TOAST: Record<AppointmentStatus, string> = {
+  pending: 'Rendez-vous remis à confirmer.',
+  confirmed: 'Rendez-vous confirmé. Pensez à prévenir votre client.',
+  done: 'Rendez-vous marqué comme terminé.',
+  cancelled: 'Rendez-vous annulé : le créneau est de nouveau libre.',
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+function whatsappMessage(rdv: AppointmentWithRelations, shopName: string): string {
+  const what = rdv.service?.name ?? rdv.service_name ?? 'votre rendez-vous'
+  const when = `${formatLongDate(rdv.start_at.slice(0, 10))} à ${formatClock(rdv.start_at)}`
+  if (rdv.status === 'cancelled') {
+    return `Bonjour ${rdv.customer_name}, nous devons annuler votre rendez-vous « ${what} » du ${when} chez ${shopName}. Pouvons-nous en fixer un autre ?`
+  }
+  if (rdv.status === 'pending') {
+    return `Bonjour ${rdv.customer_name}, nous avons bien reçu votre demande de rendez-vous « ${what} » le ${when} chez ${shopName}. Nous revenons vers vous très vite.`
+  }
+  return `Bonjour ${rdv.customer_name}, votre rendez-vous « ${what} » est confirmé le ${when} chez ${shopName}. À bientôt !`
 }
 
 export function AppointmentsPage() {
@@ -38,17 +64,31 @@ export function AppointmentsPage() {
   const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
 
-  const [date, setDate] = useState(todayIso())
+  const [date, setDate] = useState(localDateIso())
+  const [filter, setFilter] = useState<BookingStatus | 'all'>('all')
   const [createOpen, setCreateOpen] = useState(false)
   const [serviceId, setServiceId] = useState('')
   const [teamMemberId, setTeamMemberId] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [startTime, setStartTime] = useState('09:00')
+  const [copied, setCopied] = useState(false)
 
   const { data: appointments = [], isLoading, isError } = useQuery({
     queryKey: ['appointments', 'admin', shop?.id, date],
     queryFn: () => listAppointmentsByDate(shop!.id, date),
+    enabled: !!shop?.id,
+  })
+  const { data: bookingSettings } = useQuery({
+    queryKey: ['booking-settings', 'admin', shop?.id],
+    queryFn: () => getBookingSettings(shop!.id),
+    enabled: !!shop?.id,
+  })
+  const closedOn = (iso: string) => isClosedOn(weeklyHoursFromSettings(bookingSettings), bookingSettings?.closed_dates ?? [], iso)
+  const monday = startOfWeek(date)
+  const { data: weekItems = [] } = useQuery({
+    queryKey: ['appointments', 'admin', shop?.id, 'week', monday],
+    queryFn: () => listAppointmentsForRange(shop!.id, monday, addDays(monday, 7)),
     enabled: !!shop?.id,
   })
   const { data: services = [] } = useQuery({
@@ -65,30 +105,32 @@ export function AppointmentsPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['appointments', shop?.id] })
     queryClient.invalidateQueries({ queryKey: ['appointments', 'admin', shop?.id] })
+    queryClient.invalidateQueries({ queryKey: ['appointments', 'upcoming', shop?.id] })
+    queryClient.invalidateQueries({ queryKey: ['booking-pending'] })
   }
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
-      setAppointmentStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) => setAppointmentStatus(id, status),
     onSuccess: (_d, v) => {
       invalidate()
-      toast.success(`Rendez-vous ${APPOINTMENT_STATUS_LABELS[v.status].toLowerCase()}.`)
+      toast.success(STATUS_TOAST[v.status])
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Action impossible.'),
   })
 
+  const activeServices = services.filter((s) => s.active)
+  const selectedService = activeServices.find((s) => s.id === serviceId)
+
   const createMutation = useMutation({
     mutationFn: () => {
-      const service = services.find((s) => s.id === serviceId)
-      if (!service) throw new Error('Choisissez une prestation.')
-      const start = new Date(`${date}T${startTime}:00`)
+      if (!selectedService) throw new Error('Choisissez une prestation.')
       return createAppointment({
         shopId: shop!.id,
         serviceId,
         teamMemberId: teamMemberId || null,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
-        startAt: start.toISOString(),
+        startAt: new Date(`${date}T${startTime}:00`).toISOString(),
       })
     },
     onSuccess: () => {
@@ -96,190 +138,208 @@ export function AppointmentsPage() {
       setCreateOpen(false)
       setCustomerName('')
       setCustomerPhone('')
-      toast.success('Rendez-vous enregistré.')
+      toast.success('Rendez-vous ajouté à l’agenda.')
     },
     onError: (e) => toast.error(bookingErrorMessage(e)),
   })
 
+  const copyLink = async () => {
+    if (!shop) return
+    try {
+      await navigator.clipboard.writeText(shopUrl(shop.slug))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Copie impossible : sélectionnez le lien manuellement.')
+    }
+  }
+
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
+
+  const counts = countByStatus(appointments)
+  const pending = counts.pending ?? 0
+  const visible = filter === 'all' ? appointments : appointments.filter((a) => a.status === filter)
+  const endTimePreview =
+    selectedService && startTime
+      ? formatClock(new Date(new Date(`${date}T${startTime}:00`).getTime() + selectedService.duration_minutes * 60000).toISOString())
+      : null
 
   return (
     <div>
       <PageHeader
         title="Rendez-vous"
-        subtitle="Agenda du jour : confirmez, terminez ou annulez les créneaux réservés."
+        subtitle="Vos clients réservent sur votre site : leurs demandes arrivent ici. Confirmez-les pour bloquer le créneau."
         actions={
-          <button
-            type="button"
+          <>
+          <Button variant="secondary" icon={<Clock size={15} aria-hidden />} onClick={() => document.getElementById('booking-hours')?.scrollIntoView({ behavior: 'smooth' })}>
+            Mes horaires
+          </Button>
+          <Button
+            icon={<Plus size={15} aria-hidden />}
             onClick={() => {
               createMutation.reset()
               setCreateOpen(true)
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
-            <Plus size={15} aria-hidden /> Nouveau rendez-vous
-          </button>
+            Ajouter un rendez-vous
+          </Button>
+          </>
         }
       />
 
-      <BookingSettingsCard />
+      {activeServices.length === 0 && (
+        <Card className="mt-4 border-amber-200 bg-amber-50">
+          <p className="text-sm font-medium text-amber-900">Vos clients ne peuvent pas encore réserver</p>
+          <p className="mt-1 text-sm text-amber-800">
+            Un rendez-vous porte sur une prestation (nom, prix, durée).{' '}
+            <Link to="/admin/prestations" className="font-semibold underline">Ajoutez votre première prestation</Link>.
+          </p>
+        </Card>
+      )}
 
-      <div className="mt-4">
-        <label htmlFor="appointments-date" className="text-sm font-medium text-gray-700">Journée</label>
-        <input
-          id="appointments-date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value || todayIso())}
-          className="ml-2 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+      <div className="mt-5 flex flex-col gap-4">
+        <DayNavigator
+          date={date}
+          onChange={(next) => {
+            setDate(next)
+            setFilter('all')
+          }}
         />
+
+        <WeekStrip date={date} onChange={(next) => { setDate(next); setFilter('all') }} counts={groupByLocalDay(weekItems)} unit="rendez-vous" isClosed={closedOn} />
+
+        {pending > 0 && (
+          <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>{pending} demande{pending > 1 ? 's' : ''} à confirmer.</strong> Confirmez pour réserver le créneau, ou refusez pour le libérer — puis prévenez votre client sur WhatsApp.
+          </div>
+        )}
+
+        {appointments.length > 0 && (
+          <StatusFilter value={filter} onChange={setFilter} counts={counts} labels={APPOINTMENT_STATUS_LABELS} />
+        )}
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="mt-4">
         {appointments.length === 0 ? (
-          <EmptyState icon={CalendarDays} title="Aucun rendez-vous ce jour-là" />
+          <Card padded={false}>
+            <EmptyState
+              icon={CalendarDays}
+              title="Aucun rendez-vous ce jour-là"
+              description="Les demandes de vos clients apparaissent ici dès qu’ils réservent sur votre site."
+              action={
+                <Button variant="secondary" icon={<Copy size={14} aria-hidden />} onClick={copyLink}>
+                  {copied ? 'Lien copié' : 'Copier le lien de mon site'}
+                </Button>
+              }
+            />
+          </Card>
+        ) : visible.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">Aucun rendez-vous avec ce statut.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {appointments.map((rdv) => (
-              <li key={rdv.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900">
-                    {formatTime(rdv.start_at)} · {rdv.service?.name ?? rdv.service_name ?? 'Prestation'}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {rdv.customer_name} · {rdv.customer_phone}
-                    {rdv.team_member ? ` · avec ${rdv.team_member.name}` : ''}
-                    {rdv.service_price != null || rdv.service ? ` · ${formatCurrency(rdv.service_price ?? rdv.service?.price ?? 0, currency)}` : ''}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${APPOINTMENT_STATUS_COLORS[rdv.status as AppointmentStatus] ?? 'bg-gray-100 text-gray-600'}`}
-                  >
-                    {APPOINTMENT_STATUS_LABELS[rdv.status as AppointmentStatus] ?? rdv.status}
-                  </span>
-                  {rdv.status === 'pending' && (
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ id: rdv.id, status: 'confirmed' })}
+          <ul className="space-y-3">
+            {visible.map((rdv) => {
+              const status = rdv.status as BookingStatus
+              const serviceName = rdv.service?.name ?? rdv.service_name ?? 'Prestation'
+              const price = rdv.service_price ?? rdv.service?.price
+              const duration = rdv.service_duration ?? rdv.service?.duration_minutes
+              return (
+                <li key={rdv.id}>
+                  <Card className={`flex flex-col gap-3 sm:flex-row sm:items-start ${status === 'cancelled' ? 'opacity-60' : ''}`}>
+                    <div className="flex items-baseline gap-2 sm:w-32 sm:shrink-0 sm:flex-col sm:gap-0.5">
+                      <p className="flex items-center gap-1.5 text-lg font-semibold text-gray-900">
+                        <Clock size={16} aria-hidden className="text-gray-400" />
+                        {formatClock(rdv.start_at)}
+                      </p>
+                      <p className="text-xs text-gray-500">jusqu’à {formatClock(rdv.end_at)}</p>
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="flex items-center gap-1.5 font-semibold text-gray-900">
+                          <Scissors size={14} aria-hidden className="text-gray-400" /> {serviceName}
+                        </p>
+                        <Badge tone={BOOKING_STATUS_TONE[status] ?? 'neutral'}>
+                          {APPOINTMENT_STATUS_LABELS[status as AppointmentStatus] ?? rdv.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {[duration ? `${duration} min` : null, price != null ? formatCurrency(price, currency) : null].filter(Boolean).join(' · ')}
+                        {rdv.team_member && (
+                          <span className="ml-2 inline-flex items-center gap-1"><User size={12} aria-hidden /> avec {rdv.team_member.name}</span>
+                        )}
+                      </p>
+                      <p className="text-sm font-medium text-gray-800">{rdv.customer_name}</p>
+                      <ContactActions phone={rdv.customer_phone} message={whatsappMessage(rdv, shop?.name ?? '')} />
+                      <p className="text-xs text-gray-400">{BOOKING_STATUS_HELP[status]}</p>
+                    </div>
+
+                    <StatusActions
+                      status={status}
                       disabled={statusMutation.isPending}
-                      className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                    >
-                      Confirmer
-                    </button>
-                  )}
-                  {rdv.status === 'confirmed' && (
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ id: rdv.id, status: 'done' })}
-                      disabled={statusMutation.isPending}
-                      className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-200 disabled:opacity-60"
-                    >
-                      Terminer
-                    </button>
-                  )}
-                  {(rdv.status === 'pending' || rdv.status === 'confirmed') && (
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ id: rdv.id, status: 'cancelled' })}
-                      disabled={statusMutation.isPending}
-                      className="rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
-                    >
-                      Annuler
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
+                      onChange={(next) => statusMutation.mutate({ id: rdv.id, status: next })}
+                    />
+                  </Card>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
 
+      <BookingSettingsCard />
+
       <Dialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Nouveau rendez-vous"
+        title="Ajouter un rendez-vous"
+        description={`Pour le ${formatLongDate(date)}. Utile quand un client vous appelle ou passe sans avoir réservé en ligne.`}
         footer={
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !serviceId || !customerName.trim() || !customerPhone.trim()}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              loading={createMutation.isPending}
+              disabled={!serviceId || !customerName.trim() || !customerPhone.trim()}
             >
-              {createMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+              Ajouter à l’agenda
+            </Button>
           </div>
         }
       >
         <div className="space-y-3">
-          <div>
-            <label htmlFor="rdv-service" className="block text-sm font-medium text-gray-700">Prestation</label>
-            <select
-              id="rdv-service"
-              value={serviceId}
-              onChange={(e) => setServiceId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-            >
-              <option value="">Choisir…</option>
-              {services.filter((s) => s.active).map((s) => (
-                <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes} min</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="rdv-team" className="block text-sm font-medium text-gray-700">Équipier (optionnel)</label>
-            <select
-              id="rdv-team"
-              value={teamMemberId}
-              onChange={(e) => setTeamMemberId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-            >
+          <SelectField label="Prestation" required value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+            <option value="">Choisir une prestation…</option>
+            {activeServices.map((s) => (
+              <option key={s.id} value={s.id}>{s.name} — {s.duration_minutes} min — {formatCurrency(s.price, currency)}</option>
+            ))}
+          </SelectField>
+          <div className="grid grid-cols-2 gap-3">
+            <TextField
+              label="Heure de début"
+              type="time"
+              required
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              hint={endTimePreview ? `Fin prévue : ${endTimePreview}` : 'La fin se calcule avec la durée de la prestation.'}
+            />
+            <SelectField label="Avec" value={teamMemberId} onChange={(e) => setTeamMemberId(e.target.value)} hint="Facultatif">
               <option value="">Sans préférence</option>
               {team.filter((m) => m.active).map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
-            </select>
+            </SelectField>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="rdv-name" className="block text-sm font-medium text-gray-700">Cliente</label>
-              <input
-                id="rdv-name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="rdv-phone" className="block text-sm font-medium text-gray-700">Téléphone</label>
-              <input
-                id="rdv-phone"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="+221…"
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="rdv-time" className="block text-sm font-medium text-gray-700">Heure de début</label>
-            <input
-              id="rdv-time"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-            />
-          </div>
+          <TextField label="Nom du client" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <TextField
+            label="Téléphone du client"
+            type="tel"
+            required
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="77 123 45 67"
+            hint="Pour pouvoir le joindre ou le prévenir sur WhatsApp."
+          />
         </div>
       </Dialog>
     </div>

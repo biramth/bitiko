@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { buttonClass } from '@/components/ui/styles'
 
 export function ForgotPasswordPage() {
   usePageSeo({ title: 'Mot de passe oublié — Bitiko', noindex: true })
@@ -70,7 +71,7 @@ export function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass({ size: 'lg', fullWidth: true })}
           >
             {loading ? 'Envoi…' : 'Envoyer le lien'}
           </button>

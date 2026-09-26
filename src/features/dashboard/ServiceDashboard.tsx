@@ -1,48 +1,46 @@
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { BookOpen, CalendarDays, Scissors, Users, type LucideIcon } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { BookOpen, CalendarDays, Clock, Scissors, Users, type LucideIcon } from 'lucide-react'
 import { listShopServices } from '@/services/service.service'
 import { listShopTeamMembers } from '@/services/teamMember.service'
 import {
-  APPOINTMENT_STATUS_COLORS,
   APPOINTMENT_STATUS_LABELS,
   listAppointmentsByDate,
   listUpcomingAppointments,
+  setAppointmentStatus,
   type AppointmentStatus,
 } from '@/services/appointment.service'
 import {
-  RESERVATION_STATUS_COLORS,
   RESERVATION_STATUS_LABELS,
   listReservationsByDate,
   listUpcomingReservations,
+  setReservationStatus,
   type ReservationStatus,
 } from '@/services/reservation.service'
-import { formatCurrency, localDateIso } from '@/utils/format'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { useToast } from '@/components/ui/Toast'
+import { BOOKING_STATUS_TONE, type BookingStatus } from '@/features/booking/bookingStatus'
+import { formatClock, formatLongDate } from '@/features/booking/bookingHelpers'
+import { localDateIso } from '@/utils/format'
 
-function todayIso(): string {
-  return localDateIso()
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function MiniStat({
+function ShortcutTile({
+  icon: Icon,
   label,
   value,
   hint,
-  icon: Icon,
   to,
 }: {
+  icon: LucideIcon
   label: string
   value: string
   hint?: string
-  icon: LucideIcon
   to: string
 }) {
   return (
-    <Link to={to} className="block transition-shadow hover:shadow-md">
-      <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
+    <Link to={to} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
           <Icon size={17} aria-hidden />
         </span>
@@ -56,12 +54,39 @@ function MiniStat({
   )
 }
 
-/** Bloc dashboard pour les business de service : prestations, rendez-vous,
- *  réservations et équipe. Affiché quand le business type porte au moins une
- *  capability service ; les boutiques 100 % commerce ne le voient jamais. */
+function DayHeading({ icon: Icon, title, count, pending, to, linkLabel }: {
+  icon: LucideIcon
+  title: string
+  count: number
+  pending: number
+  to: string
+  linkLabel: string
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+          <Icon size={16} aria-hidden className="text-gray-400" /> {title}
+          <span className="text-sm font-normal text-gray-500">
+            {count === 0 ? 'rien de prévu' : `${count} prévu${count > 1 ? 's' : ''}`}
+          </span>
+        </h3>
+        {pending > 0 && (
+          <p className="mt-0.5 text-sm font-medium text-amber-700">
+            {pending} à confirmer
+          </p>
+        )}
+      </div>
+      <Link to={to} className="text-sm font-medium text-brand-700 hover:text-brand-800">{linkLabel}</Link>
+    </div>
+  )
+}
+
+/** Bloc du tableau de bord pour les activités de service : ce qui se passe
+ *  AUJOURD'HUI (avec les boutons pour confirmer sur place), puis les prochains
+ *  jours, puis des raccourcis vers le catalogue et l'équipe. */
 export function ServiceDashboard({
   shopId,
-  currency,
   showServices,
   showAppointments,
   showReservations,
@@ -74,7 +99,9 @@ export function ServiceDashboard({
   showReservations: boolean
   showTeam: boolean
 }) {
-  const today = todayIso()
+  const today = localDateIso()
+  const queryClient = useQueryClient()
+  const toast = useToast()
 
   const { data: services = [] } = useQuery({
     queryKey: ['services', 'admin', shopId],
@@ -93,7 +120,7 @@ export function ServiceDashboard({
   })
   const { data: upcomingAppointments = [] } = useQuery({
     queryKey: ['appointments', 'upcoming', shopId],
-    queryFn: () => listUpcomingAppointments(shopId, 5),
+    queryFn: () => listUpcomingAppointments(shopId, 12),
     enabled: showAppointments,
   })
   const { data: reservationsToday = [] } = useQuery({
@@ -103,112 +130,191 @@ export function ServiceDashboard({
   })
   const { data: upcomingReservations = [] } = useQuery({
     queryKey: ['reservations', 'upcoming', shopId],
-    queryFn: () => listUpcomingReservations(shopId, 5),
+    queryFn: () => listUpcomingReservations(shopId, 12),
     enabled: showReservations,
   })
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['appointments', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['appointments', 'admin', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['appointments', 'upcoming', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['reservations', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['reservations', 'admin', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['reservations', 'upcoming', shopId] })
+    queryClient.invalidateQueries({ queryKey: ['booking-pending'] })
+  }
+  const appointmentMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) => setAppointmentStatus(id, status),
+    onSuccess: () => {
+      invalidate()
+      toast.success('Rendez-vous confirmé. Pensez à prévenir votre client.')
+    },
+    onError: () => toast.error('Action impossible.'),
+  })
+  const reservationMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ReservationStatus }) => setReservationStatus(id, status),
+    onSuccess: () => {
+      invalidate()
+      toast.success('Réservation confirmée. Pensez à prévenir votre client.')
+    },
+    onError: () => toast.error('Action impossible.'),
+  })
+
+  const liveAppointments = appointmentsToday.filter((a) => a.status !== 'cancelled')
+  const liveReservations = reservationsToday.filter((r) => r.status !== 'cancelled')
+  const pendingAppointments = liveAppointments.filter((a) => a.status === 'pending').length
+  const pendingReservations = liveReservations.filter((r) => r.status === 'pending').length
+  const laterAppointments = upcomingAppointments.filter((a) => localDateIso(new Date(a.start_at)) !== today).slice(0, 5)
+  const laterReservations = upcomingReservations.filter((r) => localDateIso(new Date(r.start_at)) !== today).slice(0, 5)
   const activeServices = services.filter((s) => s.active)
-  const liveAppointmentsToday = appointmentsToday.filter((a) => a.status !== 'cancelled')
-  const liveReservationsToday = reservationsToday.filter((r) => r.status !== 'cancelled')
-  const pendingAppointments = liveAppointmentsToday.filter((a) => a.status === 'pending').length
-  const pendingReservations = liveReservationsToday.filter((r) => r.status === 'pending').length
 
   return (
-    <div className="mt-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {showAppointments && (
-          <MiniStat
+    <div className="mt-4 space-y-6">
+      <p className="text-sm text-gray-500">Aujourd’hui — {formatLongDate(today)}</p>
+
+      {showAppointments && (
+        <Card>
+          <DayHeading
             icon={CalendarDays}
-            label="RDV aujourd'hui"
-            value={String(liveAppointmentsToday.length)}
-            hint={pendingAppointments > 0 ? `${pendingAppointments} à confirmer` : undefined}
+            title="Rendez-vous du jour"
+            count={liveAppointments.length}
+            pending={pendingAppointments}
             to="/admin/rendez-vous"
+            linkLabel="Ouvrir l’agenda"
           />
-        )}
-        {showReservations && (
-          <MiniStat
+          {liveAppointments.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500">
+              Aucun rendez-vous aujourd’hui. Partagez le lien de votre site pour recevoir des demandes.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100">
+              {liveAppointments.map((rdv) => {
+                const status = rdv.status as BookingStatus
+                return (
+                  <li key={rdv.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+                    <span className="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold text-gray-900">
+                      <Clock size={13} aria-hidden className="text-gray-400" /> {formatClock(rdv.start_at)}
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm text-gray-700">
+                      <span className="font-medium text-gray-900">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'}</span>
+                      {' — '}
+                      {rdv.customer_name}
+                    </span>
+                    <Badge tone={BOOKING_STATUS_TONE[status] ?? 'neutral'}>
+                      {APPOINTMENT_STATUS_LABELS[status as AppointmentStatus] ?? rdv.status}
+                    </Badge>
+                    {status === 'pending' && (
+                      <Button
+                        size="sm"
+                        disabled={appointmentMutation.isPending}
+                        onClick={() => appointmentMutation.mutate({ id: rdv.id, status: 'confirmed' })}
+                      >
+                        Confirmer
+                      </Button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {laterAppointments.length > 0 && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
+              <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                {laterAppointments.map((rdv) => (
+                  <li key={rdv.id} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="w-40 shrink-0 capitalize text-gray-500">
+                      {new Date(rdv.start_at).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} · {formatClock(rdv.start_at)}
+                    </span>
+                    <span className="text-gray-800">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'} — {rdv.customer_name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {showReservations && (
+        <Card>
+          <DayHeading
             icon={BookOpen}
-            label="Réservations aujourd'hui"
-            value={String(liveReservationsToday.length)}
-            hint={pendingReservations > 0 ? `${pendingReservations} à confirmer` : undefined}
+            title="Réservations de table du jour"
+            count={liveReservations.length}
+            pending={pendingReservations}
             to="/admin/reservations"
+            linkLabel="Ouvrir le registre"
           />
-        )}
-        {showServices && (
-          <MiniStat
-            icon={Scissors}
-            label="Prestations actives"
-            value={String(activeServices.length)}
-            hint={services.length !== activeServices.length ? `${services.length} au total` : undefined}
-            to="/admin/prestations"
-          />
-        )}
-        {showTeam && (
-          <MiniStat icon={Users} label="Équipe" value={String(team.length)} to="/admin/equipe" />
-        )}
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {showAppointments && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Prochains rendez-vous</h3>
-              <Link to="/admin/rendez-vous" className="text-sm font-medium text-brand-700">Agenda</Link>
-            </div>
-            {upcomingAppointments.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">Aucun rendez-vous à venir.</p>
-            ) : (
-              <ul className="mt-3 divide-y divide-gray-100">
-                {upcomingAppointments.map((rdv) => (
-                  <li key={rdv.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="min-w-0 truncate text-gray-800">
-                      {formatTime(rdv.start_at)} · {rdv.service?.name ?? rdv.service_name ?? 'Prestation'} — {rdv.customer_name}
+          {liveReservations.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500">Aucune réservation aujourd’hui.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100">
+              {liveReservations.map((resa) => {
+                const status = resa.status as BookingStatus
+                return (
+                  <li key={resa.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+                    <span className="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold text-gray-900">
+                      <Clock size={13} aria-hidden className="text-gray-400" /> {formatClock(resa.start_at)}
                     </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${APPOINTMENT_STATUS_COLORS[rdv.status as AppointmentStatus] ?? 'bg-gray-100 text-gray-600'}`}
-                    >
-                      {APPOINTMENT_STATUS_LABELS[rdv.status as AppointmentStatus] ?? rdv.status}
+                    <span className="min-w-0 flex-1 text-sm text-gray-700">
+                      <span className="font-medium text-gray-900">{resa.customer_name}</span> · {resa.party_size} personne{resa.party_size > 1 ? 's' : ''}
                     </span>
+                    <Badge tone={BOOKING_STATUS_TONE[status] ?? 'neutral'}>
+                      {RESERVATION_STATUS_LABELS[status as ReservationStatus] ?? resa.status}
+                    </Badge>
+                    {status === 'pending' && (
+                      <Button
+                        size="sm"
+                        disabled={reservationMutation.isPending}
+                        onClick={() => reservationMutation.mutate({ id: resa.id, status: 'confirmed' })}
+                      >
+                        Confirmer
+                      </Button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {laterReservations.length > 0 && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
+              <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                {laterReservations.map((resa) => (
+                  <li key={resa.id} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="w-40 shrink-0 capitalize text-gray-500">
+                      {new Date(resa.start_at).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} · {formatClock(resa.start_at)}
+                    </span>
+                    <span className="text-gray-800">{resa.customer_name} · {resa.party_size} pers.</span>
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        )}
-
-        {showReservations && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Prochaines réservations</h3>
-              <Link to="/admin/reservations" className="text-sm font-medium text-brand-700">Registre</Link>
             </div>
-            {upcomingReservations.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">Aucune réservation à venir.</p>
-            ) : (
-              <ul className="mt-3 divide-y divide-gray-100">
-                {upcomingReservations.map((resa) => (
-                  <li key={resa.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="min-w-0 truncate text-gray-800">
-                      {formatTime(resa.start_at)} · {resa.customer_name} · {resa.party_size} pers.
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${RESERVATION_STATUS_COLORS[resa.status as ReservationStatus] ?? 'bg-gray-100 text-gray-600'}`}
-                    >
-                      {RESERVATION_STATUS_LABELS[resa.status as ReservationStatus] ?? resa.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </Card>
+      )}
 
-      {showServices && activeServices.length > 0 && (
-        <p className="mt-4 text-sm text-gray-500">
-          Prestation la plus chère : {formatCurrency(Math.max(...activeServices.map((s) => s.price)), currency)} ·{' '}
-          <Link to="/admin/prestations" className="font-medium text-brand-700">Gérer les prestations</Link>
-        </p>
+      {(showServices || showTeam) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {showServices && (
+            <ShortcutTile
+              icon={Scissors}
+              label="Prestations sur votre site"
+              value={String(activeServices.length)}
+              hint={services.length !== activeServices.length ? `${services.length - activeServices.length} masquée${services.length - activeServices.length > 1 ? 's' : ''}` : 'Gérer mes prestations'}
+              to="/admin/prestations"
+            />
+          )}
+          {showTeam && (
+            <ShortcutTile
+              icon={Users}
+              label="Personnes dans votre équipe"
+              value={String(team.filter((m) => m.active).length)}
+              hint="Gérer mon équipe"
+              to="/admin/equipe"
+            />
+          )}
+        </div>
       )}
     </div>
   )

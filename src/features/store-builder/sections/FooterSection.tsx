@@ -7,6 +7,8 @@ import { SocialIcon } from '@/components/ui/SocialIcon'
 import { resolveTextStyle } from '@/config/textStyle'
 import { platformUrl } from '@/lib/tenant'
 import { whatsappHref } from '@/utils/format'
+import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 import { ensureReadableAccent } from '@/utils/color'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
@@ -45,6 +47,7 @@ export function FooterRenderer({
   editable: boolean
 }) {
   const patch = useInlineEdit(sectionId)
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const layout = footer.layout ?? 'columns'
   const shopName = shop?.name ?? 'Boutique'
   // Unset, the footer's background derives from the shop's own primary color
@@ -112,11 +115,11 @@ export function FooterRenderer({
 
   const catalogueCta = (
     <Link
-      to="/catalogue"
+      to={vocab.booking?.href ?? vocab.catalogHref}
       style={{ borderRadius: 'var(--shop-radius)' }}
       className="inline-flex items-center gap-1.5 bg-[var(--footer-button)] px-4 py-2 text-sm font-semibold text-[var(--footer-button-text)] transition-opacity hover:opacity-90"
     >
-      Voir tout le catalogue →
+      {vocab.booking ? vocab.booking.label : catalogCtaLabel(vocab)} →
     </Link>
   )
 

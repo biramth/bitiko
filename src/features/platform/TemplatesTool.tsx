@@ -14,6 +14,7 @@ import {
 } from '@/services/admin.service'
 import { STORE_TEMPLATE_BY_KEY, STORE_TEMPLATES } from '@/config/storeTemplates'
 import { validateTemplateContent } from '@/services/template.service'
+import { buttonClass } from '@/components/ui/styles'
 
 const STATUSES = ['active', 'deprecated', 'draft'] as const
 
@@ -387,7 +388,7 @@ export function TemplatesTool() {
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                className={buttonClass()}
               >
                 {saving ? 'Enregistrement…' : 'Enregistrer'}
               </button>

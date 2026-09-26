@@ -23,6 +23,7 @@ import { ProductImportDialog } from './ProductImportDialog'
 import { CategoriesPage } from './CategoriesPage'
 import { priceRange } from '@/utils/productPricing'
 import type { ProductWithRelations } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 /** Advertised price: "À partir de X" when variants are priced differently. */
 function priceLabel(product: ProductWithRelations, currency: string): string {
@@ -272,7 +273,7 @@ export function ProductsPage() {
             <button
               type="button"
               onClick={() => setImportOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               <Upload size={16} /> Importer (CSV)
             </button>

@@ -69,6 +69,8 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 16 | [Testing](PHASE-16-testing.md) | Unit + intégration + E2E + sécurité multi-tenant explicites | 03–15 | ✅ TERMINÉ — 2026-09-25 (DEV : unit 164 + matrice RLS effective ; E2E en suivi) |
 | 17 | [Production migration](PHASE-17-production.md) | Bascule dev→prod, REMOVE LEGACY, validation critères §67 de la mission | 16 | ⬜ NON DÉMARRÉ |
 | 18 | [Métiers, services et réservations](PHASE-18-metiers-services.md) | Chantier post-refonte : groupes métiers, services, réservations réelles, intégrité facturation | 16 | 🟨 EN COURS — 2026-09-26 (DEV, migrations 0121–0124 à appliquer) |
+| 19 | [Outils de gestion : finances et bilan](PHASE-19-gestion-finances.md) | Journal dépenses/recettes, bilan simple, exports, modèle payant par plan | 18 | 🟨 EN COURS — 2026-09-26 (code prêt, migrations 0129–0130 à appliquer) |
+| 20 | [Landing, CGU et visuels marketing](PHASE-20-landing-legal.md) | Landing commerce + services, vraies captures, vidéo de démo, CGU / confidentialité à jour | 18, 19 | 🟨 EN COURS — 2026-09-26 (à relire avant mise en ligne) |
 
 ## 4. Livrable de fin de phase (obligatoire, format imposé)
 

@@ -14,6 +14,7 @@ import {
   groupCapabilitiesByCategory,
   type Capability,
 } from '@/services/businessType.service'
+import { buttonClass } from '@/components/ui/styles'
 
 const STATUSES = ['active', 'deprecated', 'draft'] as const
 
@@ -131,7 +132,7 @@ export function BusinessTypesTool() {
               setForm({ slug: '', name: '', description: '', icon: '', status: 'active' })
               setChecked([])
             }}
-            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            className={buttonClass({ size: 'sm' })}
           >
             + Nouveau type
           </button>
@@ -272,7 +273,7 @@ export function BusinessTypesTool() {
                 type="button"
                 disabled={saving}
                 onClick={handleSave}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                className={buttonClass()}
               >
                 {saving ? 'Enregistrement…' : 'Enregistrer'}
               </button>

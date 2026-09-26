@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   Users,
   Wand2,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -40,13 +41,18 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   { key: 'orders', label: 'Commandes', to: '/admin/commandes', icon: ShoppingBag, group: 'Ventes', guide: 'guide-nav-commandes', ordersBadge: true, capabilities: ['HAS_ORDERS'], enabled: true },
   { key: 'customers', label: 'Clients', to: '/admin/clients', icon: Users, group: 'Ventes', capabilities: ['HAS_CUSTOMERS'], enabled: true },
   { key: 'products', label: 'Produits', to: '/admin/produits', icon: Package, group: 'Boutique', guide: 'guide-nav-produits', capabilities: ['HAS_PRODUCTS'], enabled: true },
-  { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', capabilities: ['HAS_SERVICES'], enabled: true },
+  // L'agenda d'abord (ce que le commerçant consulte chaque jour), le catalogue
+  // de prestations ensuite (réglé une fois).
   { key: 'appointments', label: 'Rendez-vous', to: '/admin/rendez-vous', icon: CalendarDays, group: 'Services', capabilities: ['HAS_APPOINTMENTS'], enabled: true },
-  { key: 'reservations', label: 'Réservations', to: '/admin/reservations', icon: BookOpen, group: 'Services', capabilities: ['HAS_RESERVATIONS'], enabled: true },
+  { key: 'reservations', label: 'Réservations de table', to: '/admin/reservations', icon: BookOpen, group: 'Services', capabilities: ['HAS_RESERVATIONS'], enabled: true },
+  { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', capabilities: ['HAS_SERVICES'], enabled: true },
   // L'équipe (vitrine) est transversale : son propre groupe, jamais noyée
   // dans « Services » (sinon une boutique mode verrait un groupe Services
   // avec pour seul contenu l'Équipe).
-  { key: 'team', label: 'Équipe', to: '/admin/equipe', icon: Users, group: 'Équipe', capabilities: ['HAS_TEAM'], enabled: true },
+  { key: 'team', label: 'Mon équipe', to: '/admin/equipe', icon: Users, group: 'Équipe', capabilities: ['HAS_TEAM'], enabled: true },
+  // Finances : recettes, dépenses et bilan. Aucune capability requise (tout commerce a des
+  // chiffres) ; la page elle-même est réservée au propriétaire et aux managers.
+  { key: 'finance', label: 'Finances', to: '/admin/gestion', icon: Wallet, group: 'Gestion', guide: 'guide-nav-finances', enabled: true },
   // Personnaliser concerne tout le site client (vitrine), pas le commerce :
   // hors groupe, au niveau du tableau de bord. « Boutique » ne contient donc
   // plus que Produits et redevient 100 % commerce.

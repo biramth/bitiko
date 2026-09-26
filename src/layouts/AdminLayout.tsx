@@ -25,6 +25,8 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop, useMyShops } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
 import { getOrderStatusCounts } from '@/services/order.service'
+import { countPendingAppointments } from '@/services/appointment.service'
+import { countPendingReservations } from '@/services/reservation.service'
 import { ShopSwitcher } from '@/features/shop-settings/ShopSwitcher'
 import { claimShopInvites } from '@/services/team.service'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
@@ -51,7 +53,7 @@ const settingsSections = [
   { to: '/admin/parametres/contact', key: 'contact', label: 'Contact & devise', icon: Phone },
   { to: '/admin/parametres/shipping', key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { to: '/admin/parametres/facturation', key: 'facturation', label: 'Facturation', icon: CreditCard },
-  { to: '/admin/parametres/equipe', key: 'equipe', label: 'Équipe & accès', icon: Users },
+  { to: '/admin/parametres/equipe', key: 'equipe', label: 'Accès collaborateurs', icon: Users },
   { to: '/admin/parametres/notifications', key: 'notifications', label: 'Notifications', icon: Bell },
   { to: '/admin/parametres/compte', key: 'compte', label: 'Mon compte', icon: User },
 ]
@@ -84,7 +86,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
   const { data: shops } = useMyShops()
-  const { groups, capabilities } = useWorkspaceModules()
+  const { groups: allGroups, capabilities } = useWorkspaceModules()
   const multiShop = (shops?.length ?? 0) > 1
   // Shared with OrdersPage's own query (same key): the sidebar pill costs
   // no extra fetch once Commandes has been visited, and vice versa.
@@ -94,10 +96,41 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
     enabled: !!shop?.id,
   })
   const ordersToTreat = (orderCounts?.counts.pending ?? 0) + (orderCounts?.counts.confirmed ?? 0)
+  // Demandes de rendez-vous / de table à confirmer : la pastille évite d'ouvrir
+  // l'agenda pour savoir si un client attend une réponse.
+  const hasAppointments = capabilities?.has('HAS_APPOINTMENTS') ?? false
+  const hasReservations = capabilities?.has('HAS_RESERVATIONS') ?? false
+  const { data: pendingAppointments = 0 } = useQuery({
+    queryKey: ['booking-pending', 'appointments', shop?.id],
+    queryFn: () => countPendingAppointments(shop!.id),
+    enabled: !!shop?.id && hasAppointments,
+    refetchInterval: 60_000,
+  })
+  const { data: pendingReservations = 0 } = useQuery({
+    queryKey: ['booking-pending', 'reservations', shop?.id],
+    queryFn: () => countPendingReservations(shop!.id),
+    enabled: !!shop?.id && hasReservations,
+    refetchInterval: 60_000,
+  })
+  const badgeCount = (moduleKey: string): number =>
+    moduleKey === 'orders' ? ordersToTreat : moduleKey === 'appointments' ? pendingAppointments : moduleKey === 'reservations' ? pendingReservations : 0
+  const Pill = ({ count }: { count: number }) =>
+    count > 0 ? (
+      <span
+        className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+        aria-label={`${count} à traiter`}
+      >
+        {count}
+      </span>
+    ) : null
   // Billing + team stay owner-only: hide them from managers/vendeurs (RLS
   // blocks the data anyway; this just avoids dead-end pages). Unknown role
   // (still loading) keeps everything visible to avoid flicker for owners.
   const { role: shopRole } = useShopRole()
+  // Les chiffres de l'activité restent au propriétaire et aux managers.
+  const groups = allGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => !(item.key === 'finance' && shopRole === 'vendeur')) }))
+    .filter((group) => group.items.length > 0)
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
   // Livraison & stock n'a de sens qu'avec livraison ou catalogue : un salon
@@ -192,24 +225,22 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
     <>
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
         {groups.map((group) =>
-          !group.label ? (
-            <Fragment key="main">
-              {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+          // Un groupe d'un seul lien (Produits, Mon équipe) n'a pas besoin
+          // d'accordéon : le lien direct est plus rapide et plus lisible.
+          !group.label || group.items.length === 1 ? (
+            <Fragment key={group.label ?? 'main'}>
+              {group.items.map(({ key, to, label, icon: Icon, end, guide }) => (
                 <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
                   <Icon size={17} aria-hidden />
                   {!collapsed && label}
-                  {!collapsed && ordersBadge && ordersToTreat > 0 && (
-                    <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                      {ordersToTreat}
-                    </span>
-                  )}
+                  {!collapsed && <Pill count={badgeCount(key)} />}
                 </NavLink>
               ))}
             </Fragment>
           ) : collapsed ? (
             <Fragment key={group.label}>
-              {group.items.map(({ to, label, icon: Icon, end, guide }) => (
-                <NavLink key={to} to={to} end={end} className={linkClass} title={label} data-guide={guide}>
+              {group.items.map(({ key, to, label, icon: Icon, end, guide }) => (
+                <NavLink key={to} to={to} end={end} className={linkClass} title={badgeCount(key) > 0 ? `${label} (${badgeCount(key)} à traiter)` : label} data-guide={guide}>
                   <Icon size={17} aria-hidden />
                 </NavLink>
               ))}
@@ -227,6 +258,9 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
                   return <GroupIcon size={17} aria-hidden />
                 })()}
                 <span className="flex-1 text-left">{group.label}</span>
+                {openGroup !== group.label && !tourExpanded && (
+                  <Pill count={group.items.reduce((sum, item) => sum + badgeCount(item.key), 0)} />
+                )}
                 <ChevronDown
                   size={15}
                   aria-hidden
@@ -235,15 +269,11 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
               </button>
               {(openGroup === group.label || tourExpanded) && (
                 <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                  {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+                  {group.items.map(({ key, to, label, icon: Icon, end, guide }) => (
                     <NavLink key={to} to={to} end={end} className={linkClass} data-guide={guide}>
                       <Icon size={17} aria-hidden />
                       {label}
-                      {ordersBadge && ordersToTreat > 0 && (
-                        <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                          {ordersToTreat}
-                        </span>
-                      )}
+                      <Pill count={badgeCount(key)} />
                     </NavLink>
                   ))}
                 </div>

@@ -39,6 +39,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { OptionField, PaymentMethod } from '@/types'
+import { buttonClass } from '@/components/ui/styles'
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cod: 'Espèces à la livraison',
@@ -542,7 +543,7 @@ export function NewOrderPage() {
                 <button
                   type="button"
                   onClick={handleAddLine}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                  className={buttonClass({ className: 'mt-4 gap-1.5' })}
                 >
                   <Plus size={14} aria-hidden /> Ajouter au panier
                 </button>
@@ -726,7 +727,7 @@ export function NewOrderPage() {
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={buttonClass({ size: 'lg', className: 'shrink-0' })}
             >
               {mutation.isPending ? (
                 <Loader2 size={15} className="animate-spin" aria-hidden />

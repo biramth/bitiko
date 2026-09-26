@@ -20,7 +20,7 @@ const COMMERCE_CAPS = new Set([
 describe('resolveModules', () => {
   it('shows every legacy module for a commerce capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'customize'])
+    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'finance', 'customize'])
   })
 
   it('fails open to the full workspace when capabilities are unknown (null)', () => {
@@ -30,10 +30,11 @@ describe('resolveModules', () => {
       'orders',
       'customers',
       'products',
-      'services',
       'appointments',
       'reservations',
+      'services',
       'team',
+      'finance',
       'customize',
     ])
   })
@@ -50,12 +51,12 @@ describe('resolveModules', () => {
       'HAS_PROMOTIONS',
     ])
     const keys = resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'services', 'appointments', 'team', 'customize'])
+    expect(keys).toEqual(['dashboard', 'appointments', 'services', 'team', 'finance', 'customize'])
   })
 
-  it('keeps only the dashboard for a known-but-empty capability set', () => {
+  it('keeps only ungated modules (dashboard, finance) for a known-but-empty capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, new Set(), { teamAccess: false }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard'])
+    expect(keys).toEqual(['dashboard', 'finance'])
   })
 
   it('hides disabled modules and applies entitlement gates', () => {
@@ -84,7 +85,7 @@ describe('resolveModules', () => {
 describe('groupModules', () => {
   it('keeps ungrouped entries first, then group order of first appearance', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
-    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe'])
+    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe', 'Gestion'])
     expect(groups[0]?.items.map((m) => m.key)).toEqual(['dashboard', 'customize'])
     expect(groups[1]?.items.map((m) => m.key)).toEqual(['orders', 'customers'])
   })
@@ -103,8 +104,8 @@ describe('sortGroupsForProfile', () => {
     ).map((g) => g.label)
 
   it('keeps the historic order for commerce-only and unknown', () => {
-    expect(labels(COMMERCE_CAPS)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe'])
-    expect(labels(null)).toEqual([undefined, 'Ventes', 'Boutique', 'Services', 'Équipe'])
+    expect(labels(COMMERCE_CAPS)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe', 'Gestion'])
+    expect(labels(null)).toEqual([undefined, 'Ventes', 'Boutique', 'Services', 'Équipe', 'Gestion'])
   })
 
   it('puts Services first for a mixed business (salon qui vend)', () => {
@@ -117,6 +118,6 @@ describe('sortGroupsForProfile', () => {
       'HAS_APPOINTMENTS',
       'HAS_TEAM',
     ])
-    expect(labels(caps)).toEqual([undefined, 'Services', 'Ventes', 'Boutique', 'Équipe'])
+    expect(labels(caps)).toEqual([undefined, 'Services', 'Ventes', 'Boutique', 'Équipe', 'Gestion'])
   })
 })

@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Home, LayoutGrid, MessageCircle, ShoppingCart, X } from 'lucide-react'
+import { CalendarCheck, Home, LayoutGrid, MessageCircle, ShoppingCart, X } from 'lucide-react'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { useCart } from '@/features/cart/CartContext'
 import { useEffectiveShopConfig } from '@/features/store-builder/useEffectiveShopConfig'
@@ -238,21 +238,38 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
             <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith(vocab.catalogHref) ? 2.25 : 1.75} />
             {vocab.catalogLabel}
           </Link>
-          <Link
-            to="/panier"
-            className={tab(pathname.startsWith('/panier'))}
-            aria-current={pathname.startsWith('/panier') ? 'page' : undefined}
-          >
-            <span className="relative">
-              <ShoppingCart size={22} aria-hidden strokeWidth={pathname.startsWith('/panier') ? 2.25 : 1.75} />
-              {itemCount > 0 && (
-                <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--shop-accent)] px-1 text-[9px] font-bold text-[var(--shop-button-text)]">
-                  {itemCount}
-                </span>
-              )}
-            </span>
-            {vocab.cartLabel}
-          </Link>
+          {vocab.booking && (
+            <Link
+              to={vocab.booking.href}
+              className="relative flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold text-[var(--shop-accent)]"
+              aria-current={pathname.startsWith(vocab.booking.href) ? 'page' : undefined}
+            >
+              <span
+                className="flex h-9 w-12 items-center justify-center bg-[var(--shop-button)] text-[var(--shop-button-text)] shadow-sm"
+                style={{ borderRadius: 'var(--shop-radius, 0.75rem)' }}
+              >
+                <CalendarCheck size={20} aria-hidden strokeWidth={2} />
+              </span>
+              {vocab.booking.shortLabel}
+            </Link>
+          )}
+          {vocab.showCart && (
+            <Link
+              to="/panier"
+              className={tab(pathname.startsWith('/panier'))}
+              aria-current={pathname.startsWith('/panier') ? 'page' : undefined}
+            >
+              <span className="relative">
+                <ShoppingCart size={22} aria-hidden strokeWidth={pathname.startsWith('/panier') ? 2.25 : 1.75} />
+                {itemCount > 0 && (
+                  <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--shop-accent)] px-1 text-[9px] font-bold text-[var(--shop-button-text)]">
+                    {itemCount}
+                  </span>
+                )}
+              </span>
+              {vocab.cartLabel}
+            </Link>
+          )}
           {digits && (
             <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className={tab(false)} aria-label="Contacter sur WhatsApp">
               <MessageCircle size={22} aria-hidden strokeWidth={1.75} />

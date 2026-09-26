@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, ImageOff, Search, Star } from 'lucide-react'
-import { useFeaturedProducts, useShopProducts } from '@/features/products/useProducts'
+import { FEATURED_FALLBACK_COUNT, useFeaturedProducts, useShopProducts } from '@/features/products/useProducts'
 import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
@@ -121,6 +121,7 @@ export function FeaturedProductsEditor({
 
       <div>
         <span className={editorLabelClass}>Produits sélectionnés ({config.productIds.length})</span>
+        <p className={`mt-1 ${editorHelpClass}`}>Aucun produit coché = les {FEATURED_FALLBACK_COUNT} plus récents.</p>
         <div className="relative mt-1.5">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
           <input

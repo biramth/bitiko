@@ -22,6 +22,7 @@ import type { SavedTheme } from '@/types/savedTheme'
 import type { PublishHistoryEntry } from '@/types/publishHistory'
 import { SYSTEM_TEMPLATE_KEYS, type StoreTemplate } from '@/types/builder'
 import { HISTORY_KEY_PREFIX, SAVED_THEME_KEY_PREFIX } from './templateKeys'
+import { controlClass } from '@/components/ui/styles'
 
 /** What "the current design" means for saving a personal style: the shop's
  *  live, published design — not an in-progress unsaved draft, which the
@@ -450,7 +451,7 @@ export function TemplateLibraryPanel({
           value={saveName}
           onChange={(e) => setSaveName(e.target.value)}
           placeholder="Ex. Édition Ramadan"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()}`}
         />
       </ConfirmDialog>
 
@@ -469,7 +470,7 @@ export function TemplateLibraryPanel({
           autoFocus
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()}`}
         />
       </ConfirmDialog>
 

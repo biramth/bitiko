@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { Eye, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import {
   createTeamMember,
@@ -21,6 +22,11 @@ import { canAddTeamMember } from '@/config/plans'
 import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
 import { planLimitMessage } from '@/features/billing/planLimit'
 import { useToast } from '@/components/ui/Toast'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { TextField } from '@/components/ui/Field'
+import { Switch } from '@/components/ui/Switch'
 
 interface TeamForm {
   name: string
@@ -35,7 +41,7 @@ interface TeamForm {
 const EMPTY_FORM: TeamForm = { name: '', role: '', specialty: '', phone: '', email: '', showContact: false, active: true }
 
 export function TeamPage() {
-  usePageSeo({ title: 'Équipe — Bitiko', noindex: true })
+  usePageSeo({ title: 'Mon équipe — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { plan } = useShopPlan(shop?.id)
   const queryClient = useQueryClient()
@@ -128,176 +134,149 @@ export function TeamPage() {
   return (
     <div>
       <PageHeader
-        title="Équipe"
-        subtitle="Les visages de votre vitrine et les équipiers réservables en rendez-vous."
+        title="Mon équipe"
+        subtitle="Les personnes que vos clients voient sur votre site et peuvent choisir pour leur rendez-vous."
         actions={
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={!canCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            <Plus size={15} aria-hidden /> Ajouter un membre
-          </button>
+          <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate}>
+            Ajouter une personne
+          </Button>
         }
       />
 
       <PlanLimitBanner
         used={activeCount}
         max={plan.maxTeamMembers}
-        singular="équipier actif"
-        plural="équipiers actifs"
+        singular="personne visible sur votre site"
+        plural="personnes visibles sur votre site"
       />
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="mt-5">
         {members.length === 0 ? (
-          <EmptyState icon={Users} title="Aucun membre" description="Présentez votre équipe : coiffeurs, serveurs, artisans…" />
+          <Card padded={false}>
+            <EmptyState
+              icon={Users}
+              title="Présentez votre équipe"
+              description="Coiffeurs, serveurs, artisans… Vos clients aiment savoir avec qui ils viennent, et peuvent réserver avec la personne de leur choix."
+              action={
+                <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate}>
+                  Ajouter une personne
+                </Button>
+              }
+            />
+          </Card>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {members.map((member) => (
-              <li key={member.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
-                  {member.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-gray-900">{member.name}</p>
-                  <p className="truncate text-xs text-gray-500">
-                    {[member.role, member.specialty].filter(Boolean).join(' · ') || '—'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleMutation.mutate({ id: member.id, active: !member.active })}
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    member.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {member.active ? 'Visible' : 'Masqué'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(member)}
-                  aria-label={`Modifier ${member.name}`}
-                  className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                >
-                  <Pencil size={15} aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(member)}
-                  aria-label={`Retirer ${member.name}`}
-                  className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                >
-                  <Trash2 size={15} aria-hidden />
-                </button>
+          <ul className="space-y-3">
+            {[...members].sort((a, b) => Number(b.active) - Number(a.active)).map((member) => (
+              <li key={member.id}>
+                <Card className={`flex flex-col gap-3 sm:flex-row sm:items-center ${member.active ? '' : 'bg-gray-50'}`}>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
+                      {member.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className={`truncate font-semibold ${member.active ? 'text-gray-900' : 'text-gray-500'}`}>{member.name}</p>
+                        {!member.active && <Badge>Masqué</Badge>}
+                        {member.show_contact && (member.phone || member.email) && (
+                          <Badge tone="info"><Eye size={11} aria-hidden /> Contact visible</Badge>
+                        )}
+                      </div>
+                      <p className="truncate text-sm text-gray-500">
+                        {[member.role, member.specialty].filter(Boolean).join(' · ') || 'Aucun poste renseigné'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Switch
+                      checked={member.active}
+                      label="Visible et réservable"
+                      disabled={toggleMutation.isPending}
+                      onChange={(active) => toggleMutation.mutate({ id: member.id, active })}
+                    />
+                    <Button size="sm" variant="secondary" icon={<Pencil size={13} aria-hidden />} onClick={() => openEdit(member)}>
+                      Modifier
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(member)}
+                      aria-label={`Retirer ${member.name}`}
+                      className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={15} aria-hidden />
+                    </button>
+                  </div>
+                </Card>
               </li>
             ))}
           </ul>
         )}
       </div>
 
+      <p className="mt-6 text-sm text-gray-500">
+        Ici, ce sont les personnes <strong className="font-medium text-gray-700">présentées à vos clients</strong>. Pour donner à quelqu’un l’accès à votre espace de gestion (commandes, agenda…), rendez-vous dans{' '}
+        <Link to="/admin/parametres/equipe" className="font-medium text-brand-700 hover:text-brand-800">Paramètres → Accès collaborateurs</Link>.
+      </p>
+
       <Dialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editing ? 'Modifier le membre' : 'Nouveau membre'}
+        title={editing ? 'Modifier cette personne' : 'Ajouter une personne'}
         footer={
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !form.name.trim()}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+            <Button variant="secondary" onClick={() => setFormOpen(false)}>Annuler</Button>
+            <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={!form.name.trim()}>
+              Enregistrer
+            </Button>
           </div>
         }
       >
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <TextField label="Nom" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="team-name" className="block text-sm font-medium text-gray-700">Nom</label>
-              <input
-                id="team-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="team-role" className="block text-sm font-medium text-gray-700">Rôle</label>
-              <input
-                id="team-role"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                placeholder="Coiffeuse senior…"
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="team-specialty" className="block text-sm font-medium text-gray-700">Spécialité</label>
-            <input
-              id="team-specialty"
+            <TextField
+              label="Poste"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              placeholder="Coiffeuse, serveur…"
+            />
+            <TextField
+              label="Spécialité"
               value={form.specialty}
               onChange={(e) => setForm({ ...form, specialty: e.target.value })}
               placeholder="Coloration, barbe…"
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="team-phone" className="block text-sm font-medium text-gray-700">Téléphone</label>
-              <input
-                id="team-phone"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
+          <div className="rounded-lg border border-gray-200 p-3">
+            <p className="text-sm font-medium text-gray-700">Coordonnées</p>
+            <p className="mt-0.5 text-xs text-gray-500">Facultatif. Elles ne sont montrées à vos clients que si vous cochez l’option ci-dessous.</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <TextField label="Téléphone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <TextField label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
-            <div>
-              <label htmlFor="team-email" className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                id="team-email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            <div className="mt-3">
+              <Switch
+                checked={form.showContact}
+                label="Afficher ces coordonnées sur mon site"
+                onChange={(showContact) => setForm({ ...form, showContact })}
               />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.showContact}
-              onChange={(e) => setForm({ ...form, showContact: e.target.checked })}
-              className="accent-brand-600"
-            />
-            Afficher téléphone et email sur la vitrine
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.active}
-              onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="accent-brand-600"
-            />
-            Visible en vitrine
-          </label>
+          <Switch
+            checked={form.active}
+            label="Visible sur mon site et réservable"
+            onChange={(active) => setForm({ ...form, active })}
+          />
         </div>
       </Dialog>
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Retirer ce membre ?"
-        description={deleteTarget ? `« ${deleteTarget.name} » ne sera plus visible ni réservable.` : undefined}
+        title="Retirer cette personne ?"
+        description={
+          deleteTarget
+            ? `« ${deleteTarget.name} » ne sera plus visible ni réservable. Les rendez-vous déjà pris sont conservés. Pour la retirer temporairement, masquez-la plutôt.`
+            : undefined
+        }
         confirmLabel="Retirer"
         pendingLabel="Suppression…"
         pending={removeMutation.isPending}

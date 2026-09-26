@@ -19,6 +19,7 @@ import {
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { buttonClass } from '@/components/ui/styles'
 
 const ROLE_BADGE: Record<PlatformRole, string> = {
   owner: 'bg-amber-100 text-amber-800',
@@ -130,7 +131,7 @@ export function TeamTool() {
             <button
               type="submit"
               disabled={add.isPending}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               {add.isPending ? 'Ajout…' : 'Ajouter'}
             </button>

@@ -128,3 +128,17 @@ describe('plafonds métiers de service', () => {
     expect(canAddTeamMember(PLANS.essential, 7)).toBe(true)
   })
 })
+
+describe('outils de gestion par plan', () => {
+  it('l’export (CSV + PDF, généré dans le navigateur) est ouvert à tous ; l’historique, la comparaison et les saisies différencient les plans', () => {
+    expect(PLANS.free.financeHistoryMonths).toBe(1)
+    expect(PLANS.free.financeExport).toBe('pdf')
+    expect(PLANS.essential.financeExport).toBe('pdf')
+    expect(PLANS.free.maxMonthlyFinanceEntries).toBe(30)
+    expect(PLANS.essential.financeHistoryMonths).toBe(12)
+    expect(PLANS.essential.maxMonthlyFinanceEntries).toBeNull()
+    expect(PLANS.pro.financeExport).toBe('pdf')
+    expect(PLANS.pro.financeHistoryMonths).toBeNull()
+    expect(PLANS.pro.financeComparison).toBe(true)
+  })
+})

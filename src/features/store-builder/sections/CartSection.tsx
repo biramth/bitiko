@@ -16,6 +16,9 @@ import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
+import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
+import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
 import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
 
 /** Progress toward the shop's free-delivery threshold — hidden when the shop
@@ -57,6 +60,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
   const currency = shop.currency ?? 'XOF'
   const isDemo = demo !== null
   const aside = (config.layout ?? 'stacked') === 'summary-aside'
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
 
   const handleShareCart = async () => {
     const lines = items.map((item) => `- ${item.name} x${item.quantity} : ${formatCurrency(item.price * item.quantity, currency)}`)
@@ -81,11 +85,11 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
         <EmptyState
           icon={ShoppingBag}
           title="Votre panier est vide"
-          description="Parcourez le catalogue pour ajouter des produits."
+          description="Ajoutez des articles pour préparer votre commande."
         />
         <div className="text-center">
-          <Link to="/catalogue" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
-            Voir le catalogue
+          <Link to={vocab.catalogHref} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
+            {catalogCtaLabel(vocab)}
             <ArrowRight size={14} aria-hidden />
           </Link>
         </div>
@@ -149,9 +153,9 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                   <button
                     onClick={() => removeItem(item)}
                     aria-label={`Supprimer ${item.name} du panier`}
-                    className="text-[var(--shop-text)]/30 hover:text-red-600"
+                    className="-mr-2 -mt-2 flex h-10 w-10 items-center justify-center text-[var(--shop-text)]/40 hover:text-red-600"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} aria-hidden />
                   </button>
                 )}
               </div>
@@ -161,9 +165,9 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                 <div className="flex items-center gap-4">
                   {!isDemo ? (
                     <>
-                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} /></button>
-                      <span className="w-4 text-center text-sm font-medium text-[var(--shop-text)]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="-m-1 p-2 text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} /></button>
+                      <button onClick={() => updateQuantity(item, item.quantity - 1)} aria-label="Diminuer la quantité" className="-mx-2 flex h-10 w-10 items-center justify-center text-[var(--shop-text)]/70 hover:text-[var(--shop-text)]"><Minus size={14} aria-hidden /></button>
+                      <span className="w-4 text-center text-sm font-medium text-[var(--shop-text)]" aria-live="polite">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item, item.quantity + 1)} disabled={item.quantity >= item.stock} aria-label="Augmenter la quantité" className="-mx-2 flex h-10 w-10 items-center justify-center text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={14} aria-hidden /></button>
                     </>
                   ) : (
                     <span className="text-sm text-[var(--shop-text)]/60">Qté : {item.quantity}</span>
@@ -181,13 +185,14 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
       <div className={aside ? 'lg:sticky lg:top-24 lg:mt-8 lg:border lg:border-[var(--shop-text)]/10 lg:p-5' : undefined}>
       <div className={`mt-6 flex items-center justify-between border-t ${aside ? 'lg:mt-0 lg:border-t-0 lg:pt-0' : ''} border-[var(--shop-text)]/10 pt-4`}>
         <div>
-          <span className="block text-base font-semibold text-[var(--shop-text)]">Total</span>
-          <Link to="/catalogue" className="mt-1 inline-block text-xs text-[var(--shop-text)]/60 underline underline-offset-2 hover:text-[var(--shop-text)]">
+          <span className="block text-base font-semibold text-[var(--shop-text)]">Sous-total</span>
+          <Link to={vocab.catalogHref} className="mt-1 inline-block text-xs text-[var(--shop-text)]/60 underline underline-offset-2 hover:text-[var(--shop-text)]">
             Continuer mes achats
           </Link>
         </div>
         <span className="text-lg font-bold text-[var(--shop-text)]">{formatCurrency(subtotal, currency)}</span>
       </div>
+      <p className="mt-2 text-xs text-[var(--shop-text)]/60">Livraison calculée à l'étape suivante.</p>
 
       {!isDemo && (
         <Link
@@ -209,6 +214,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
           <ArrowRight size={16} aria-hidden />
         </Link>
       )}
+      <DeliveryPaymentInfo shop={shop} className="mt-6" />
       </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 /**
- * Tests de comportement des migrations 0114 → 0128 sur un vrai Postgres
+ * Tests de comportement des migrations 0114 → 0130 sur un vrai Postgres
  * (PGlite, en mémoire) avec un schéma minimal : réservations durcies, prix,
  * vie privée équipe, miroir d'abonnement. Aucun accès réseau ni base distante.
  */
@@ -31,7 +31,8 @@ beforeAll(async () => {
     create role anon; create role authenticated; create schema auth;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true),'')::uuid $$;
     create table public.shops(id uuid primary key default gen_random_uuid(), owner_id uuid not null, whatsapp_number text);
-    create table public.orders(id uuid primary key default gen_random_uuid(), shop_id uuid references public.shops(id), customer_phone text);
+    create table public.orders(id uuid primary key default gen_random_uuid(), shop_id uuid references public.shops(id), customer_phone text, total numeric(12,2) not null default 0, status text not null default 'pending', created_at timestamptz not null default now());
+    create table public.order_items(id uuid primary key default gen_random_uuid(), order_id uuid references public.orders(id), product_name text not null, quantity integer not null, subtotal numeric(12,2) not null);
     create table public.profiles(id uuid primary key default gen_random_uuid(), phone text);
     create table public.shop_members(shop_id uuid, user_id uuid, role text);
     create table public.categories(id uuid primary key default gen_random_uuid(), shop_id uuid, name text, position integer default 0);
@@ -63,6 +64,8 @@ beforeAll(async () => {
   await db.exec(read('0126_category_kind.sql'))
   await db.exec(read('0127_automation_rules_owner_write.sql'))
   await db.exec(read('0128_countries_and_generic_phones.sql'))
+  await db.exec(read('0129_booking_weekly_hours.sql'))
+  await db.exec(read('0130_finance_tools.sql'))
 
   serviceId = (await rows<{ id: string }>('select id from services limit 1'))[0].id
   memberId = (await rows<{ id: string }>('select id from team_members limit 1'))[0].id
@@ -82,6 +85,8 @@ describe('migrations 0121 → 0123', () => {
     await db.exec(read('0126_category_kind.sql'))
     await db.exec(read('0127_automation_rules_owner_write.sql'))
     await db.exec(read('0128_countries_and_generic_phones.sql'))
+    await db.exec(read('0129_booking_weekly_hours.sql'))
+    await db.exec(read('0130_finance_tools.sql'))
     expect((await rows<{ price: number }>('select price from services'))[0].price).toBe(5000)
   })
 })
@@ -284,5 +289,163 @@ describe('pays et téléphones (0128)', () => {
     expect((await rows<{ timezone: string }>(`select (effective_booking_settings('${SHOP}')).timezone as timezone`))[0].timezone).toBe('Africa/Lagos')
     await db.exec(`update shops set country_code = 'SN', whatsapp_number = '771234567' where id = '${SHOP}'`)
     expect((await rows<{ timezone: string }>(`select (effective_booking_settings('${SHOP}')).timezone as timezone`))[0].timezone).toBe('Africa/Dakar')
+  })
+})
+
+describe('horaires par jour (0129)', () => {
+  const isoDow = () => {
+    const dow = new Date(`${day}T00:00:00Z`).getUTCDay()
+    return dow === 0 ? 7 : dow
+  }
+  const slotTimes = async () =>
+    (
+      await rows<{ s: string }>(
+        `select to_char(slot_start at time zone 'UTC','HH24:MI') s from get_booking_slots('${SHOP}','${serviceId}',null,'${day}')`,
+      )
+    ).map((r) => r.s)
+  const setHours = (hours: object | null, closed = '{}') =>
+    db.exec(`
+      insert into booking_settings(shop_id, weekly_hours, closed_dates) values ('${SHOP}', ${hours ? `'${JSON.stringify(hours)}'::jsonb` : 'null'}, '${closed}')
+      on conflict (shop_id) do update set weekly_hours = excluded.weekly_hours, closed_dates = excluded.closed_dates
+    `)
+
+  beforeAll(async () => {
+    await db.exec(`update shop_subscriptions set plan = 'pro', current_period_end = now() + interval '10 days' where shop_id = '${SHOP}'`)
+    await db.exec(`update team_members set active = false where name <> 'Awa'`)
+    // Repart d'un agenda vide : les tests précédents ont réservé des créneaux ce jour-là.
+    await db.exec('delete from appointments; delete from reservations;')
+  })
+
+  it('génère les créneaux plage par plage (pause déjeuner) et refuse les invités dans la pause', async () => {
+    await setHours({ [isoDow()]: [['09:00', '12:00'], ['14:00', '16:00']] })
+    const slots = await slotTimes()
+    expect(slots[0]).toBe('09:00')
+    expect(slots).toContain('11:30')
+    expect(slots).not.toContain('12:00')
+    expect(slots).not.toContain('13:00')
+    expect(slots).toContain('14:00')
+    expect(slots).toContain('15:30')
+    expect(slots).not.toContain('16:00')
+    await expect(createAppointment('Pause', '70 111 22 33', at('12:30'))).rejects.toThrow(/outside opening hours/)
+    await expect(createAppointment('Fin', '70 111 22 34', at('15:45'))).rejects.toThrow(/outside opening hours/)
+    await createAppointment('Ok', '70 111 22 35', at('14:30'))
+  })
+
+  it('un jour absent de weekly_hours est fermé', async () => {
+    await setHours({ [(isoDow() % 7) + 1]: [['09:00', '17:00']] })
+    expect(await slotTimes()).toEqual([])
+    await expect(createAppointment('Ferme', '70 111 22 36', at('10:00'))).rejects.toThrow(/outside opening hours/)
+  })
+
+  it('une date de fermeture exceptionnelle bloque le jour même en mode weekly_hours', async () => {
+    await setHours({ [isoDow()]: [['09:00', '17:00']] }, `{${day}}`)
+    expect(await slotTimes()).toEqual([])
+    await expect(createAppointment('Conge', '70 111 22 37', at('10:00'))).rejects.toThrow(/outside opening hours/)
+    await setHours({ [isoDow()]: [['09:00', '17:00']] })
+    expect((await slotTimes()).length).toBeGreaterThan(0)
+  })
+
+  it('sans weekly_hours, l’ancien mode (open_days + plage unique) continue de marcher', async () => {
+    await setHours(null)
+    await db.exec(`update booking_settings set open_days = '{1,2,3,4,5,6,7}', open_time = '10:00', close_time = '12:00' where shop_id = '${SHOP}'`)
+    const slots = await slotTimes()
+    expect(slots[0]).toBe('10:00')
+    expect(slots).not.toContain('12:00')
+  })
+
+  it('les créneaux de table suivent les mêmes plages', async () => {
+    await setHours({ [isoDow()]: [['12:00', '14:00'], ['19:00', '22:00']] })
+    await db.exec(`update booking_settings set reservation_minutes = 60 where shop_id = '${SHOP}'`)
+    const slots = (
+      await rows<{ s: string }>(`select to_char(slot_start at time zone 'UTC','HH24:MI') s from get_reservation_slots('${SHOP}',2,'${day}')`)
+    ).map((r) => r.s)
+    expect(slots).toContain('12:00')
+    expect(slots).not.toContain('15:00')
+    expect(slots).toContain('19:00')
+    expect(slots).not.toContain('21:30')
+  })
+})
+
+describe('outils de gestion (0130)', () => {
+  const asOwner = () => db.exec(`set app.uid = '${OWNER}'`)
+  const asGuest = () => db.exec(`set app.uid = ''`)
+  const monthRange = () => {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth(), 1)
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { from: iso(from), to: iso(to) }
+  }
+
+  beforeAll(async () => {
+    await db.exec('delete from appointments; delete from order_items; delete from orders; delete from shop_subscriptions;')
+  })
+
+  it('plafonne les saisies mensuelles du plan gratuit, pas des plans payants', async () => {
+    for (let i = 0; i < 30; i++) {
+      await db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','expense','stock','Achat ${i}',1000)`)
+    }
+    await expect(
+      db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','expense','stock','Trop',1000)`),
+    ).rejects.toThrow(/plan_limit_exceeded/)
+    await db.exec(`insert into shop_subscriptions(shop_id, plan, current_period_end) values ('${SHOP}','essential', now() + interval '10 days')`)
+    await db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','income','vente_comptoir','Vente',5000)`)
+    await db.exec('delete from finance_entries')
+  })
+
+  it('valide les saisies (montant positif, catégorie stable, libellé non vide)', async () => {
+    await expect(db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','expense','stock','Zéro',0)`)).rejects.toThrow()
+    await expect(db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','expense','Mauvaise Catégorie','X',10)`)).rejects.toThrow()
+    await expect(db.exec(`insert into finance_entries(shop_id, kind, category, label, amount) values ('${SHOP}','expense','stock','   ',10)`)).rejects.toThrow()
+  })
+
+  it('calcule les recettes : commandes payées ou livrées + rendez-vous terminés, sans annulées ni en attente', async () => {
+    await db.exec(`
+      insert into orders(shop_id, customer_phone, total, status) values
+        ('${SHOP}','+221771234567',10000,'paid'),
+        ('${SHOP}','+221771234567',5000,'delivered'),
+        ('${SHOP}','+221771234567',7000,'pending'),
+        ('${SHOP}','+221771234567',3000,'cancelled');
+      insert into order_items(order_id, product_name, quantity, subtotal)
+        select id, 'Robe', 2, total from orders where status in ('paid','delivered');
+    `)
+    await asOwner()
+    await createAppointment('Cliente', '77 000 11 22', at('10:00'))
+    await db.exec(`update appointments set status = 'done'`)
+    await asGuest()
+    await db.exec(`update services set price = 4000 where id = '${serviceId}'`)
+
+    await asOwner()
+    const { from, to } = monthRange()
+    const revenue = await rows<{ source: string; amount: string; entries: number }>(
+      `select source, amount::text, entries from finance_revenue_by_month('${SHOP}','${from}','${to}') order by source`,
+    )
+    await asGuest()
+    const bySource = Object.fromEntries(revenue.map((r) => [r.source, r]))
+    expect(Number(bySource.orders.amount)).toBe(15000)
+    expect(bySource.orders.entries).toBe(2)
+    expect(Number(bySource.appointments.amount)).toBe(5000) // prix figé à la prise (5000), pas le nouveau tarif
+  })
+
+  it('classe ce qui rapporte le plus (produits et prestations)', async () => {
+    await asOwner()
+    const { from, to } = monthRange()
+    const top = await rows<{ name: string; kind: string; amount: string }>(
+      `select name, kind, amount::text from finance_top_items('${SHOP}','${from}','${to}', 5)`,
+    )
+    await asGuest()
+    expect(top[0].name).toBe('Robe')
+    expect(Number(top[0].amount)).toBe(15000)
+    expect(top.map((t) => t.kind)).toEqual(['product', 'service'])
+  })
+
+  it('refuse les invités, les périodes invalides et trop longues', async () => {
+    const { from, to } = monthRange()
+    await asGuest()
+    await expect(rows(`select * from finance_revenue_by_month('${SHOP}','${from}','${to}')`)).rejects.toThrow(/not authorized/)
+    await asOwner()
+    await expect(rows(`select * from finance_revenue_by_month('${SHOP}','${to}','${from}')`)).rejects.toThrow(/invalid period/)
+    await expect(rows(`select * from finance_revenue_by_month('${SHOP}','2020-01-01','2026-12-31')`)).rejects.toThrow(/invalid period/)
+    await asGuest()
   })
 })

@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Scissors, Trash2 } from 'lucide-react'
+import { Clock, ExternalLink, Pencil, Plus, Scissors, Trash2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { createCategory } from '@/services/category.service'
@@ -25,6 +26,12 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/Toast'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
+import { Switch } from '@/components/ui/Switch'
+import { shopUrl } from '@/lib/tenant'
 
 interface ServiceForm {
   name: string
@@ -53,7 +60,8 @@ export function ServicesPage() {
   const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
 
-  const [formOpen, setFormOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [formOpen, setFormOpen] = useState(() => searchParams.get('new') === '1')
   const [editing, setEditing] = useState<ServiceWithCategory | null>(null)
   const [form, setForm] = useState<ServiceForm>(EMPTY_FORM)
   const [deleteTarget, setDeleteTarget] = useState<ServiceWithCategory | null>(null)
@@ -149,74 +157,100 @@ export function ServicesPage() {
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
 
+  const DURATIONS = [15, 30, 45, 60, 90, 120]
+
   return (
     <div>
       <PageHeader
         title="Prestations"
-        subtitle="Vos services : tarif, durée et disponibilité en vitrine et sur rendez-vous."
+        subtitle="Ce que vous proposez à vos clients : un nom, un prix, une durée. Ils choisissent une prestation pour réserver."
         actions={
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={!canCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            <Plus size={15} aria-hidden /> Nouvelle prestation
-          </button>
+          <>
+            {shop && (
+              <a
+                href={`${shopUrl(shop.slug)}/prestations`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                <ExternalLink size={14} aria-hidden /> Voir sur mon site
+              </a>
+            )}
+            <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate}>
+              Nouvelle prestation
+            </Button>
+          </>
         }
       />
 
       <PlanLimitBanner
         used={activeCount}
         max={plan.maxActiveServices}
-        singular="prestation active"
-        plural="prestations actives"
+        singular="prestation visible sur votre site"
+        plural="prestations visibles sur votre site"
       />
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="mt-5">
         {services.length === 0 ? (
-          <EmptyState icon={Scissors} title="Aucune prestation" description="Créez votre première prestation (coupe, soin, consultation…)." />
+          <Card padded={false}>
+            <EmptyState
+              icon={Scissors}
+              title="Commencez par votre première prestation"
+              description="Exemple : « Coupe femme — 5 000 F — 45 min ». Vos clients pourront ensuite la réserver depuis votre site."
+              action={
+                <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate}>
+                  Ajouter une prestation
+                </Button>
+              }
+            />
+          </Card>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {services.map((service) => (
-              <li key={service.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-gray-900">{service.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {service.duration_minutes} min · {formatCurrency(service.price, currency)}
-                    {service.category ? ` · ${service.category.name}` : ''}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleMutation.mutate({ id: service.id, active: !service.active })}
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    service.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {service.active ? 'Active' : 'Inactive'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(service)}
-                  aria-label={`Modifier ${service.name}`}
-                  className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                >
-                  <Pencil size={15} aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(service)}
-                  aria-label={`Supprimer ${service.name}`}
-                  className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                >
-                  <Trash2 size={15} aria-hidden />
-                </button>
+          <ul className="space-y-3">
+            {[...services].sort((a, b) => Number(b.active) - Number(a.active)).map((service) => (
+              <li key={service.id}>
+                <Card className={`flex flex-col gap-3 sm:flex-row sm:items-center ${service.active ? '' : 'bg-gray-50'}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className={`font-semibold ${service.active ? 'text-gray-900' : 'text-gray-500'}`}>{service.name}</p>
+                      {service.category && <Badge tone="brand">{service.category.name}</Badge>}
+                      {!service.active && <Badge>Masquée</Badge>}
+                    </div>
+                    {service.description && <p className="mt-0.5 line-clamp-1 text-sm text-gray-500">{service.description}</p>}
+                    <p className="mt-1 flex items-center gap-3 text-sm text-gray-600">
+                      <strong className="text-gray-900">{formatCurrency(service.price, currency)}</strong>
+                      <span className="inline-flex items-center gap-1"><Clock size={13} aria-hidden className="text-gray-400" /> {service.duration_minutes} min</span>
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Switch
+                      checked={service.active}
+                      label="Visible sur mon site"
+                      disabled={toggleMutation.isPending}
+                      onChange={(active) => toggleMutation.mutate({ id: service.id, active })}
+                    />
+                    <Button size="sm" variant="secondary" icon={<Pencil size={13} aria-hidden />} onClick={() => openEdit(service)}>
+                      Modifier
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(service)}
+                      aria-label={`Supprimer ${service.name}`}
+                      className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={15} aria-hidden />
+                    </button>
+                  </div>
+                </Card>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <p className="mt-6 text-sm text-gray-500">
+        Astuce : masquez une prestation au lieu de la supprimer pour la remettre en ligne plus tard. Les horaires de réservation se règlent dans{' '}
+        <Link to="/admin/rendez-vous" className="font-medium text-brand-700 hover:text-brand-800">Rendez-vous</Link>.
+      </p>
 
       <Dialog
         open={formOpen}
@@ -224,67 +258,61 @@ export function ServicesPage() {
         title={editing ? 'Modifier la prestation' : 'Nouvelle prestation'}
         footer={
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !form.name.trim()}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+            <Button variant="secondary" onClick={() => setFormOpen(false)}>Annuler</Button>
+            <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={!form.name.trim()}>
+              Enregistrer
+            </Button>
           </div>
         }
       >
-        <div className="space-y-3">
-          <div>
-            <label htmlFor="service-name" className="block text-sm font-medium text-gray-700">Nom</label>
-            <input
-              id="service-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Coupe femme, consultation…"
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+        <div className="space-y-4">
+          <TextField
+            label="Nom de la prestation"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Coupe femme, consultation…"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField
+              label={`Prix (${currency === 'XOF' ? 'F CFA' : currency})`}
+              type="number"
+              min={0}
+              value={form.priceFcfa}
+              onChange={(e) => setForm({ ...form, priceFcfa: e.target.value })}
+              hint="Affiché à vos clients."
+            />
+            <TextField
+              label="Durée (minutes)"
+              type="number"
+              min={5}
+              max={480}
+              value={form.duration}
+              onChange={(e) => setForm({ ...form, duration: e.target.value })}
+              hint="Bloque ce temps dans votre agenda."
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="service-price" className="block text-sm font-medium text-gray-700">Tarif (F CFA)</label>
-              <input
-                id="service-price"
-                type="number"
-                min={0}
-                value={form.priceFcfa}
-                onChange={(e) => setForm({ ...form, priceFcfa: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="service-duration" className="block text-sm font-medium text-gray-700">Durée (min)</label>
-              <input
-                id="service-duration"
-                type="number"
-                min={5}
-                max={480}
-                value={form.duration}
-                onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-              />
-            </div>
+          <div className="-mt-2 flex flex-wrap gap-1.5">
+            {DURATIONS.map((minutes) => (
+              <button
+                key={minutes}
+                type="button"
+                onClick={() => setForm({ ...form, duration: String(minutes) })}
+                aria-pressed={form.duration === String(minutes)}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  form.duration === String(minutes) ? 'bg-ink-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {minutes >= 60 && minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`}
+              </button>
+            ))}
           </div>
           <div>
-            <label htmlFor="service-category" className="block text-sm font-medium text-gray-700">Catégorie</label>
-            <select
-              id="service-category"
+            <SelectField
+              label="Catégorie"
+              hint="Pour regrouper vos prestations sur le site (facultatif)."
               value={form.categoryId}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
             >
               <option value="">Sans catégorie</option>
               {form.categoryId && !categories.some((c) => c.id === form.categoryId) && (
@@ -293,51 +321,50 @@ export function ServicesPage() {
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+            </SelectField>
             <div className="mt-2 flex gap-2">
               <input
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="Nouvelle catégorie (ex. Coupes)"
+                placeholder="Créer une catégorie (ex. Coiffure)"
                 aria-label="Nom de la nouvelle catégorie"
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="secondary"
+                className="shrink-0"
                 onClick={() => categoryMutation.mutate(newCategory.trim())}
-                disabled={!newCategory.trim() || categoryMutation.isPending}
-                className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                disabled={!newCategory.trim()}
+                loading={categoryMutation.isPending}
               >
-                Ajouter
-              </button>
+                Créer
+              </Button>
             </div>
           </div>
-          <div>
-            <label htmlFor="service-description" className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              id="service-description"
-              rows={2}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.active}
-              onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="accent-brand-600"
-            />
-            Visible en vitrine
-          </label>
+          <TextAreaField
+            label="Description"
+            rows={2}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            hint="Facultatif : une phrase pour expliquer ce que comprend la prestation."
+          />
+          <Switch
+            checked={form.active}
+            label="Visible sur mon site"
+            onChange={(active) => setForm({ ...form, active })}
+          />
         </div>
       </Dialog>
 
       <ConfirmDialog
         open={!!deleteTarget}
         title="Supprimer cette prestation ?"
-        description={deleteTarget ? `« ${deleteTarget.name} » sera définitivement supprimée.` : undefined}
+        description={
+          deleteTarget
+            ? `« ${deleteTarget.name} » disparaîtra de votre site. Les rendez-vous déjà pris gardent son nom et son prix. Pour la retirer temporairement, masquez-la plutôt.`
+            : undefined
+        }
         confirmLabel="Supprimer"
         pendingLabel="Suppression…"
         pending={removeMutation.isPending}

@@ -151,9 +151,63 @@ export type Database = {
           },
         ]
       }
+      finance_entries: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          id: string
+          kind: string
+          label: string
+          note: string | null
+          payment_method: string | null
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          kind: string
+          label: string
+          note?: string | null
+          payment_method?: string | null
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          kind?: string
+          label?: string
+          note?: string | null
+          payment_method?: string | null
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_settings: {
         Row: {
           close_time: string
+          closed_dates: string[]
           max_days_ahead: number
           open_days: number[]
           open_time: string
@@ -163,9 +217,11 @@ export type Database = {
           table_capacity: number
           timezone: string
           updated_at: string
+          weekly_hours: Json | null
         }
         Insert: {
           close_time?: string
+          closed_dates?: string[]
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string
@@ -175,9 +231,11 @@ export type Database = {
           table_capacity?: number
           timezone?: string
           updated_at?: string
+          weekly_hours?: Json | null
         }
         Update: {
           close_time?: string
+          closed_dates?: string[]
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string
@@ -187,6 +245,7 @@ export type Database = {
           table_capacity?: number
           timezone?: string
           updated_at?: string
+          weekly_hours?: Json | null
         }
         Relationships: [
           {
@@ -1680,6 +1739,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      finance_revenue_by_month: {
+        Args: { p_from: string; p_shop_id: string; p_to: string }
+        Returns: { amount: number; entries: number; month: string; source: string }[]
+      }
+      finance_top_items: {
+        Args: { p_from: string; p_limit?: number; p_shop_id: string; p_to: string }
+        Returns: { amount: number; kind: string; name: string; quantity: number }[]
       }
       get_booking_slots: {
         Args: { p_date: string; p_service_id: string; p_shop_id: string; p_team_member_id: string | null }

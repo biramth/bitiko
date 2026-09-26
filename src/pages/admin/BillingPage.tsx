@@ -13,6 +13,7 @@ import { formatCurrency } from '@/utils/format'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
+import { buttonClass } from '@/components/ui/styles'
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -237,6 +238,7 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 `Personnalisation de base (${tier.maxCustomSections} blocs de contenu)`,
                 'Commandes via WhatsApp',
                 `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
+                `Finances : bilan du mois, export Excel et PDF, ${tier.maxMonthlyFinanceEntries} saisies / mois`,
               ]
             : key === 'essential'
               ? [
@@ -244,12 +246,14 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                   `Builder complet (${tier.maxCustomSections} blocs de contenu) et pages personnalisées`,
                   'Analytics standard et import CSV',
                   `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
+                  'Finances : 12 mois d’historique et saisies illimitées',
                 ]
               : [
                   'Produits illimités',
                   'Personnalisation illimitée (blocs et pages) et styles avancés',
                   'Analytics avancées et branding retiré',
                   'Prestations, équipiers et rendez-vous en ligne illimités',
+                  'Finances : comparaison entre périodes, historique complet, bilan sans mention Bitiko',
                 ]
 
           return (
@@ -281,11 +285,11 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                       <CreditCard size={15} /> Payer avec Wave
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setQrDialogPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <button type="button" onClick={() => setQrDialogPlan(key)} className={buttonClass({ size: 'lg', fullWidth: true })}>
                       <CreditCard size={15} /> Payer avec Wave
                     </button>
                   )}
-                  <button type="button" onClick={() => setProofPlan(key)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <button type="button" onClick={() => setProofPlan(key)} className={buttonClass({ variant: 'secondary', size: 'lg', fullWidth: true })}>
                     <CheckCircle2 size={14} />
                     Envoyer ma preuve de paiement
                   </button>

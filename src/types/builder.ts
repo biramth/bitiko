@@ -380,8 +380,6 @@ export interface MenuSectionConfig {
   heading: string
   headingStyle?: TextStyleOverride
   showPrices: boolean
-  showAllergens: boolean
-  layout?: GridLayout
   limit?: number
   sort?: 'manual' | 'price_asc' | 'price_desc' | 'recent'
 }

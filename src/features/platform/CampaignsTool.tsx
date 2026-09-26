@@ -27,6 +27,7 @@ import {
   type CampaignSendResult,
 } from '@/services/platform.service'
 import { Spinner } from '@/components/ui/Spinner'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 const VARIABLES = [
   { token: '{{shop_name}}', label: 'Nom de la boutique' },
@@ -359,7 +360,7 @@ export function CampaignsTool() {
           <button
             type="button"
             onClick={() => startNew(PRESETS[0])}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            className={buttonClass()}
           >
             <Plus size={16} aria-hidden /> Nouvelle campagne
           </button>
@@ -562,7 +563,7 @@ export function CampaignsTool() {
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
               placeholder="Ex. Annonce ambiance"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className={`${controlClass()} mt-1`}
             />
             <label className="mt-4 block text-xs font-medium text-gray-500">Objet de l’email</label>
             <input
@@ -570,7 +571,7 @@ export function CampaignsTool() {
               onChange={(e) => setSubject(e.target.value)}
               maxLength={160}
               placeholder="Ce que le commerçant voit dans sa boîte mail"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className={`${controlClass()} mt-1`}
             />
             <p className="mt-1 text-[11px] text-gray-400">
               Les variables <span className="font-mono">&#123;&#123;…&#125;&#125;</span> fonctionnent aussi dans l’objet.
@@ -590,7 +591,7 @@ export function CampaignsTool() {
               rows={12}
               maxLength={8000}
               placeholder="Rédige ton message…"
-              className="mt-1 w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className={`${controlClass()} mt-1 resize-y`}
             />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {VARIABLES.map((variable) => (
@@ -618,7 +619,7 @@ export function CampaignsTool() {
               onChange={(e) => setButtonLabel(e.target.value)}
               maxLength={60}
               placeholder="Ouvrir mon tableau de bord"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className={`${controlClass()} mt-1`}
             />
             <label className="mt-4 block text-xs font-medium text-gray-500">Lien du bouton</label>
             <input
@@ -626,7 +627,7 @@ export function CampaignsTool() {
               onChange={(e) => setButtonUrl(e.target.value)}
               maxLength={2048}
               placeholder="Ex. /admin, {{shop_url}}/nouveautes"
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className={`${controlClass()} mt-1`}
             />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {BUTTON_LINK_VARIABLES.map((variable) => (
@@ -735,7 +736,7 @@ export function CampaignsTool() {
                     ? 'Aucun destinataire joignable pour cette audience.'
                     : undefined
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className={buttonClass()}
             >
               <Send size={15} aria-hidden /> {send.isPending ? 'Envoi…' : 'Envoyer la campagne'}
             </button>

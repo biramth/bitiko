@@ -128,7 +128,7 @@ function menu(overrides: Partial<Extract<LayoutSection, { type: 'menu' }>['confi
     id: createSectionId('menu'),
     type: 'menu',
     visible: true,
-    config: { heading: 'Notre carte', showPrices: true, showAllergens: true, ...overrides },
+    config: { heading: 'Notre carte', showPrices: true, ...overrides },
   }
 }
 
@@ -255,29 +255,34 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     key: 'beaute',
     vertical: 'beaute',
     label: 'Beauté',
-    description: 'Doux et raffiné, tons rosés — l\'esprit boutique de cosmétiques.',
+    description: 'Doux et raffiné — prestations, rendez-vous en ligne et boutique de soins réunis.',
     swatch: ['#be185d', '#fdf2f8'],
     themeColor: '#be185d',
     themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    // Gabarit hybride : le type « Beauté & Bien-être » porte à la fois les
+    // prestations (rendez-vous, équipe) et la vente de produits. Chaque section
+    // s'efface d'elle-même si la boutique n'a pas la capability correspondante.
     layout: {
       home: [
         header(),
         hero({
-          eyebrow: 'Soins & cosmétiques',
-          heading: 'Révélez votre éclat naturel',
-          subheading: 'Une sélection beauté pensée pour toutes les peaux.',
+          eyebrow: 'Beauté & bien-être',
+          heading: 'Prenez soin de vous',
+          subheading: 'Soins, prestations et produits sélectionnés — réservez en ligne ou commandez en un clic.',
         }),
+        services({ heading: 'Nos prestations', limit: 6 }),
+        team({ heading: 'Notre équipe' }),
+        appointments({ heading: 'Réserver un créneau' }),
         featuredProducts({ heading: 'Nos best-sellers' }),
         text({
-          heading: 'Conseils d\'experte',
-          body: 'Chaque produit est choisi pour sa qualité et testé avant d\'être proposé à la vente.',
+          heading: "Conseils d'experte",
+          body: 'Chaque soin et chaque produit est choisi pour sa qualité, avec des conseils adaptés à votre peau.',
           align: 'center',
         }),
-        categories({ heading: 'Par catégorie' }),
-        products({ heading: 'Toute la routine' }),
+        products({ heading: 'La boutique', limit: 8 }),
         footer(),
       ],
-      ...systemLayout('Toute la routine'),
+      ...systemLayout('La boutique'),
     },
   },
   {
@@ -310,7 +315,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         }),
         footer(),
       ],
-      ...systemLayout('Nouveautés'),
+      ...systemLayout('Tous les produits'),
     },
   },
   {
@@ -350,10 +355,11 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         services({ heading: 'Nos prestations' }),
         team({ heading: 'Notre équipe' }),
         appointments({ heading: 'Réserver un créneau' }),
+        products({ heading: 'La boutique', limit: 4 }),
         testimonials({ heading: 'Elles parlent de nous' }),
         footer(),
       ],
-      ...systemLayout('Nos produits'),
+      ...systemLayout('La boutique'),
     },
   },
   {
@@ -393,10 +399,11 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         services({ heading: 'Nos rituels' }),
         team({ heading: 'Nos barbiers' }),
         appointments({ heading: 'Réserver ma chaise' }),
+        products({ heading: 'La boutique', limit: 4 }),
         testimonials({ heading: 'Ils nous recommandent' }),
         footer(),
       ],
-      ...systemLayout('Nos soins'),
+      ...systemLayout('La boutique'),
     },
   },
   {
@@ -436,10 +443,11 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         services({ heading: 'Nos soins' }),
         team({ heading: 'Nos expertes' }),
         appointments({ heading: 'Réserver un soin' }),
+        products({ heading: 'La boutique', limit: 4 }),
         testimonials({ heading: 'Elles nous adorent' }),
         footer(),
       ],
-      ...systemLayout('Nos rituels'),
+      ...systemLayout('La boutique'),
     },
   },
   {
@@ -460,11 +468,10 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         }),
         menu({ heading: 'Notre carte' }),
         reservations({ heading: 'Réserver une table' }),
-        products({ heading: 'À emporter', limit: 8 }),
         testimonials({ heading: 'Ils nous recommandent' }),
         footer(),
       ],
-      ...systemLayout('À emporter'),
+      ...systemLayout('La carte'),
     },
   },
   {
@@ -636,7 +643,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         testimonials({ heading: 'Les habitués' }),
         footer(),
       ],
-      ...systemLayout('À emporter'),
+      ...systemLayout('La carte'),
     },
   },
   {
@@ -687,10 +694,11 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         featuredServices({ heading: 'Nos poses stars' }),
         services({ heading: 'La carte des soins' }),
         appointments({ heading: 'Réserver ma pose' }),
+        products({ heading: 'La boutique', limit: 4 }),
         testimonials({ heading: 'Elles adorent' }),
         footer(),
       ],
-      ...systemLayout('Nos produits'),
+      ...systemLayout('La boutique'),
     },
   },
   {
@@ -784,7 +792,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
         categories({ heading: 'Par pièce' }),
         footer(),
       ],
-      ...systemLayout('Nouveautés'),
+      ...systemLayout('Tous les produits'),
     },
   },
   {

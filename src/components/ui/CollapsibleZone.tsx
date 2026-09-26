@@ -11,6 +11,7 @@ export function CollapsibleZone({
   to,
   linkLabel = 'Voir tout',
   storageKey,
+  defaultOpen = true,
   children,
 }: {
   title: string
@@ -18,13 +19,16 @@ export function CollapsibleZone({
   to?: string
   linkLabel?: string
   storageKey: string
+  /** Ouverte tant que l'utilisateur n'a pas choisi (une zone encore vide peut démarrer repliée). */
+  defaultOpen?: boolean
   children: ReactNode
 }) {
   const [open, setOpen] = useState(() => {
     try {
-      return localStorage.getItem(storageKey) !== '0'
+      const stored = localStorage.getItem(storageKey)
+      return stored === null ? defaultOpen : stored !== '0'
     } catch {
-      return true
+      return defaultOpen
     }
   })
 

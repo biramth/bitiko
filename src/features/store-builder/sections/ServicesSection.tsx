@@ -8,6 +8,7 @@ import { ServiceCard } from '@/features/services/ServiceCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ContactShopLink } from '../components/ContactShopLink'
 import { SERVICES_PAGE_SIZE } from '@/config/constants'
 import type { ServiceFilters } from '@/services/service.service'
 import type { Shop } from '@/types'
@@ -80,6 +81,10 @@ export function ServicesRenderer({
       { replace: true },
     )
   }
+
+  // Une section d'accueil vide n'apporte rien au visiteur : on la masque
+  // (le commerçant, lui, la voit dans l'éditeur pour la remplir).
+  if (!fullToolbox && !editable && !isLoading && !isError && services.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
@@ -172,7 +177,8 @@ export function ServicesRenderer({
         <EmptyState
           icon={PackageSearch}
           title={search ? 'Aucune prestation trouvée' : 'Aucune prestation pour le moment'}
-          description={search ? `Aucun résultat pour « ${search} ».` : undefined}
+          description={search ? `Aucun résultat pour « ${search} ».` : 'Revenez bientôt, ou contactez-nous pour en savoir plus.'}
+          action={search ? undefined : <ContactShopLink shop={shop} />}
         />
       )}
       {!isLoading && services.length > 0 && (

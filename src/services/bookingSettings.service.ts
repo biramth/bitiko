@@ -15,6 +15,8 @@ export const DEFAULT_BOOKING_SETTINGS: BookingSettingsInput = {
   max_days_ahead: 60,
   table_capacity: 40,
   reservation_minutes: 90,
+  weekly_hours: null,
+  closed_dates: [],
 }
 
 export async function getBookingSettings(shopId: string): Promise<BookingSettingsRow | null> {

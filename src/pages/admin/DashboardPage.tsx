@@ -27,6 +27,7 @@ import { getDashboardStats } from '@/services/dashboard.service'
 import { listShopServices } from '@/services/service.service'
 import { listShopTeamMembers } from '@/services/teamMember.service'
 import { listDeliverySecteurs } from '@/services/deliverySecteur.service'
+import { getBookingSettings } from '@/services/bookingSettings.service'
 import { updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
@@ -37,6 +38,7 @@ import { CollapsibleZone } from '@/components/ui/CollapsibleZone'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/Toast'
+import { buttonClass } from '@/components/ui/styles'
 import type { OrderStatus } from '@/types'
 
 type StatTone = 'default' | 'warning' | 'danger'
@@ -85,43 +87,69 @@ function StatCard({
   )
 }
 
-function SetupChecklist({
-  items,
-}: {
-  items: { done: boolean; label: ReactNode; hint?: string; to?: string }[]
-}) {
+interface ChecklistItem {
+  done: boolean
+  label: ReactNode
+  hint?: string
+  to?: string
+  /** Confort plutôt que nécessaire : rangé dans « Pour un site plus complet ». */
+  optional?: boolean
+}
+
+function ChecklistRow({ item }: { item: ChecklistItem }) {
+  return (
+    <li className="flex items-start gap-2">
+      {item.done ? (
+        <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" aria-hidden />
+      ) : (
+        <Circle size={16} className="mt-0.5 shrink-0 text-gray-300" aria-hidden />
+      )}
+      <span className={item.done ? 'text-gray-400 line-through' : 'text-gray-700'}>
+        {item.to && !item.done ? (
+          <Link to={item.to} className="font-medium text-brand-700 hover:text-brand-800">
+            {item.label}
+          </Link>
+        ) : (
+          item.label
+        )}
+        {!item.done && item.hint ? <span className="text-gray-500"> — {item.hint}</span> : null}
+      </span>
+    </li>
+  )
+}
+
+function SetupChecklist({ items }: { items: ChecklistItem[] }) {
   const remaining = items.filter((i) => !i.done).length
   if (remaining === 0) return null
+  const main = items.filter((i) => !i.optional)
+  const extra = items.filter((i) => i.optional)
+  const extraRemaining = extra.filter((i) => !i.done).length
 
   return (
     <div className="mt-6 rounded-xl border border-brand-100 bg-brand-50 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Finalisez votre boutique</h2>
+        <h2 className="font-semibold text-gray-900">Pour bien démarrer</h2>
         <span className="text-xs font-medium text-brand-700">
           {items.length - remaining}/{items.length} terminé
         </span>
       </div>
       <ul className="mt-3 space-y-2 text-sm">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2">
-            {item.done ? (
-              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" aria-hidden />
-            ) : (
-              <Circle size={16} className="mt-0.5 shrink-0 text-gray-300" aria-hidden />
-            )}
-            <span className={item.done ? 'text-gray-400 line-through' : 'text-gray-700'}>
-              {item.to && !item.done ? (
-                <Link to={item.to} className="font-medium text-brand-700 hover:text-brand-800">
-                  {item.label}
-                </Link>
-              ) : (
-                item.label
-              )}
-              {!item.done && item.hint ? <span className="text-gray-500"> — {item.hint}</span> : null}
-            </span>
-          </li>
+        {main.map((item, i) => (
+          <ChecklistRow key={i} item={item} />
         ))}
       </ul>
+      {extra.length > 0 && (
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer font-medium text-gray-600 hover:text-gray-900">
+            Pour un site plus complet{extraRemaining > 0 ? ` (${extraRemaining} à faire)` : ''}
+          </summary>
+          <ul className="mt-2 space-y-2">
+            {extra.map((item, i) => (
+              <ChecklistRow key={i} item={item} />
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   )
 }
@@ -177,6 +205,13 @@ export function DashboardPage() {
   // Le bloc « Activité services » exige une vraie brique service : la seule
   // vitrine équipe (ex. une boutique mode) ne doit pas le faire apparaître.
   const hasServiceActivity = showServices || showAppointments || showReservations
+  const hasDelivery = capabilities === null || capabilities.has('HAS_DELIVERY')
+
+  const { data: bookingSettings } = useQuery({
+    queryKey: ['booking-settings', 'admin', shop?.id],
+    queryFn: () => getBookingSettings(shop!.id),
+    enabled: !!shop?.id && (showAppointments || showReservations),
+  })
 
   const { data: serviceList = [] } = useQuery({
     queryKey: ['services', 'admin', shop?.id],
@@ -212,57 +247,55 @@ export function DashboardPage() {
       <PageHeader
         title="Tableau de bord"
         subtitle={
-          hasCommerce && hasServiceActivity
-            ? 'Ventes, rendez-vous et prestations en un coup d’œil.'
+          hasServiceActivity && hasCommerce
+            ? 'Votre agenda du jour d’abord, puis vos ventes en ligne.'
             : hasCommerce
               ? 'Vue d’ensemble de votre boutique : ventes, commandes et stock.'
-              : 'Vue d’ensemble de votre activité : rendez-vous, prestations et équipe.'
+              : 'Votre agenda du jour, vos prestations et votre équipe.'
         }
         actions={
           <>
-            {hasProducts && (
+            {hasServiceActivity && (showAppointments || showReservations) && (
               <Link
-                to="/admin/produits/nouveau"
-                className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                to={showAppointments ? '/admin/rendez-vous' : '/admin/reservations'}
+                className={buttonClass({ className: 'gap-1.5' })}
               >
-                <PackagePlus size={16} /> Nouveau produit
-              </Link>
-            )}
-            {hasProducts && (
-              <Link
-                to="/admin/produits?tab=categories"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <Tags size={16} /> Catégories
+                <CalendarDays size={16} aria-hidden /> {showAppointments ? 'Agenda du jour' : 'Réservations du jour'}
               </Link>
             )}
             {showServices && (
-              <Link
-                to="/admin/prestations"
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
-                  hasProducts
-                    ? 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                    : 'bg-brand-600 text-white hover:bg-brand-700'
-                }`}
+              <span className={showAppointments || showReservations ? 'hidden sm:inline-flex' : 'inline-flex'}><Link
+                to="/admin/prestations?new=1"
+                className={buttonClass({ variant: showAppointments || showReservations ? 'secondary' : 'primary', className: 'gap-1.5' })}
               >
-                <Scissors size={16} /> Prestations
-              </Link>
+                <Scissors size={16} aria-hidden /> Nouvelle prestation
+              </Link></span>
+            )}
+            {hasProducts && (
+              <span className={hasServiceActivity ? 'hidden sm:inline-flex' : 'inline-flex'}><Link
+                to="/admin/produits/nouveau"
+                className={buttonClass({ variant: hasServiceActivity ? 'secondary' : 'primary', className: 'gap-1.5' })}
+              >
+                <PackagePlus size={16} aria-hidden /> Nouveau produit
+              </Link></span>
+            )}
+            {hasProducts && !hasServiceActivity && (
+              <span className="inline-flex"><Link to="/admin/produits?tab=categories" className={buttonClass({ variant: 'secondary', className: 'gap-1.5' })}>
+                <Tags size={16} aria-hidden /> Catégories
+              </Link></span>
             )}
             {shop && (
               <>
-                <button
-                  onClick={copyShopLink}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <Copy size={16} /> {copied ? 'Lien copié' : 'Copier le lien'}
+                <button onClick={copyShopLink} className={buttonClass({ variant: 'secondary', className: 'gap-1.5' })}>
+                  <Copy size={16} aria-hidden /> {copied ? 'Lien copié' : 'Copier le lien de mon site'}
                 </button>
                 <Link
                   to={shopUrl(shop.slug)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className={buttonClass({ variant: 'secondary', className: 'gap-1.5' })}
                 >
-                  <ExternalLink size={16} /> Voir la boutique
+                  <ExternalLink size={16} aria-hidden /> Voir mon site
                 </Link>
               </>
             )}
@@ -275,27 +308,54 @@ export function DashboardPage() {
       {shop && (
         <SetupChecklist
           items={[
+            ...(showServices
+              ? [{ done: serviceList.length > 0, label: 'Ajoutez vos prestations (nom, prix, durée)', to: '/admin/prestations?new=1' }]
+              : []),
+            ...(showTeam
+              ? [{ done: teamList.length > 0, label: 'Présentez votre équipe', to: '/admin/equipe' }]
+              : []),
+            ...(showAppointments || showReservations
+              ? [
+                  {
+                    done: !!bookingSettings,
+                    label: 'Réglez vos jours et heures de réservation',
+                    hint: 'sinon des horaires par défaut (9 h – 19 h) s’appliquent',
+                    to: showAppointments ? '/admin/rendez-vous' : '/admin/reservations',
+                  },
+                ]
+              : []),
             ...(hasProducts
               ? [{ done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' }]
               : []),
-            ...(showServices
-              ? [{ done: serviceList.length > 0, label: 'Créez vos premières prestations', to: '/admin/prestations' }]
-              : []),
-            ...(showTeam
-              ? [{ done: teamList.length > 0, label: "Présentez votre équipe", to: '/admin/equipe' }]
-              : []),
             { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/contact' },
-            ...(hasCommerce
+            ...(hasCommerce && hasDelivery
               ? [{ done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' }]
               : []),
-            { done: !!shop.logo_url, label: 'Ajoutez votre logo (favicon et aperçus partagés)', to: '/admin/parametres/appearance' },
-            { done: !!shop.description, label: 'Décrivez votre boutique (référencement Google)', to: '/admin/parametres/general' },
-            { done: !!shop.banner_url, label: 'Ajoutez une bannière (aperçus WhatsApp)', to: '/admin/parametres/appearance' },
+            { done: !!shop.logo_url, label: 'Ajoutez votre logo', hint: 'icône du site et aperçus partagés', to: '/admin/parametres/appearance', optional: true },
+            { done: !!shop.description, label: 'Décrivez votre activité', hint: 'aide à être trouvé sur Google', to: '/admin/parametres/general', optional: true },
+            { done: !!shop.banner_url, label: 'Ajoutez une bannière', hint: 'aperçu quand vous partagez le lien sur WhatsApp', to: '/admin/parametres/appearance', optional: true },
             ...(hasCommerce
-              ? [{ done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' }]
+              ? [{ done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'partagez le lien de votre site' }]
               : []),
           ]}
         />
+      )}
+
+      {hasServiceActivity && shop && (
+        <CollapsibleZone
+          title="Agenda et prestations"
+          icon={CalendarDays}
+          storageKey="bitiko-dashboard-zone-services"
+        >
+          <ServiceDashboard
+            shopId={shop.id}
+            currency={currency}
+            showServices={showServices}
+            showAppointments={showAppointments}
+            showReservations={showReservations}
+            showTeam={showTeam}
+          />
+        </CollapsibleZone>
       )}
 
       {hasCommerce && (
@@ -304,6 +364,7 @@ export function DashboardPage() {
           icon={ShoppingBag}
           to={hasServiceActivity ? '/admin/commandes' : undefined}
           storageKey="bitiko-dashboard-zone-ventes"
+          defaultOpen={!hasServiceActivity || stats.totalOrders > 0}
         >
       <>
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -540,22 +601,6 @@ export function DashboardPage() {
       </CollapsibleZone>
       )}
 
-      {hasServiceActivity && shop && (
-        <CollapsibleZone
-          title="Activité services"
-          icon={CalendarDays}
-          storageKey="bitiko-dashboard-zone-services"
-        >
-          <ServiceDashboard
-            shopId={shop.id}
-            currency={currency}
-            showServices={showServices}
-            showAppointments={showAppointments}
-            showReservations={showReservations}
-            showTeam={showTeam}
-          />
-        </CollapsibleZone>
-      )}
     </div>
   )
 }

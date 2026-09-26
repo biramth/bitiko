@@ -8,6 +8,7 @@ import { ProductCard } from '@/features/products/ProductCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ContactShopLink } from '../components/ContactShopLink'
 import { PRODUCTS_PAGE_SIZE } from '@/config/constants'
 import type { ProductFilters } from '@/services/product.service'
 import type { Shop } from '@/types'
@@ -77,6 +78,10 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
       { replace: true },
     )
   }
+
+  // Une section d'accueil vide n'apporte rien au visiteur : on la masque
+  // (le commerçant, lui, la voit dans l'éditeur pour la remplir).
+  if (!fullToolbox && !editable && !isLoading && !isError && products.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
@@ -167,7 +172,8 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
         <EmptyState
           icon={PackageSearch}
           title={search ? 'Aucun produit trouvé' : 'Aucun produit pour le moment'}
-          description={search ? `Aucun résultat pour « ${search} ».` : undefined}
+          description={search ? `Aucun résultat pour « ${search} ».` : 'Revenez bientôt, ou contactez-nous pour en savoir plus.'}
+          action={search ? undefined : <ContactShopLink shop={shop} />}
         />
       )}
       {!isLoading && products.length > 0 && (

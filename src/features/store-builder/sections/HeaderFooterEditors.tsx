@@ -6,6 +6,7 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { ColorField } from '../components/ColorField'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+import { controlClass } from '@/components/ui/styles'
 
 const checkboxRow = 'flex items-center gap-2 text-sm text-gray-700'
 
@@ -251,7 +252,7 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           value={config.copyrightText}
           onChange={(e) => onChange({ ...config, copyrightText: e.target.value })}
           placeholder="Laisser vide = © année · nom de la boutique"
-          className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()} mt-1`}
         />
         <TextStyleField value={config.copyrightTextStyle} onChange={(copyrightTextStyle) => onChange({ ...config, copyrightTextStyle })} />
       </div>

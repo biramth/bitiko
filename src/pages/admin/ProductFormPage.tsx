@@ -32,6 +32,7 @@ import { MAX_OPTION_CHOICES, MAX_OPTION_FIELDS, parseOptionFields } from '@/util
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PLANS, canAddProductImage, canAddVariant } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
@@ -829,7 +830,7 @@ function ProductForm({
                           }
                         }}
                         placeholder="ex. Accessoires"
-                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                        className={`${controlClass()}`}
                       />
                       <button
                         type="button"
@@ -1241,7 +1242,7 @@ function ProductForm({
                             })
                           }
                           aria-label="Type de champ"
-                          className="min-h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none sm:w-auto"
+                          className={`${controlClass()} min-h-10 sm:w-auto`}
                         >
                           <option value="choice">Choix dans une liste</option>
                           <option value="text">Texte libre</option>
@@ -1275,7 +1276,7 @@ function ProductForm({
                                 }}
                                 placeholder={`Option ${ci + 1}`}
                                 aria-label={`Option ${ci + 1} de ${field.label || 'ce champ'}`}
-                                className="min-h-10 w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+                                className={`${controlClass()} min-h-10 min-w-0`}
                               />
                               <button
                                 type="button"
@@ -1410,14 +1411,14 @@ function ProductForm({
               <button
                 type="button"
                 onClick={() => navigate('/admin/produits')}
-                className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className={buttonClass({ variant: 'secondary', size: 'lg' })}
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={saveMutation.isPending}
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+                className={buttonClass({ size: 'lg' })}
               >
                 {saveMutation.isPending ? (
                   <Loader2 size={15} className="animate-spin" />

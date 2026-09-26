@@ -38,11 +38,19 @@ export function useRelatedProducts(
   })
 }
 
+/** Nombre de produits montrés par une section « sélection » dont le commerçant n'a rien choisi. */
+export const FEATURED_FALLBACK_COUNT = 4
+
+/** Produits choisis à la main ; sans choix, les plus récents — un gabarit neuf
+ *  affiche ainsi sa sélection dès le premier produit ajouté. */
 export function useFeaturedProducts(shopId: string | undefined, productIds: string[]) {
   return useQuery({
     queryKey: ['products', 'featured', shopId, productIds],
-    queryFn: () => getActiveProductsByIds(shopId as string, productIds),
-    enabled: !!shopId && productIds.length > 0,
+    queryFn: async () =>
+      productIds.length > 0
+        ? getActiveProductsByIds(shopId as string, productIds)
+        : (await listActiveProducts({ shopId: shopId as string, sort: 'recent', pageSize: FEATURED_FALLBACK_COUNT })).products,
+    enabled: !!shopId,
   })
 }
 

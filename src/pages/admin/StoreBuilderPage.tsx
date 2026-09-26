@@ -47,6 +47,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import type { Shop, StorePage } from '@/types'
 import { SYSTEM_TEMPLATE_KEYS } from '@/types/builder'
 import type { LayoutSection, SectionType, StoreTemplate, SystemTemplateKey } from '@/types/builder'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 export function StoreBuilderPage() {
   usePageSeo({ title: 'Personnaliser ma boutique — Bitiko', noindex: true })
@@ -1155,7 +1156,7 @@ function AppearanceTool({
             <button
               type="button"
               onClick={() => setApplyConfirmOpen(true)}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonClass({ size: 'sm' })}
             >
               Appliquer ce style
             </button>
@@ -1316,14 +1317,14 @@ function CreatePageDialog({
       size="md"
       footer={
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button type="button" onClick={onClose} className={buttonClass({ variant: 'secondary' })}>
             Annuler
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!title.trim() || pending}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass({ className: 'gap-1.5' })}
           >
             {pending && <Loader2 size={14} className="animate-spin" />}
             Créer la page
@@ -1339,7 +1340,7 @@ function CreatePageDialog({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="À propos"
             autoFocus
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()} mt-1`}
           />
         </div>
         <div>

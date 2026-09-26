@@ -3,6 +3,7 @@ import { Gift, Loader2 } from 'lucide-react'
 import { getPromoOffer } from '@/services/billing.service'
 import { PLANS } from '@/config/plans'
 import { useRedeemPromo } from './useRedeemPromo'
+import { buttonClass } from '@/components/ui/styles'
 
 export function PromoOfferCard({ shopId }: { shopId: string }) {
   const { data: offer } = useQuery({
@@ -36,7 +37,7 @@ export function PromoOfferCard({ shopId }: { shopId: string }) {
         type="button"
         onClick={() => redeem.mutate(undefined)}
         disabled={redeem.isPending}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60 sm:w-auto sm:px-5"
+        className={buttonClass({ size: 'lg', fullWidth: true, className: 'mt-4 sm:w-auto sm:px-5' })}
       >
         {redeem.isPending && <Loader2 size={15} className="animate-spin" aria-hidden />}
         Activer mon mois offert

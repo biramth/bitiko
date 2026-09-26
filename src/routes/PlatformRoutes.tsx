@@ -67,6 +67,10 @@ const ServicesPage = lazy(() =>
 const AppointmentsPage = lazy(() =>
   import('@/pages/admin/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })),
 )
+const FinancePage = lazy(() => import('@/pages/admin/FinancePage').then((m) => ({ default: m.FinancePage })))
+const BilanPrintPage = lazy(() =>
+  import('@/pages/admin/BilanPrintPage').then((m) => ({ default: m.BilanPrintPage })),
+)
 const NotificationsPage = lazy(() =>
   import('@/pages/admin/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
 )
@@ -208,6 +212,8 @@ export function PlatformRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="onboarding" element={standalone(<OnboardingPage />)} />
           <Route element={<RequireShop />}>
+            {/* Bilan imprimable : hors du layout admin (pas de menu à l'impression). */}
+            <Route path="gestion/bilan" element={standalone(<BilanPrintPage />)} />
             <Route element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
               <Route element={<RequireCapabilities capabilities={['HAS_PRODUCTS']} />}>
@@ -240,6 +246,7 @@ export function PlatformRoutes() {
               <Route element={<RequireCapabilities capabilities={['HAS_RESERVATIONS']} />}>
                 <Route path="reservations" element={standalone(<ReservationsPage />)} />
               </Route>
+              <Route path="gestion" element={standalone(<FinancePage />)} />
               <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
                 <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
               </Route>

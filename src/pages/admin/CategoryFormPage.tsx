@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { TileStyleFields } from '@/features/categories/TileStyleFields'
 import { themeTileColors, readableTextColor } from '@/features/categories/categoryTile'
+import { buttonClass } from '@/components/ui/styles'
 
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
@@ -286,14 +287,14 @@ export function CategoryFormPage() {
               <button
                 type="button"
                 onClick={() => navigate('/admin/produits?tab=categories')}
-                className="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className={buttonClass({ variant: 'secondary', size: 'lg' })}
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={saveMutation.isPending || !name.trim() || planLoading}
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-60"
+                className={buttonClass({ size: 'lg' })}
               >
                 {saveMutation.isPending ? (
                   <Loader2 size={15} className="animate-spin" />

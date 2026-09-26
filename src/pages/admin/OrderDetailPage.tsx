@@ -28,6 +28,7 @@ import type { OrderStatus } from '@/types'
 
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { controlClass } from '@/components/ui/styles'
 
 function StatusStepper({ status }: { status: OrderStatus }) {
   const currentIndex = ORDER_STATUS_FLOW.indexOf(status)
@@ -377,7 +378,7 @@ export function OrderDetailPage() {
           value={notesValue}
           onChange={(e) => setNotesDraft(e.target.value)}
           placeholder="Ex. À rappeler avant livraison…"
-          className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()} mt-2`}
         />
         <button
           type="button"

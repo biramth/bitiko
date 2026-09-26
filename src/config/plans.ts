@@ -46,6 +46,15 @@ export interface Plan {
   maxTeamMembers: number | null
   /** Demandes de rendez-vous/réservation en ligne par mois. Miroir de MAX_MONTHLY_BOOKINGS. */
   maxMonthlyBookings: number | null
+  /** Saisies (dépenses / recettes) par mois dans le journal de gestion. Miroir de MAX_MONTHLY_FINANCE_ENTRIES. */
+  maxMonthlyFinanceEntries: number | null
+  /** Historique consultable dans le bilan, en mois (`null` = illimité). Ergonomie côté interface : les données restent celles du commerçant. */
+  financeHistoryMonths: number | null
+  /** Export du bilan : aucun, tableur (CSV), ou bilan PDF imprimable en plus. Généré dans le navigateur du commerçant
+   *  (aucun coût serveur) : ouvert à tous les plans ; le levier payant reste l'historique, la comparaison et le plafond de saisies. */
+  financeExport: 'none' | 'csv' | 'pdf'
+  /** Comparaison avec la période précédente et synthèse annuelle. */
+  financeComparison: boolean
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -68,6 +77,10 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveServices: 6,
     maxTeamMembers: 2,
     maxMonthlyBookings: 40,
+    maxMonthlyFinanceEntries: 30,
+    financeHistoryMonths: 1,
+    financeExport: 'pdf',
+    financeComparison: false,
   },
   essential: {
     key: 'essential',
@@ -86,6 +99,10 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveServices: 30,
     maxTeamMembers: 8,
     maxMonthlyBookings: 300,
+    maxMonthlyFinanceEntries: null,
+    financeHistoryMonths: 12,
+    financeExport: 'pdf',
+    financeComparison: false,
   },
   pro: {
     key: 'pro',
@@ -104,6 +121,10 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxActiveServices: null,
     maxTeamMembers: null,
     maxMonthlyBookings: null,
+    maxMonthlyFinanceEntries: null,
+    financeHistoryMonths: null,
+    financeExport: 'pdf',
+    financeComparison: true,
   },
 }
 

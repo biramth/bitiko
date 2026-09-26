@@ -5,7 +5,7 @@ export type ReservationRow = Database['public']['Tables']['reservations']['Row']
 export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'done'
 
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
-  pending: 'En attente',
+  pending: 'À confirmer',
   confirmed: 'Confirmée',
   cancelled: 'Annulée',
   done: 'Terminée',
@@ -89,4 +89,30 @@ export async function getReservationSlots(input: {
   })
   if (error) throw error
   return (data ?? []).map((row) => row.slot_start)
+}
+
+/** Demandes de réservation encore à confirmer (à partir d'aujourd'hui) — pastille de la navigation. */
+export async function countPendingReservations(shopId: string): Promise<number> {
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const { count, error } = await supabase
+    .from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('shop_id', shopId)
+    .eq('status', 'pending')
+    .gte('start_at', startOfToday.toISOString())
+  if (error) throw error
+  return count ?? 0
+}
+
+/** Réservations par jour sur [from, to[ (dates locales YYYY-MM-DD), hors annulées — bandeau de la semaine. */
+export async function listReservationsForRange(shopId: string, from: string, to: string): Promise<{ start_at: string; status: string }[]> {
+  const { data, error } = await supabase
+    .from('reservations')
+    .select('start_at, status')
+    .eq('shop_id', shopId)
+    .gte('start_at', new Date(`${from}T00:00:00`).toISOString())
+    .lt('start_at', new Date(`${to}T00:00:00`).toISOString())
+  if (error) throw error
+  return data ?? []
 }

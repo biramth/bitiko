@@ -70,6 +70,7 @@ import { PageLoader } from '@/components/ui/PageLoader'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { trackEvent } from '@/lib/analytics'
+import { buttonClass } from '@/components/ui/styles'
 
 const STEPS: { number: number; label: string; icon: LucideIcon }[] = [
   { number: 1, label: 'Activité', icon: Briefcase },
@@ -1185,7 +1186,7 @@ export function OnboardingPage() {
                   setError(null)
                   setStep((s) => s + 1)
                 }}
-                className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className={buttonClass({ size: 'lg', className: 'shrink-0' })}
               >
                 Suivant <ArrowRight size={15} aria-hidden />
               </button>

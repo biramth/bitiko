@@ -9,8 +9,6 @@ import {
   Minus,
   Plus,
   Share2,
-  ShieldCheck,
-  Truck,
   X,
   ZoomIn,
 } from 'lucide-react'
@@ -33,6 +31,7 @@ import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
+import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
@@ -122,27 +121,8 @@ function ImageLightbox({
   )
 }
 
-/** Small reassurance row: this platform always checks out via WhatsApp with
- *  pay-on-delivery or mobile money, so these three claims hold for every shop. */
-function TrustBadges() {
-  const badges = [
-    { icon: ShieldCheck, label: 'Paiement à la livraison' },
-    { icon: Truck, label: 'Livraison à domicile' },
-    { icon: MessageCircle, label: 'Confirmation sur WhatsApp' },
-  ]
-  return (
-    <ul className="mt-5 flex flex-col gap-2 border-t border-[var(--shop-text)]/10 pt-5 text-xs text-[var(--shop-text)]/70">
-      {badges.map(({ icon: Icon, label }) => (
-        <li key={label} className="flex items-center gap-2">
-          <Icon size={15} className="shrink-0 text-[var(--shop-text)]/50" aria-hidden />
-          {label}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function ProductDetails({
+  shop,
   product,
   config,
   currency,
@@ -150,6 +130,7 @@ function ProductDetails({
   whatsappNumber,
   themeConfig,
 }: {
+  shop: Shop
   product: Product & {
     category?: { name: string; slug: string } | null
     images: ProductImage[]
@@ -458,9 +439,9 @@ function ProductDetails({
             {config.showQuantity && (
               <div className="mt-8 flex items-center gap-6">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={outOfStock} aria-label="Diminuer la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Minus size={16} /></button>
+                  <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={outOfStock} aria-label="Diminuer la quantité" className="-mx-2 flex h-10 w-10 items-center justify-center text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Minus size={16} aria-hidden /></button>
                   <span className="w-4 text-center text-sm font-semibold text-[var(--shop-text)]">{quantity}</span>
-                  <button onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))} disabled={outOfStock || quantity >= displayStock} aria-label="Augmenter la quantité" className="text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={16} /></button>
+                  <button onClick={() => setQuantity((q) => Math.min(displayStock, q + 1))} disabled={outOfStock || quantity >= displayStock} aria-label="Augmenter la quantité" className="-mx-2 flex h-10 w-10 items-center justify-center text-[var(--shop-text)]/70 hover:text-[var(--shop-text)] disabled:opacity-30"><Plus size={16} aria-hidden /></button>
                 </div>
               </div>
             )}
@@ -504,13 +485,13 @@ function ProductDetails({
               )}
             </div>
 
-            {config.showTrustBadges !== false && <TrustBadges />}
+            {config.showTrustBadges !== false && <DeliveryPaymentInfo shop={shop} className="mt-5" />}
           </div>
         </div>
       </div>
 
       {config.showAddToCart && !ctaVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
+        <div className="fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-[var(--shop-text)]/60">{product.name}</p>
             <p className="text-sm font-bold text-[var(--shop-text)]">{formatCurrency(displayPrice, currency)}</p>
@@ -645,6 +626,7 @@ export function ProductRenderer({ shop, config, themeConfig }: { shop: Shop; con
   return (
     <>
       <ProductDetails
+        shop={shop}
         product={product}
         config={config}
         currency={currency}

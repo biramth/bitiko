@@ -16,6 +16,8 @@ export interface ServiceFilters {
   categoryId?: string
   sort?: ServiceSort
   page?: number
+  /** Taille de page ; défaut = grille des prestations. */
+  pageSize?: number
 }
 
 export interface ServiceListResult {
@@ -28,8 +30,9 @@ const SELECT = '*, category:categories(id, name)'
 /** Prestations actives d'une boutique (vitrine publique + blocs builder). */
 export async function listActiveServices(filters: ServiceFilters): Promise<ServiceListResult> {
   const page = filters.page ?? 1
-  const from = (page - 1) * SERVICES_PAGE_SIZE
-  const to = from + SERVICES_PAGE_SIZE - 1
+  const pageSize = filters.pageSize ?? SERVICES_PAGE_SIZE
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('services')

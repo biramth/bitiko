@@ -15,8 +15,6 @@ export interface Service {
   images: string[]
   categoryId?: string
   categoryName?: string
-  preparationTime?: number
-  allergens?: string[]
 }
 
 interface UseActiveServicesOptions {
@@ -24,6 +22,8 @@ interface UseActiveServicesOptions {
   sort?: ServiceSort
   page?: number
   limit?: number
+  /** Taille de page côté serveur (défaut : grille publique) — utile à un sélecteur qui veut tout lister. */
+  pageSize?: number
   search?: string
   categoryId?: string
   ids?: string[]
@@ -39,21 +39,20 @@ function toUiService(row: ServiceWithCategory): Service {
     images: [],
     categoryId: row.category_id ?? undefined,
     categoryName: row.category?.name,
-    preparationTime: row.duration_minutes,
   }
 }
 
 export function useActiveServices(options: UseActiveServicesOptions) {
-  const { shopId, sort = 'manual', page = 1, limit = 12, search, categoryId, ids } = options
+  const { shopId, sort = 'manual', page = 1, limit = 12, pageSize, search, categoryId, ids } = options
 
   return useQuery({
-    queryKey: ['services', shopId, { sort, page, limit, search, categoryId, ids }],
+    queryKey: ['services', shopId, { sort, page, limit, pageSize, search, categoryId, ids }],
     queryFn: async () => {
       if (ids) {
         const rows = await getActiveServicesByIds(shopId, ids)
         return { services: rows.map(toUiService), total: rows.length }
       }
-      const result = await listActiveServices({ shopId, sort, page, search, categoryId })
+      const result = await listActiveServices({ shopId, sort, page, pageSize, search, categoryId })
       const services = result.services.map(toUiService).slice(0, limit)
       return { services, total: result.total }
     },

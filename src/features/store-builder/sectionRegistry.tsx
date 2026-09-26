@@ -497,7 +497,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
   },
   menu: {
     label: 'Menu / Carte',
-    description: 'Votre carte restaurant ou menu de prestations — plats, boissons, formules, allergènes.',
+    description: 'Votre carte restaurant ou menu de prestations — plats, boissons, formules.',
     icon: UtensilsCrossed,
     color: 'from-lime-500 to-lime-700',
     category: 'services',
@@ -507,7 +507,7 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
       id: createSectionId('menu'),
       type: 'menu',
       visible: true,
-      config: { heading: 'Notre carte', showPrices: true, showAllergens: true } satisfies MenuSectionConfig,
+      config: { heading: 'Notre carte', showPrices: true } satisfies MenuSectionConfig,
     }),
     Editor: MenuEditor,
     Renderer: MenuRenderer,

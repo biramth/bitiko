@@ -27,6 +27,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
+import { buttonClass, controlClass } from '@/components/ui/styles'
 
 /* ── Inline text editor (#1) ─────────────────────────────────────────── */
 
@@ -152,7 +153,7 @@ function EditCategoryDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -168,7 +169,7 @@ function EditCategoryDialog({
               })
             }
             disabled={isPending || !name.trim()}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Enregistrement…' : 'Enregistrer'}
           </button>
@@ -181,7 +182,7 @@ function EditCategoryDialog({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           />
         </div>
         <div>
@@ -203,7 +204,7 @@ function EditCategoryDialog({
             rows={3}
             maxLength={160}
             placeholder="Ex : Vêtements tendance pour femme…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           />
           <p className="mt-1 text-xs text-gray-500">{description.length}/160</p>
         </div>
@@ -255,7 +256,7 @@ function MergeDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -263,7 +264,7 @@ function MergeDialog({
             type="button"
             onClick={() => onMerge(sourceId, targetId)}
             disabled={isPending || !sourceId || !targetId || sourceId === targetId}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Fusion…' : 'Fusionner'}
           </button>
@@ -276,7 +277,7 @@ function MergeDialog({
           <select
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           >
             <option value="">Choisir…</option>
             {categories.map((c) => (
@@ -292,7 +293,7 @@ function MergeDialog({
           <select
             value={targetId}
             onChange={(e) => setTargetId(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+            className={`${controlClass()}`}
           >
             <option value="">Choisir…</option>
             {categories.filter((c) => c.id !== sourceId).map((c) => (
@@ -339,7 +340,7 @@ function MoveDialog({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className={buttonClass({ variant: 'secondary' })}
           >
             Annuler
           </button>
@@ -347,7 +348,7 @@ function MoveDialog({
             type="button"
             onClick={() => onMove(targetId)}
             disabled={isPending || !targetId}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass()}
           >
             {isPending ? 'Déplacement…' : 'Déplacer'}
           </button>
@@ -357,7 +358,7 @@ function MoveDialog({
       <select
         value={targetId}
         onChange={(e) => setTargetId(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+        className={`${controlClass()}`}
       >
         <option value="">Choisir une catégorie cible…</option>
         {categories.filter((c) => !excludeIds.includes(c.id)).map((c) => (
@@ -564,7 +565,7 @@ export function CategoriesPage() {
             <button
               type="button"
               onClick={() => setMergeOpen(true)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={buttonClass({ variant: 'secondary' })}
             >
               Fusionner
             </button>
@@ -734,7 +735,7 @@ export function CategoriesPage() {
                   setMoveTargetIds([...selectedIds])
                   setMoveOpen(true)
                 }}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className={buttonClass({ variant: 'secondary' })}
               >
                 Déplacer les produits vers…
               </button>

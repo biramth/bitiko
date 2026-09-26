@@ -6,7 +6,7 @@ import type { HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { useCart } from '@/features/cart/CartContext'
 import { whatsappHref } from '@/utils/format'
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
-import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { getStorefrontVocabulary, type StorefrontBooking } from '@/config/storefrontVocabulary'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
@@ -19,19 +19,26 @@ function resolveHeaderNavLinks(
   shop: { whatsapp_number: string | null } | null | undefined,
   catalogLabel = 'Catalogue',
   catalogHref = '/catalogue',
-): { key: string; label: string; href: string; external: boolean }[] {
+  booking: StorefrontBooking | null = null,
+): { key: string; label: string; href: string; external: boolean; primary: boolean }[] {
   if ((header.menu?.length ?? 0) > 0) {
     return header.menu!.map((link) => ({
       key: link.href + link.label,
       label: link.label,
       href: link.href,
       external: /^https?:\/\//.test(link.href),
+      primary: false,
     }))
   }
-  const links: { key: string; label: string; href: string; external: boolean }[] = []
-  if (header.showCatalogLink) links.push({ key: 'catalogue', label: catalogLabel, href: catalogHref, external: false })
+  const links: { key: string; label: string; href: string; external: boolean; primary: boolean }[] = []
+  // Métier à réservation : « Réserver » est l'action principale, le catalogue
+  // passe en lien secondaire (sinon deux boutons pleins se concurrencent).
+  if (booking) links.push({ key: 'booking', label: booking.label, href: booking.href, external: false, primary: true })
+  if (header.showCatalogLink) {
+    links.push({ key: 'catalogue', label: catalogLabel, href: catalogHref, external: false, primary: !booking })
+  }
   if (header.showContactLink && shop?.whatsapp_number) {
-    links.push({ key: 'contact', label: 'Contact', href: whatsappHref(shop.whatsapp_number), external: true })
+    links.push({ key: 'contact', label: 'Contact', href: whatsappHref(shop.whatsapp_number), external: true, primary: false })
   }
   return links
 }
@@ -70,7 +77,7 @@ export function HeaderRenderer({
   const layout = header.layout ?? 'left-logo'
   const shopName = shop?.name ?? 'Boutique'
   const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
-  const navLinks = resolveHeaderNavLinks(header, shop, vocab.catalogLabel, vocab.catalogHref)
+  const navLinks = resolveHeaderNavLinks(header, shop, vocab.catalogLabel, vocab.catalogHref, vocab.booking)
   // With the stock header (logo + Catalogue), nav links render as prominent
   // CTA buttons so shopping is the obvious next step; with a custom menu the
   // merchant's own list keeps the classic link style.
@@ -127,7 +134,7 @@ export function HeaderRenderer({
             {link.label}
           </a>
         ) : (
-          <Link key={link.key} to={link.href} className={usesCustomMenu ? nativeLinkClass : ctaLinkClass}>
+          <Link key={link.key} to={link.href} className={usesCustomMenu || !link.primary ? nativeLinkClass : ctaLinkClass}>
             {link.label}
           </Link>
         ),
@@ -167,7 +174,7 @@ export function HeaderRenderer({
       </button>
     ) : null
 
-  const cart = (
+  const cart = !vocab.showCart ? null : (
     <Link
       to="/panier"
       className="relative -m-2 flex items-center p-2 text-[var(--shop-text)] transition-opacity hover:opacity-60"
@@ -241,7 +248,7 @@ export function HeaderRenderer({
                 key={link.key}
                 to={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]'}
+                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : link.primary ? 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:border-ink-900/40'}
               >
                 {link.label}
               </Link>

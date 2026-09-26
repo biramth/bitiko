@@ -27,21 +27,27 @@ import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
+import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 
 function CheckoutFlow({
   items,
   subtotal,
   demo,
   showTrustBadges,
+  showTitle,
   themeConfig,
 }: {
   items: CartItem[]
   subtotal: number
   demo: boolean
   showTrustBadges: boolean
+  /** Faux quand le bloc affiche déjà son propre titre (évite deux « Finaliser la commande »). */
+  showTitle: boolean
   themeConfig: ThemeConfig
 }) {
   const { shop } = useTenant()
+  const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const { clear } = useCart()
   const navigate = useNavigate()
   const currency = shop?.currency ?? 'XOF'
@@ -80,6 +86,8 @@ function CheckoutFlow({
 
   const deliveryFee = shop ? resolveZoneDeliveryFee(shop, subtotal, Number(selectedSecteur?.fee ?? 0)) : 0
   const estimate = subtotal + deliveryFee
+  const freeThreshold = shop?.free_delivery_threshold != null ? Number(shop.free_delivery_threshold) : null
+  const freeUnlocked = freeThreshold != null && freeThreshold > 0 && subtotal >= freeThreshold
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -118,9 +126,8 @@ function CheckoutFlow({
         formatCurrency: (amount) => formatCurrency(amount, currency),
       })
       const whatsappUrl = buildWhatsAppUrl(shop!.whatsapp_number, message)
-      if (whatsappWindowRef.current) {
-        whatsappWindowRef.current.location.href = whatsappUrl
-      }
+      const whatsappWindow = whatsappWindowRef.current
+      if (whatsappWindow) whatsappWindow.location.href = whatsappUrl
       navigate(`/commande/confirmation/${result.orderId}`, {
         replace: true,
         state: {
@@ -132,10 +139,12 @@ function CheckoutFlow({
           paymentMethod,
           paymentInstructions: shop!.payment_instructions,
           whatsappUrl,
-          autoOpenFailed: !whatsappWindowRef.current,
           customerName,
         } satisfies OrderConfirmationState,
       })
+      // Onglet bloqué par le navigateur : WhatsApp s'ouvre dans cet onglet-ci, sans
+      // geste de plus. La confirmation (déjà dans l'historique) est la page de retour.
+      if (!whatsappWindow) window.setTimeout(() => window.location.assign(whatsappUrl), 0)
     },
     onError: () => {
       whatsappWindowRef.current?.close()
@@ -152,8 +161,8 @@ function CheckoutFlow({
           <ShoppingBag size={26} className="text-[var(--shop-text)]/70" aria-hidden />
         </span>
         <p className="mt-3 text-[var(--shop-text)]/70">Votre panier est vide.</p>
-        <Link to="/catalogue" className="mt-3 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
-          Voir le catalogue
+        <Link to={vocab.catalogHref} className="mt-3 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
+          {catalogCtaLabel(vocab)}
         </Link>
       </div>
     )
@@ -174,7 +183,9 @@ function CheckoutFlow({
 
   return (
     <div className="mx-auto max-w-[min(32rem,var(--shop-content-width))] px-4 py-8 sm:px-6">
-      <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Finaliser la commande</h1>
+      {showTitle && (
+        <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Finaliser la commande</h1>
+      )}
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[var(--shop-text)]/65" aria-label="Garanties de commande">
         <p className="border border-[var(--shop-text)]/10 px-3 py-2">Prix et stock vérifiés à la commande</p>
         <p className="border border-[var(--shop-text)]/10 px-3 py-2">Paiement confirmé avec le vendeur sur WhatsApp</p>
@@ -204,6 +215,11 @@ function CheckoutFlow({
           <div className="mt-2 flex justify-between text-sm text-[var(--shop-text)]/80">
             <span>Livraison</span>
             <span>{formatCurrency(deliveryFee, currency)}</span>
+          </div>
+        ) : groupes.length === 0 && !freeUnlocked ? (
+          <div className="mt-2 flex justify-between gap-4 text-sm text-[var(--shop-text)]/80">
+            <span>Livraison</span>
+            <span className="text-right">À convenir avec le vendeur</span>
           </div>
         ) : (
           <div className="mt-2 flex justify-between text-sm text-emerald-600">
@@ -240,10 +256,11 @@ function CheckoutFlow({
               if (phoneError) setPhoneError(null)
             }}
             aria-invalid={phoneError ? true : undefined}
+            aria-describedby={phoneError ? 'customerPhone-error' : undefined}
             placeholder={phonePlaceholder(shop?.country_code)}
             className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
           />
-          {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
+          {phoneError && <p id="customerPhone-error" role="alert" className="mt-1 text-xs text-red-600">{phoneError}</p>}
         </div>
         <div>
           <label htmlFor="customerAddress" className="block text-sm font-medium text-[var(--shop-text)]/80">Adresse de livraison</label>
@@ -284,6 +301,11 @@ function CheckoutFlow({
               Mobile money avec le vendeur
             </label>
           </div>
+          {paymentMethod === 'mobile_money' && shop.payment_instructions && (
+            <p className="mt-3 whitespace-pre-line border border-[var(--shop-text)]/10 bg-[var(--shop-text)]/5 px-3 py-2 text-xs text-[var(--shop-text)]/80">
+              {shop.payment_instructions}
+            </p>
+          )}
           <p className="mt-1 text-xs text-[var(--shop-text)]/50">
             Aucun paiement n'est effectué ici. Le vendeur vous confirme le montant et le moyen de paiement sur WhatsApp.
           </p>
@@ -299,8 +321,12 @@ function CheckoutFlow({
           style={{ borderRadius: 'var(--shop-radius)' }}
           className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : 'Commander via WhatsApp'}
+          {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : `Commander via WhatsApp · ${formatCurrency(estimate, currency)}`}
         </button>
+
+        <p className="-mt-2 text-center text-xs text-[var(--shop-text)]/60">
+          Votre commande est enregistrée, puis WhatsApp s'ouvre avec le message déjà rempli.
+        </p>
 
         {showTrustBadges && (
           <ul className="flex flex-col gap-2 text-xs text-[var(--shop-text)]/60">
@@ -334,7 +360,7 @@ export function CheckoutRenderer({ shop, config, themeConfig }: { shop: Shop; co
           <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1>
         </div>
       )}
-      <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} showTrustBadges={config.showTrustBadges !== false} themeConfig={themeConfig} />
+      <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} showTrustBadges={config.showTrustBadges !== false} showTitle={!config.heading} themeConfig={themeConfig} />
     </>
   )
 }

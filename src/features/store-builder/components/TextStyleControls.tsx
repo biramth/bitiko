@@ -2,6 +2,7 @@ import { Palette, RotateCcw } from 'lucide-react'
 import { hasTextStyle } from '@/config/textStyle'
 import type { FontChoice, TextStyleOverride, TextWeight } from '@/types/builder'
 import { ColorField } from './ColorField'
+import { controlClass } from '@/components/ui/styles'
 
 const WEIGHTS: { value: TextWeight; label: string; css: number }[] = [
   { value: 'normal', label: 'Fin', css: 400 },
@@ -59,7 +60,7 @@ export function TextStyleControls({
         <select
           value={current.font ?? ''}
           onChange={(e) => set({ font: (e.target.value || undefined) as FontChoice | undefined })}
-          className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-400 focus:outline-none"
+          className={`${controlClass()} mt-1`}
         >
           {FONTS.map((f) => (
             <option key={f.value} value={f.value}>

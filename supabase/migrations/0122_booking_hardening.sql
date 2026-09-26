@@ -83,7 +83,23 @@ set search_path = public
 as $$
   select coalesce(
     (select b from public.booking_settings b where b.shop_id = p_shop_id),
-    row(p_shop_id, 'Africa/Dakar', '09:00'::time, '19:00'::time, '{1,2,3,4,5,6}'::integer[], 30, 60, 40, 90, now())::public.booking_settings
+    -- Construit par NOM de colonne : ajouter une colonne à booking_settings ne
+    -- casse plus cette fonction (un row(...) positionnel cassait à chaque ajout).
+    jsonb_populate_record(
+      null::public.booking_settings,
+      jsonb_build_object(
+        'shop_id', p_shop_id,
+        'timezone', 'Africa/Dakar',
+        'open_time', '09:00',
+        'close_time', '19:00',
+        'open_days', jsonb_build_array(1, 2, 3, 4, 5, 6),
+        'slot_minutes', 30,
+        'max_days_ahead', 60,
+        'table_capacity', 40,
+        'reservation_minutes', 90,
+        'updated_at', now()
+      )
+    )
   );
 $$;
 

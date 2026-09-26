@@ -1,9 +1,10 @@
-import { Star } from 'lucide-react'
+import { Check, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useActiveServices } from '@/features/services/useServices'
 import { ServiceCard } from '@/features/services/ServiceCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import type { Shop } from '@/types'
 import type { GridLayout, FeaturedServicesSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
@@ -15,6 +16,8 @@ import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
+
+const FALLBACK_COUNT = 4
 
 const GRID_LAYOUTS: { value: GridLayout; label: string; preview: React.ReactNode }[] = [
   {
@@ -48,11 +51,17 @@ export function FeaturedServicesRenderer({
 }: { shop: Shop; config: FeaturedServicesSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
 
+  // Sans choix du commerçant : les premières prestations, pas une section vide.
+  const chosen = config.serviceIds.length > 0
   const { data: result, isLoading, isError } = useActiveServices({
     shopId: shop.id,
-    ids: config.serviceIds,
+    ids: chosen ? config.serviceIds : undefined,
+    limit: FALLBACK_COUNT,
   })
   const services = result?.services ?? []
+
+  // Rien à mettre en avant : le visiteur ne voit pas de section vide, le commerçant si.
+  if (!isLoading && !isError && services.length === 0 && !editable) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
@@ -77,12 +86,12 @@ export function FeaturedServicesRenderer({
       </div>
 
       {isLoading && <Spinner />}
-      {isError && <div className="text-center py-8 text-red-600">Erreur de chargement</div>}
+      {isError && <ErrorMessage />}
       {!isLoading && services.length === 0 && (
         <EmptyState
           icon={Star}
-          title="Aucune prestation sélectionnée"
-          description="Ajoutez des IDs de prestations dans l'éditeur pour les afficher ici."
+          title="Aucune prestation à afficher"
+          description="Ajoutez des prestations pour les mettre en avant ici."
         />
       )}
       {!isLoading && services.length > 0 && (
@@ -96,7 +105,15 @@ export function FeaturedServicesRenderer({
   )
 }
 
-export function FeaturedServicesEditor({ config, onChange }: SectionEditorProps<FeaturedServicesSectionConfig>) {
+export function FeaturedServicesEditor({ config, onChange, shopId }: SectionEditorProps<FeaturedServicesSectionConfig>) {
+  const { data: result, isLoading } = useActiveServices({ shopId, limit: 100, pageSize: 100 })
+  const services = result?.services ?? []
+  const toggle = (id: string) =>
+    onChange({
+      ...config,
+      serviceIds: config.serviceIds.includes(id) ? config.serviceIds.filter((s) => s !== id) : [...config.serviceIds, id],
+    })
+
   return (
     <div className="space-y-4">
       <div>
@@ -118,15 +135,27 @@ export function FeaturedServicesEditor({ config, onChange }: SectionEditorProps<
         <p className={`mt-1.5 ${editorHelpClass}`}>« Carrousel » affiche une seule rangée défilante horizontalement.</p>
       </div>
       <div>
-        <label className={editorLabelClass}>IDs des prestations (séparés par des virgules)</label>
-        <textarea
-          value={config.serviceIds.join(', ')}
-          onChange={(e) => onChange({ ...config, serviceIds: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-          className={editorInputClass}
-          rows={3}
-          placeholder="svc_abc123, svc_def456, svc_ghi789"
-        />
-        <p className={`mt-1 ${editorHelpClass}`}>Récupérez les IDs dans l'URL d'édition de chaque prestation.</p>
+        <span className={editorLabelClass}>Prestations à mettre en avant ({config.serviceIds.length})</span>
+        <p className={`mt-1 ${editorHelpClass}`}>Aucune prestation cochée = les {FALLBACK_COUNT} premières.</p>
+        <div className="mt-2 max-h-72 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-1.5">
+          {isLoading && <p className="px-2 py-3 text-sm text-gray-500">Chargement…</p>}
+          {!isLoading && services.length === 0 && <p className="px-2 py-3 text-sm text-gray-500">Aucune prestation pour le moment.</p>}
+          {services.map((service) => {
+            const selected = config.serviceIds.includes(service.id)
+            return (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => toggle(service.id)}
+                aria-pressed={selected}
+                className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm ${selected ? 'bg-brand-50' : 'hover:bg-gray-50'}`}
+              >
+                <span className="min-w-0 flex-1 truncate text-gray-900">{service.name}</span>
+                {selected && <Check size={15} className="shrink-0 text-brand-600" aria-hidden />}
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
