@@ -26,6 +26,15 @@ describe('business groups (10 groupes)', () => {
     expect(templatesForVertical('mode')[0]?.key).toBe('mode')
   })
 
+  it('offers several templates to Beauté & Bien-être', () => {
+    expect(templatesForVertical('beaute').map((t) => t.key)).toEqual([
+      'beaute',
+      'coiffure',
+      'barber',
+      'institut',
+    ])
+  })
+
   it('resolves legacy slugs through their vertical', () => {
     expect(templatesForVertical('deco')[0]?.key).toBe('maison')
     expect(templatesForVertical('coiffure')[0]?.key).toBe('coiffure')
