@@ -10,6 +10,8 @@ export type AdminAuditAction =
   | 'promo_save'
   | 'template_save'
   | 'subscription_grant'
+  | 'shop_suspend'
+  | 'shop_unsuspend'
 
 /**
  * Records a sensitive backoffice action in admin_audit_log (service-role only,

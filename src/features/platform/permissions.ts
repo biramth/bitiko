@@ -19,6 +19,8 @@ export type PlatformCapability =
   | 'delete_users'
   | 'manage_business_types'
   | 'manage_countries'
+  | 'suspend_shops'
+  | 'view_health'
 
 export interface PlatformRoleInfo {
   key: PlatformRole
@@ -34,9 +36,9 @@ export const PLATFORM_ROLES: PlatformRoleInfo[] = [
 ]
 
 const CAPABILITIES: Record<PlatformRole, PlatformCapability[]> = {
-  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries'],
-  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries'],
-  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access'],
+  owner: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries', 'suspend_shops', 'view_health'],
+  admin: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_business_types', 'manage_countries', 'suspend_shops', 'view_health'],
+  dev: ['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'support_access', 'view_health'],
   marketing: ['view_analytics', 'view_shops', 'send_campaigns'],
 }
 
@@ -50,6 +52,8 @@ export const CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   delete_users: 'Supprimer des comptes utilisateurs',
   manage_business_types: 'Gérer les types d’activité et capabilities',
   manage_countries: 'Gérer les pays',
+  suspend_shops: 'Suspendre et réactiver des boutiques',
+  view_health: 'Consulter la santé technique',
 }
 
 export function roleLabel(role: PlatformRole | null | undefined): string {

@@ -10,6 +10,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   promo_save: 'Promotion enregistrée',
   template_save: 'Gabarit enregistré',
   subscription_grant: 'Abonnement offert / prolongé',
+  shop_suspend: 'Boutique suspendue',
+  shop_unsuspend: 'Suspension levée',
 }
 
 /** Phrase courte décrivant les détails utiles d'une entrée (jamais de données personnelles brutes). */

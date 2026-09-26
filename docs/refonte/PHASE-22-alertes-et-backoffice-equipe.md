@@ -1,6 +1,6 @@
 # PHASE 22 — Alertes marchand et back-office équipe Bitiko
 
-> État : 🟨 EN COURS — 2026-09-26 (code prêt ; **migrations 0131 et 0132 appliquées sur dev** le 2026-09-26, prod non touchée).
+> État : 🟨 EN COURS — 2026-09-26 (0131 à 0133 appliquées sur dev le 2026-09-26, prod non touchée).
 
 ## Alertes marchand (0131)
 
@@ -22,9 +22,15 @@ Constats : liste des boutiques sans recherche ni filtre ni pagination ; plan aff
 - **Journal** (`/plateforme/journal`, propriétaires et administrateurs) : qui a fait quoi, filtrable.
 - Correction : `admin_audit_log` accepte `template_save` et `subscription_grant`.
 
+## Suspension, santé technique, fiche produit (0133)
+
+- **Suspension d'une boutique** : `shops.suspended_at`. Vitrine « momentanément indisponible » (`ShopSuspendedPage`), et **plus aucune commande, rendez-vous ni réservation** possible : trigger côté base sur `orders`, `appointments`, `reservations` (les RPC `SECURITY DEFINER` y insèrent aussi). Données intactes, réactivation immédiate. Bandeau rouge dans l'admin du commerçant. Action réservée aux propriétaires/administrateurs (`suspend_shops`), motif obligatoire, tracé dans le journal *avant* l'écriture ; le motif n'est jamais lisible publiquement. Filtre « Suspendues » sur la page Boutiques.
+- **Santé technique** (`/plateforme/sante`, propriétaires, administrateurs, développeurs) : `get_platform_health()` → événements non traités depuis > 15 min (cron ou clé d'emails en panne), envois d'alerte en échec et ignorés, campagnes en échec, preuves de paiement en attente depuis > 24 h, derniers échecs avec leur erreur. Niveaux ok / à surveiller / action requise (`healthChecks`, testé).
+- **Fiche produit** : 1 436 → 907 lignes. Extraits : `productFormParts` (cartes, interrupteur, aperçu), `OptionFieldsEditor`, `VariantsEditor`, `productFormHelpers`. Cartes avancées (variantes, champs de précision) repliées tant qu'elles sont vides ; barre d'enregistrement collante (mobile et bureau).
+
 ## À faire
 
 - Vérifier un email de commande réel sur la preview (dev) ; appliquer 0131 puis 0132 sur prod après validation.
-- Santé technique : automatisations échouées, emails non délivrés, état des crons.
+- Santé : journaliser l'exécution des crons (aujourd'hui déduite des événements en attente), suivi des emails rebondis côté Resend.
 - Alertes marchand par WhatsApp (canal non branché) ; digest quotidien.
-- Suspension d'une boutique, notes internes sur un compte, funnel d'inscription (inscrit → produit → première commande).
+- Notes internes sur un compte, funnel d'inscription (inscrit → produit → première commande), suspension automatique (impayé grave), email au commerçant suspendu.

@@ -251,6 +251,7 @@ function platformShops() {
         created_at: new Date(Date.now() - n * 9 * day).toISOString(), products: n % 12, orders: (n * 7) % 40, revenue: ((n * 37) % 90) * 12000,
         plan: lapsed ? 'free' : paid, plan_status: paid === 'free' ? 'none' : 'active', owner_id: `owner-${n}`, owner_email: `owner${n}@example.sn`,
         country_code: n % 6 === 0 ? 'CI' : 'SN', business_type: n % 2 ? 'mode' : 'beaute', subscribed_plan: paid, period_end: end,
+        suspended_at: n === 3 ? new Date(Date.now() - 2 * day).toISOString() : null,
         last_order_at: (n * 7) % 40 === 0 ? null : new Date(Date.now() - ((n * 5) % 60) * day).toISOString(),
       }
     }),
@@ -270,6 +271,18 @@ export const supabase = {
   rpc: async (name: string, args: Record<string, string>) => {
     if (name === 'get_platform_role') return { data: 'owner', error: null }
     if (name === 'get_platform_shops') return { data: platformShops(), error: null }
+    if (name === 'get_platform_health') {
+      return {
+        data: {
+          generated_at: new Date().toISOString(), pending_events: 4, stuck_events: 3, oldest_pending_event: new Date(Date.now() - 30 * 3600000).toISOString(),
+          failed_runs_7d: 2, skipped_runs_7d: { no_owner_email: 3 },
+          recent_failures: [{ created_at: new Date(Date.now() - 7200000).toISOString(), event_type: 'ORDER_CREATED', shop_name: 'Chez Moussa', error: 'Resend 422: invalid to address' }],
+          campaign_failures: [{ name: 'Rentrée 2026', sent_at: new Date(Date.now() - 5 * 86400000).toISOString(), failed_count: 3, recipient_count: 40 }],
+          stale_payments: 1, suspended_shops: 1,
+        },
+        error: null,
+      }
+    }
     if (name === 'business_type_capability_codes') return { data: caps, error: null }
     if (name === 'shop_business_type_slug') return { data: shop.business_type, error: null }
     if (name === 'finance_revenue_by_month') {

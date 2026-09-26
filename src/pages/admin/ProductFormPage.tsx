@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
@@ -22,17 +22,21 @@ import { deleteProductImage, reorderProductImages, uploadProductImage } from '@/
 import { createCategory } from '@/services/category.service'
 import { supabase } from '@/lib/supabaseClient'
 import { storefrontUrl } from '@/lib/tenant'
-import { formatCurrency, slugify } from '@/utils/format'
+import { slugify } from '@/utils/format'
 import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { useToast } from '@/components/ui/Toast'
 import type { Category, OptionField, ProductImage, ProductVariant, ProductWithRelations, Shop } from '@/types'
 import type { Json } from '@/types/database.types'
-import { MAX_OPTION_CHOICES, MAX_OPTION_FIELDS, parseOptionFields } from '@/utils/productOptions'
+import { parseOptionFields } from '@/utils/productOptions'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PLANS, canAddProductImage, canAddVariant } from '@/config/plans'
 import type { PlanKey } from '@/types/billing'
 import { buttonClass, controlClass } from '@/components/ui/styles'
+import { inputClass, normalizeOptionFields, type VariantDraft } from '@/features/products/productFormHelpers'
+import { FormCard, ProductPreview, Toggle } from '@/features/products/productFormParts'
+import { OptionFieldsEditor } from '@/features/products/OptionFieldsEditor'
+import { VariantsEditor } from '@/features/products/VariantsEditor'
 
 async function getProductById(id: string): Promise<ProductWithRelations | null> {
   const { data, error } = await supabase
@@ -44,131 +48,6 @@ async function getProductById(id: string): Promise<ProductWithRelations | null> 
     .maybeSingle()
   if (error) throw error
   return data as ProductWithRelations | null
-}
-
-const inputClass =
-  'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
-
-interface VariantDraft {
-  key: string
-  id?: string
-  name: string
-  sku: string
-  price: string
-  stock: string
-  active: boolean
-  /** Persisted photo (already uploaded to Storage). */
-  imageUrl: string | null
-  /** Photo picked but not uploaded yet — upload happens at save. */
-  photoFile?: File
-  /** Object URL for a just-picked photo (revoked when the draft is replaced). */
-  photoPreviewUrl?: string
-  /** User removed an existing photo → persisted by clearing image_url at save. */
-  photoCleared?: boolean
-}
-
-let variantKeyCounter = 0
-function nextVariantKey() {
-  variantKeyCounter += 1
-  return `variant-${variantKeyCounter}`
-}
-
-function newOptionFieldId(): string {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID()
-    }
-  } catch {
-    // fall through
-  }
-  return `f${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`
-}
-
-function normalizeOptionFields(fields: OptionField[]): OptionField[] {
-  return fields.map((f) => {
-    const choices: string[] = []
-    if (f.type === 'choice') {
-      const seen = new Set<string>()
-      for (const c of f.choices) {
-        const t = c.trim()
-        if (t && !seen.has(t.toLowerCase())) {
-          seen.add(t.toLowerCase())
-          choices.push(t)
-        }
-      }
-    }
-    return { id: f.id, label: f.label.trim(), type: f.type, required: f.required, choices }
-  })
-}
-
-function Card({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: typeof Pencil
-  title: string
-  description?: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-xl border border-gray-200 bg-white">
-      <header className="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-          <Icon size={18} aria-hidden />
-        </span>
-        <div>
-          <h2 className="font-heading font-semibold text-gray-900">{title}</h2>
-          {description && <p className="text-sm text-gray-500">{description}</p>}
-        </div>
-      </header>
-      <div className="space-y-4 p-5">{children}</div>
-    </section>
-  )
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  description,
-  disabled,
-}: {
-  checked: boolean
-  onChange: (value: boolean) => void
-  label: string
-  description: string
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left ${
-        disabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-50'
-      }`}
-    >
-      <span>
-        <span className="block text-sm font-medium text-gray-900">{label}</span>
-        <span className="block text-xs text-gray-500">{description}</span>
-      </span>
-      <span
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-emerald-500' : 'bg-gray-200'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-            checked ? 'left-[22px]' : 'left-0.5'
-          }`}
-        />
-      </span>
-    </button>
-  )
 }
 
 export function ProductFormPage() {
@@ -228,7 +107,6 @@ function ProductForm({
   const queryClient = useQueryClient()
   const toast = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const variantPhotoInputRefs = useRef<Record<string, HTMLInputElement>>({})
   const formRef = useRef<HTMLFormElement>(null)
 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
@@ -273,46 +151,6 @@ function ProductForm({
     parseOptionFields(existingProduct?.option_fields),
   )
 
-  const updateOptionField = (fieldId: string, patch: Partial<OptionField>) =>
-    setOptionFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)))
-
-  const addOptionField = () => {
-    if (optionFields.length >= MAX_OPTION_FIELDS) return
-    setOptionFields((prev) => [
-      ...prev,
-      { id: newOptionFieldId(), label: '', type: 'choice', required: false, choices: [] },
-    ])
-  }
-
-  const moveOptionField = (index: number, delta: number) =>
-    setOptionFields((prev) => {
-      const target = index + delta
-      if (target < 0 || target >= prev.length) return prev
-      const next = [...prev]
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
-
-  const updateOptionChoice = (fieldId: string, choiceIndex: number, value: string) =>
-    setOptionFields((prev) =>
-      prev.map((f) =>
-        f.id === fieldId
-          ? { ...f, choices: f.choices.map((c, i) => (i === choiceIndex ? value : c)) }
-          : f,
-      ),
-    )
-
-  const addOptionChoice = (fieldId: string) => {
-    const field = optionFields.find((f) => f.id === fieldId)
-    if (!field || field.choices.length >= MAX_OPTION_CHOICES) return
-    const nextIndex = field.choices.length
-    updateOptionField(fieldId, { choices: [...field.choices, ''] })
-    setTimeout(() => {
-      document
-        .querySelector<HTMLInputElement>(`[data-opt-choice="${fieldId}-${nextIndex}"]`)
-        ?.focus()
-    }, 0)
-  }
 
   const validateBeforeSave = (): string | null => {
     const basePrice = Number(price)
@@ -653,7 +491,7 @@ function ProductForm({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6">
-            <Card icon={Pencil} title="Informations" description="Les données principales du produit.">
+            <FormCard icon={Pencil} title="Informations" description="Les données principales du produit.">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                   Nom
@@ -870,9 +708,9 @@ function ProductForm({
                   </p>
                 </div>
               )}
-            </Card>
+            </FormCard>
 
-            <Card icon={ImagePlus} title="Photos" description="Les photos affichées sur votre boutique.">
+            <FormCard icon={ImagePlus} title="Photos" description="Les photos affichées sur votre boutique.">
               <div className="mt-1 flex flex-wrap gap-3">
                 {images.map((image, index) => (
                   <div
@@ -968,419 +806,52 @@ function ProductForm({
                   </>
                 )}
               </p>
-            </Card>
+            </FormCard>
 
-            <Card
+            <FormCard
               icon={Layers}
               title="Variantes"
               description="Tailles, couleurs, formats… avec leur propre stock et prix."
+              collapsible
+              defaultOpen={variants.length > 0}
+              badge={variants.length > 0 ? String(variants.length) : undefined}
             >
-              {variants.length > 0 && (
-                <ul className="space-y-3">
-                  {variants.map((variant) => {
-                    const displayUrl = variant.photoPreviewUrl ?? variant.imageUrl
-                    return (
-                    <li
-                      key={variant.key}
-                      className="rounded-lg border border-gray-200 p-3"
-                    >
-                      <div className="mb-3 flex items-center gap-3">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                          {displayUrl ? (
-                            <img src={displayUrl} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center text-gray-300">
-                              <ImagePlus size={18} aria-hidden />
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => variantPhotoInputRefs.current[variant.key]?.click()}
-                            disabled={imageLimitReached && !displayUrl}
-                            title={imageLimitReached && !displayUrl ? `Limite : ${plan.maxProductImages} photos max par produit` : undefined}
-                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Upload size={13} aria-hidden />
-                            {displayUrl ? 'Changer la photo' : 'Ajouter une photo'}
-                          </button>
-                          {displayUrl && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveVariantPhoto(variant.key)}
-                              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 hover:underline"
-                            >
-                              <Trash2 size={13} aria-hidden /> Retirer
-                            </button>
-                          )}
-                          <input
-                            ref={(el) => {
-                              if (el) variantPhotoInputRefs.current[variant.key] = el
-                            }}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (file) handleVariantPhotoChange(variant.key, file)
-                              e.currentTarget.value = ''
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <input
-                            type="text"
-                            value={variant.name}
-                            onChange={(e) =>
-                              setVariants((prev) =>
-                                prev.map((v) =>
-                                  v.key === variant.key ? { ...v, name: e.target.value } : v,
-                                ),
-                              )
-                            }
-                            placeholder="Nom (ex. Taille M)"
-                            className={inputClass}
-                            aria-label={`Nom de la variante ${variants.indexOf(variant) + 1}`}
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            value={variant.sku}
-                            onChange={(e) =>
-                              setVariants((prev) =>
-                                prev.map((v) =>
-                                  v.key === variant.key ? { ...v, sku: e.target.value } : v,
-                                ),
-                              )
-                            }
-                            placeholder="SKU (optionnel)"
-                            className={inputClass}
-                            aria-label={`SKU de la variante ${variants.indexOf(variant) + 1}`}
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={variant.price}
-                            onChange={(e) =>
-                              setVariants((prev) =>
-                                prev.map((v) =>
-                                  v.key === variant.key ? { ...v, price: e.target.value } : v,
-                                ),
-                              )
-                            }
-                            placeholder={
-                              price.trim() !== ''
-                                ? `Prix de base : ${Number(price).toLocaleString('fr-FR')}`
-                                : 'Prix de base'
-                            }
-                            className={inputClass}
-                            aria-label={`Prix de la variante ${variants.indexOf(variant) + 1}`}
-                          />
-                          <p className="mt-1 text-xs text-gray-500">Laisser vide = prix de base.</p>
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={variant.stock}
-                            onChange={(e) =>
-                              setVariants((prev) =>
-                                prev.map((v) =>
-                                  v.key === variant.key ? { ...v, stock: e.target.value } : v,
-                                ),
-                              )
-                            }
-                            placeholder="Stock"
-                            className={inputClass}
-                            aria-label={`Stock de la variante ${variants.indexOf(variant) + 1}`}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVariants((prev) =>
-                              prev.map((v) =>
-                                v.key === variant.key ? { ...v, active: !v.active } : v,
-                              ),
-                            )
-                          }
-                          className={`text-sm font-medium ${
-                            variant.active ? 'text-emerald-600' : 'text-gray-400'
-                          }`}
-                        >
-                          {variant.active ? 'Actif' : 'Inactif'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVariants((prev) => prev.filter((v) => v.key !== variant.key))
-                          }
-                          aria-label={`Supprimer la variante ${variant.name || ''}`}
-                          className="text-sm text-red-600 hover:underline"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    </li>
-                    )
-                  })}
-                </ul>
-              )}
-              <button
-                type="button"
-                onClick={() =>
-                  setVariants((prev) => [
-                    ...prev,
-                    {
-                      key: nextVariantKey(),
-                      name: '',
-                      sku: '',
-                      price: '',
-                      stock: '0',
-                      active: true,
-                      imageUrl: null,
-                    },
-                  ])
-                }
-                disabled={variantLimitReached}
-                title={variantLimitReached ? `Limite : ${plan.maxVariants} variantes max sur le plan gratuit` : undefined}
-                className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-600"
-              >
-                <Plus size={16} />
-                Ajouter une variante
-              </button>
-              <p className="text-xs text-gray-500">
-                Avec des variantes, le prix et le stock du produit sont gérés par chaque variante
-                (le prix peut rester vide : hérité du produit). Chaque variante peut avoir sa
-                photo, affichée dans la fiche produit quand on la sélectionne.
-                {plan.maxVariants !== null && (
-                  <>
-                    {' '}
-                    <span className={variantLimitReached ? 'font-semibold text-amber-600' : ''}>
-                      {variants.length} / {plan.maxVariants} variantes
-                    </span>{' '}
-                    sur le plan gratuit.
-                  </>
-                )}
-              </p>
-            </Card>
+              <VariantsEditor
+                variants={variants}
+                setVariants={setVariants}
+                plan={plan}
+                basePrice={price}
+                imageLimitReached={imageLimitReached}
+                variantLimitReached={variantLimitReached}
+                onPhotoChange={handleVariantPhotoChange}
+                onRemovePhoto={handleRemoveVariantPhoto}
+              />
+            </FormCard>
 
-            <Card
+            <FormCard
               icon={ListChecks}
               title="Champs de précision"
               description="Ajoutez les informations que le client doit préciser avant de commander (ton, taille, prénom à broder…). Elles apparaissent dans le panier et dans le message WhatsApp de commande."
+              collapsible
+              defaultOpen={optionFields.length > 0}
+              badge={optionFields.length > 0 ? String(optionFields.length) : undefined}
             >
-              {optionFields.length > 0 && (
-                <ul className="space-y-3">
-                  {optionFields.map((field, index) => (
-                    <li key={field.id} className="rounded-lg border border-gray-200 p-3">
-                      <div className="flex items-end gap-2">
-                        <div className="min-w-0 flex-1">
-                          <label
-                            htmlFor={`opt-label-${field.id}`}
-                            className="block text-sm font-medium text-gray-700"
-                          >
-                            Nom du champ
-                          </label>
-                          <input
-                            id={`opt-label-${field.id}`}
-                            type="text"
-                            value={field.label}
-                            onChange={(e) => updateOptionField(field.id, { label: e.target.value })}
-                            placeholder="Ex. Ton, Taille, Prénom à broder"
-                            className={inputClass}
-                          />
-                        </div>
-                        <div className="flex shrink-0 gap-1">
-                          <button
-                            type="button"
-                            onClick={() => moveOptionField(index, -1)}
-                            disabled={index === 0}
-                            aria-label={`Monter le champ ${field.label || index + 1}`}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:border-brand-300 disabled:opacity-40"
-                          >
-                            <ArrowUp size={16} aria-hidden />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveOptionField(index, 1)}
-                            disabled={index === optionFields.length - 1}
-                            aria-label={`Descendre le champ ${field.label || index + 1}`}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:border-brand-300 disabled:opacity-40"
-                          >
-                            <ArrowDown size={16} aria-hidden />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOptionFields((prev) => prev.filter((f) => f.id !== field.id))
-                            }
-                            aria-label={`Supprimer le champ ${field.label || index + 1}`}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-red-600 hover:border-red-300"
-                          >
-                            <Trash2 size={16} aria-hidden />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                        <select
-                          value={field.type}
-                          onChange={(e) =>
-                            updateOptionField(field.id, {
-                              type: e.target.value === 'text' ? 'text' : 'choice',
-                            })
-                          }
-                          aria-label="Type de champ"
-                          className={`${controlClass()} min-h-10 sm:w-auto`}
-                        >
-                          <option value="choice">Choix dans une liste</option>
-                          <option value="text">Texte libre</option>
-                        </select>
-                        <label className="flex min-h-10 items-center gap-2 text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={field.required}
-                            onChange={(e) => updateOptionField(field.id, { required: e.target.checked })}
-                            className="h-5 w-5 rounded border-gray-300"
-                          />
-                          Obligatoire
-                        </label>
-                      </div>
-
-                      {field.type === 'choice' ? (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-xs text-gray-500">Le client choisira une de ces options.</p>
-                          {field.choices.map((choice, ci) => (
-                            <div key={ci} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={choice}
-                                data-opt-choice={`${field.id}-${ci}`}
-                                onChange={(e) => updateOptionChoice(field.id, ci, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault()
-                                    if (ci === field.choices.length - 1) addOptionChoice(field.id)
-                                  }
-                                }}
-                                placeholder={`Option ${ci + 1}`}
-                                aria-label={`Option ${ci + 1} de ${field.label || 'ce champ'}`}
-                                className={`${controlClass()} min-h-10 min-w-0`}
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateOptionField(field.id, {
-                                    choices: field.choices.filter((_, i) => i !== ci),
-                                  })
-                                }
-                                aria-label={`Supprimer l'option ${ci + 1}`}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-red-600 hover:border-red-300"
-                              >
-                                <Trash2 size={15} aria-hidden />
-                              </button>
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => addOptionChoice(field.id)}
-                            disabled={field.choices.length >= MAX_OPTION_CHOICES}
-                            className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-brand-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Plus size={15} aria-hidden /> Ajouter une option
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="mt-3 text-xs text-gray-500">
-                          Le client saisira librement sa réponse (200 caractères max).
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                type="button"
-                onClick={addOptionField}
-                disabled={optionFields.length >= MAX_OPTION_FIELDS}
-                className="flex min-h-10 items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-600"
-              >
-                <Plus size={16} aria-hidden />
-                Ajouter un champ
-              </button>
-              {optionFields.length >= MAX_OPTION_FIELDS && (
-                <p className="text-xs text-amber-600">
-                  Maximum {MAX_OPTION_FIELDS} champs par produit.
-                </p>
-              )}
-            </Card>
+              <OptionFieldsEditor fields={optionFields} setFields={setOptionFields} />
+            </FormCard>
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-xl border border-gray-200 bg-white">
-              <header className="border-b border-gray-100 px-5 py-4">
-                <h2 className="font-heading font-semibold text-gray-900">Aperçu</h2>
-              </header>
-              <div className="p-5">
-                <div className="overflow-hidden rounded-xl border border-sand-200 bg-sand-50">
-                  <div className="flex h-32 items-center justify-center bg-sand-100">
-                    {previewImage ? (
-                      <img src={previewImage} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-xs text-gray-400">Photo du produit</span>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="truncate font-heading font-semibold text-ink-900">
-                        {name.trim() || 'Nom du produit'}
-                      </p>
-                      {!effectiveActive && (
-                        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-                          Inactif
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-brand-600">
-                        {formatCurrency(previewPrice, currency)}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          previewStock <= 0
-                            ? 'bg-red-100 text-red-800'
-                            : previewStock <= (shop?.low_stock_threshold ?? 5)
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {previewStock <= 0 ? 'Rupture' : `${previewStock} en stock`}
-                      </span>
-                    </div>
-                    {previewCategoryName && (
-                      <p className="mt-1 text-xs text-gray-500">{previewCategoryName}</p>
-                    )}
-                    {description.trim() && (
-                      <p className="mt-2 line-clamp-3 text-xs text-gray-600">{description.trim()}</p>
-                    )}
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-gray-500">
-                  Mis à jour en direct — ce que verront vos clients.
-                </p>
-              </div>
-            </section>
+            <ProductPreview
+              image={previewImage}
+              name={name}
+              active={effectiveActive}
+              price={previewPrice}
+              stock={previewStock}
+              lowStockThreshold={shop?.low_stock_threshold ?? 5}
+              currency={currency}
+              categoryName={previewCategoryName}
+              description={description}
+            />
 
             {!isEditing && (
               <p className="rounded-xl border border-dashed border-gray-200 bg-white px-5 py-4 text-sm text-gray-500">
@@ -1390,7 +861,7 @@ function ProductForm({
           </div>
         </div>
 
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white px-5 py-4">
+        <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-gray-200 bg-white/95 px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
               {saveMutation.isPending ? (

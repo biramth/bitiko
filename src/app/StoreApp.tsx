@@ -6,6 +6,7 @@ import { StoreLayout } from '@/layouts/StoreLayout'
 import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { StoreShell } from '@/components/ui/StoreShell'
 import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
+import { ShopSuspendedPage } from '@/pages/store/ShopSuspendedPage'
 
 // Each storefront page is its own chunk (StoreLayout already wraps <Outlet/> in
 // a Suspense boundary), so the home page doesn't ship the checkout funnel.
@@ -30,13 +31,14 @@ function StoreIndexRoute() {
 }
 
 export function StoreApp() {
-  const { isLoading, notFound } = useTenant()
+  const { isLoading, notFound, shop } = useTenant()
 
   if (isLoading) {
     return <StoreShell />
   }
 
   if (notFound) return <ShopNotFoundPage />
+  if (shop?.suspended_at) return <ShopSuspendedPage shopName={shop.name} />
 
   return (
     <DraftPreviewProvider>

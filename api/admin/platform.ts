@@ -4,6 +4,7 @@ import {
   canManageCountries,
   canManageCatalog,
   canManageTeam,
+  canSuspendShops,
   canSupportAccess,
   getPlatformMemberByUserId,
   getPlatformMemberFromAuthHeader,
@@ -94,6 +95,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleSubscriptionGrant(req, res)
     case 'audit-list':
       return handleAuditList(req, res)
+    case 'shop-suspend':
+      return handleShopSuspension(req, res, true)
+    case 'shop-unsuspend':
+      return handleShopSuspension(req, res, false)
     case 'biztype-list':
       return handleBizTypeList(req, res)
     case 'biztype-save':
@@ -2098,6 +2103,61 @@ async function handleAuditList(req: VercelRequest, res: VercelResponse) {
     })
   } catch (err) {
     console.error('audit-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** Suspend ou réactive une boutique. Motif obligatoire à la suspension ; la trace précède toujours l'écriture. */
+async function handleShopSuspension(req: VercelRequest, res: VercelResponse, suspend: boolean) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canSuspendShops(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs suspendent une boutique.' })
+      return
+    }
+    const body: { shopId?: unknown; reason?: unknown } = req.body ?? {}
+    if (typeof body.shopId !== 'string' || !UUID_PATTERN.test(body.shopId)) {
+      res.status(400).json({ error: 'Boutique invalide.' })
+      return
+    }
+    const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 300) : ''
+    if (suspend && reason.length < 3) {
+      res.status(400).json({ error: 'Indiquez le motif de la suspension (il est conservé dans le journal).' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: shop } = await admin.from('shops').select('id, name, suspended_at').eq('id', body.shopId).maybeSingle()
+    if (!shop) {
+      res.status(404).json({ error: 'Boutique introuvable.' })
+      return
+    }
+    if (suspend === Boolean(shop.suspended_at)) {
+      res.status(200).json({ suspendedAt: (shop.suspended_at as string | null) ?? null })
+      return
+    }
+
+    await logAdminAudit(
+      {
+        actorUserId: member.id,
+        actorEmail: member.email,
+        action: suspend ? 'shop_suspend' : 'shop_unsuspend',
+        targetShopId: body.shopId,
+        details: reason ? { reason } : {},
+      },
+      true,
+    )
+    const suspendedAt = suspend ? new Date().toISOString() : null
+    const { error } = await admin.from('shops').update({ suspended_at: suspendedAt }).eq('id', body.shopId)
+    if (error) throw error
+    res.status(200).json({ suspendedAt })
+  } catch (err) {
+    console.error('shop-suspension failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

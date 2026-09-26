@@ -1253,6 +1253,7 @@ export type Database = {
           page_templates: SystemTemplateMap
           payment_instructions: string | null
           slug: string
+          suspended_at: string | null
           social_links: Record<string, string>
           template_id: string | null
           theme_color: string
@@ -1284,6 +1285,7 @@ export type Database = {
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug: string
+          suspended_at?: string | null
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -1315,6 +1317,7 @@ export type Database = {
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug?: string
+          suspended_at?: string | null
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -1596,8 +1599,10 @@ export type Database = {
           subscribed_plan: string
           period_end: string | null
           last_order_at: string | null
+          suspended_at: string | null
         }[]
       }
+      get_platform_health: { Args: never; Returns: Json }
       get_platform_stats: { Args: never; Returns: Json }
       get_shop_visit_stats: {
         Args: { p_shop_id: string }

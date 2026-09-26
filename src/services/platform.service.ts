@@ -66,6 +66,7 @@ export interface PlatformShop {
   subscribed_plan: string
   period_end: string | null
   last_order_at: string | null
+  suspended_at: string | null
 }
 
 export async function getPlatformShops(): Promise<PlatformShop[]> {
@@ -248,4 +249,27 @@ export function listAuditLog(params: { action?: string; offset?: number } = {}):
   if (params.offset) query.set('offset', String(params.offset))
   const suffix = query.toString()
   return platformFetch(`/api/admin/audit-log${suffix ? `?${suffix}` : ''}`)
+}
+
+export function setShopSuspended(shopId: string, suspended: boolean, reason?: string): Promise<{ suspendedAt: string | null }> {
+  return platformFetch(suspended ? '/api/admin/suspend-shop' : '/api/admin/unsuspend-shop', { method: 'POST', body: JSON.stringify({ shopId, reason }) })
+}
+
+export interface PlatformHealth {
+  generated_at: string
+  pending_events: number
+  stuck_events: number
+  oldest_pending_event: string | null
+  failed_runs_7d: number
+  skipped_runs_7d: Record<string, number>
+  recent_failures: { created_at: string; event_type: string; shop_name: string | null; error: string }[]
+  campaign_failures: { name: string; sent_at: string; failed_count: number; recipient_count: number }[]
+  stale_payments: number
+  suspended_shops: number
+}
+
+export async function getPlatformHealth(): Promise<PlatformHealth> {
+  const { data, error } = await supabase.rpc('get_platform_health')
+  if (error) throw new Error(error.message)
+  return data as unknown as PlatformHealth
 }

@@ -16,3 +16,17 @@ describe('platform capabilities', () => {
     expect(can('marketing', 'manage_team')).toBe(false)
   })
 })
+
+describe('suspension et santé', () => {
+  it('réserve la suspension aux propriétaires et administrateurs', () => {
+    expect(can('owner', 'suspend_shops')).toBe(true)
+    expect(can('admin', 'suspend_shops')).toBe(true)
+    expect(can('dev', 'suspend_shops')).toBe(false)
+    expect(can('marketing', 'suspend_shops')).toBe(false)
+  })
+
+  it('ouvre la santé technique au développeur mais pas au marketing', () => {
+    expect(can('dev', 'view_health')).toBe(true)
+    expect(can('marketing', 'view_health')).toBe(false)
+  })
+})

@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 /**
- * Tests de comportement des migrations 0114 → 0132 sur un vrai Postgres
+ * Tests de comportement des migrations 0114 → 0133 sur un vrai Postgres
  * (PGlite, en mémoire) avec un schéma minimal : réservations durcies, prix,
  * vie privée équipe, miroir d'abonnement. Aucun accès réseau ni base distante.
  */
@@ -529,5 +529,59 @@ describe('pilotage plateforme (0132)', () => {
     await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'subscription_grant')`)
     await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'template_save')`)
     await expect(db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'nope')`)).rejects.toThrow()
+  })
+})
+
+describe('suspension et santé plateforme (0133)', () => {
+  beforeAll(async () => {
+    await db.exec(`
+      create table if not exists public.automation_runs(id uuid primary key default gen_random_uuid(), rule_id uuid not null references public.automation_rules(id), event_id uuid not null references public.business_events(id), status text not null, detail jsonb not null default '{}', created_at timestamptz not null default now());
+      create table if not exists public.campaigns(id uuid primary key default gen_random_uuid(), name text not null, sent_at timestamptz, failed_count integer not null default 0, recipient_count integer not null default 0);
+      create table if not exists public.wave_payments(id uuid primary key default gen_random_uuid(), status text not null default 'pending', proof_submitted_at timestamptz);
+    `)
+    await db.exec(read('0133_shop_suspension_and_health.sql'))
+  })
+
+  it('bloque toute nouvelle commande, rendez-vous et réservation d’une boutique suspendue, puis rétablit', async () => {
+    await db.exec(`update shops set suspended_at = now() where id = '${SHOP}'`)
+    await expect(db.exec(`insert into orders(shop_id, total) values ('${SHOP}', 1000)`)).rejects.toThrow(/shop_suspended/)
+    await expect(db.exec(`insert into appointments(shop_id, customer_name, customer_phone, start_at, end_at) values ('${SHOP}', 'Awa', '771234567', now() + interval '2 days', now() + interval '2 days 1 hour')`)).rejects.toThrow(/shop_suspended/)
+    await expect(db.exec(`insert into reservations(shop_id, customer_name, customer_phone, party_size, start_at) values ('${SHOP}', 'Awa', '771234567', 2, now() + interval '2 days')`)).rejects.toThrow(/shop_suspended/)
+    await db.exec(`update shops set suspended_at = null where id = '${SHOP}'`)
+    await db.exec(`insert into orders(shop_id, total) values ('${SHOP}', 1000)`)
+    expect((await rows('select 1 from orders where total = 1000')).length).toBeGreaterThan(0)
+  })
+
+  it('n’empêche pas les commandes des autres boutiques', async () => {
+    const other = '00000000-0000-0000-0000-0000000000a2'
+    await db.exec(`insert into shops(id, owner_id) values ('${other}', '${OWNER}')`)
+    await db.exec(`update shops set suspended_at = now() where id = '${SHOP}'`)
+    await db.exec(`insert into orders(shop_id, total) values ('${other}', 2000)`)
+    await db.exec(`update shops set suspended_at = null where id = '${SHOP}'`)
+  })
+
+  it('expose la suspension dans la liste des boutiques et accepte les nouvelles actions d’audit', async () => {
+    await db.exec(`update shops set suspended_at = now() where id = '${SHOP}'`)
+    const [row] = await rows<{ suspended_at: string | null }>(`select suspended_at from get_platform_shops() where id = '${SHOP}'`)
+    expect(row.suspended_at).toBeTruthy()
+    await db.exec(`update shops set suspended_at = null where id = '${SHOP}'`)
+    await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'shop_suspend')`)
+    await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'shop_unsuspend')`)
+  })
+
+  it('remonte les événements coincés, les échecs d’automatisation et les paiements en attente', async () => {
+    const rule = (await rows<{ id: string }>('select id from automation_rules limit 1'))[0].id
+    const event = (await rows<{ id: string }>(`insert into business_events(shop_id, type, occurred_at) values ('${SHOP}', 'ORDER_CREATED', now() - interval '2 hours') returning id`))[0].id
+    await db.exec(`insert into automation_runs(rule_id, event_id, status, detail) values ('${rule}', '${event}', 'failed', '{"error":"Resend 500"}')`)
+    await db.exec(`insert into automation_runs(rule_id, event_id, status, detail) values ('${rule}', '${event}', 'skipped', '{"reason":"no_owner_email"}')`)
+    await db.exec(`insert into campaigns(name, sent_at, failed_count, recipient_count) values ('Rentrée', now(), 3, 40)`)
+    await db.exec(`insert into wave_payments(status, proof_submitted_at) values ('pending', now() - interval '2 days')`)
+    const [{ health }] = await rows<{ health: Record<string, unknown> }>('select get_platform_health() as health')
+    expect(Number(health.stuck_events)).toBeGreaterThanOrEqual(1)
+    expect(Number(health.failed_runs_7d)).toBe(1)
+    expect(health.skipped_runs_7d).toMatchObject({ no_owner_email: 1 })
+    expect((health.recent_failures as { error: string }[])[0].error).toBe('Resend 500')
+    expect((health.campaign_failures as { name: string }[])[0].name).toBe('Rentrée')
+    expect(Number(health.stale_payments)).toBe(1)
   })
 })

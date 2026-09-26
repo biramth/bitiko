@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, Gift, LifeBuoy, MessageCircle, Search, Store, Trash2 } from 'lucide-react'
-import { deletePlatformUser, getPlatformShops, requestSupportAccess, type PlatformShop } from '@/services/platform.service'
+import { Ban, ExternalLink, Gift, LifeBuoy, MessageCircle, RotateCcw, Search, Store, Trash2 } from 'lucide-react'
+import { deletePlatformUser, getPlatformShops, requestSupportAccess, setShopSuspended, type PlatformShop } from '@/services/platform.service'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { can } from '@/features/platform/permissions'
 import { GrantSubscriptionDialog } from '@/features/platform/GrantSubscriptionDialog'
@@ -27,6 +27,10 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Pagination } from '@/components/ui/Pagination'
 import { controlClass } from '@/components/ui/styles'
+import { Dialog } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
+import { TextAreaField } from '@/components/ui/Field'
+import { useToast } from '@/components/ui/Toast'
 
 const PAGE_SIZE = 25
 
@@ -37,6 +41,7 @@ const PLAN_OPTIONS: { value: PlanFilter; label: string }[] = [
   { value: 'pro', label: 'Pro' },
   { value: 'expiring', label: 'Expire sous 7 jours' },
   { value: 'expired', label: 'Échu depuis < 30 jours' },
+  { value: 'suspended', label: 'Suspendues' },
 ]
 const ACTIVITY_OPTIONS: { value: ActivityFilter; label: string }[] = [
   { value: 'all', label: 'Toute activité' },
@@ -79,6 +84,9 @@ export function ShopsPanel() {
   const [supportingId, setSupportingId] = useState<string | null>(null)
   const [deletingShop, setDeletingShop] = useState<PlatformShop | null>(null)
   const [grantShop, setGrantShop] = useState<PlatformShop | null>(null)
+  const [suspendShop, setSuspendShop] = useState<PlatformShop | null>(null)
+  const [suspendReason, setSuspendReason] = useState('')
+  const toast = useToast()
   const [filters, setFilters] = useState<ShopFilters>(DEFAULT_SHOP_FILTERS)
   const [sort, setSort] = useState<ShopSort>('recent')
   const [page, setPage] = useState(1)
@@ -87,6 +95,7 @@ export function ShopsPanel() {
   const canSupport = can(role, 'support_access')
   const canDelete = can(role, 'delete_users')
   const canGrant = can(role, 'manage_payments')
+  const canSuspend = can(role, 'suspend_shops')
 
   const countries = useMemo(() => [...new Set((data ?? []).map((s) => s.country_code).filter(Boolean))].sort(), [data])
   const filtered = useMemo(() => sortShops(filterShops(data ?? [], filters), sort), [data, filters, sort])
@@ -121,11 +130,22 @@ export function ShopsPanel() {
     },
   })
 
+  const suspension = useMutation({
+    mutationFn: ({ shop, suspended, reason }: { shop: PlatformShop; suspended: boolean; reason?: string }) => setShopSuspended(shop.id, suspended, reason),
+    onSuccess: (_result, variables) => {
+      toast.success(variables.suspended ? `« ${variables.shop.name} » est suspendue.` : `« ${variables.shop.name} » est réactivée.`)
+      setSuspendShop(null)
+      setSuspendReason('')
+      return queryClient.invalidateQueries({ queryKey: ['platform-shops'] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Action impossible.'),
+  })
+
   if (isLoading) return <Spinner />
   if (isError) return <p className="text-sm text-red-600">{error instanceof Error ? error.message : 'Erreur.'}</p>
   if (!data || data.length === 0) return <EmptyState icon={Store} title="Aucune boutique" />
 
-  const hasActions = canSupport || canDelete || canGrant
+  const hasActions = canSupport || canDelete || canGrant || canSuspend
 
   return (
     <div>
@@ -186,6 +206,7 @@ export function ShopsPanel() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-gray-900">{shop.name}</span>
+                      {shop.suspended_at && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Suspendue</span>}
                       <a href={shopUrl(shop.slug)} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-gray-700" aria-label={`Ouvrir ${shop.name}`}>
                         <ExternalLink size={13} aria-hidden />
                       </a>
@@ -230,6 +251,19 @@ export function ShopsPanel() {
                             <Gift size={13} aria-hidden /> Offrir
                           </button>
                         )}
+                        {canSuspend && (
+                          <button
+                            type="button"
+                            onClick={() => (shop.suspended_at ? suspension.mutate({ shop, suspended: false }) : setSuspendShop(shop))}
+                            disabled={suspension.isPending}
+                            title={shop.suspended_at ? 'Lever la suspension' : 'Suspendre la boutique (plus aucune commande possible)'}
+                            aria-label={`${shop.suspended_at ? 'Réactiver' : 'Suspendre'} ${shop.name}`}
+                            className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                          >
+                            {shop.suspended_at ? <RotateCcw size={13} aria-hidden /> : <Ban size={13} aria-hidden />}
+                            {shop.suspended_at ? 'Réactiver' : 'Suspendre'}
+                          </button>
+                        )}
                         {canSupport && (
                           <button
                             type="button"
@@ -267,6 +301,35 @@ export function ShopsPanel() {
       <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} onPageChange={setPage} />
 
       <GrantSubscriptionDialog shop={grantShop} onClose={() => setGrantShop(null)} />
+
+      <Dialog
+        open={suspendShop !== null}
+        onClose={() => { if (!suspension.isPending) setSuspendShop(null) }}
+        title="Suspendre cette boutique ?"
+        description={suspendShop ? `La vitrine de « ${suspendShop.name} » s’affichera comme indisponible et plus aucune commande, rendez-vous ni réservation ne sera possible. Ses données restent intactes ; vous pouvez lever la suspension à tout moment.` : undefined}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSuspendShop(null)} disabled={suspension.isPending}>Annuler</Button>
+            <Button
+              variant="danger"
+              loading={suspension.isPending}
+              disabled={suspendReason.trim().length < 3}
+              onClick={() => suspendShop && suspension.mutate({ shop: suspendShop, suspended: true, reason: suspendReason })}
+            >
+              Suspendre
+            </Button>
+          </>
+        }
+      >
+        <TextAreaField
+          label="Motif (conservé dans le journal, jamais montré au public)"
+          rows={2}
+          maxLength={300}
+          value={suspendReason}
+          onChange={(e) => setSuspendReason(e.target.value)}
+          placeholder="Ex. Signalements de fraude, litige en cours…"
+        />
+      </Dialog>
 
       <ConfirmDialog
         open={deletingShop !== null}

@@ -4,7 +4,7 @@ import { whatsappUrl } from '@/features/booking/bookingHelpers'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export type PlanFilter = 'all' | 'free' | 'essential' | 'pro' | 'expiring' | 'expired'
+export type PlanFilter = 'all' | 'free' | 'essential' | 'pro' | 'expiring' | 'expired' | 'suspended'
 export type ActivityFilter = 'all' | 'active' | 'inactive' | 'never'
 export type ShopSort = 'recent' | 'name' | 'revenue' | 'orders' | 'last_order'
 
@@ -58,6 +58,9 @@ export function filterShops(shops: PlatformShop[], filters: ShopFilters, now: nu
         break
       case 'expired':
         if (!isRecentlyExpired(shop, now)) return false
+        break
+      case 'suspended':
+        if (!shop.suspended_at) return false
         break
     }
     switch (filters.activity) {

@@ -527,6 +527,14 @@ export function AdminLayout() {
         )}
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {shop?.suspended_at && (
+            <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm font-semibold text-red-800">Votre boutique est suspendue</p>
+              <p className="mt-0.5 text-xs text-red-700">
+                Votre vitrine est indisponible et vos clients ne peuvent plus commander ni réserver. Vos données sont intactes. Contactez le support Bitiko pour en savoir plus.
+              </p>
+            </div>
+          )}
           {impersonation && (
             <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gold-300 bg-gold-400/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

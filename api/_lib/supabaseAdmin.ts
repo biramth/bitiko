@@ -91,6 +91,11 @@ const MANAGE_TEAM_ROLES: PlatformRole[] = ['owner', 'admin']
 const MANAGE_PAYMENTS_ROLES: PlatformRole[] = ['owner', 'admin', 'dev']
 const MANAGE_COUNTRIES_ROLES: PlatformRole[] = ['owner', 'admin']
 
+/** Suspendre / réactiver une boutique : décision de propriétaire ou d'administrateur. */
+export function canSuspendShops(role: PlatformRole): boolean {
+  return MANAGE_TEAM_ROLES.includes(role)
+}
+
 export function canManageTeam(role: PlatformRole): boolean {
   return MANAGE_TEAM_ROLES.includes(role)
 }

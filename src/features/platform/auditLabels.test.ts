@@ -12,7 +12,7 @@ describe('auditSummary', () => {
   })
 
   it('libelle chaque action connue par l’API', () => {
-    for (const action of ['support_access', 'user_delete', 'team_add', 'biztype_save', 'payment_approve', 'payment_reject', 'promo_save', 'template_save', 'subscription_grant']) {
+    for (const action of ['support_access', 'user_delete', 'team_add', 'biztype_save', 'payment_approve', 'payment_reject', 'promo_save', 'template_save', 'subscription_grant', 'shop_suspend', 'shop_unsuspend']) {
       expect(AUDIT_ACTION_LABELS[action], action).toBeTruthy()
     }
   })
