@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { availableVerticals, templatesForVertical } from './storeTemplates'
+import { resolveTemplateVariant } from '@/types/builder'
+import { availableVerticals, STORE_TEMPLATE_BY_KEY, templatesForVertical } from './storeTemplates'
 
 describe('business groups (10 groupes)', () => {
   it('exposes 10 verticals with at least one template', () => {
@@ -43,5 +44,33 @@ describe('business groups (10 groupes)', () => {
   it('fails open to every template on unknown vertical', () => {
     expect(templatesForVertical('nope').length).toBeGreaterThan(10)
     expect(templatesForVertical(null).length).toBeGreaterThan(10)
+  })
+})
+
+describe('resolveTemplateVariant', () => {
+  const barber = STORE_TEMPLATE_BY_KEY['barber']!
+
+  it('resolves a variant to the base layout with the variant theme', () => {
+    const resolved = resolveTemplateVariant(barber, 'cuir')
+    expect(resolved.key).toBe('barber')
+    expect(resolved.variantKey).toBe('cuir')
+    expect(resolved.variantLabel).toBe('Cuir & Laiton')
+    expect(resolved.themeColor).toBe('#92400e')
+    expect(resolved.layout).toBe(barber.layout)
+  })
+
+  it('returns the base design on empty or unknown variant', () => {
+    for (const key of [null, undefined, '', 'nope']) {
+      const resolved = resolveTemplateVariant(barber, key)
+      expect(resolved.variantKey).toBeUndefined()
+      expect(resolved.themeColor).toBe(barber.themeColor)
+      expect(resolved.themeConfig).toBe(barber.themeConfig)
+    }
+  })
+
+  it('clears a previous resolution when going back to base', () => {
+    const resolved = resolveTemplateVariant(resolveTemplateVariant(barber, 'cuir'), null)
+    expect(resolved.variantKey).toBeUndefined()
+    expect(resolved).not.toHaveProperty('variantLabel')
   })
 })

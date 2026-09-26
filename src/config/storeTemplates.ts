@@ -312,6 +312,24 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#9d174d', '#fdf2f8'],
     themeColor: '#9d174d',
     themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    variants: [
+      {
+        key: 'dore',
+        label: 'Doré',
+        description: 'Noir et or — le salon premium.',
+        swatch: ['#a16207', '#1c1917'],
+        themeColor: '#a16207',
+        themeConfig: baseTheme({ secondaryColor: '#fef3c7', textColor: '#fafaf9', backgroundColor: '#1c1917', buttonColor: '#a16207', font: 'sora', textScale: 'lg', radius: 'full', contentWidth: 'normal' }),
+      },
+      {
+        key: 'epure',
+        label: 'Épuré',
+        description: 'Blanc et rose poudré — doux et lumineux.',
+        swatch: ['#be185d', '#ffffff'],
+        themeColor: '#be185d',
+        themeConfig: baseTheme({ secondaryColor: '#fdf2f8', textColor: '#1c1917', backgroundColor: '#ffffff', font: 'inter', textScale: 'base', radius: 'full', contentWidth: 'narrow' }),
+      },
+    ],
     layout: {
       home: [
         header(),
@@ -337,6 +355,24 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#1c1917', '#e7e5e4'],
     themeColor: '#1c1917',
     themeConfig: baseTheme({ secondaryColor: '#292524', textColor: '#fafaf9', backgroundColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'none', contentWidth: 'normal' }),
+    variants: [
+      {
+        key: 'cuir',
+        label: 'Cuir & Laiton',
+        description: 'Version claire — cuir, laiton et bois.',
+        swatch: ['#92400e', '#f5f0e8'],
+        themeColor: '#92400e',
+        themeConfig: baseTheme({ secondaryColor: '#e7dcc8', textColor: '#1c1917', backgroundColor: '#f5f0e8', buttonColor: '#92400e', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+      },
+      {
+        key: 'bordeaux',
+        label: 'Bordeaux',
+        description: 'Version feutrée — rouge profond et cuir sombre.',
+        swatch: ['#991b1b', '#1c1917'],
+        themeColor: '#991b1b',
+        themeConfig: baseTheme({ secondaryColor: '#450a0a', textColor: '#fafaf9', backgroundColor: '#1c1917', buttonColor: '#991b1b', font: 'sora', textScale: 'lg', radius: 'none', contentWidth: 'normal' }),
+      },
+    ],
     layout: {
       home: [
         header(),
@@ -362,6 +398,24 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#4d7c6f', '#f2f7f5'],
     themeColor: '#4d7c6f',
     themeConfig: baseTheme({ secondaryColor: '#dcebe5', textColor: '#1c2b26', backgroundColor: '#fbfdfc', buttonColor: '#4d7c6f', font: 'sora', textScale: 'base', radius: 'full', contentWidth: 'normal' }),
+    variants: [
+      {
+        key: 'rose',
+        label: 'Rose poudré',
+        description: 'Version cocooning — rose tendre et blanc.',
+        swatch: ['#be185d', '#fff7f9'],
+        themeColor: '#be185d',
+        themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#3b2b33', backgroundColor: '#fff7f9', buttonColor: '#be185d', font: 'sora', textScale: 'base', radius: 'full', contentWidth: 'narrow' }),
+      },
+      {
+        key: 'argile',
+        label: 'Argile',
+        description: 'Version terrienne — terracotta et crème.',
+        swatch: ['#9a3412', '#fff7ed'],
+        themeColor: '#9a3412',
+        themeConfig: baseTheme({ secondaryColor: '#ffedd5', textColor: '#431407', backgroundColor: '#fff7ed', buttonColor: '#9a3412', font: 'inter', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+      },
+    ],
     layout: {
       home: [
         header(),

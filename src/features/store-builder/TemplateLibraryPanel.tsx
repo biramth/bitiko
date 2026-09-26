@@ -8,6 +8,7 @@ import { VERTICAL_BY_KEY } from '@/config/verticals'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { TemplateThumbnail } from '@/features/store-builder/TemplateThumbnail'
+import { resolveTemplateVariant } from '@/types/builder'
 import {
   createSavedTheme,
   deleteSavedTheme,
@@ -37,6 +38,41 @@ function currentPublishedSnapshot(shop: Shop) {
 }
 
 const historyDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+/** One look of a template: two-color dot + label. Clicking previews it live. */
+function VariantSwatch({
+  active,
+  swatch,
+  label,
+  title,
+  onSelect,
+}: {
+  active: boolean
+  swatch: [string, string]
+  label: string
+  title?: string
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      title={title}
+      aria-pressed={active}
+      className={`flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs font-medium transition-colors ${
+        active
+          ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500'
+          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      <span className="flex h-4 w-7 overflow-hidden rounded-full border border-black/10" aria-hidden>
+        <span className="h-full w-1/2" style={{ backgroundColor: swatch[0] }} />
+        <span className="h-full w-1/2" style={{ backgroundColor: swatch[1] }} />
+      </span>
+      {label}
+    </button>
+  )
+}
 
 function historyEntryToTemplate(entry: PublishHistoryEntry, businessType: string | null): StoreTemplate {
   return {
@@ -134,11 +170,14 @@ function SavedThemeRow({
 export function TemplateLibraryPanel({
   shop,
   previewingKey,
+  previewingVariantKey = null,
   onPreview,
 }: {
   shop: Shop
   /** Key of the template currently shown in the live preview, if any. */
   previewingKey: string | null
+  /** Variant of that template (null = base design). */
+  previewingVariantKey?: string | null
   onPreview: (template: StoreTemplate) => void
 }) {
   const toast = useToast()
@@ -171,8 +210,12 @@ export function TemplateLibraryPanel({
     throwOnError: false,
   })
 
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
+  /** Chosen look per template (variant key, absent = base design). Choosing a
+   *  variant previews it immediately in the live preview — l'embarras du
+   *  choix, style Shopify. */
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [renaming, setRenaming] = useState<SavedTheme | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [deleting, setDeleting] = useState<SavedTheme | null>(null)
@@ -233,35 +276,70 @@ export function TemplateLibraryPanel({
       <div className="space-y-3">
         {templates.map((template) => {
           const isCurrent = shop.template_id === template.key
-          const isPreviewing = previewingKey === template.key
+          const chosenVariant = selectedVariants[template.key] || null
+          const resolved = resolveTemplateVariant(template, chosenVariant)
+          const isPreviewing =
+            previewingKey === template.key && (previewingVariantKey ?? null) === (resolved.variantKey ?? null)
+          const chooseVariant = (variantKey: string | null) => {
+            setSelectedVariants((prev) => ({ ...prev, [template.key]: variantKey ?? '' }))
+            onPreview(resolveTemplateVariant(template, variantKey))
+          }
           return (
-            <button
+            <div
               key={template.key}
-              type="button"
-              onClick={() => onPreview(template)}
-              aria-pressed={isPreviewing}
-              className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left hover:border-brand-300 hover:bg-brand-50/40 ${
+              className={`rounded-xl border p-3 ${
                 isPreviewing ? 'border-brand-500 ring-1 ring-brand-500' : isCurrent ? 'border-brand-300 bg-brand-50/40' : 'border-gray-200'
               }`}
             >
-              <TemplateThumbnail template={template} />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
-                  {isCurrent && (
-                    <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
-                      Actuel
+              <button
+                type="button"
+                onClick={() => chooseVariant(chosenVariant)}
+                aria-pressed={isPreviewing}
+                className="flex w-full items-center gap-3 text-left"
+              >
+                <TemplateThumbnail template={resolved} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="block text-sm font-semibold text-gray-900">
+                      {template.label}
+                      {resolved.variantLabel ? ` · ${resolved.variantLabel}` : ''}
                     </span>
-                  )}
-                  {isPreviewing && (
-                    <span className="flex items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                      <Eye size={10} aria-hidden /> Aperçu
-                    </span>
-                  )}
+                    {isCurrent && (
+                      <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                        Actuel
+                      </span>
+                    )}
+                    {isPreviewing && (
+                      <span className="flex items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        <Eye size={10} aria-hidden /> Aperçu
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-xs text-gray-500">{template.description}</span>
                 </span>
-                <span className="block text-xs text-gray-500">{template.description}</span>
-              </span>
-            </button>
+              </button>
+              {(template.variants?.length ?? 0) > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-gray-100 pt-2.5" role="group" aria-label={`Styles ${template.label}`}>
+                  <VariantSwatch
+                    active={chosenVariant === null}
+                    swatch={template.swatch}
+                    label="Original"
+                    title={template.description}
+                    onSelect={() => chooseVariant(null)}
+                  />
+                  {template.variants!.map((variant) => (
+                    <VariantSwatch
+                      key={variant.key}
+                      active={chosenVariant === variant.key}
+                      swatch={variant.swatch}
+                      label={variant.label}
+                      title={variant.description ?? variant.label}
+                      onSelect={() => chooseVariant(variant.key)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

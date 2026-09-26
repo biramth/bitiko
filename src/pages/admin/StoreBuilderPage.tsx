@@ -1116,7 +1116,7 @@ function AppearanceTool({
             onThemeConfigChange={builder.setThemeConfig}
           />
         ) : (
-          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} onPreview={setPreviewTemplate} />
+          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} previewingVariantKey={previewTemplate?.variantKey ?? null} onPreview={setPreviewTemplate} />
         )}
       </div>
     </div>
@@ -1254,7 +1254,7 @@ function AppearanceTool({
         title="Appliquer ce style à toute la boutique ?"
         description={
           previewTemplate
-            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${previewTemplate.label}" en brouillon. Vos produits, catégories, commandes et informations restent inchangés — prévisualisez, puis publiez quand vous êtes prêt·e.`
+            ? `Le design complet de votre boutique (accueil, catalogue, fiche produit, panier et commande) sera remplacé par "${previewTemplate.label}${previewTemplate.variantLabel ? ` · ${previewTemplate.variantLabel}` : ''}" en brouillon. Vos produits, catégories, commandes et informations restent inchangés — prévisualisez, puis publiez quand vous êtes prêt·e.`
             : ''
         }
         confirmLabel="Appliquer"

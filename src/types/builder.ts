@@ -512,4 +512,46 @@ export interface StoreTemplate {
   themeColor: string
   themeConfig: ThemeConfig
   layout: StoreTemplateLayout
+  /** Style presets of this template (Shopify-style: one Barber template,
+   *  several looks). The base design itself is the implicit first choice —
+   *  `variants` only holds the alternatives. A resolved template (see
+   *  `resolveTemplateVariant`) carries `variantKey`/`variantLabel` but keeps
+   *  the base `key`, so `shop.template_id` always stays a known template. */
+  variants?: TemplateVariant[]
+  /** Set on resolved templates only — never on catalog entries. */
+  variantKey?: string
+  variantLabel?: string
+}
+
+/** One alternative look of a template: same pages and blocks, different
+ *  theme. Previewing/applying a variant flows through the exact same
+ *  StoreTemplate path as the base design. */
+export interface TemplateVariant {
+  key: string
+  label: string
+  description?: string
+  swatch: [string, string]
+  themeColor: string
+  themeConfig: ThemeConfig
+}
+
+/** Resolves a template + variant choice to a renderable StoreTemplate: the
+ *  base layout with the variant's theme. Unknown/empty variant key returns
+ *  the base design unchanged (with any previous resolution cleared). */
+export function resolveTemplateVariant(
+  template: StoreTemplate,
+  variantKey: string | null | undefined,
+): StoreTemplate {
+  const { variantKey: _droppedKey, variantLabel: _droppedLabel, ...base } = template
+  if (!variantKey) return { ...base }
+  const variant = template.variants?.find((v) => v.key === variantKey)
+  if (!variant) return { ...base }
+  return {
+    ...base,
+    variantKey: variant.key,
+    variantLabel: variant.label,
+    swatch: variant.swatch,
+    themeColor: variant.themeColor,
+    themeConfig: variant.themeConfig,
+  }
 }
