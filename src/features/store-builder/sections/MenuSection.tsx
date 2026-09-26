@@ -1,9 +1,9 @@
-import { UtensilsCrossed } from 'lucide-react'
+import { Clock, UtensilsCrossed } from 'lucide-react'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
-import type { MenuSectionConfig, ThemeConfig } from '@/types/builder'
+import type { GridLayout, MenuSectionConfig, ThemeConfig } from '@/types/builder'
 import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
@@ -14,7 +14,7 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 
-const GRID_LAYOUTS = [
+const GRID_LAYOUTS: { value: GridLayout; label: string; preview: React.ReactNode }[] = [
   {
     value: 'grid',
     label: 'Grille',
@@ -35,7 +35,7 @@ const GRID_LAYOUTS = [
       </SwatchFrame>
     ),
   },
-] as const
+]
 
 export function MenuRenderer({
   shop,
@@ -50,11 +50,10 @@ export function MenuRenderer({
   // For now, we reuse the products service
   const { data: result, isLoading, isError } = useActiveProducts({
     shopId: shop.id,
-    sort: 'manual',
+    sort: 'recent',
     page: 1,
-    limit: config.limit ?? 12,
   })
-  const items = result?.products ?? []
+  const items = (result?.products ?? []).slice(0, config.limit ?? 12)
 
   if (isLoading) return <Spinner />
   if (isError) return <div className="text-center py-8 text-red-600">Erreur de chargement du menu</div>
@@ -71,9 +70,18 @@ export function MenuRenderer({
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
-        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>
-          {config.heading || 'Notre carte'}
-        </h2>
+        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+          <InlineText
+            as="h2"
+            editable={editable}
+            value={config.heading || 'Notre carte'}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre"
+            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            style={resolveTextStyle(config.headingStyle)}
+            label="Titre"
+          />
+        </InlineStyleToolbar>
       </div>
 
       {(config.layout ?? 'grid') === 'carousel' ? (

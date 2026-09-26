@@ -5,7 +5,7 @@ import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
-import { sanitizeSections, sectionVisibleForCapabilities } from '@/features/store-builder/sanitizeSections'
+import { sanitizeSections, sectionVisibleWithRegistry } from '@/features/store-builder/sanitizeSections'
 import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { StoreNotFoundPage } from './StoreNotFoundPage'
@@ -95,7 +95,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
         const Renderer = def?.Renderer
         if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
-        if (!sectionVisibleForCapabilities(section, capabilities)) return null
+        if (!sectionVisibleWithRegistry(section, def.capabilities, capabilities)) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>
         return (

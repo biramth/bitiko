@@ -5,22 +5,23 @@ export interface Vertical {
 }
 
 /**
- * Business types a merchant can operate in — chosen at onboarding, and
- * changeable later from Réglages. A shop's `business_type` is independent of
- * `template_id`: switching to another template within the same vertical
- * never touches it, and switching vertical is what unlocks browsing
- * templates outside the shop's current one (see storeTemplates.ts).
- *
- * Bitiko targets around 6 verticals long-term; only the ones with at least
- * one template in STORE_TEMPLATES are ever shown to a merchant (see
- * `availableVerticals` in storeTemplates.ts) — listing a vertical here ahead
- * of its templates would just be a dead end in the UI.
+ * Les 10 groupes d'activité — choisis à l'onboarding, modifiables ensuite
+ * dans Réglages. Les clés correspondent aux slugs du référentiel
+ * `business_types` (migration 0116) ; le fallback local (DB indisponible)
+ * passe par `availableVerticals` dans storeTemplates.ts, qui ne retient que
+ * les groupes ayant au moins un gabarit.
  */
 export const VERTICALS: Vertical[] = [
-  { key: 'mode', label: 'Mode', description: 'Vêtements, accessoires, chaussures…' },
-  { key: 'epicerie', label: 'Épicerie', description: 'Alimentation, produits frais, essentiels du quotidien.' },
-  { key: 'beaute', label: 'Beauté', description: 'Cosmétiques, soins, parfums.' },
-  { key: 'tech', label: 'High-Tech', description: 'Électronique, téléphonie, électroménager.' },
+  { key: 'restauration', label: 'Restauration', description: 'Restaurant, traiteur, fast-food, snack, pâtisserie, boulangerie, café, food truck, livraison de repas.' },
+  { key: 'mode', label: 'Mode & Habillement', description: 'Vêtements, prêt-à-porter, friperie, chaussures, accessoires, sacs, bijoux, lingerie, couture.' },
+  { key: 'beaute', label: 'Beauté & Bien-être', description: 'Coiffure, barber, institut de beauté, maquillage, onglerie, parfumerie, soins, spa, massage.' },
+  { key: 'epicerie', label: 'Commerce général', description: 'Épicerie, supérette, alimentation, boutique généraliste, grossiste, bazar.' },
+  { key: 'tech', label: 'Électronique & Technologie', description: 'Téléphones, accessoires, informatique, électronique, réparation, consoles, gaming.' },
+  { key: 'deco', label: 'Maison & Décoration', description: 'Meubles, décoration, ameublement, literie, cuisine, luminaires, rideaux, tapis.' },
+  { key: 'cosmetiques', label: 'Cosmétiques & Soins', description: 'Cosmétiques, produits capillaires, skincare, huiles, savons, produits naturels, parfums.' },
+  { key: 'epicerie_fine', label: 'Alimentation & Épicerie fine', description: 'Produits locaux, chocolaterie, épices, fruits et légumes, viande, poisson, artisanat gourmand.' },
+  { key: 'fleurs_cadeaux', label: 'Fleurs & Cadeaux', description: 'Fleuriste, bouquets, cadeaux, coffrets, personnalisation, événementiel.' },
+  { key: 'artisanat', label: 'Artisanat & Création', description: 'Poterie, maroquinerie, sculpture, peinture, objets faits main, créations personnalisées.' },
 ]
 
 export const VERTICAL_BY_KEY: Record<string, Vertical> = Object.fromEntries(

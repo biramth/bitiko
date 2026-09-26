@@ -32,5 +32,5 @@ export function useWorkspaceModules() {
     teamAccess: plan.teamAccess,
   })
 
-  return { modules, groups: groupModules(modules), isReady: !!shop?.id }
+  return { modules, groups: groupModules(modules), capabilities: caps ?? null, isReady: !!shop?.id }
 }

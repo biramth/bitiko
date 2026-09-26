@@ -1,4 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import {
+  getActiveServicesByIds,
+  listActiveServices,
+  type ServiceSort,
+  type ServiceWithCategory,
+} from '@/services/service.service'
 
 export interface Service {
   id: string
@@ -13,14 +19,30 @@ export interface Service {
   allergens?: string[]
 }
 
+export type ServiceFilters = { sort?: ServiceSort }
+
 interface UseActiveServicesOptions {
   shopId: string
-  sort?: 'manual' | 'price_asc' | 'price_desc' | 'duration_asc' | 'duration_desc'
+  sort?: ServiceSort
   page?: number
   limit?: number
   search?: string
   categoryId?: string
   ids?: string[]
+}
+
+function toUiService(row: ServiceWithCategory): Service {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? '',
+    price: row.price,
+    duration: row.duration_minutes,
+    images: [],
+    categoryId: row.category_id ?? undefined,
+    categoryName: row.category?.name,
+    preparationTime: row.duration_minutes,
+  }
 }
 
 export function useActiveServices(options: UseActiveServicesOptions) {
@@ -29,51 +51,13 @@ export function useActiveServices(options: UseActiveServicesOptions) {
   return useQuery({
     queryKey: ['services', shopId, { sort, page, limit, search, categoryId, ids }],
     queryFn: async () => {
-      // Mock implementation - replace with real API call
-      const mockServices: Service[] = [
-        {
-          id: 'svc_1',
-          name: 'Coupe femme',
-          description: 'Coupe personnalisée avec shampooing et brushing',
-          price: 3500,
-          duration: 45,
-          images: [],
-          categoryName: 'Coiffure',
-          preparationTime: 45,
-        },
-        {
-          id: 'svc_2',
-          name: 'Coloration',
-          description: 'Coloration complète avec soin',
-          price: 5500,
-          duration: 90,
-          images: [],
-          categoryName: 'Coiffure',
-          preparationTime: 90,
-        },
-        {
-          id: 'svc_3',
-          name: 'Barbe',
-          description: 'Taille et entretien de la barbe',
-          price: 1500,
-          duration: 20,
-          images: [],
-          categoryName: 'Barbe',
-          preparationTime: 20,
-        },
-      ]
-
-      let filtered = mockServices
-      if (ids) filtered = filtered.filter((s) => ids.includes(s.id))
-      if (search) filtered = filtered.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-
-      const start = (page - 1) * limit
-      const paginated = filtered.slice(start, start + limit)
-
-      return {
-        services: paginated,
-        total: filtered.length,
+      if (ids) {
+        const rows = await getActiveServicesByIds(shopId, ids)
+        return { services: rows.map(toUiService), total: rows.length }
       }
+      const result = await listActiveServices({ shopId, sort, page, search, categoryId })
+      const services = result.services.map(toUiService).slice(0, limit)
+      return { services, total: result.total }
     },
     enabled: !!shopId,
     staleTime: 5 * 60 * 1000,

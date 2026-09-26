@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { listReservationsByDate } from '@/services/reservation.service'
 
 export interface Reservation {
   id: string
@@ -14,10 +15,9 @@ export interface Reservation {
 export function useReservations({ shopId, date }: { shopId: string | undefined; date: string }) {
   return useQuery({
     queryKey: ['reservations', shopId, date],
-    queryFn: async () => {
+    queryFn: () => {
       if (!shopId) return []
-      // Mock implementation
-      return []
+      return listReservationsByDate(shopId, date)
     },
     enabled: !!shopId,
     staleTime: 5 * 60 * 1000,

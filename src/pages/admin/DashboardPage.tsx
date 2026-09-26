@@ -9,6 +9,7 @@ import {
   Package,
   PackagePlus,
   PackageX,
+  Scissors,
   ShoppingBag,
   Tags,
   Wallet,
@@ -18,8 +19,12 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
+import { ServiceDashboard } from '@/features/dashboard/ServiceDashboard'
 import { PromoOfferCard } from '@/features/billing/PromoOfferCard'
 import { getDashboardStats } from '@/services/dashboard.service'
+import { listShopServices } from '@/services/service.service'
+import { listShopTeamMembers } from '@/services/teamMember.service'
 import { listDeliverySecteurs } from '@/services/deliverySecteur.service'
 import { updateOrderStatus } from '@/services/order.service'
 import { formatCurrency } from '@/utils/format'
@@ -123,6 +128,7 @@ export function DashboardPage() {
   usePageSeo({ title: 'Tableau de bord — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { plan, isLoading: planLoading } = useShopPlan(shop?.id)
+  const { capabilities } = useWorkspaceModules()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
@@ -157,6 +163,28 @@ export function DashboardPage() {
   // (fees are per zone, so shop.delivery_fee is not what completes this step).
   const hasDeliveryZones = secteurs.some((s) => s.is_active)
 
+  // Le dashboard suit le business type : capabilities inconnues (boutique
+  // legacy) = comportement historique 100 % commerce ; sinon chaque bloc
+  // n'apparaît que si le type porte la capability correspondante.
+  const hasCommerce = capabilities === null || capabilities.has('HAS_ORDERS') || capabilities.has('HAS_PRODUCTS')
+  const hasProducts = capabilities === null || capabilities.has('HAS_PRODUCTS')
+  const showServices = capabilities !== null && capabilities.has('HAS_SERVICES')
+  const showAppointments = capabilities !== null && capabilities.has('HAS_APPOINTMENTS')
+  const showReservations = capabilities !== null && capabilities.has('HAS_RESERVATIONS')
+  const showTeam = capabilities !== null && capabilities.has('HAS_TEAM')
+  const hasServiceActivity = showServices || showAppointments || showReservations || showTeam
+
+  const { data: serviceList = [] } = useQuery({
+    queryKey: ['services', 'admin', shop?.id],
+    queryFn: () => listShopServices(shop!.id),
+    enabled: !!shop?.id && showServices,
+  })
+  const { data: teamList = [] } = useQuery({
+    queryKey: ['team-members', 'admin', shop?.id],
+    queryFn: () => listShopTeamMembers(shop!.id),
+    enabled: !!shop?.id && showTeam,
+  })
+
   const copyShopLink = async () => {
     if (!shop) return
     try {
@@ -182,18 +210,34 @@ export function DashboardPage() {
         subtitle="Vue d'ensemble de votre boutique : ventes, commandes et stock."
         actions={
           <>
-            <Link
-              to="/admin/produits/nouveau"
-              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              <PackagePlus size={16} /> Nouveau produit
-            </Link>
-            <Link
-              to="/admin/produits?tab=categories"
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Tags size={16} /> Catégories
-            </Link>
+            {hasProducts && (
+              <Link
+                to="/admin/produits/nouveau"
+                className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                <PackagePlus size={16} /> Nouveau produit
+              </Link>
+            )}
+            {hasProducts && (
+              <Link
+                to="/admin/produits?tab=categories"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Tags size={16} /> Catégories
+              </Link>
+            )}
+            {showServices && (
+              <Link
+                to="/admin/prestations"
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
+                  hasProducts
+                    ? 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-brand-600 text-white hover:bg-brand-700'
+                }`}
+              >
+                <Scissors size={16} /> Prestations
+              </Link>
+            )}
             {shop && (
               <>
                 <button
@@ -221,17 +265,31 @@ export function DashboardPage() {
       {shop && (
         <SetupChecklist
           items={[
-            { done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' },
+            ...(hasProducts
+              ? [{ done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' }]
+              : []),
+            ...(showServices
+              ? [{ done: serviceList.length > 0, label: 'Créez vos premières prestations', to: '/admin/prestations' }]
+              : []),
+            ...(showTeam
+              ? [{ done: teamList.length > 0, label: "Présentez votre équipe", to: '/admin/equipe' }]
+              : []),
             { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/contact' },
-            { done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' },
+            ...(hasCommerce
+              ? [{ done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' }]
+              : []),
             { done: !!shop.logo_url, label: 'Ajoutez votre logo (favicon et aperçus partagés)', to: '/admin/parametres/appearance' },
             { done: !!shop.description, label: 'Décrivez votre boutique (référencement Google)', to: '/admin/parametres/general' },
             { done: !!shop.banner_url, label: 'Ajoutez une bannière (aperçus WhatsApp)', to: '/admin/parametres/appearance' },
-            { done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' },
+            ...(hasCommerce
+              ? [{ done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'Partagez le lien de votre boutique' }]
+              : []),
           ]}
         />
       )}
 
+      {hasCommerce && (
+      <>
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-1">
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -462,6 +520,19 @@ export function DashboardPage() {
           </>
         )}
       </div>
+      </>
+      )}
+
+      {hasServiceActivity && shop && (
+        <ServiceDashboard
+          shopId={shop.id}
+          currency={currency}
+          showServices={showServices}
+          showAppointments={showAppointments}
+          showReservations={showReservations}
+          showTeam={showTeam}
+        />
+      )}
     </div>
   )
 }

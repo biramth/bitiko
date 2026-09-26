@@ -22,6 +22,7 @@ import { useShopPlan } from '@/features/billing/useShopPlan'
 import type { Plan } from '@/config/plans'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
+import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { BuilderPreviewFrame } from '@/features/store-builder/BuilderPreviewFrame'
 import { PageSwitcher } from '@/features/store-builder/PageSwitcher'
 import { SectionEditorPanel } from '@/features/store-builder/SectionEditorPanel'
@@ -634,6 +635,7 @@ function BuilderEditor({
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
+  const capabilities = useStorefrontCapabilities(shop)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
   const canDiscard = builder.dirty || hasStoredDraft
@@ -827,6 +829,7 @@ function BuilderEditor({
             onReorder={builder.reorderSection}
             onAdd={builder.addSection}
             availableTypes={availableTypes}
+            capabilities={capabilities}
             templateId={shop.template_id}
             maxCustomSections={maxCustomSections}
             protectedType={protectedType}

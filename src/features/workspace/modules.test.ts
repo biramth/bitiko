@@ -20,17 +20,27 @@ const SERVICE_CAPS = new Set(['HAS_APPOINTMENTS', 'HAS_SERVICES', 'HAS_CALENDAR'
 describe('resolveModules', () => {
   it('shows every legacy module for a commerce capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'customize'])
+    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'customize'])
   })
 
   it('fails open to the full workspace when capabilities are unknown (null)', () => {
     const keys = resolveModules(WORKSPACE_MODULES, null, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'customize'])
+    expect(keys).toEqual([
+      'dashboard',
+      'orders',
+      'customers',
+      'products',
+      'services',
+      'appointments',
+      'reservations',
+      'team',
+      'customize',
+    ])
   })
 
-  it('hides capability-gated modules for a service business without commerce capabilities', () => {
+  it('shows service modules for a service business without commerce capabilities', () => {
     const keys = resolveModules(WORKSPACE_MODULES, SERVICE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'customers'])
+    expect(keys).toEqual(['dashboard', 'customers', 'services', 'appointments', 'team'])
   })
 
   it('keeps only the dashboard for a known-but-empty capability set', () => {
@@ -42,8 +52,8 @@ describe('resolveModules', () => {
     const modules: WorkspaceModule[] = [
       ...WORKSPACE_MODULES,
       {
-        key: 'team',
-        label: 'Équipe',
+        key: 'staff',
+        label: 'Staff',
         to: '/admin/parametres/equipe',
         icon: WORKSPACE_MODULES[0]!.icon,
         capabilities: ['HAS_TEAM'],
@@ -54,17 +64,17 @@ describe('resolveModules', () => {
     ]
     expect(
       resolveModules(modules, COMMERCE_CAPS, { teamAccess: false }).map((m) => m.key),
-    ).not.toContain('team')
+    ).not.toContain('staff')
     expect(
       resolveModules(modules, COMMERCE_CAPS, { teamAccess: true }).map((m) => m.key),
-    ).toContain('team')
+    ).toContain('staff')
   })
 })
 
 describe('groupModules', () => {
   it('keeps ungrouped entries first, then group order of first appearance', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
-    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique'])
+    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Services'])
     expect(groups[1]?.items.map((m) => m.key)).toEqual(['orders', 'customers'])
   })
 })

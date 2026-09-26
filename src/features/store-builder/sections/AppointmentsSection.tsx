@@ -14,9 +14,9 @@ export function AppointmentsRenderer({
   shop,
   config,
   themeConfig,
-  sectionId,
 }: { shop: Shop; config: AppointmentsSectionConfig; themeConfig: ThemeConfig; sectionId?: string }) {
-  const { data: services } = useActiveServices({ shopId: shop.id, limit: 100 })
+  const { data: result } = useActiveServices({ shopId: shop.id, limit: 100 })
+  const services = result?.services ?? []
   const { data: team } = useTeamMembers(shop.id)
   const { isLoading, isError } = useAppointments({ shopId: shop.id, date: new Date().toISOString().split('T')[0] })
 

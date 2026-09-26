@@ -1,6 +1,9 @@
 import {
+  BookOpen,
+  CalendarDays,
   LayoutDashboard,
   Package,
+  Scissors,
   ShoppingBag,
   Users,
   Wand2,
@@ -37,6 +40,10 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   { key: 'orders', label: 'Commandes', to: '/admin/commandes', icon: ShoppingBag, group: 'Ventes', guide: 'guide-nav-commandes', ordersBadge: true, capabilities: ['HAS_ORDERS'], enabled: true },
   { key: 'customers', label: 'Clients', to: '/admin/clients', icon: Users, group: 'Ventes', capabilities: ['HAS_CUSTOMERS'], enabled: true },
   { key: 'products', label: 'Produits', to: '/admin/produits', icon: Package, group: 'Boutique', guide: 'guide-nav-produits', capabilities: ['HAS_PRODUCTS'], enabled: true },
+  { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', capabilities: ['HAS_SERVICES'], enabled: true },
+  { key: 'appointments', label: 'Rendez-vous', to: '/admin/rendez-vous', icon: CalendarDays, group: 'Services', capabilities: ['HAS_APPOINTMENTS'], enabled: true },
+  { key: 'reservations', label: 'Réservations', to: '/admin/reservations', icon: BookOpen, group: 'Services', capabilities: ['HAS_RESERVATIONS'], enabled: true },
+  { key: 'team', label: 'Équipe', to: '/admin/equipe', icon: Users, group: 'Services', capabilities: ['HAS_TEAM'], enabled: true },
   { key: 'customize', label: 'Personnaliser', to: '/admin/personnaliser', icon: Wand2, group: 'Boutique', guide: 'guide-nav-personnaliser', capabilities: ['HAS_SHOP'], enabled: true },
 ]
 

@@ -112,10 +112,7 @@ export function FeaturedServicesEditor({ config, onChange }: SectionEditorProps<
             columns={2}
             value={config.layout ?? 'grid'}
             onChange={(layout) => onChange({ ...config, layout })}
-            options={[
-              { value: 'grid', label: 'Grille', preview: <div className="grid grid-cols-2 gap-1"><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /></div> },
-              { value: 'carousel', label: 'Carrousel', preview: <div className="flex gap-1"><div className="h-6 w-1/3 bg-gray-200 rounded" /><div className="h-6 w-1/3 bg-gray-200 rounded" /><div className="h-6 w-1/3 bg-gray-200 rounded opacity-50" /></div> },
-            ]}
+            options={GRID_LAYOUTS}
           />
         </div>
         <p className={`mt-1.5 ${editorHelpClass}`}>« Carrousel » affiche une seule rangée défilante horizontalement.</p>

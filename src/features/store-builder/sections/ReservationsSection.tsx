@@ -1,4 +1,4 @@
-import { Calendar, Clock, Users, CheckCircle, MapPin, AlertCircle } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { useReservations } from '@/features/reservations/useReservations'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -20,14 +20,12 @@ export function ReservationsRenderer({
   editable = false,
 }: { shop: Shop; config: ReservationsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
-  const { data: reservations, isLoading, isError } = useReservations({ shopId: shop.id, date: new Date().toISOString().split('T')[0] })
+  const { isLoading, isError } = useReservations({ shopId: shop.id, date: new Date().toISOString().split('T')[0] })
 
   if (isLoading) return <Spinner />
   if (isError) return <div className="text-center py-8 text-red-600">Erreur de chargement des réservations</div>
 
   const today = new Date().toISOString().split('T')[0]
-  const now = new Date()
-  const currentTime = now.getHours() * 60 + now.getMinutes()
 
   const availableSlots = config.showAvailability
     ? generateAvailability(today)
@@ -36,9 +34,18 @@ export function ReservationsRenderer({
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
-        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>
-          {config.heading || 'Réserver une table'}
-        </h2>
+        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+          <InlineText
+            as="h2"
+            editable={editable}
+            value={config.heading || 'Réserver une table'}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre"
+            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            style={resolveTextStyle(config.headingStyle)}
+            label="Titre"
+          />
+        </InlineStyleToolbar>
       </div>
 
       <div className="space-y-4">

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PackageSearch, Search } from 'lucide-react'
 import { useActiveServices } from '@/features/services/useServices'
@@ -215,8 +216,6 @@ export function ServicesRenderer({
     </section>
   )
 }
-
-import { useEffect, useState } from 'react'
 
 const GRID_LAYOUTS: { value: GridLayout; label: string; preview: React.ReactNode }[] = [
   {

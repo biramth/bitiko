@@ -36,3 +36,18 @@ export function sectionVisibleForCapabilities(
   if (caps === null) return true
   return required.every((c) => caps.has(c))
 }
+
+/** Full visibility check: the stored instance's own capabilities AND the
+ *  registry definition's (sections created before capabilities existed carry
+ *  none on the instance — the definition is then the only gate). `caps = null`
+ *  fails OPEN, like the instance-level check above. */
+export function sectionVisibleWithRegistry(
+  section: Pick<LayoutSection, 'capabilities'>,
+  registryCapabilities: string[] | undefined,
+  caps: Set<string> | null,
+): boolean {
+  if (!sectionVisibleForCapabilities(section, caps)) return false
+  if (!registryCapabilities || registryCapabilities.length === 0) return true
+  if (caps === null) return true
+  return registryCapabilities.every((c) => caps.has(c))
+}

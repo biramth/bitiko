@@ -1,4 +1,4 @@
-import { Users, Star, MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { Users, Star, Phone, Mail } from 'lucide-react'
 import { useTeamMembers } from '@/features/team/useTeamMembers'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,14 +11,13 @@ import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
+import { VisualPicker } from '../components/VisualPicker'
 
-const LAYOUTS = [
+const LAYOUTS: { value: TeamSectionConfig['layout']; label: string; preview: React.ReactNode }[] = [
   { value: 'grid', label: 'Grille', preview: <div className="grid grid-cols-2 gap-1"><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /><div className="h-6 w-full bg-gray-200 rounded" /></div> },
   { value: 'list', label: 'Liste', preview: <div className="space-y-1"><div className="h-4 w-3/4 bg-gray-200 rounded" /><div className="h-4 w-3/4 bg-gray-200 rounded" /><div className="h-4 w-3/4 bg-gray-200 rounded" /></div> },
   { value: 'carousel', label: 'Carrousel', preview: <div className="flex gap-1"><div className="h-6 w-1/3 bg-gray-200 rounded" /><div className="h-6 w-1/3 bg-gray-200 rounded" /><div className="h-6 w-1/3 bg-gray-200 rounded opacity-50" /></div> },
-] as const
-
-type TeamLayout = 'grid' | 'list' | 'carousel'
+]
 
 export function TeamRenderer({
   shop,
@@ -45,15 +44,24 @@ export function TeamRenderer({
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
-        <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>
-          {config.heading || 'Notre équipe'}
-        </h2>
+        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+          <InlineText
+            as="h2"
+            editable={editable}
+            value={config.heading || 'Notre équipe'}
+            onCommit={(heading) => patch({ heading })}
+            placeholder="Titre"
+            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            style={resolveTextStyle(config.headingStyle)}
+            label="Titre"
+          />
+        </InlineStyleToolbar>
       </div>
 
       {config.layout === 'grid' && (
         <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {team.map((member) => (
-            <TeamCard key={member.id} member={member} themeConfig={themeConfig} />
+            <TeamCard key={member.id} member={member} />
           ))}
         </div>
       )}
@@ -61,7 +69,7 @@ export function TeamRenderer({
       {config.layout === 'list' && (
         <div className="space-y-4">
           {team.map((member) => (
-            <TeamListItem key={member.id} member={member} themeConfig={themeConfig} />
+            <TeamListItem key={member.id} member={member} />
           ))}
         </div>
       )}
@@ -70,7 +78,7 @@ export function TeamRenderer({
         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
           {team.map((member) => (
             <div key={member.id} className="w-[80%] shrink-0 snap-start sm:w-[60%] lg:w-[40%]">
-              <TeamCard member={member} themeConfig={themeConfig} />
+              <TeamCard member={member} />
             </div>
           ))}
         </div>
@@ -79,7 +87,7 @@ export function TeamRenderer({
   )
 }
 
-function TeamCard({ member, themeConfig }: { member: any; themeConfig: ThemeConfig }) {
+function TeamCard({ member }: { member: any }) {
   return (
     <article className="group bg-[var(--shop-surface)] rounded-2xl border border-[var(--shop-border)] overflow-hidden transition-shadow hover:shadow-xl">
       {member.avatarUrl && (
@@ -120,7 +128,7 @@ function TeamCard({ member, themeConfig }: { member: any; themeConfig: ThemeConf
   )
 }
 
-function TeamListItem({ member, themeConfig }: { member: any; themeConfig: ThemeConfig }) {
+function TeamListItem({ member }: { member: any }) {
   return (
     <article className="flex items-center gap-4 p-4 rounded-xl border border-[var(--shop-border)] bg-[var(--shop-surface)] group hover:shadow-md">
       <div className="h-16 w-16 shrink-0 rounded-full bg-brand-100 overflow-hidden">

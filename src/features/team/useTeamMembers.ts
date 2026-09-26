@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { listActiveTeamMembers } from '@/services/teamMember.service'
 
 export interface TeamMember {
   id: string
@@ -14,36 +15,19 @@ export interface TeamMember {
 export function useTeamMembers(shopId: string | undefined) {
   return useQuery({
     queryKey: ['team-members', shopId],
-    queryFn: async () => {
+    queryFn: async (): Promise<TeamMember[]> => {
       if (!shopId) return []
-      // Mock implementation
-      const mockTeam: TeamMember[] = [
-        {
-          id: 'tm_1',
-          name: 'Awa Diop',
-          role: 'Coiffeuse senior',
-          specialty: 'Coloration & balayage',
-          avatarUrl: '',
-          rating: 4.9,
-        },
-        {
-          id: 'tm_2',
-          name: 'Moussa Fall',
-          role: 'Barbier',
-          specialty: 'Barbe & coupe homme',
-          avatarUrl: '',
-          rating: 4.8,
-        },
-        {
-          id: 'tm_3',
-          name: 'Fatou Sarr',
-          role: 'Coiffeuse junior',
-          specialty: 'Coupe & brushing',
-          avatarUrl: '',
-          rating: 4.7,
-        },
-      ]
-      return mockTeam
+      const rows = await listActiveTeamMembers(shopId)
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        specialty: r.specialty ?? undefined,
+        avatarUrl: r.avatar_url ?? undefined,
+        phone: r.phone ?? undefined,
+        email: r.email ?? undefined,
+        rating: r.rating ?? undefined,
+      }))
     },
     enabled: !!shopId,
     staleTime: 5 * 60 * 1000,

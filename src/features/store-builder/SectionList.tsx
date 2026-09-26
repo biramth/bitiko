@@ -1,6 +1,6 @@
 import { PREVIEW_SELECT } from './previewBridge'
 import { getEffectiveRegistry } from './effectiveRegistry'
-import { sanitizeSections, sectionVisibleForCapabilities } from './sanitizeSections'
+import { sanitizeSections, sectionVisibleWithRegistry } from './sanitizeSections'
 import type { Shop } from '@/types'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
 
@@ -32,8 +32,8 @@ export function SectionList({
   return (
     <>
       {sanitizeSections(sections).map((section) => {
-        if (!sectionVisibleForCapabilities(section, capabilities)) return null
         const def = registry[section.type]
+        if (!sectionVisibleWithRegistry(section, def?.capabilities, capabilities)) return null
         const Renderer = def?.Renderer
         if (!Renderer) return null
         const content = (
