@@ -243,7 +243,7 @@ export function TemplatesTool() {
                 onClick={() => setDeleteTarget(template)}
                 aria-label={`Supprimer ${template.name}`}
                 title={template.shops > 0 ? 'En usage : passe-le en déprécié' : 'Supprimer'}
-                className="shrink-0 rounded p-1.5 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 group-focus-within:opacity-100"
+                className="shrink-0 rounded p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
               >
                 <Trash2 size={14} aria-hidden />
               </button>

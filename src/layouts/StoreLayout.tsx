@@ -196,7 +196,7 @@ function AnnouncementBar({
   return (
     <div
       style={colors}
-      className="relative flex items-center justify-center gap-x-3 gap-y-1 px-10 py-2 text-center text-xs font-medium sm:text-sm"
+      className="relative flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2 text-center text-xs font-medium break-words sm:px-10 sm:text-sm"
     >
       {content}
     </div>

@@ -283,7 +283,7 @@ export function CategoryFormPage() {
                 <span className="text-gray-500">Votre catégorie apparaîtra immédiatement sur la boutique.</span>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row [&>*]:w-full sm:[&>*]:w-auto">
               <button
                 type="button"
                 onClick={() => navigate('/admin/produits?tab=categories')}

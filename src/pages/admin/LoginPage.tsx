@@ -179,7 +179,7 @@ export function LoginPage() {
       <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-brand-100 opacity-50 blur-3xl" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-gold-300 opacity-20 blur-3xl" aria-hidden />
 
-      <div className="relative w-full max-w-sm rounded-2xl border border-sand-200 bg-white p-8 shadow-xl shadow-ink-900/5">
+      <div className="relative w-full max-w-sm rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <Logo size={40} withWordmark={false} />
           <h1 className="font-heading text-xl font-bold text-ink-900">Espace boutique</h1>

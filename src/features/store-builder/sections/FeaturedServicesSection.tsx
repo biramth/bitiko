@@ -65,7 +65,7 @@ export function FeaturedServicesRenderer({
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
+      <div className="mb-8 flex items-end justify-between gap-3 border-b border-ink-900/10 pb-4">
         <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
             as="h2"
@@ -73,13 +73,13 @@ export function FeaturedServicesRenderer({
             value={config.heading || 'Nos coups de cœur'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`min-w-0 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />
         </InlineStyleToolbar>
         {services.length > 0 && (
-          <Link to="/prestations" className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
+          <Link to="/prestations" className="shrink-0 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
             Tout voir
           </Link>
         )}
@@ -95,11 +95,21 @@ export function FeaturedServicesRenderer({
         />
       )}
       {!isLoading && services.length > 0 && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
-          {services.map((service) => (
-            <ServiceCard key={service.id} service={service} currency={shop.currency} />
-          ))}
-        </div>
+        (config.layout ?? 'grid') === 'carousel' ? (
+          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
+            {services.map((service) => (
+              <div key={service.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
+                <ServiceCard service={service} currency={shop.currency} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
+            {services.map((service) => (
+              <ServiceCard key={service.id} service={service} currency={shop.currency} />
+            ))}
+          </div>
+        )
       )}
     </section>
   )

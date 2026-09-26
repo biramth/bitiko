@@ -257,7 +257,7 @@ export function ReservationsPage() {
         title="Ajouter une réservation"
         description={`Pour le ${formatLongDate(date)}. Utile quand un client vous appelle ou vous écrit sur WhatsApp.`}
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>Annuler</Button>
             <Button
               onClick={() => createMutation.mutate()}
@@ -280,7 +280,7 @@ export function ReservationsPage() {
             placeholder="77 123 45 67"
             hint="Pour pouvoir le joindre ou le prévenir sur WhatsApp."
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
               label="Nombre de personnes"
               type="number"

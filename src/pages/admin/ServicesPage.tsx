@@ -221,7 +221,7 @@ export function ServicesPage() {
                       <span className="inline-flex items-center gap-1"><Clock size={13} aria-hidden className="text-gray-400" /> {service.duration_minutes} min</span>
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 sm:gap-3">
                     <Switch
                       checked={service.active}
                       label="Visible sur mon site"
@@ -257,7 +257,7 @@ export function ServicesPage() {
         onClose={() => setFormOpen(false)}
         title={editing ? 'Modifier la prestation' : 'Nouvelle prestation'}
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <Button variant="secondary" onClick={() => setFormOpen(false)}>Annuler</Button>
             <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={!form.name.trim()}>
               Enregistrer
@@ -273,7 +273,7 @@ export function ServicesPage() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Coupe femme, consultation…"
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
               label={`Prix (${currency === 'XOF' ? 'F CFA' : currency})`}
               type="number"

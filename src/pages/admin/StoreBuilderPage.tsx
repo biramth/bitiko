@@ -1316,7 +1316,7 @@ function CreatePageDialog({
       title="Nouvelle page"
       size="md"
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
           <button type="button" onClick={onClose} className={buttonClass({ variant: 'secondary' })}>
             Annuler
           </button>

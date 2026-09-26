@@ -149,7 +149,7 @@ export function FooterRenderer({
   )
 
   const legalLinks = (
-    <p className="flex items-center gap-3">
+    <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
       <Link to="/compte" className="hover:text-[var(--footer-text)]/70">Mon compte</Link>
       <a href={`${platformUrl()}/legal/cgu`} className="hover:text-[var(--footer-text)]/70">CGU</a>
       <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-[var(--footer-text)]/70">Confidentialité</a>
@@ -193,7 +193,7 @@ export function FooterRenderer({
   } else {
     body = (
       <>
-        <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
+        <div className="mx-auto grid max-w-[var(--shop-content-width)] gap-10 px-4 py-10 sm:px-6 md:grid-cols-3 md:py-14">
           <div>
             {brandMark}
             {shop?.description && <p className="mt-3 max-w-xs text-sm text-[var(--footer-text)]/50">{shop.description}</p>}

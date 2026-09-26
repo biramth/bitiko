@@ -17,7 +17,7 @@ function Kpi({ icon: Icon, label, value, hint, to }: { icon: LucideIcon; label: 
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Icon size={15} aria-hidden /> {label}
       </div>
-      <p className="mt-2 text-2xl font-semibold text-gray-900">{value}</p>
+      <p className="mt-2 break-words text-xl font-semibold text-gray-900 sm:text-2xl">{value}</p>
       <p className="mt-0.5 min-h-4 text-xs text-gray-400">{hint}</p>
     </div>
   )
@@ -141,7 +141,7 @@ export function CommerceDashboard({
         </Card>
       </div>
 
-      <div className={`grid grid-cols-2 gap-4 ${advancedAnalytics ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${advancedAnalytics ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
         <Kpi icon={Wallet} label="CA aujourd’hui" value={formatCurrency(stats.revenueToday, currency)} hint={`${stats.ordersToday} commande${stats.ordersToday > 1 ? 's' : ''}`} to="/admin/commandes" />
         <Kpi icon={Eye} label="Visites aujourd’hui" value={String(stats.visitsToday)} hint={`${stats.visitors30d} visiteurs sur 30 jours`} />
         <Kpi icon={ShoppingBag} label="Commandes" value={String(stats.totalOrders)} hint={`${stats.activeProducts} produit${stats.activeProducts > 1 ? 's' : ''} actif${stats.activeProducts > 1 ? 's' : ''}`} to="/admin/commandes" />

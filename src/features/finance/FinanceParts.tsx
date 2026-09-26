@@ -70,7 +70,8 @@ function shortMonth(month: string): string {
 export function MonthBars({ months, currency }: { months: MonthTotals[]; currency: string }) {
   const max = Math.max(1, ...months.flatMap((m) => [m.revenue, m.expenses]))
   return (
-    <div>
+    <div className="overflow-x-auto pb-1">
+      <div className="min-w-[560px]">
       <div className="flex h-36 items-end gap-2 sm:gap-4" role="img" aria-label="Recettes et dépenses mois par mois">
         {months.map((m) => (
           <div key={m.month} className="flex h-full min-w-0 flex-1 flex-col justify-end">
@@ -100,10 +101,11 @@ export function MonthBars({ months, currency }: { months: MonthTotals[]; currenc
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" aria-hidden /> Recettes</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-rose-400" aria-hidden /> Dépenses</span>
         <span className="text-gray-400">Sous chaque mois : le résultat</span>
+      </div>
       </div>
     </div>
   )

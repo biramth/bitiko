@@ -88,7 +88,7 @@ export function ServicesRenderer({
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8 flex items-end justify-between border-b border-ink-900/10 pb-4">
+      <div className="mb-8 flex items-end justify-between gap-3 border-b border-ink-900/10 pb-4">
         <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
             as="h2"
@@ -96,13 +96,13 @@ export function ServicesRenderer({
             value={config.heading || 'Nos prestations'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`min-w-0 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />
         </InlineStyleToolbar>
         {!fullToolbox && services.length > 0 && (
-          <Link to="/prestations" className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
+          <Link to="/prestations" className="shrink-0 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
             Tout voir
           </Link>
         )}
@@ -122,7 +122,7 @@ export function ServicesRenderer({
             />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <select
               value={categorySlug}
               onChange={(e) => {
@@ -140,7 +140,7 @@ export function ServicesRenderer({
                 )
               }}
               aria-label="Filtrer par catégorie"
-              className="border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto sm:min-w-0 sm:flex-1"
             >
               <option value="">Toutes les catégories</option>
               {categories?.map((c) => (
@@ -152,7 +152,7 @@ export function ServicesRenderer({
               value={sort}
               onChange={(e) => setParam('tri', e.target.value)}
               aria-label="Trier les prestations"
-              className="border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
+              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto"
             >
               <option value="manual">Ordre manuel</option>
               <option value="price_asc">Prix croissant</option>
@@ -200,7 +200,7 @@ export function ServicesRenderer({
           )}
 
           {fullToolbox && totalPages > 1 && (
-            <div className="mt-12 flex items-center justify-center gap-1">
+            <div className="mt-12 flex max-w-full flex-wrap items-center justify-center gap-1 overflow-x-auto pb-1">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}

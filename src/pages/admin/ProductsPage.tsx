@@ -278,18 +278,18 @@ export function ProductsPage() {
         title="Produits"
         subtitle="Gérez vos produits, leur stock et leur visibilité."
         actions={
-          readOnly ? undefined : <div className="flex items-center gap-2">
+          readOnly ? undefined : <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setImportOpen(true)}
               className={buttonClass({ variant: 'secondary' })}
             >
-              <Upload size={16} /> Importer (CSV)
+              <Upload size={16} /> <span className="whitespace-nowrap">Importer (CSV)</span>
             </button>
             <Link
               to="/admin/produits/nouveau"
               data-guide="guide-nouveau-produit"
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               <Plus size={16} /> Nouveau produit
             </Link>

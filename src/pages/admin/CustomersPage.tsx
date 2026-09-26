@@ -215,7 +215,7 @@ export function CustomersPage() {
         title="Corriger la fiche client"
         description="Nom et adresse affichés ici. Les compteurs restent calculés depuis vos commandes."
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <button
               type="button"
               onClick={() => setEditing(null)}

@@ -51,8 +51,8 @@ export function CountriesTool() {
         {toggle.isError && <p className="mt-2 text-sm text-red-600">{(toggle.error as Error).message}</p>}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-gray-100 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Pays</th>

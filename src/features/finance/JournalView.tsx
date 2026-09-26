@@ -158,10 +158,10 @@ export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
         plural="saisies ce mois-ci"
       />
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card><p className="text-xs text-gray-500">Recettes saisies</p><p className="mt-1 truncate text-base font-semibold text-emerald-700 sm:text-lg">{formatCurrency(income, currency)}</p></Card>
-        <Card><p className="text-xs text-gray-500">Dépenses</p><p className="mt-1 truncate text-base font-semibold text-rose-600 sm:text-lg">{formatCurrency(expenses, currency)}</p></Card>
-        <Card><p className="text-xs text-gray-500">Solde du journal</p><p className={`mt-1 truncate text-base font-semibold sm:text-lg ${income - expenses >= 0 ? 'text-gray-900' : 'text-rose-600'}`}>{income - expenses < 0 ? '− ' : ''}{formatCurrency(Math.abs(income - expenses), currency)}</p></Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card><p className="text-xs text-gray-500">Recettes saisies</p><p className="mt-1 break-words text-base font-semibold text-emerald-700 sm:text-lg">{formatCurrency(income, currency)}</p></Card>
+        <Card><p className="text-xs text-gray-500">Dépenses</p><p className="mt-1 break-words text-base font-semibold text-rose-600 sm:text-lg">{formatCurrency(expenses, currency)}</p></Card>
+        <Card><p className="text-xs text-gray-500">Solde du journal</p><p className={`mt-1 break-words text-base font-semibold sm:text-lg ${income - expenses >= 0 ? 'text-gray-900' : 'text-rose-600'}`}>{income - expenses < 0 ? '− ' : ''}{formatCurrency(Math.abs(income - expenses), currency)}</p></Card>
       </div>
 
       {entries.length > 0 && (

@@ -62,7 +62,7 @@ export function HeroRenderer({
   const banner = showBanner && (
     <div
       className={`group/banner relative w-full overflow-hidden ${
-        side ? 'aspect-[4/3] md:aspect-auto md:h-full md:min-h-[18rem]' : 'aspect-[3/1] sm:aspect-[16/5]'
+        side ? 'aspect-[4/3] md:aspect-auto md:h-full md:min-h-[18rem]' : 'aspect-[16/10] sm:aspect-[16/5]'
       }`}
       style={side ? { borderRadius: 'var(--shop-radius)' } : undefined}
     >

@@ -570,7 +570,7 @@ export function CategoriesPage() {
         title="Catégories"
         subtitle="Organisez vos produits par catégorie — l'ordre ci-dessous est celui de votre boutique."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setMergeOpen(true)}
@@ -580,7 +580,7 @@ export function CategoriesPage() {
             </button>
             <Link
               to="/admin/categories/nouveau"
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               <Plus size={16} /> Nouvelle catégorie
             </Link>
@@ -694,7 +694,7 @@ export function CategoriesPage() {
                   )}
                   <Link
                     to={`/admin/produits?category=${category.id}`}
-                    className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                    className="hidden shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 sm:inline-block"
                     title={`Voir les produits de la catégorie « ${category.name} »`}
                   >
                     {productCounts?.get(category.id) ?? 0} produit{(productCounts?.get(category.id) ?? 0) > 1 ? 's' : ''}

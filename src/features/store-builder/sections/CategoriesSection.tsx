@@ -118,9 +118,9 @@ export function CategoriesRenderer({ shop, config, themeConfig, sectionId, edita
                   aria-hidden
                 />
               )}
-              <span className="relative z-10 block">
+              <span className="relative z-10 block min-w-0">
                 {category.emoji && <span className="mb-2 block text-2xl">{category.emoji}</span>}
-                <span className="block text-sm font-semibold">{category.name}</span>
+                <span className="block break-words text-sm font-semibold">{category.name}</span>
                 {category.description && (
                   <span className="mt-0.5 line-clamp-2 block text-xs opacity-70">{category.description}</span>
                 )}

@@ -194,9 +194,9 @@ export function HeaderRenderer({
   if (layout === 'centered-logo') {
     bar = (
       <div className={rowClass}>
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center px-10 sm:px-6">
           <div className="absolute left-0 flex items-center">{menuButton}</div>
-          {logo}
+          <div className="flex min-w-0 max-w-full justify-center">{logo}</div>
           <div className="absolute right-0 flex items-center">{cart}</div>
         </div>
         {desktopNav && <div className="mt-3">{desktopNav}</div>}
@@ -204,12 +204,12 @@ export function HeaderRenderer({
     )
   } else if (layout === 'split') {
     bar = (
-      <div className={`${rowClass} grid grid-cols-[1fr_auto_1fr] items-center gap-3`}>
-        <div className="flex items-center">
+      <div className={`${rowClass} grid grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-2 sm:gap-3`}>
+        <div className="flex min-w-0 items-center">
           {menuButton}
           {desktopNav}
         </div>
-        {logo}
+        <div className="flex min-w-0 justify-center">{logo}</div>
         <div className="flex items-center justify-end">{cart}</div>
       </div>
     )
@@ -230,7 +230,7 @@ export function HeaderRenderer({
     <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
       {bar}
       {mobileMenuOpen && navLinks.length > 0 && (
-        <nav className="border-t border-ink-900/10 px-4 py-2 sm:hidden">
+        <nav className="max-h-[70vh] overflow-y-auto border-t border-ink-900/10 px-4 py-2 sm:hidden">
           {navLinks.map((link) =>
             link.external ? (
               <a

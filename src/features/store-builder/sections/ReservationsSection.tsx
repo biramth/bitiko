@@ -203,7 +203,7 @@ export function ReservationsRenderer({
             type="submit"
             disabled={!canSubmit}
             style={{ borderRadius: 'var(--shop-radius)' }}
-            className="bg-[var(--shop-button)] px-6 py-3 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full bg-[var(--shop-button)] px-6 py-3 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {bookMutation.isPending ? 'Envoi…' : editable ? 'Aperçu — réservation désactivée' : 'Demander cette table'}
           </button>

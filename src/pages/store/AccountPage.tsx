@@ -212,7 +212,7 @@ export function AccountPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
               {shop.whatsapp_number ? (
                 <a
                   href={`${whatsappHref(shop.whatsapp_number)}?text=${encodeURIComponent(`Bonjour, une question sur ma commande ${order.order_number}.`)}`}

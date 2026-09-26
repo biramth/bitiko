@@ -31,12 +31,12 @@ import { buttonClass, controlClass } from '@/components/ui/styles'
 function StatusStepper({ status }: { status: OrderStatus }) {
   const currentIndex = ORDER_STATUS_FLOW.indexOf(status)
   return (
-    <ol className="mt-4 flex items-start">
+    <ol className="mt-4 flex items-start overflow-x-auto pb-1">
       {ORDER_STATUS_FLOW.map((step, index) => {
         const reached = index < currentIndex
         const isCurrent = index === currentIndex
         return (
-          <li key={step} className="flex flex-1 flex-col items-center">
+          <li key={step} className="flex min-w-[72px] flex-1 flex-col items-center">
             <div className="relative w-full">
               {index < ORDER_STATUS_FLOW.length - 1 && (
                 <span aria-hidden className={`absolute left-1/2 top-4 h-0.5 w-full ${index < currentIndex ? 'bg-brand-500' : 'bg-gray-200'}`} />
@@ -53,7 +53,7 @@ function StatusStepper({ status }: { status: OrderStatus }) {
                 {reached ? <Check size={15} strokeWidth={3} /> : isCurrent ? <span className="h-2.5 w-2.5 rounded-full bg-brand-500" /> : null}
               </span>
             </div>
-            <span className={`mt-2 whitespace-nowrap text-center text-xs font-medium ${isCurrent ? 'text-brand-700' : reached ? 'text-gray-500' : 'text-gray-400'}`}>
+            <span className={`mt-2 break-words text-center text-[11px] font-medium sm:text-xs ${isCurrent ? 'text-brand-700' : reached ? 'text-gray-500' : 'text-gray-400'}`}>
               {ORDER_STATUS_LABELS[step]}
             </span>
           </li>

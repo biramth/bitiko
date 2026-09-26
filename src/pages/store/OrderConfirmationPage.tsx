@@ -100,7 +100,7 @@ export function OrderConfirmationPage() {
           {confirmation.paymentMethod === 'mobile_money' && confirmation.paymentInstructions?.trim() && (
             <div className="mt-4 bg-[var(--shop-text)]/5 p-4 text-sm text-[var(--shop-text)]/85" style={shape}>
               <p className="font-semibold text-[var(--shop-text)]">Modalités de paiement :</p>
-              <p className="mt-1 whitespace-pre-line">{confirmation.paymentInstructions}</p>
+              <p className="mt-1 break-words whitespace-pre-line">{confirmation.paymentInstructions}</p>
             </div>
           )}
         </>
