@@ -74,7 +74,12 @@ describe('resolveModules', () => {
 describe('groupModules', () => {
   it('keeps ungrouped entries first, then group order of first appearance', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
-    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Services'])
+    expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe'])
     expect(groups[1]?.items.map((m) => m.key)).toEqual(['orders', 'customers'])
+  })
+
+  it('never shows a Services group for a commerce-only business', () => {
+    const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
+    expect(groups.map((g) => g.label)).not.toContain('Services')
   })
 })

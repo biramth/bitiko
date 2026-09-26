@@ -172,7 +172,9 @@ export function DashboardPage() {
   const showAppointments = capabilities !== null && capabilities.has('HAS_APPOINTMENTS')
   const showReservations = capabilities !== null && capabilities.has('HAS_RESERVATIONS')
   const showTeam = capabilities !== null && capabilities.has('HAS_TEAM')
-  const hasServiceActivity = showServices || showAppointments || showReservations || showTeam
+  // Le bloc « Activité services » exige une vraie brique service : la seule
+  // vitrine équipe (ex. une boutique mode) ne doit pas le faire apparaître.
+  const hasServiceActivity = showServices || showAppointments || showReservations
 
   const { data: serviceList = [] } = useQuery({
     queryKey: ['services', 'admin', shop?.id],

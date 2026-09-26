@@ -43,7 +43,10 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', capabilities: ['HAS_SERVICES'], enabled: true },
   { key: 'appointments', label: 'Rendez-vous', to: '/admin/rendez-vous', icon: CalendarDays, group: 'Services', capabilities: ['HAS_APPOINTMENTS'], enabled: true },
   { key: 'reservations', label: 'Réservations', to: '/admin/reservations', icon: BookOpen, group: 'Services', capabilities: ['HAS_RESERVATIONS'], enabled: true },
-  { key: 'team', label: 'Équipe', to: '/admin/equipe', icon: Users, group: 'Services', capabilities: ['HAS_TEAM'], enabled: true },
+  // L'équipe (vitrine) est transversale : son propre groupe, jamais noyée
+  // dans « Services » (sinon une boutique mode verrait un groupe Services
+  // avec pour seul contenu l'Équipe).
+  { key: 'team', label: 'Équipe', to: '/admin/equipe', icon: Users, group: 'Équipe', capabilities: ['HAS_TEAM'], enabled: true },
   { key: 'customize', label: 'Personnaliser', to: '/admin/personnaliser', icon: Wand2, group: 'Boutique', guide: 'guide-nav-personnaliser', capabilities: ['HAS_SHOP'], enabled: true },
 ]
 
