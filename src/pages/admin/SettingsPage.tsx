@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { getImpersonation } from '@/lib/supportSession'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
@@ -71,7 +72,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
   { key: 'contact', label: 'Contact & devise', icon: Phone },
   { key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { key: 'facturation', label: 'Facturation', icon: CreditCard },
-  { key: 'equipe', label: 'Équipe', icon: Users },
+  { key: 'equipe', label: 'Équipe & accès', icon: Users },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -429,10 +430,21 @@ export function SettingsPage() {
   const { data: shop, isLoading } = useMyShop()
   const { section: sectionParam } = useParams<{ section: string }>()
   const { role: shopRole, isLoading: roleLoading } = useShopRole()
+  const { capabilities } = useWorkspaceModules()
 
   if (isLoading || roleLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!SECTIONS.some((s) => s.key === sectionParam)) {
+    return <Navigate to="/admin/parametres/general" replace />
+  }
+  // Livraison & stock n'existe que pour les métiers qui livrent ou vendent
+  // (masqué de la nav le cas échéant — garde-fou anti lien direct).
+  if (
+    sectionParam === 'shipping' &&
+    capabilities !== null &&
+    !capabilities.has('HAS_DELIVERY') &&
+    !capabilities.has('HAS_PRODUCTS')
+  ) {
     return <Navigate to="/admin/parametres/general" replace />
   }
   // Billing + team are owner-only (also hidden from the nav for staff).

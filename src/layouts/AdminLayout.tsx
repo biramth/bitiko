@@ -37,17 +37,27 @@ import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 // just be chrome. Catégories lives as a tab of Produits and Facturation
 // under Paramètres (see settingsSections below).
 // Workspace navigation is generated from the module registry
-// (src/features/workspace/modules.ts): Business Type → Capabilities → Modules.
-// For today's commerce shops the output matches the historic sidebar exactly.
+// (src/features/workspace/modules.ts): Business Type → Capabilities → Modules,
+// ordered and relabeled for the business profile (useWorkspaceModules).
+// Groups render as a single-open accordion (chevron + auto-open on the active
+// route); the collapsed rail and the mobile drawer share this component.
 
 const settingsSections = [
-  { to: '/admin/parametres/general', label: 'Général', icon: Store },
-  { to: '/admin/parametres/appearance', label: 'Apparence', icon: ImagePlus },
-  { to: '/admin/parametres/contact', label: 'Contact & devise', icon: Phone },
-  { to: '/admin/parametres/shipping', label: 'Livraison & stock', icon: Truck },
-  { to: '/admin/parametres/facturation', label: 'Facturation', icon: CreditCard },
-  { to: '/admin/parametres/equipe', label: 'Équipe', icon: Users },
-  { to: '/admin/parametres/compte', label: 'Mon compte', icon: User },
+  { to: '/admin/parametres/general', key: 'general', label: 'Général', icon: Store },
+  { to: '/admin/parametres/appearance', key: 'appearance', label: 'Apparence', icon: ImagePlus },
+  { to: '/admin/parametres/contact', key: 'contact', label: 'Contact & devise', icon: Phone },
+  { to: '/admin/parametres/shipping', key: 'shipping', label: 'Livraison & stock', icon: Truck },
+  { to: '/admin/parametres/facturation', key: 'facturation', label: 'Facturation', icon: CreditCard },
+  { to: '/admin/parametres/equipe', key: 'equipe', label: 'Équipe & accès', icon: Users },
+  { to: '/admin/parametres/compte', key: 'compte', label: 'Mon compte', icon: User },
+]
+
+/** Paramètres regroupés comme le reste du workspace : Boutique (le lieu),
+ *  Ventes (livraison & stock), Compte (facturation, accès, profil). */
+const SETTINGS_GROUPS: { label: string; keys: string[] }[] = [
+  { label: 'Boutique', keys: ['general', 'appearance', 'contact'] },
+  { label: 'Ventes', keys: ['shipping'] },
+  { label: 'Compte', keys: ['facturation', 'equipe', 'compte'] },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
@@ -61,7 +71,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   const { signOut } = useAuth()
   const { data: shop } = useMyShop()
   const { data: shops } = useMyShops()
-  const { groups } = useWorkspaceModules()
+  const { groups, capabilities } = useWorkspaceModules()
   const multiShop = (shops?.length ?? 0) > 1
   // Shared with OrdersPage's own query (same key): the sidebar pill costs
   // no extra fetch once Commandes has been visited, and vice versa.
@@ -75,24 +85,38 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   // blocks the data anyway; this just avoids dead-end pages). Unknown role
   // (still loading) keeps everything visible to avoid flicker for owners.
   const { role: shopRole } = useShopRole()
-  const visibleSettingsSections =
+  const location = useLocation()
+  const onSettings = location.pathname.startsWith('/admin/parametres')
+  // Livraison & stock n'a de sens qu'avec livraison ou catalogue : un salon
+  // 100 % rendez-vous ne le voit ni ici ni dans la page Paramètres.
+  const showShippingSection =
+    capabilities === null || capabilities.has('HAS_DELIVERY') || capabilities.has('HAS_PRODUCTS')
+  const visibleSettingsSections = (
     shopRole && shopRole !== 'owner'
       ? settingsSections.filter((s) => s.to !== '/admin/parametres/facturation' && s.to !== '/admin/parametres/equipe')
       : settingsSections
-  const location = useLocation()
+  ).filter((s) => s.key !== 'shipping' || showShippingSection)
+
+  // Accordéon unique : un seul groupe ouvert à la fois, suit la navigation.
+  // La route active rouvre son groupe ; un clic manuel ne vit que jusqu'à la
+  // prochaine navigation (même pattern que le suivi de page existant).
+  const matchesRoute = (to: string, end?: boolean) =>
+    end ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`)
+  const activeKey = onSettings
+    ? 'Paramètres'
+    : (groups.find((g) => g.label && g.items.some((m) => matchesRoute(m.to, m.end)))?.label ?? null)
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [prevNavKey, setPrevNavKey] = useState(
+    () => `${location.pathname}|${groups.map((g) => g.label ?? 'main').join(',')}`,
+  )
+  const navKey = `${location.pathname}|${groups.map((g) => g.label ?? 'main').join(',')}`
+  if (navKey !== prevNavKey) {
+    setPrevNavKey(navKey)
+    setOpenGroup(activeKey)
+  }
+  const settingsExpanded = openGroup === 'Paramètres'
   const [impersonation] = useState(() => getImpersonation())
   const [quitting, setQuitting] = useState(false)
-  const onSettings = location.pathname.startsWith('/admin/parametres')
-  const [settingsOpen, setSettingsOpen] = useState(onSettings)
-  // Navigate into/out of Paramètres → follow it (adjust during render rather
-  // than in an effect, so a manual collapse isn't re-opened by an unrelated
-  // re-render, but the link itself always reflects where you actually are).
-  const [prevOnSettings, setPrevOnSettings] = useState(onSettings)
-  if (onSettings !== prevOnSettings) {
-    setPrevOnSettings(onSettings)
-    if (onSettings) setSettingsOpen(true)
-  }
-  const settingsExpanded = settingsOpen
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -137,30 +161,66 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   return (
     <>
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
-        {groups.map((group) => (
-          <Fragment key={group.label ?? 'main'}>
-            {group.label && !collapsed && (
-              <p className="px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                {group.label}
-              </p>
-            )}
-            {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
-              <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
-                <Icon size={17} aria-hidden />
-                {!collapsed && label}
-                {!collapsed && ordersBadge && ordersToTreat > 0 && (
-                  <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                    {ordersToTreat}
-                  </span>
-                )}
-              </NavLink>
-            ))}
-          </Fragment>
-        ))}
+        {groups.map((group) =>
+          !group.label ? (
+            <Fragment key="main">
+              {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+                <NavLink key={to} to={to} end={end} className={linkClass} title={collapsed ? label : undefined} data-guide={guide}>
+                  <Icon size={17} aria-hidden />
+                  {!collapsed && label}
+                  {!collapsed && ordersBadge && ordersToTreat > 0 && (
+                    <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                      {ordersToTreat}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </Fragment>
+          ) : collapsed ? (
+            <Fragment key={group.label}>
+              {group.items.map(({ to, label, icon: Icon, end, guide }) => (
+                <NavLink key={to} to={to} end={end} className={linkClass} title={label} data-guide={guide}>
+                  <Icon size={17} aria-hidden />
+                </NavLink>
+              ))}
+            </Fragment>
+          ) : (
+            <div key={group.label}>
+              <button
+                type="button"
+                onClick={() => setOpenGroup((open) => (open === group.label ? null : (group.label ?? null)))}
+                aria-expanded={openGroup === group.label}
+                className="flex w-full items-center gap-2 rounded-lg px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 transition-colors hover:text-white/60"
+              >
+                <span className="flex-1 text-left">{group.label}</span>
+                <ChevronDown
+                  size={13}
+                  aria-hidden
+                  className={`transition-transform ${openGroup === group.label ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {openGroup === group.label && (
+                <div className="flex flex-col gap-0.5">
+                  {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
+                    <NavLink key={to} to={to} end={end} className={linkClass} data-guide={guide}>
+                      <Icon size={17} aria-hidden />
+                      {label}
+                      {ordersBadge && ordersToTreat > 0 && (
+                        <span className="ml-auto rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                          {ordersToTreat}
+                        </span>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+        )}
 
         <button
           type="button"
-          onClick={() => (collapsed ? undefined : setSettingsOpen((open) => !open))}
+          onClick={() => (collapsed ? undefined : setOpenGroup((open) => (open === 'Paramètres' ? null : 'Paramètres')))}
           aria-expanded={settingsExpanded}
           title={collapsed ? 'Paramètres' : undefined}
           data-guide="guide-nav-parametres"
@@ -185,13 +245,26 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
           )}
         </button>
         {!collapsed && settingsExpanded && (
-          <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-            {visibleSettingsSections.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={settingsSubLinkClass}>
-                <Icon size={14} aria-hidden />
-                {label}
-              </NavLink>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            {SETTINGS_GROUPS.map(({ label, keys }) => {
+              const items = visibleSettingsSections.filter((s) => keys.includes(s.key))
+              if (items.length === 0) return null
+              return (
+                <div key={label}>
+                  <p className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    {label}
+                  </p>
+                  <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+                    {items.map(({ to, label: itemLabel, icon: Icon }) => (
+                      <NavLink key={to} to={to} className={settingsSubLinkClass}>
+                        <Icon size={14} aria-hidden />
+                        {itemLabel}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </nav>

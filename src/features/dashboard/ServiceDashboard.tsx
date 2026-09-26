@@ -112,12 +112,8 @@ export function ServiceDashboard({
   const pendingReservations = reservationsToday.filter((r) => r.status === 'pending').length
 
   return (
-    <div className="mt-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Activité services</h2>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="mt-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {showAppointments && (
           <MiniStat
             icon={CalendarDays}

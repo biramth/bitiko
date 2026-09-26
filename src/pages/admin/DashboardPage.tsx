@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
+  CalendarDays,
   Clock,
   Copy,
   ExternalLink,
@@ -32,6 +33,7 @@ import { shopUrl } from '@/lib/tenant'
 import { ORDER_STATUS_ACTION_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, getLinearNext } from '@/config/constants'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { CollapsibleZone } from '@/components/ui/CollapsibleZone'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ui/Toast'
@@ -296,16 +298,13 @@ export function DashboardPage() {
         />
       )}
 
-      {hasCommerce && hasServiceActivity && (
-        <div className="mt-8 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Ventes en ligne</h2>
-          <Link to="/admin/commandes" className="text-sm font-medium text-brand-700">
-            Voir tout
-          </Link>
-        </div>
-      )}
-
       {hasCommerce && (
+        <CollapsibleZone
+          title="Ventes en ligne"
+          icon={ShoppingBag}
+          to={hasServiceActivity ? '/admin/commandes' : undefined}
+          storageKey="bitiko-dashboard-zone-ventes"
+        >
       <>
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-1">
@@ -538,17 +537,24 @@ export function DashboardPage() {
         )}
       </div>
       </>
+      </CollapsibleZone>
       )}
 
       {hasServiceActivity && shop && (
-        <ServiceDashboard
-          shopId={shop.id}
-          currency={currency}
-          showServices={showServices}
-          showAppointments={showAppointments}
-          showReservations={showReservations}
-          showTeam={showTeam}
-        />
+        <CollapsibleZone
+          title="Activité services"
+          icon={CalendarDays}
+          storageKey="bitiko-dashboard-zone-services"
+        >
+          <ServiceDashboard
+            shopId={shop.id}
+            currency={currency}
+            showServices={showServices}
+            showAppointments={showAppointments}
+            showReservations={showReservations}
+            showTeam={showTeam}
+          />
+        </CollapsibleZone>
       )}
     </div>
   )
