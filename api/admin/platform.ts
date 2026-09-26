@@ -19,7 +19,7 @@ import { recordUsage } from '../_lib/usage.js'
 import { campaignEmailHtml, proActivatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
-import { nextSubscription } from '../_lib/subscriptionPeriod.js'
+import { grantedSubscription, nextSubscription } from '../_lib/subscriptionPeriod.js'
 
 /**
  * Platform-team serverless endpoint (team management + campaign tool),
@@ -90,6 +90,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handlePaymentApprove(req, res)
     case 'payment-reject':
       return handlePaymentReject(req, res)
+    case 'subscription-grant':
+      return handleSubscriptionGrant(req, res)
+    case 'audit-list':
+      return handleAuditList(req, res)
     case 'biztype-list':
       return handleBizTypeList(req, res)
     case 'biztype-save':
@@ -1971,6 +1975,129 @@ async function handleCountrySet(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ ok: true, code, enabled })
   } catch (err) {
     console.error('platform country-set failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Offre ou prolongation manuelle d'un abonnement (geste commercial, paiement reçu hors Wave). Motif obligatoire, tracé avant l'écriture. */
+async function handleSubscriptionGrant(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const operator = await getPlatformOperatorFromAuthHeader(req.headers.authorization)
+    if (!operator) {
+      res.status(403).json({ error: 'Accès réservé.' })
+      return
+    }
+    const body: { shopId?: unknown; plan?: unknown; days?: unknown; reason?: unknown } = req.body ?? {}
+    if (typeof body.shopId !== 'string' || !UUID_PATTERN.test(body.shopId)) {
+      res.status(400).json({ error: 'Boutique invalide.' })
+      return
+    }
+    if (body.plan !== 'essential' && body.plan !== 'pro') {
+      res.status(400).json({ error: 'Plan payant invalide.' })
+      return
+    }
+    const days = Number(body.days)
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      res.status(400).json({ error: 'La durée doit être comprise entre 1 et 365 jours.' })
+      return
+    }
+    const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 300) : ''
+    if (reason.length < 3) {
+      res.status(400).json({ error: 'Indiquez le motif de cette offre (il est conservé dans le journal).' })
+      return
+    }
+
+    const supabase = getSupabaseAdmin()
+    const { data: shop } = await supabase.from('shops').select('id, name').eq('id', body.shopId).maybeSingle()
+    if (!shop) {
+      res.status(404).json({ error: 'Boutique introuvable.' })
+      return
+    }
+    const { data: currentSub } = await supabase
+      .from('shop_subscriptions')
+      .select('plan, current_period_end')
+      .eq('shop_id', body.shopId)
+      .maybeSingle()
+    const result = grantedSubscription({ current: currentSub, plan: body.plan, days })
+    if (!result.ok) {
+      res.status(409).json({ error: 'Un plan supérieur est déjà actif sur cette boutique : rien n’a été modifié.' })
+      return
+    }
+
+    // La trace d'abord : sans elle, pas d'offre.
+    await logAdminAudit(
+      {
+        actorUserId: operator.id,
+        actorEmail: operator.email,
+        action: 'subscription_grant',
+        targetShopId: body.shopId,
+        details: { plan: result.plan, days, reason, periodEnd: result.periodEnd, previousPlan: currentSub?.plan ?? 'free' },
+      },
+      true,
+    )
+    const { error: upsertError } = await supabase
+      .from('shop_subscriptions')
+      .upsert({ shop_id: body.shopId, plan: result.plan, status: 'active', current_period_end: result.periodEnd }, { onConflict: 'shop_id' })
+    if (upsertError) throw upsertError
+
+    res.status(200).json({ plan: result.plan, periodEnd: result.periodEnd })
+  } catch (err) {
+    console.error('subscription-grant failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** Journal des actions sensibles de l'équipe (propriétaires et administrateurs uniquement). */
+async function handleAuditList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageTeam(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs consultent le journal.' })
+      return
+    }
+    const action = typeof req.query.action_filter === 'string' ? req.query.action_filter : ''
+    const offset = Math.max(0, Number(req.query.offset) || 0)
+    const admin = getSupabaseAdmin()
+    let query = admin
+      .from('admin_audit_log')
+      .select('id, actor_email, action, target_user_id, target_shop_id, details, created_at')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + 49)
+    if (action) query = query.eq('action', action)
+    const { data, error } = await query
+    if (error) throw error
+    const rows = data ?? []
+    const shopIds = [...new Set(rows.map((r) => r.target_shop_id as string | null).filter((id): id is string => !!id))]
+    const shopNames = new Map<string, string>()
+    if (shopIds.length > 0) {
+      const { data: shops } = await admin.from('shops').select('id, name').in('id', shopIds)
+      for (const shop of shops ?? []) shopNames.set(shop.id as string, shop.name as string)
+    }
+    res.status(200).json({
+      entries: rows.map((row) => ({
+        id: row.id as string,
+        actorEmail: row.actor_email as string,
+        action: row.action as string,
+        shopId: (row.target_shop_id as string | null) ?? null,
+        shopName: row.target_shop_id ? (shopNames.get(row.target_shop_id as string) ?? null) : null,
+        details: (row.details ?? {}) as Record<string, unknown>,
+        createdAt: row.created_at as string,
+      })),
+      hasMore: rows.length === 50,
+    })
+  } catch (err) {
+    console.error('audit-list failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

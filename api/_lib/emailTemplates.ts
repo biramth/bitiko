@@ -422,3 +422,33 @@ export function bookingNotificationEmailHtml({
     <p><a href="${escapeHtml(origin + path)}" style="color:#c2481c;">Ouvrir mon agenda pour confirmer</a></p>
   </div>`
 }
+
+/** Alerte marchand (nouvelle commande, stock bas…) : même habillage que les autres emails Bitiko.
+ *  `body` est du texte brut (les variables viennent de clients : tout est échappé ici). */
+export function merchantAlertEmailHtml({
+  origin,
+  shopName,
+  heading,
+  body,
+  buttonLabel,
+  path,
+}: {
+  origin: string
+  shopName: string
+  heading: string
+  body: string
+  buttonLabel: string
+  /** Chemin de l'admin à ouvrir (ex. /admin/commandes). */
+  path: string
+}): string {
+  return shell({
+    origin,
+    preheader: escapeHtml(heading),
+    eyebrow: escapeHtml(shopName),
+    heading: escapeHtml(heading),
+    body: escapeHtml(body).replace(/\n/g, '<br>'),
+    buttonLabel: escapeHtml(buttonLabel),
+    buttonUrl: escapeHtml(`${origin}${path}`),
+    footnote: 'Vous recevez cette alerte car elle est activée sur votre boutique. Vous pouvez la désactiver dans Paramètres › Notifications.',
+  })
+}

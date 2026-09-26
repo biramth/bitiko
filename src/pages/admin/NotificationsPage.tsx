@@ -23,7 +23,11 @@ import { usePageSeo } from '@/hooks/usePageSeo'
  *  rendez-vous et de réservation partent déjà d'office par email (voir l'encadré) :
  *  les proposer aussi ici enverrait deux emails pour la même demande. */
 function eventsForCapabilities(capabilities: Set<string> | null): AutomationEventDef[] {
-  return AUTOMATION_EVENTS.filter((event) => event.type.startsWith('ORDER_') && (capabilities === null || capabilities.has('HAS_ORDERS')))
+  return AUTOMATION_EVENTS.filter((event) => {
+    if (event.type.startsWith('ORDER_')) return capabilities === null || capabilities.has('HAS_ORDERS')
+    if (event.type.startsWith('STOCK_')) return capabilities === null || capabilities.has('HAS_PRODUCTS')
+    return false
+  })
 }
 
 function EventRuleCard({
@@ -37,7 +41,7 @@ function EventRuleCard({
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [enabled, setEnabled] = useState(rule?.enabled ?? false)
+  const [enabled, setEnabled] = useState(rule?.enabled ?? event.defaultEnabled ?? false)
   const [subject, setSubject] = useState(rule?.template.subject ?? event.defaultSubject)
   const [body, setBody] = useState(rule?.template.body ?? event.defaultBody)
   const [editing, setEditing] = useState(false)
@@ -50,7 +54,7 @@ function EventRuleCard({
       saveEmailRule({ shopId, eventType: event.type, enabled: next.enabled, subject, body }),
     onSuccess: (_d, next) => {
       queryClient.invalidateQueries({ queryKey: ['automation-rules', shopId] })
-      toast.success(next.enabled ? 'C’est activé : vous recevrez un email.' : 'Notification désactivée.')
+      toast.success(next.enabled ? 'C’est activé : vous recevrez un email.' : 'Notification désactivée : vous ne recevrez plus cet email.')
     },
     onError: () => toast.error('Enregistrement impossible.'),
   })
@@ -162,7 +166,7 @@ export function NotificationsPage() {
     <div>
       <PageHeader
         title="Notifications"
-        subtitle={`Choisissez ce qui vous prévient par email${user?.email ? ` à l’adresse ${user.email}` : ''} : une commande, un rendez-vous, une réservation…`}
+        subtitle={`Ne ratez plus une vente : vous êtes prévenu par email${user?.email ? ` à l’adresse ${user.email}` : ''} dès qu’il se passe quelque chose. Désactivez ce qui ne vous sert pas.`}
       />
       {(capabilities === null || capabilities.has('HAS_APPOINTMENTS') || capabilities.has('HAS_RESERVATIONS')) && (
         <Card className="mt-6 border-emerald-200 bg-emerald-50">

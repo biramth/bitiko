@@ -69,6 +69,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const rows = data as CreateOrderRpcRow[]
   if (!rows || rows.length === 0) throw new Error('La commande n\'a pas pu être créée.')
 
+  // Prévient le marchand tout de suite (email d'alerte) au lieu d'attendre le cron quotidien.
+  void kickAutomations(input.shopId)
+
   return {
     orderId: rows[0].order_id,
     orderNumber: rows[0].order_number,

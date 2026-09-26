@@ -6,33 +6,23 @@ import {
   Copy,
   CreditCard,
   ExternalLink,
-  LifeBuoy,
   Package,
   ShoppingBag,
   Store,
-  Trash2,
   Users,
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { listPendingPayments, approvePayment, rejectPayment } from '@/services/admin.service'
 import {
-  deletePlatformUser,
-  getPlatformShops,
   getPlatformStats,
-  requestSupportAccess,
   type PlatformVisitsByDay,
 } from '@/services/platform.service'
-import { usePlatformRole } from '@/features/platform/usePlatformRole'
-import { can } from '@/features/platform/permissions'
-import { supabase } from '@/lib/supabaseClient'
-import { saveSupportReturnSession, beginImpersonation } from '@/lib/supportSession'
 import { PLANS, PLAN_BADGE, PLAN_LABELS } from '@/config/plans'
 import { formatCurrency } from '@/utils/format'
 import { shopUrl } from '@/lib/tenant'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 /**
  * Panels shared by the platform workspace pages. They used to be tabs inside
@@ -188,155 +178,6 @@ export function AnalyticsPanel({ stats }: { stats: Awaited<ReturnType<typeof get
       </div>
     </div>
   )
-}
-
-export function ShopsPanel() {
-  const queryClient = useQueryClient()
-  const { data: role } = usePlatformRole()
-  const [supportingId, setSupportingId] = useState<string | null>(null)
-  const [deletingShop, setDeletingShop] = useState<PlatformShopsPanelShop | null>(null)
-  const { data, isLoading, isError, error } = useQuery({ queryKey: ['platform-shops'], queryFn: getPlatformShops, retry: false })
-
-  const canSupport = can(role, 'support_access')
-  const canDelete = can(role, 'delete_users')
-
-  const enterSupport = async (shop: PlatformShopsPanelShop) => {
-    setSupportingId(shop.id)
-    try {
-      const { tokenHash, type, shopName, shopSlug } = await requestSupportAccess(shop.id)
-      const { data: current } = await supabase.auth.getSession()
-      saveSupportReturnSession(current.session)
-      beginImpersonation({ shopId: shop.id, shopName, shopSlug, startedAt: new Date().toISOString() })
-      // Same-browser bounce through /auth/callback, which verifies the token
-      // and swaps the operator's session for the merchant's.
-      window.location.assign(`/auth/callback?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(type)}`)
-    } catch (err) {
-      console.error('support-access failed', err)
-      setSupportingId(null)
-    }
-  }
-
-  const deleteUser = useMutation({
-    mutationFn: (shop: PlatformShopsPanelShop) => deletePlatformUser(shop.owner_id),
-    onSuccess: () => {
-      setDeletingShop(null)
-      return queryClient.invalidateQueries({ queryKey: ['platform-shops'] })
-    },
-  })
-
-  if (isLoading) return <Spinner />
-  if (isError) return <p className="text-sm text-red-600">{error instanceof Error ? error.message : 'Erreur.'}</p>
-  if (!data || data.length === 0) return <EmptyState icon={Store} title="Aucune boutique" />
-
-  return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-gray-100 text-gray-500">
-          <tr>
-            <th className="px-4 py-3 font-medium">Boutique</th>
-            <th className="px-4 py-3 font-medium">WhatsApp</th>
-            <th className="px-4 py-3 font-medium">Produits</th>
-            <th className="px-4 py-3 font-medium">Commandes</th>
-            <th className="px-4 py-3 font-medium">CA</th>
-            <th className="px-4 py-3 font-medium">Offre</th>
-            <th className="px-4 py-3 font-medium">Inscrite le</th>
-            {(canSupport || canDelete) && <th className="px-4 py-3 font-medium">Actions</th>}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {data.map((shop) => (
-            <tr key={shop.id}>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-gray-900">{shop.name}</span>
-                  <a href={shopUrl(shop.slug)} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-gray-700" aria-label={`Ouvrir ${shop.name}`}>
-                    <ExternalLink size={13} aria-hidden />
-                  </a>
-                </div>
-                <span className="text-xs text-gray-400">{shop.slug}</span>
-              </td>
-              <td className="px-4 py-3 text-gray-600">{shop.whatsapp_number ?? '—'}</td>
-              <td className="px-4 py-3 text-gray-600">{shop.products}</td>
-              <td className="px-4 py-3 text-gray-600">{shop.orders}</td>
-              <td className="px-4 py-3 text-gray-600">{formatCurrency(Number(shop.revenue), shop.currency)}</td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${PLAN_BADGE[shop.plan] ?? PLAN_BADGE.free}`}>
-                  {PLAN_LABELS[shop.plan] ?? shop.plan}
-                </span>
-                {shop.plan_status === 'past_due' && <span className="ml-1.5 text-xs text-amber-600">paiement en retard</span>}
-              </td>
-              <td className="px-4 py-3 text-gray-600">{new Date(shop.created_at).toLocaleDateString('fr-FR')}</td>
-              {(canSupport || canDelete) && (
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    {canSupport && (
-                      <button
-                        type="button"
-                        onClick={() => enterSupport(shop)}
-                        disabled={supportingId === shop.id || deleteUser.isPending}
-                        title="Ouvrir la boutique comme si tu étais le commerçant"
-                        className="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-100 disabled:opacity-60"
-                      >
-                        <LifeBuoy size={13} aria-hidden />
-                        {supportingId === shop.id ? 'Ouverture…' : 'Support'}
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => setDeletingShop(shop)}
-                        disabled={deleteUser.isPending || supportingId === shop.id}
-                        title="Supprimer définitivement le compte et la boutique"
-                        className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
-                      >
-                        <Trash2 size={13} aria-hidden />
-                        Supprimer
-                      </button>
-                    )}
-                  </div>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <ConfirmDialog
-        open={deletingShop !== null}
-        onClose={() => { if (!deleteUser.isPending) setDeletingShop(null) }}
-        title="Supprimer ce compte ?"
-        description={
-          deletingShop
-            ? `La boutique « ${deletingShop.name} », ses produits, images et l’ensemble des données du compte ${deletingShop.owner_email ?? 'propriétaire'} seront supprimés définitivement. Il est impossible de revenir en arrière.`
-            : undefined
-        }
-        confirmLabel="Supprimer définitivement"
-        pendingLabel="Suppression…"
-        pending={deleteUser.isPending}
-        onConfirm={() => deletingShop && deleteUser.mutate(deletingShop)}
-      >
-        {deletingShop && (
-          <p className="text-sm text-gray-600">
-            Tu t’apprêtes à supprimer le compte de <strong>{deletingShop.owner_email ?? 'cette personne'}</strong>.
-          </p>
-        )}
-      </ConfirmDialog>
-
-      {deleteUser.isError && (
-        <p className="px-4 py-2 text-sm text-red-600">
-          {deleteUser.error instanceof Error ? deleteUser.error.message : 'Erreur.'}
-        </p>
-      )}
-    </div>
-  )
-}
-
-interface PlatformShopsPanelShop {
-  id: string
-  name: string
-  slug: string
-  owner_id: string
-  owner_email: string | null
 }
 
 const REJECT_REASONS = [

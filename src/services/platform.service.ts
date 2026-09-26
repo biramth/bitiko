@@ -60,6 +60,12 @@ export interface PlatformShop {
   plan_status: string
   owner_id: string
   owner_email: string | null
+  country_code: string
+  business_type: string | null
+  /** Plan tel qu'enregistré (Pro même échu) ; `plan` est le plan effectif. */
+  subscribed_plan: string
+  period_end: string | null
+  last_order_at: string | null
 }
 
 export async function getPlatformShops(): Promise<PlatformShop[]> {
@@ -219,4 +225,27 @@ export function deleteCampaign(id: string): Promise<{ ok: true }> {
 /** Opens/closes a country for merchants (super-admin "Pays" tool). */
 export function setCountryEnabled(code: string, enabled: boolean): Promise<{ ok: true; code: string; enabled: boolean }> {
   return platformFetch('/api/admin/countries/set', { method: 'POST', body: JSON.stringify({ code, enabled }) })
+}
+
+/** Offre ou prolonge un abonnement payant (motif obligatoire, conservé dans le journal). */
+export function grantSubscription(input: { shopId: string; plan: 'essential' | 'pro'; days: number; reason: string }): Promise<{ plan: string; periodEnd: string }> {
+  return platformFetch('/api/admin/grant-subscription', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export interface AuditEntry {
+  id: string
+  actorEmail: string
+  action: string
+  shopId: string | null
+  shopName: string | null
+  details: Record<string, unknown>
+  createdAt: string
+}
+
+export function listAuditLog(params: { action?: string; offset?: number } = {}): Promise<{ entries: AuditEntry[]; hasMore: boolean }> {
+  const query = new URLSearchParams()
+  if (params.action) query.set('action_filter', params.action)
+  if (params.offset) query.set('offset', String(params.offset))
+  const suffix = query.toString()
+  return platformFetch(`/api/admin/audit-log${suffix ? `?${suffix}` : ''}`)
 }

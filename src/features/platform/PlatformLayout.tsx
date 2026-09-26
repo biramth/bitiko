@@ -11,6 +11,7 @@ import {
   LogOut,
   Mail,
   Menu,
+  ScrollText,
   ShieldCheck,
   Store,
   Users,
@@ -45,6 +46,7 @@ const TOOLS: Tool[] = [
   { to: '/plateforme/promotions', label: 'Promotions', icon: Gift, capability: 'send_campaigns' },
   { to: '/plateforme/pays', label: 'Pays', icon: Globe, capability: 'manage_countries' },
   { to: '/plateforme/equipe', label: 'Équipe', icon: Users, capability: 'manage_team' },
+  { to: '/plateforme/journal', label: 'Journal', icon: ScrollText, capability: 'manage_team' },
   { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types' },
   { to: '/plateforme/gabarits', label: 'Gabarits', icon: LayoutTemplate, capability: 'manage_business_types' },
 ]

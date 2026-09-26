@@ -1591,6 +1591,11 @@ export type Database = {
           whatsapp_number: string
           owner_id: string
           owner_email: string | null
+          country_code: string
+          business_type: string | null
+          subscribed_plan: string
+          period_end: string | null
+          last_order_at: string | null
         }[]
       }
       get_platform_stats: { Args: never; Returns: Json }

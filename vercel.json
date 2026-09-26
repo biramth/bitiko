@@ -27,6 +27,8 @@
     { "source": "/sitemap.xml", "destination": "/api/sitemap?kind=sitemap" },
     { "source": "/api/admin/pending-payments", "destination": "/api/admin/platform?action=payment-pending" },
     { "source": "/api/admin/approve-payment", "destination": "/api/admin/platform?action=payment-approve" },
+    { "source": "/api/admin/grant-subscription", "destination": "/api/admin/platform?action=subscription-grant" },
+    { "source": "/api/admin/audit-log", "destination": "/api/admin/platform?action=audit-list" },
     { "source": "/api/admin/reject-payment", "destination": "/api/admin/platform?action=payment-reject" },
     { "source": "/api/admin/team", "destination": "/api/admin/platform?action=team-list" },
     { "source": "/api/admin/team/add", "destination": "/api/admin/platform?action=team-add" },

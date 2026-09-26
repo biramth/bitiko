@@ -55,3 +55,23 @@ export function nextSubscription(input: {
   const base = running && running.plan === input.paidPlan ? running.endsAt : now
   return { plan: input.paidPlan, periodEnd: new Date(base + period).toISOString() }
 }
+
+const GRANT_RANK: Record<PlanKey, number> = { free: 0, essential: 1, pro: 2 }
+
+/**
+ * Abonnement résultant d'une offre / prolongation manuelle de l'équipe Bitiko (geste commercial, compensation,
+ * paiement reçu hors Wave). Même plan encore actif : les jours s'ajoutent à la fin en cours ; sinon ils courent
+ * à partir de maintenant. Un plan supérieur déjà actif n'est jamais écrasé par une offre inférieure.
+ */
+export function grantedSubscription(input: {
+  current: CurrentSubscription | null | undefined
+  plan: PlanKey
+  days: number
+  now?: number
+}): { ok: true; plan: PlanKey; periodEnd: string } | { ok: false; reason: 'higher_plan_running' } {
+  const now = input.now ?? Date.now()
+  const running = runningSubscription(input.current, now)
+  if (running && GRANT_RANK[running.plan] > GRANT_RANK[input.plan]) return { ok: false, reason: 'higher_plan_running' }
+  const base = running && running.plan === input.plan ? running.endsAt : now
+  return { ok: true, plan: input.plan, periodEnd: new Date(base + input.days * DAY_MS).toISOString() }
+}

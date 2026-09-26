@@ -236,6 +236,27 @@ function makeQuery(table: string) {
   return q
 }
 
+/** Boutiques fictives pour l'outil Plateforme (non utilisé par les visuels marketing). */
+function platformShops() {
+  const day = 86400000
+  const names = ['Salon Awa Beauté', 'Wax & Style by Fatou', 'Chez Moussa', 'Boutique Khady', 'Barber Ibou', 'Café Léa', 'Tech Dakar', 'Épicerie Sokhna', 'Ateliers Mame', 'Robes de Thiès']
+  return names.flatMap((name, i) =>
+    [0, 1, 2].map((k) => {
+      const n = i * 3 + k
+      const paid = n % 4 === 0 ? 'pro' : n % 4 === 1 ? 'essential' : 'free'
+      const lapsed = paid !== 'free' && n % 7 === 0
+      const end = paid === 'free' ? null : new Date(Date.now() + (lapsed ? -5 : (n % 5) * 6 - 1) * day).toISOString()
+      return {
+        id: `shop-${n}`, name: k === 0 ? name : `${name} ${k + 1}`, slug: `shop-${n}`, whatsapp_number: `+22177${String(1000000 + n * 731).slice(0, 7)}`, currency: 'XOF',
+        created_at: new Date(Date.now() - n * 9 * day).toISOString(), products: n % 12, orders: (n * 7) % 40, revenue: ((n * 37) % 90) * 12000,
+        plan: lapsed ? 'free' : paid, plan_status: paid === 'free' ? 'none' : 'active', owner_id: `owner-${n}`, owner_email: `owner${n}@example.sn`,
+        country_code: n % 6 === 0 ? 'CI' : 'SN', business_type: n % 2 ? 'mode' : 'beaute', subscribed_plan: paid, period_end: end,
+        last_order_at: (n * 7) % 40 === 0 ? null : new Date(Date.now() - ((n * 5) % 60) * day).toISOString(),
+      }
+    }),
+  )
+}
+
 const session = { access_token: 'mock', user: { id: uid, email: 'awa@example.sn', user_metadata: { full_name: 'Awa Diop' } } }
 
 export const supabase = {
@@ -247,6 +268,8 @@ export const supabase = {
   },
   from: (t: string) => makeQuery(t),
   rpc: async (name: string, args: Record<string, string>) => {
+    if (name === 'get_platform_role') return { data: 'owner', error: null }
+    if (name === 'get_platform_shops') return { data: platformShops(), error: null }
     if (name === 'business_type_capability_codes') return { data: caps, error: null }
     if (name === 'shop_business_type_slug') return { data: shop.business_type, error: null }
     if (name === 'finance_revenue_by_month') {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUTOMATION_EVENTS, renderPreview } from './events'
+import { AUTOMATION_EVENTS, DEFAULT_ALERT_EVENT_TYPES, renderPreview } from './events'
 
 describe('renderPreview', () => {
   it('remplace les variables et vide les inconnues', () => {
@@ -22,5 +22,11 @@ describe('AUTOMATION_EVENTS', () => {
       const used = [...`${event.defaultSubject} ${event.defaultBody}`.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map((m) => m[1])
       for (const variable of used) expect(event.variables).toContain(variable)
     }
+  })
+})
+
+describe('alertes par défaut', () => {
+  it('prévient d’office pour une commande et pour le stock, pas pour le reste', () => {
+    expect(DEFAULT_ALERT_EVENT_TYPES.sort()).toEqual(['ORDER_CREATED', 'STOCK_LOW', 'STOCK_OUT'])
   })
 })

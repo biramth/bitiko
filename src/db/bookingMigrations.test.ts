@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 /**
- * Tests de comportement des migrations 0114 → 0130 sur un vrai Postgres
+ * Tests de comportement des migrations 0114 → 0132 sur un vrai Postgres
  * (PGlite, en mémoire) avec un schéma minimal : réservations durcies, prix,
  * vie privée équipe, miroir d'abonnement. Aucun accès réseau ni base distante.
  */
@@ -30,13 +30,13 @@ beforeAll(async () => {
   await db.exec(`
     create role anon; create role authenticated; create schema auth;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true),'')::uuid $$;
-    create table public.shops(id uuid primary key default gen_random_uuid(), owner_id uuid not null, whatsapp_number text);
+    create table public.shops(id uuid primary key default gen_random_uuid(), owner_id uuid not null, whatsapp_number text, low_stock_threshold integer);
     create table public.orders(id uuid primary key default gen_random_uuid(), shop_id uuid references public.shops(id), customer_phone text, total numeric(12,2) not null default 0, status text not null default 'pending', created_at timestamptz not null default now());
     create table public.order_items(id uuid primary key default gen_random_uuid(), order_id uuid references public.orders(id), product_name text not null, quantity integer not null, subtotal numeric(12,2) not null);
     create table public.profiles(id uuid primary key default gen_random_uuid(), phone text);
     create table public.shop_members(shop_id uuid, user_id uuid, role text);
     create table public.categories(id uuid primary key default gen_random_uuid(), shop_id uuid, name text, position integer default 0);
-    create table public.products(id uuid primary key default gen_random_uuid(), shop_id uuid, category_id uuid references public.categories(id));
+    create table public.products(id uuid primary key default gen_random_uuid(), shop_id uuid, category_id uuid references public.categories(id), name text, stock integer not null default 0, active boolean not null default true);
     create function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at=now(); return new; end $$;
     create table public.business_events(id uuid primary key default gen_random_uuid(), shop_id uuid not null, type text not null, payload jsonb not null default '{}', processed boolean not null default false, occurred_at timestamptz default now());
     create table public.automation_rules(id uuid primary key default gen_random_uuid(), shop_id uuid not null references public.shops(id), event_type text not null, channel text not null check (channel in ('log','email','whatsapp','sms','push')), template jsonb not null default '{}', enabled boolean not null default false, created_at timestamptz default now(), updated_at timestamptz default now());
@@ -66,6 +66,7 @@ beforeAll(async () => {
   await db.exec(read('0128_countries_and_generic_phones.sql'))
   await db.exec(read('0129_booking_weekly_hours.sql'))
   await db.exec(read('0130_finance_tools.sql'))
+  await db.exec(read('0131_stock_alert_events.sql'))
 
   serviceId = (await rows<{ id: string }>('select id from services limit 1'))[0].id
   memberId = (await rows<{ id: string }>('select id from team_members limit 1'))[0].id
@@ -447,5 +448,86 @@ describe('outils de gestion (0130)', () => {
     await expect(rows(`select * from finance_revenue_by_month('${SHOP}','${to}','${from}')`)).rejects.toThrow(/invalid period/)
     await expect(rows(`select * from finance_revenue_by_month('${SHOP}','2020-01-01','2026-12-31')`)).rejects.toThrow(/invalid period/)
     await asGuest()
+  })
+})
+
+describe('alertes de stock (0131)', () => {
+  const events = () => rows<{ type: string; payload: { product_name: string; stock: number } }>(
+    "select type, payload from business_events where type in ('STOCK_LOW','STOCK_OUT') order by occurred_at, id",
+  )
+  let productId: string
+
+  it('émet STOCK_LOW en passant sous le seuil, sans rien émettre au-dessus', async () => {
+    await db.exec(`update shops set low_stock_threshold = 3 where id = '${SHOP}'`)
+    productId = (await rows<{ id: string }>(`insert into products(shop_id,name,stock) values ('${SHOP}','Robe wax',10) returning id`))[0].id
+    await db.exec(`update products set stock = 6 where id = '${productId}'`)
+    expect(await events()).toHaveLength(0)
+    await db.exec(`update products set stock = 3 where id = '${productId}'`)
+    const list = await events()
+    expect(list.map((e) => e.type)).toEqual(['STOCK_LOW'])
+    expect(list[0].payload).toMatchObject({ product_name: 'Robe wax', stock: 3 })
+  })
+
+  it('n’émet pas de nouvelle alerte tant que le produit reste sous le seuil, puis STOCK_OUT à zéro', async () => {
+    await db.exec(`update products set stock = 2 where id = '${productId}'`)
+    expect(await events()).toHaveLength(1)
+    await db.exec(`update products set stock = 0 where id = '${productId}'`)
+    expect((await events()).map((e) => e.type)).toEqual(['STOCK_LOW', 'STOCK_OUT'])
+  })
+
+  it('ignore le réapprovisionnement et les produits inactifs', async () => {
+    await db.exec(`update products set stock = 20 where id = '${productId}'`)
+    await db.exec(`update products set active = false where id = '${productId}'`)
+    await db.exec(`update products set stock = 1 where id = '${productId}'`)
+    expect(await events()).toHaveLength(2)
+  })
+
+  it('un stock qui tombe directement de haut à zéro émet STOCK_OUT seul', async () => {
+    const id = (await rows<{ id: string }>(`insert into products(shop_id,name,stock) values ('${SHOP}','Sac',8) returning id`))[0].id
+    await db.exec(`update products set stock = 0 where id = '${id}'`)
+    const list = await events()
+    expect(list.filter((e) => e.payload.product_name === 'Sac').map((e) => e.type)).toEqual(['STOCK_OUT'])
+  })
+})
+
+describe('pilotage plateforme (0132)', () => {
+  beforeAll(async () => {
+    await db.exec(`
+      alter table public.shops add column if not exists name text, add column if not exists slug text, add column if not exists currency text default 'XOF',
+        add column if not exists created_at timestamptz default now(), add column if not exists country_code text not null default 'SN', add column if not exists business_type text;
+      create table if not exists auth.users(id uuid primary key, email text);
+      create or replace function public.is_platform_admin() returns boolean language sql as $$ select true $$;
+      create table if not exists public.admin_audit_log(id uuid primary key default gen_random_uuid(), actor_user_id uuid not null, actor_email text not null, action text not null, target_user_id uuid, target_shop_id uuid, details jsonb not null default '{}', created_at timestamptz default now());
+      insert into auth.users values ('${OWNER}', 'owner@example.sn');
+      update public.shops set name = 'Boutique test', slug = 'test' where id = '${SHOP}';
+    `)
+    await db.exec(read('0132_platform_oversight.sql'))
+  })
+
+  it('affiche le plan gratuit quand l’abonnement payant est échu, et garde le plan enregistré', async () => {
+    await db.exec(`delete from shop_subscriptions where shop_id = '${SHOP}'`)
+    await db.exec(`insert into shop_subscriptions(shop_id, plan, status, current_period_end) values ('${SHOP}', 'pro', 'active', now() - interval '3 days')`)
+    const [lapsed] = await rows<{ plan: string; subscribed_plan: string }>('select plan, subscribed_plan from get_platform_shops()')
+    expect(lapsed).toMatchObject({ plan: 'free', subscribed_plan: 'pro' })
+    await db.exec(`update shop_subscriptions set current_period_end = now() + interval '10 days' where shop_id = '${SHOP}'`)
+    const [running] = await rows<{ plan: string; period_end: string }>('select plan, period_end from get_platform_shops()')
+    expect(running.plan).toBe('pro')
+    expect(running.period_end).toBeTruthy()
+  })
+
+  it('expose pays, type d’activité, email du propriétaire et dernière commande', async () => {
+    await db.exec(`update public.shops set business_type = 'mode' where id = '${SHOP}'`)
+    await db.exec(`insert into orders(shop_id, total, status) values ('${SHOP}', 5000, 'paid')`)
+    const [row] = await rows<{ country_code: string; business_type: string; owner_email: string; last_order_at: string | null; orders: string }>(
+      'select country_code, business_type, owner_email, last_order_at, orders from get_platform_shops()',
+    )
+    expect(row).toMatchObject({ country_code: 'SN', business_type: 'mode', owner_email: 'owner@example.sn' })
+    expect(row.last_order_at).toBeTruthy()
+  })
+
+  it('accepte les nouvelles actions d’audit et refuse les inconnues', async () => {
+    await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'subscription_grant')`)
+    await db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'template_save')`)
+    await expect(db.exec(`insert into admin_audit_log(actor_user_id, actor_email, action) values ('${OWNER}', 'a@b.sn', 'nope')`)).rejects.toThrow()
   })
 })
