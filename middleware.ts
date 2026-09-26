@@ -14,15 +14,22 @@ import { next, rewrite } from '@vercel/edge'
 const BOT_PATTERN =
   /facebookexternalhit|WhatsApp|Twitterbot|Slackbot|TelegramBot|LinkedInBot|Discordbot|SkypeUriPreview|Pinterest|VKShare|WeChat|Line\s?Bot/i
 
+const PLATFORM_HOST = /^(www\.)?bitiko\.shop$/i
+
 export default function middleware(request: Request): Response {
   const userAgent = request.headers.get('user-agent') ?? ''
 
-  if (!BOT_PATTERN.test(userAgent)) {
-    return next()
-  }
-
   const url = new URL(request.url)
   const pathname = url.pathname
+
+  if (!BOT_PATTERN.test(userAgent)) {
+    // Vercel sert le fichier dist/index.html pour « / » avant toute réécriture de vercel.json :
+    // seule une réécriture de middleware peut donner la page d'accueil prérendue à la racine.
+    if (pathname === '/' && PLATFORM_HOST.test(request.headers.get('host') ?? '')) {
+      return rewrite(new URL('/prerendered/home.html', request.url))
+    }
+    return next()
+  }
 
   url.pathname = '/api/og'
   url.search = `?path=${encodeURIComponent(pathname)}`
