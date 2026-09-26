@@ -12,6 +12,7 @@ import {
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
+import { phonePlaceholder } from '@/config/countries'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -83,7 +84,7 @@ function CheckoutFlow({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const phone = normalizePhoneNumber(customerPhone)
+      const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
       if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
@@ -102,7 +103,7 @@ function CheckoutFlow({
       // Optional account hook: links this order to the buyer's email for
       // their future order history. Best-effort, never blocks the flow.
       if (customerEmail.trim()) void setOrderCustomerEmail(result.orderId, customerEmail)
-      const normalizedPhone = normalizePhoneNumber(customerPhone)
+      const normalizedPhone = normalizePhoneNumber(customerPhone, shop?.country_code)
       const message = buildWhatsAppMessage({
         orderNumber: result.orderNumber,
         items: result.items,
@@ -160,7 +161,7 @@ function CheckoutFlow({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const phone = normalizePhoneNumber(customerPhone)
+    const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return
@@ -239,7 +240,7 @@ function CheckoutFlow({
               if (phoneError) setPhoneError(null)
             }}
             aria-invalid={phoneError ? true : undefined}
-            placeholder="77 123 45 67"
+            placeholder={phonePlaceholder(shop?.country_code)}
             className="mt-1 w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-base text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none"
           />
           {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}

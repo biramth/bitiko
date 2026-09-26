@@ -31,7 +31,7 @@ export function ReservationsRenderer({
   editable = false,
 }: { shop: Shop; config: ReservationsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
-  const { data: settings } = useShopBookingSettings(shop.id)
+  const { data: settings } = useShopBookingSettings(shop.id, shop.country_code)
   const timeZone = settings?.timezone ?? 'Africa/Dakar'
   const bounds = bookingDateBounds(settings?.max_days_ahead ?? 60)
 
@@ -54,7 +54,7 @@ export function ReservationsRenderer({
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const normalized = normalizePhoneNumber(phone)
+      const normalized = normalizePhoneNumber(phone, shop.country_code)
       if (!normalized.ok || !normalized.value) {
         throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
       }

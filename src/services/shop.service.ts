@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { DEFAULT_COUNTRY_CODE, getCountryPreset } from '@/config/countries'
 import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { compressImageFile } from '@/utils/image'
 import { ensurePinnedSections } from '@/config/defaultLayout'
@@ -58,6 +59,9 @@ export interface CreateShopInput {
   slug: string
   whatsappNumber: string
   currency?: string
+  /** The country the shop operates in (ISO 3166-1 alpha-2, drives phone
+   *  format + currency when the latter isn't set). Defaults to 'SN'. */
+  countryCode?: string
   /** Genre template key (mode, epicerie, beaute, tech) picked during onboarding. */
   templateId?: string
   /** The merchant's onboarding answers — when present, the storefront is
@@ -109,7 +113,8 @@ export async function createShop(input: CreateShopInput): Promise<Shop> {
       name: input.name,
       slug: input.slug,
       whatsapp_number: input.whatsappNumber,
-      currency: input.currency ?? 'XOF',
+      currency: input.currency ?? getCountryPreset(input.countryCode).currencyCode,
+      country_code: input.countryCode ?? DEFAULT_COUNTRY_CODE,
       ...businessTypeLink,
       ...(generated
         ? {

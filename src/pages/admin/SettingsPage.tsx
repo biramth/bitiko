@@ -33,6 +33,8 @@ import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
 import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
 import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
+import { listEnabledCountries } from '@/services/country.service'
+import { getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { deleteAccount } from '@/services/account.service'
 import { BillingForShop } from './BillingPage'
 import { TeamSection } from '@/features/shop-settings/TeamSection'
@@ -485,6 +487,7 @@ function SettingsForm({
   const typeOptions = useBusinessTypeOptions()
   const [whatsappNumber, setWhatsappNumber] = useState(shop.whatsapp_number)
   const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
+  const [countryCode, setCountryCode] = useState(shop.country_code ?? 'SN')
   const [currency, setCurrency] = useState(shop.currency)
   const [address, setAddress] = useState(shop.address ?? '')
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(shop.social_links ?? {})
@@ -501,6 +504,17 @@ function SettingsForm({
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { data: enabledCountries = [] } = useQuery({
+    queryKey: ['countries-enabled'],
+    queryFn: listEnabledCountries,
+  })
+  const country = getCountryPreset(countryCode)
+  const countryOptions: { code: string; name: string }[] = enabledCountries.map((c) => ({ code: c.code, name: c.name }))
+  if (!countryOptions.some((c) => c.code === countryCode)) {
+    // A shop may still sit on a country that got disabled — keep it selectable/editable.
+    countryOptions.unshift({ code: country.code, name: country.name })
+  }
+
   // Tracks whether the form actually differs from what's saved, so
   // "Enregistrer" stops looking clickable once there's nothing to save —
   // it used to stay enabled at all times, inviting no-op saves.
@@ -511,6 +525,7 @@ function SettingsForm({
       businessType,
       whatsappNumber,
       paymentInstructions,
+      countryCode,
       currency,
       address,
       socialLinks,
@@ -665,7 +680,7 @@ function SettingsForm({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const phone = normalizePhoneNumber(whatsappNumber)
+      const phone = normalizePhoneNumber(whatsappNumber, countryCode)
       if (!phone.ok || !phone.value) {
         throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       }
@@ -686,6 +701,7 @@ function SettingsForm({
         ...(businessTypeId ? { business_type_id: businessTypeId } : {}),
         whatsapp_number: phone.value,
         payment_instructions: paymentInstructions.trim() || null,
+        country_code: countryCode,
         currency: normalizeCurrency(currency),
         address: address.trim() || null,
         social_links: Object.fromEntries(
@@ -723,7 +739,7 @@ function SettingsForm({
       navigate('/admin/parametres/general')
       return
     }
-    const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+    const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
     if (!whatsappCheck.ok) {
       setError(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       navigate('/admin/parametres/contact')
@@ -1030,6 +1046,34 @@ function SettingsForm({
           {section === 'contact' && (
             <Card icon={Phone} title="Contact & devise" description="Comment vos clients vous joignent et paient.">
               <div>
+                <label htmlFor="countryCode" className="block text-sm font-medium text-gray-700">
+                  Pays
+                </label>
+                <select
+                  id="countryCode"
+                  value={countryCode}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setCountryCode(next)
+                    const preset = getCountryPreset(next)
+                    if (currency.trim() === '' || currency === country.currencyCode) {
+                      setCurrency(preset.currencyCode)
+                    }
+                  }}
+                  className={inputClass}
+                >
+                  {countryOptions.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Définit le format des numéros acceptés sur vos pages. La devise suit automatiquement (modifiable ci-dessous).
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700">
                   Numéro WhatsApp
                 </label>
@@ -1041,7 +1085,7 @@ function SettingsForm({
                     required
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={inputClass}
                   />
                   {whatsappNumber.replace(/[^0-9]/g, '') && (

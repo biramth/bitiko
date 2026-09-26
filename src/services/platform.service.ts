@@ -215,3 +215,8 @@ export interface CampaignSendResult {
 export function deleteCampaign(id: string): Promise<{ ok: true }> {
   return platformFetch('/api/admin/campaigns/delete', { method: 'POST', body: JSON.stringify({ id }) })
 }
+
+/** Opens/closes a country for merchants (super-admin "Pays" tool). */
+export function setCountryEnabled(code: string, enabled: boolean): Promise<{ ok: true; code: string; enabled: boolean }> {
+  return platformFetch('/api/admin/countries/set', { method: 'POST', body: JSON.stringify({ code, enabled }) })
+}

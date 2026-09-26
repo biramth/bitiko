@@ -48,6 +48,7 @@
     { "source": "/api/admin/templates/save", "destination": "/api/admin/platform?action=template-save" },
     { "source": "/api/admin/templates/compat", "destination": "/api/admin/platform?action=template-compat" },
     { "source": "/api/admin/templates/delete", "destination": "/api/admin/platform?action=template-delete" },
+    { "source": "/api/admin/countries/set", "destination": "/api/admin/platform?action=country-set" },
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
     { "source": "/api/booking-notify", "destination": "/api/onboarding?action=booking-notify" },

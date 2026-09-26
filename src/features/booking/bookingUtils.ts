@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { DEFAULT_BOOKING_SETTINGS, getBookingSettings } from '@/services/bookingSettings.service'
+import { defaultTimezoneForCountry } from '@/config/countries'
 import { localDateIso } from '@/utils/format'
 
 export const bookingInputClass =
@@ -8,10 +9,16 @@ export const bookingInputClass =
 export const bookingLabelClass = 'mb-1 block text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/60'
 
 /** Horaires publics de la boutique (défauts serveur si rien n'est configuré). */
-export function useShopBookingSettings(shopId: string) {
+export function useShopBookingSettings(shopId: string, countryCode?: string | null) {
   return useQuery({
-    queryKey: ['booking-settings', shopId],
-    queryFn: async () => (await getBookingSettings(shopId)) ?? { shop_id: shopId, updated_at: '', ...DEFAULT_BOOKING_SETTINGS },
+    queryKey: ['booking-settings', shopId, countryCode ?? null],
+    queryFn: async () =>
+      (await getBookingSettings(shopId)) ?? {
+        shop_id: shopId,
+        updated_at: '',
+        ...DEFAULT_BOOKING_SETTINGS,
+        timezone: defaultTimezoneForCountry(countryCode),
+      },
     staleTime: 5 * 60 * 1000,
   })
 }

@@ -1,6 +1,6 @@
 # PHASE 18 — Métiers, services et réservations (chantier post-refonte)
 
-> État : 🟨 EN COURS — 2026-09-26 (DEV : migrations **0121 → 0127 appliquées** le 2026-09-26, prod non touchée ; multi-pays non livré, voir 18.5).
+> État : 🟨 EN COURS — 2026-09-26 (DEV : migrations **0121 → 0128 appliquées** le 2026-09-26, prod non touchée).
 > Origine : audit du 2026-09-26 sur le chantier « 10 groupes métiers + services + gabarits » (commits `a491480` → `b63b7c9`, migrations 0112–0120), resté hors `PLAN.md`.
 
 ## Objectif
@@ -11,7 +11,7 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
 
 ## Ordre de déploiement (important)
 
-1. ✅ `0121 → 0127` appliquées sur **dev** (2026-09-26) ; la preview `develop` est cohérente avec la base.
+1. ✅ `0121 → 0128` appliquées sur **dev** (2026-09-26) ; la preview `develop` est cohérente avec la base.
    Le code lit `team_members_public`, `booking_settings`, `get_booking_slots`, `get_reservation_slots` et appelle
    `create_appointment` à 6 arguments : le front déployé **avant** les migrations casse l'équipe vitrine et la réservation.
 2. Recette dev (voir « Recette » ci-dessous), puis prod.
@@ -55,7 +55,7 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
   dans les 10 min suivant sa création).
 - Événements `APPOINTMENT_CREATED` / `RESERVATION_CREATED` dans `business_events` ; `automation-dispatch` planifié (quotidien).
 
-### 18.5 — Suite : plafonds, catégories, notifications (`0125` → `0127`), multi-pays reporté
+### 18.5 — Suite : plafonds, catégories, notifications, multi-pays (`0125` → `0128`)
 - **`0125` plafonds de plan** (valeurs de départ à valider, modifiables par `UPDATE plan_limits` sans migration) :
   prestations actives free 6 / essentiel 30 / pro ∞ ; équipiers actifs 2 / 8 / ∞ ; demandes en ligne par mois 40 / 300 / ∞
   (invités seulement : le personnel saisit toujours à la main). Triggers serveur, jauge `PlanLimitBanner`, bouton d'ajout
@@ -66,12 +66,14 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
   événement/canal, ≤ 30 règles, gabarit borné, canaux non branchés refusés). Le dispatcher est partagé
   (`api/_lib/automationDispatch.ts`) et déclenché **tout de suite** après commande / changement de statut / réservation
   (`/api/automation-kick`, sans attendre le cron quotidien).
-- **Multi-pays : NON livré, volontairement.** Un chantier multi-pays plus complet existe déjà hors de la branche : table
-  `countries` (`is_enabled` piloté depuis l'admin plateforme), `currencies`, `shops.country_code` / `profiles.country_code`,
-  `normalize_phone(numéro, pays)` — appliqué sur la base **dev** (schéma qui a divergé du dépôt) et conservé dans
-  `stash@{0}` (« pr1-wip-backup-develop » : `0055/0056_*`, `CountriesTool`, `country.service`). Une première implémentation
-  parallèle (migration 0128) a été **retirée** pour ne pas doubler ni contredire ce modèle. Les réservations passent par
-  `booking_normalize_phone(shop, numéro)`, point d'extension prévu pour brancher `shops.country_code` une fois ce chantier fusionné.
+- **`0128` multi-pays (fusion du chantier `stash@{0}` « pr1-wip-backup-develop »)** : `currencies` / `countries`
+  (`is_enabled` décidé par l'admin plateforme, outil **Pays**, `/plateforme/pays`, action `country-set`), `shops.country_code` /
+  `profiles.country_code`, `normalize_phone(numéro, pays)` (remplace `normalize_sn_phone`), triggers commandes / WhatsApp / profils
+  re-pointés, fuseau par pays (`countries.timezone`) pour les réservations, `booking_normalize_phone` lit le pays de la boutique.
+  Migration **idempotente** (dev avait déjà ces objets, posés à la main ; une base neuve les crée). Front : pays à l'onboarding et
+  dans Paramètres → Contact (la devise suit), placeholders et validation par pays (`src/config/countries.ts`,
+  `normalizePhoneNumber(numéro, pays)`), checkout / commande manuelle / réservations dans le pays de la boutique.
+  Seul le Sénégal est ouvert (`is_enabled`) ; ouvrir un pays = un clic dans « Pays ». Le stash n'a pas été supprimé.
 
 ### 18.6 — Hygiène
 - Tests : `src/db/bookingMigrations.test.ts` (PGlite, vrai Postgres en mémoire), `api/_lib/{cronAuth,subscriptionPeriod,bookingEmail}.test.ts`.
@@ -88,16 +90,15 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
 
 ## Prod (PHASE-17) — points de vigilance
 
-Prod est en retard de **0098 → 0127**. Avant la bascule, rejouer la chaîne sur un clone de la base prod, en particulier :
+Prod est en retard de **0098 → 0128**. Avant la bascule, rejouer la chaîne sur un clone de la base prod, en particulier :
 `0104` (`drop table if exists plans, country_prices cascade`), `0113` (suppression d'un type métier), `0119`/`0120` (paire qui
 s'annule, résultat net idempotent). Numérotation : aucun fichier `0067`–`0085` dans le dépôt — vérifier que dev/prod n'ont pas de
 schéma appliqué hors dépôt.
 
 ## Historique de migrations : état constaté (CLI Supabase, lecture seule, 2026-09-26)
 
-- **Dérive de la base dev** : dev contient des objets absents du dépôt (`countries`, `currencies`, `normalize_phone(text, text)`,
-  `profiles.country_code`, `shops.country_code`) et **n'a plus `normalize_sn_phone`** que 0063 créait. Toute migration doit
-  éviter de dépendre de ces objets ou de les redéfinir (une migration 0122 qui appelait `normalize_sn_phone` a échoué sur dev pour cette raison).
+- **Dérive de la base dev (résorbée par 0128)** : dev contenait des objets absents du dépôt (`countries`, `currencies`, `normalize_phone`,
+  `country_code`) et n'avait plus `normalize_sn_phone`. La 0128 les intègre à la chaîne, de façon idempotente.
 - **Dev** (`tlqgcmbdethmhqrablcy`) : historique numérique complet `0001 → 0120`, **avec le même trou 0067–0085**. Dev a donc été
   construit uniquement à partir des fichiers du dépôt : le trou ne masque aucun schéma nécessaire (aucun fichier de cette plage n'apparaît
   dans l'historique git : rien n'a été supprimé, la numérotation a simplement sauté).
@@ -105,7 +106,7 @@ schéma appliqué hors dépôt.
   fichiers du dépôt — éditeur SQL / outil de migration) + seulement `0061–0066` et `0086–0088` en numérique ; `0001–0060` et
   `0089–0097` n'y sont pas enregistrées (leur schéma a pu être appliqué sous forme horodatée : non vérifié).
   Conséquence : **`supabase db push` vers la prod échoue** (`LegacyDbPushMissingLocalError`, versions distantes absentes du dépôt) et il faut
-  **réconcilier l'historique** avant toute bascule (`supabase migration repair` + vérification du schéma réel), pas seulement rejouer 0098–0127.
+  **réconcilier l'historique** avant toute bascule (`supabase migration repair` + vérification du schéma réel), pas seulement rejouer 0098–0128.
 - Non fait : comparaison du schéma réel de prod avec celui de dev (l'accès en lecture au schéma de prod n'a pas été autorisé
   dans cette session). À faire par le propriétaire du projet : `supabase db dump --linked --schema public` de prod puis diff avec dev,
   ou clone de prod sur une branche Supabase, avant de rejouer la chaîne.
@@ -114,4 +115,4 @@ schéma appliqué hors dépôt.
 
 - Valeurs finales des plafonds de plan 0125 (proposition de départ, pas une décision).
 - Un plan « Business » / prix (`plans.ts` reste la source des prix ; `plan_entitlements` non lu par l'app).
-- Multi-pays : fusion du chantier `stash@{0}` (countries / currencies / normalize_phone) puis branchement des réservations.
+- Multi-pays : ouvrir d'autres pays (règles de numérotation à valider par pays, gabarits / textes / devises hors XOF), supprimer `stash@{0}` une fois relu.

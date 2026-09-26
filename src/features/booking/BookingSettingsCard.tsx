@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Clock } from 'lucide-react'
+import { defaultTimezoneForCountry } from '@/config/countries'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
 import { useToast } from '@/components/ui/Toast'
@@ -29,8 +30,8 @@ const hhmm = (time: string) => time.slice(0, 5)
 /** Horaires, jours d'ouverture, pas des créneaux, horizon et capacité de
  *  tables : ce que les visiteurs voient sur la vitrine et ce que le serveur
  *  applique aux réservations invitées. Réservé au propriétaire et aux managers. */
-function toFormValues(saved: BookingSettingsRow | null | undefined): BookingSettingsInput {
-  if (!saved) return DEFAULT_BOOKING_SETTINGS
+function toFormValues(saved: BookingSettingsRow | null | undefined, countryCode: string | null | undefined): BookingSettingsInput {
+  if (!saved) return { ...DEFAULT_BOOKING_SETTINGS, timezone: defaultTimezoneForCountry(countryCode) }
   return {
     timezone: saved.timezone,
     open_time: hhmm(saved.open_time),
@@ -56,21 +57,23 @@ export function BookingSettingsCard({ showTables = false }: { showTables?: boole
   if (!shop || isLoading) return null
   if (role && role !== 'owner' && role !== 'manager') return null
   // `key` : le formulaire repart des valeurs enregistrées après chaque sauvegarde.
-  return <BookingSettingsForm key={saved?.updated_at ?? 'default'} shopId={shop.id} saved={saved} showTables={showTables} />
+  return <BookingSettingsForm key={saved?.updated_at ?? 'default'} shopId={shop.id} countryCode={shop.country_code} saved={saved} showTables={showTables} />
 }
 
 function BookingSettingsForm({
   shopId,
+  countryCode,
   saved,
   showTables,
 }: {
   shopId: string
+  countryCode: string | null | undefined
   saved: BookingSettingsRow | null | undefined
   showTables: boolean
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [form, setForm] = useState<BookingSettingsInput>(() => toFormValues(saved))
+  const [form, setForm] = useState<BookingSettingsInput>(() => toFormValues(saved, countryCode))
   const [open, setOpen] = useState(false)
 
   const saveMutation = useMutation({

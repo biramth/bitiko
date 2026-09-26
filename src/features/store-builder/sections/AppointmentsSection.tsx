@@ -39,7 +39,7 @@ export function AppointmentsRenderer({
   const { data: servicesResult, isLoading: servicesLoading } = useActiveServices({ shopId: shop.id, limit: 100 })
   const services = servicesResult?.services ?? []
   const { data: team = [] } = useTeamMembers(shop.id)
-  const { data: settings } = useShopBookingSettings(shop.id)
+  const { data: settings } = useShopBookingSettings(shop.id, shop.country_code)
   const timeZone = settings?.timezone ?? 'Africa/Dakar'
   const bounds = bookingDateBounds(settings?.max_days_ahead ?? 60)
 
@@ -63,7 +63,7 @@ export function AppointmentsRenderer({
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const normalized = normalizePhoneNumber(phone)
+      const normalized = normalizePhoneNumber(phone, shop.country_code)
       if (!normalized.ok || !normalized.value) {
         throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
       }

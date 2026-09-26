@@ -20,6 +20,7 @@ import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySec
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { formatCurrency, resolveDeliveryFee, resolveZoneDeliveryFee } from '@/utils/format'
+import { phonePlaceholder } from '@/config/countries'
 import { formatPhoneNumberForDisplay, normalizePhoneNumber, PHONE_ERROR_MESSAGES } from '@/utils/phone'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
 import { formatOptionsInline, resolveSelection, type OptionValues } from '@/utils/productOptions'
@@ -122,7 +123,7 @@ export function NewOrderPage() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!shop) throw new Error('Boutique introuvable')
-      const phone = normalizePhoneNumber(customerPhone)
+      const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
       if (!phone.ok || !phone.value) throw new Error(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return createOrder({
         shopId: shop.id,
@@ -155,7 +156,7 @@ export function NewOrderPage() {
       setFormError('Le nom du client est requis.')
       return
     }
-    const phone = normalizePhoneNumber(customerPhone)
+    const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
       return
@@ -231,7 +232,7 @@ export function NewOrderPage() {
 
   const sendWhatsApp = () => {
     if (!success || !shop) return
-    const normalized = normalizePhoneNumber(customerPhone)
+    const normalized = normalizePhoneNumber(customerPhone, shop?.country_code)
     const message = buildWhatsAppMessage({
       orderNumber: success.orderNumber,
       items: success.items,
@@ -384,7 +385,7 @@ export function NewOrderPage() {
                     setCustomerPhone(e.target.value)
                     setPhoneError(null)
                   }}
-                  placeholder="77 123 45 67"
+                  placeholder={phonePlaceholder(shop?.country_code)}
                   autoComplete="tel"
                   className={`${INPUT_CLASS} ${phoneError ? 'border-red-500' : ''}`}
                 />

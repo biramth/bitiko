@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   canDeleteUsers,
+  canManageCountries,
   canManageCatalog,
   canManageTeam,
   canSupportAccess,
@@ -75,6 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleCampaignAudience(req, res)
     case 'campaign-send':
       return handleCampaignSend(req, res)
+    case 'country-set':
+      return handleCountrySet(req, res)
     case 'campaign-delete':
       return handleCampaignDelete(req, res)
     case 'promo-list':
@@ -1913,6 +1916,61 @@ async function handlePaymentReject(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ status: 'failed' })
   } catch (err) {
     console.error('admin reject-payment failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Countries
+// ---------------------------------------------------------------------------
+
+/** Opens/closes a country for merchants (`countries.is_enabled`). Sénégal is
+ *  the home market and can never be turned off. */
+async function handleCountrySet(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+    if (!canManageCountries(member.role)) {
+      res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent les pays.' })
+      return
+    }
+
+    const { code, enabled } = (req.body ?? {}) as { code?: unknown; enabled?: unknown }
+    if (typeof code !== 'string' || !/^[A-Z]{2}$/.test(code)) {
+      res.status(400).json({ error: 'Code pays invalide.' })
+      return
+    }
+    if (typeof enabled !== 'boolean') {
+      res.status(400).json({ error: 'Statut invalide.' })
+      return
+    }
+    if (code === 'SN' && !enabled) {
+      res.status(400).json({ error: 'Le Sénégal ne peut pas être désactivé.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { data: country, error: countryError } = await admin
+      .from('countries')
+      .select('code')
+      .eq('code', code)
+      .maybeSingle()
+    if (countryError) throw countryError
+    if (!country) {
+      res.status(404).json({ error: 'Pays introuvable.' })
+      return
+    }
+
+    const { error } = await admin.from('countries').update({ is_enabled: enabled }).eq('code', code)
+    if (error) throw error
+
+    res.status(200).json({ ok: true, code, enabled })
+  } catch (err) {
+    console.error('platform country-set failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

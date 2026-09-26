@@ -43,6 +43,8 @@ import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useMyShop'
 import { createShop, isSlugAvailable, sendWelcomeEmail, updateShop, uploadShopLogo } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
+import { listEnabledCountries } from '@/services/country.service'
+import { getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { STORE_TEMPLATES, availableVerticals, templatesForVertical } from '@/config/storeTemplates'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
 import { ensureReadableAccent } from '@/utils/color'
@@ -215,6 +217,15 @@ export function OnboardingPage() {
   const [lastName, setLastName] = useState('')
   const [personalPhone, setPersonalPhone] = useState('')
   const [personalAddress, setPersonalAddress] = useState('')
+  const [countryCode, setCountryCode] = useState('SN')
+
+  const { data: enabledCountries = [] } = useQuery({
+    queryKey: ['countries-enabled'],
+    queryFn: listEnabledCountries,
+  })
+  const country = getCountryPreset(countryCode)
+  const countryOptions: { code: string; name: string }[] =
+    enabledCountries.length > 0 ? enabledCountries : [{ code: country.code, name: country.name }]
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -361,11 +372,11 @@ export function OnboardingPage() {
         throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
       }
       const ownerId = freshUserData.user.id
-      const personalPhoneCheck = normalizePhoneNumber(personalPhone)
+      const personalPhoneCheck = normalizePhoneNumber(personalPhone, countryCode)
       if (!personalPhoneCheck.ok || !personalPhoneCheck.value) {
         throw new Error(PHONE_ERROR_MESSAGES[personalPhoneCheck.error ?? 'invalid_length'])
       }
-      const whatsappCheck = normalizePhoneNumber(whatsappNumber)
+      const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
       if (!whatsappCheck.ok || !whatsappCheck.value) {
         throw new Error(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       }
@@ -374,12 +385,14 @@ export function OnboardingPage() {
         lastName,
         phone: personalPhoneCheck.value,
         address: personalAddress,
+        countryCode,
       })
       let shop = await createShop({
         ownerId,
         name: name.trim(),
         slug,
         whatsappNumber: whatsappCheck.value,
+        countryCode,
         templateId,
         profile,
         palette: logoPalette,
@@ -429,13 +442,13 @@ export function OnboardingPage() {
         ? 'checking'
         : availability
 
-  const infosValid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone)
+  const infosValid = firstName.trim().length > 0 && lastName.trim().length > 0 && validatePhoneNumber(personalPhone, countryCode)
 
   const boutiqueValid =
     name.trim().length > 0 &&
     (slugStatus === 'available' || slugStatus === 'error') &&
     !!slug &&
-    validatePhoneNumber(whatsappNumber)
+    validatePhoneNumber(whatsappNumber, countryCode)
 
   const commerceValid = !!businessType && !!templateId
 
@@ -546,6 +559,30 @@ export function OnboardingPage() {
               </div>
 
               <div>
+                <label htmlFor="countryCode" className="block text-sm font-medium text-gray-700">
+                  Pays de ta boutique
+                </label>
+                <div className="relative mt-1">
+                  <Globe size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
+                  <select
+                    id="countryCode"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className={fieldClass}
+                  >
+                    {countryOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Il définit le format des numéros et la devise de ta boutique.
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="personalPhone" className="block text-sm font-medium text-gray-700">
                   Téléphone personnel
                 </label>
@@ -557,13 +594,13 @@ export function OnboardingPage() {
                     type="tel"
                     value={personalPhone}
                     onChange={(e) => setPersonalPhone(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={fieldClass}
                   />
                 </div>
-                {personalPhone.trim() && !normalizePhoneNumber(personalPhone).ok ? (
+                {personalPhone.trim() && !normalizePhoneNumber(personalPhone, countryCode).ok ? (
                   <p className="mt-1 text-xs text-red-600">
-                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(personalPhone).error ?? 'invalid_length']}
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(personalPhone, countryCode).error ?? 'invalid_length']}
                   </p>
                 ) : (
                   <p className="mt-1 text-xs text-gray-500">
@@ -696,13 +733,13 @@ export function OnboardingPage() {
                     type="tel"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="77 123 45 67"
+                    placeholder={phonePlaceholder(countryCode)}
                     className={fieldClass}
                   />
                 </div>
-                {whatsappNumber.trim() && !normalizePhoneNumber(whatsappNumber).ok ? (
+                {whatsappNumber.trim() && !normalizePhoneNumber(whatsappNumber, countryCode).ok ? (
                   <p className="mt-1 text-xs text-red-600">
-                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber).error ?? 'invalid_length']}
+                    {PHONE_ERROR_MESSAGES[normalizePhoneNumber(whatsappNumber, countryCode).error ?? 'invalid_length']}
                   </p>
                 ) : (
                 <p className="mt-1 text-xs text-gray-500">
@@ -1106,6 +1143,10 @@ export function OnboardingPage() {
                   <div className="flex justify-between gap-4">
                     <span className="text-gray-500">Téléphone personnel</span>
                     <span className="truncate text-right font-medium text-ink-900">{personalPhone}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500">Pays</span>
+                    <span className="truncate text-right font-medium text-ink-900">{country.name}</span>
                   </div>
                   {personalAddress.trim() && (
                     <div className="flex justify-between gap-4">

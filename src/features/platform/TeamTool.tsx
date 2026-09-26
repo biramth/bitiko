@@ -216,7 +216,7 @@ export function TeamTool() {
               </div>
               <p className="mt-2 text-xs text-gray-500">{role.description}</p>
               <ul className="mt-2 space-y-0.5 text-xs text-gray-600">
-                {(['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users'] as const)
+                {(['view_analytics', 'view_shops', 'manage_payments', 'send_campaigns', 'manage_team', 'support_access', 'delete_users', 'manage_countries'] as const)
                   .filter((cap) => can(role.key, cap))
                   .map((cap) => (
                     <li key={cap}>· {CAPABILITY_LABELS[cap]}</li>

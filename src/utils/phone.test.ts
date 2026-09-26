@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatPhoneNumberForDisplay, normalizePhoneNumber, validatePhoneNumber } from './phone'
+import { DEFAULT_COUNTRY_CODE, getCountryPreset, phonePlaceholder } from '@/config/countries'
+import { formatPhoneNumberForDisplay, normalizePhoneNumber, validatePhoneInput, validatePhoneNumber } from './phone'
 
 describe('normalizePhoneNumber', () => {
   it('normalizes a plain national number', () => {
@@ -83,5 +84,57 @@ describe('formatPhoneNumberForDisplay', () => {
 
   it('returns the input unchanged if not canonical', () => {
     expect(formatPhoneNumberForDisplay('not-a-number')).toBe('not-a-number')
+  })
+})
+
+describe('normalizePhoneNumber — autres pays', () => {
+  const n = (phone: string, country: string) => normalizePhoneNumber(phone, country).value
+
+  it('France : international en 00, avec « 0 » de ligne et national', () => {
+    expect(n('0033601234567', 'FR')).toBe('+33601234567')
+    expect(n('+33601234567', 'FR')).toBe('+33601234567')
+    expect(n('601234567', 'FR')).toBe('+33601234567')
+    expect(n('0601234567', 'FR')).toBe('+33601234567')
+  })
+
+  it('Côte d’Ivoire : national à 8 chiffres', () => {
+    expect(n('+22512345678', 'CI')).toBe('+22512345678')
+    expect(n('012345678', 'CI')).toBe('+22512345678')
+    expect(n('12345678', 'CI')).toBe('+22512345678')
+  })
+
+  it('Nigeria : national à 10 chiffres', () => {
+    expect(n('+2347012345678', 'NG')).toBe('+2347012345678')
+    expect(n('7012345678', 'NG')).toBe('+2347012345678')
+  })
+
+  it('un pays inconnu retombe sur le Sénégal', () => {
+    expect(n('771234567', 'XX')).toBe('+221771234567')
+  })
+
+  it('refuse un indicatif étranger dans une boutique d’un autre pays (comme le serveur)', () => {
+    expect(normalizePhoneNumber('+22512345678', 'SN').ok).toBe(false)
+  })
+})
+
+describe('validatePhoneInput', () => {
+  it('demande un numéro, valide ou explique pour le pays', () => {
+    expect(validatePhoneInput('  ', DEFAULT_COUNTRY_CODE)).toBe('Le numéro de téléphone est requis.')
+    expect(validatePhoneInput('+221771234567', 'SN')).toBeNull()
+    expect(validatePhoneInput('+221551234567', 'SN')).toContain('Sénégal')
+    expect(validatePhoneInput('+33601234567', 'FR')).toBeNull()
+  })
+})
+
+describe('presets pays', () => {
+  it('Sénégal par défaut et placeholder indicatif + longueur', () => {
+    expect(getCountryPreset(null).code).toBe('SN')
+    expect(getCountryPreset('ZZ').name).toBe('Sénégal')
+    expect(phonePlaceholder('SN')).toBe('+221XXXXXXXXX')
+    expect(phonePlaceholder('CI')).toBe('+225XXXXXXXX')
+  })
+
+  it('affiche les numéros non sénégalais groupés', () => {
+    expect(formatPhoneNumberForDisplay('+22512345678')).toBe('+225 12 34 56 78')
   })
 })

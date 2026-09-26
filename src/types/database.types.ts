@@ -686,6 +686,77 @@ export type Database = {
           },
         ]
       }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          currency_code: string
+          dial_code: string
+          is_enabled: boolean
+          name: string
+          national_number_length: number
+          national_regex: string
+          timezone: string
+          trunk_prefix: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_code: string
+          dial_code: string
+          is_enabled?: boolean
+          name: string
+          national_number_length: number
+          national_regex: string
+          timezone?: string
+          trunk_prefix?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_code?: string
+          dial_code?: string
+          is_enabled?: boolean
+          name?: string
+          national_number_length?: number
+          national_regex?: string
+          timezone?: string
+          trunk_prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "countries_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      currencies: {
+        Row: {
+          code: string
+          created_at: string
+          decimal_digits: number
+          name: string
+          symbol: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          decimal_digits: number
+          name: string
+          symbol: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          decimal_digits?: number
+          name?: string
+          symbol?: string
+        }
+        Relationships: []
+      }
       product_images: {
         Row: {
           created_at: string
@@ -1000,6 +1071,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          country_code: string
           created_at: string
           first_name: string | null
           id: string
@@ -1009,6 +1081,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          country_code?: string
           created_at?: string
           first_name?: string | null
           id: string
@@ -1018,6 +1091,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          country_code?: string
           created_at?: string
           first_name?: string | null
           id?: string
@@ -1102,6 +1176,7 @@ export type Database = {
           builder_draft: BuilderDraft | null
           business_type: string | null
           business_type_id: string | null
+          country_code: string
           created_at: string
           currency: string
           delivery_fee: number
@@ -1132,6 +1207,7 @@ export type Database = {
           builder_draft?: BuilderDraft | null
           business_type?: string | null
           business_type_id?: string | null
+          country_code?: string
           created_at?: string
           currency?: string
           delivery_fee?: number
@@ -1162,6 +1238,7 @@ export type Database = {
           builder_draft?: BuilderDraft | null
           business_type?: string | null
           business_type_id?: string | null
+          country_code?: string
           created_at?: string
           currency?: string
           delivery_fee?: number

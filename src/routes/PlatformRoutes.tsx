@@ -101,6 +101,9 @@ const PlatformPromosPage = lazy(() =>
 const PlatformTeamPage = lazy(() =>
   import('@/pages/platform/PlatformTeamPage').then((m) => ({ default: m.PlatformTeamPage })),
 )
+const PlatformCountriesPage = lazy(() =>
+  import('@/pages/platform/PlatformCountriesPage').then((m) => ({ default: m.PlatformCountriesPage })),
+)
 const PlatformBusinessTypesPage = lazy(() =>
   import('@/pages/platform/PlatformBusinessTypesPage').then((m) => ({ default: m.PlatformBusinessTypesPage })),
 )
@@ -162,6 +165,14 @@ export function PlatformRoutes() {
               element={standalone(
                 <CapabilityGate capability="send_campaigns">
                   <PlatformPromosPage />
+                </CapabilityGate>,
+              )}
+            />
+            <Route
+              path="plateforme/pays"
+              element={standalone(
+                <CapabilityGate capability="manage_countries">
+                  <PlatformCountriesPage />
                 </CapabilityGate>,
               )}
             />
