@@ -5,6 +5,8 @@ import {
   canAddProduct,
   canAddProductImage,
   canAddSection,
+  canAddService,
+  canAddTeamMember,
   canAddVariant,
   effectivePlan,
   effectivePlanKey,
@@ -107,5 +109,22 @@ describe('canAddVariant', () => {
   it('never limits paid plans', () => {
     expect(canAddVariant(PLANS.essential, 999)).toBe(true)
     expect(canAddVariant(PLANS.pro, 999)).toBe(true)
+  })
+})
+describe('plafonds métiers de service', () => {
+  it('free < essentiel < pro, pro illimité', () => {
+    expect(PLANS.free.maxActiveServices).toBe(6)
+    expect(PLANS.essential.maxActiveServices).toBe(30)
+    expect(PLANS.pro.maxActiveServices).toBeNull()
+    expect(PLANS.free.maxTeamMembers).toBe(2)
+    expect(PLANS.pro.maxMonthlyBookings).toBeNull()
+  })
+
+  it('canAddService / canAddTeamMember respectent le plafond', () => {
+    expect(canAddService(PLANS.free, 5)).toBe(true)
+    expect(canAddService(PLANS.free, 6)).toBe(false)
+    expect(canAddService(PLANS.pro, 10_000)).toBe(true)
+    expect(canAddTeamMember(PLANS.free, 2)).toBe(false)
+    expect(canAddTeamMember(PLANS.essential, 7)).toBe(true)
   })
 })

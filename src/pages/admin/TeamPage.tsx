@@ -16,6 +16,10 @@ import { Dialog } from '@/components/ui/Dialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useShopPlan } from '@/features/billing/useShopPlan'
+import { canAddTeamMember } from '@/config/plans'
+import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
+import { planLimitMessage } from '@/features/billing/planLimit'
 import { useToast } from '@/components/ui/Toast'
 
 interface TeamForm {
@@ -33,6 +37,7 @@ const EMPTY_FORM: TeamForm = { name: '', role: '', specialty: '', phone: '', ema
 export function TeamPage() {
   usePageSeo({ title: 'Équipe — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
+  const { plan } = useShopPlan(shop?.id)
   const queryClient = useQueryClient()
   const toast = useToast()
 
@@ -73,13 +78,13 @@ export function TeamPage() {
       setEditing(null)
       toast.success(editing ? 'Membre mis à jour.' : 'Membre ajouté.')
     },
-    onError: () => toast.error('Enregistrement impossible.'),
+    onError: (e) => toast.error(planLimitMessage(e) ?? 'Enregistrement impossible.'),
   })
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateTeamMember(id, { active }),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Impossible de modifier ce membre.'),
+    onError: (e) => toast.error(planLimitMessage(e) ?? 'Impossible de modifier ce membre.'),
   })
 
   const removeMutation = useMutation({
@@ -114,6 +119,9 @@ export function TeamPage() {
     setFormOpen(true)
   }
 
+  const activeCount = members.filter((member) => member.active).length
+  const canCreate = canAddTeamMember(plan, activeCount)
+
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
 
@@ -126,11 +134,19 @@ export function TeamPage() {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            disabled={!canCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             <Plus size={15} aria-hidden /> Ajouter un membre
           </button>
         }
+      />
+
+      <PlanLimitBanner
+        used={activeCount}
+        max={plan.maxTeamMembers}
+        singular="équipier actif"
+        plural="équipiers actifs"
       />
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">

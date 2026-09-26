@@ -236,17 +236,20 @@ export function BillingForShop({ shopId }: { shopId: string }) {
                 `Jusqu'à ${tier.maxActiveProducts} produits actifs`,
                 `Personnalisation de base (${tier.maxCustomSections} blocs de contenu)`,
                 'Commandes via WhatsApp',
+                `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
               ]
             : key === 'essential'
               ? [
                   'Jusqu’à 50 produits actifs',
                   `Builder complet (${tier.maxCustomSections} blocs de contenu) et pages personnalisées`,
                   'Analytics standard et import CSV',
+                  `${tier.maxActiveServices} prestations, ${tier.maxTeamMembers} équipiers, ${tier.maxMonthlyBookings} rendez-vous en ligne / mois`,
                 ]
               : [
                   'Produits illimités',
                   'Personnalisation illimitée (blocs et pages) et styles avancés',
                   'Analytics avancées et branding retiré',
+                  'Prestations, équipiers et rendez-vous en ligne illimités',
                 ]
 
           return (

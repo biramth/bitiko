@@ -40,6 +40,12 @@ export interface Plan {
    * photo, so up to 4 total photos with the main one). `null` = unlimited.
    */
   maxVariants: number | null
+  /** Prestations actives (métiers de service). Miroir de plan_limits MAX_ACTIVE_SERVICES. */
+  maxActiveServices: number | null
+  /** Équipiers actifs affichés en vitrine. Miroir de MAX_TEAM_MEMBERS. */
+  maxTeamMembers: number | null
+  /** Demandes de rendez-vous/réservation en ligne par mois. Miroir de MAX_MONTHLY_BOOKINGS. */
+  maxMonthlyBookings: number | null
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -59,6 +65,9 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: 3,
     maxProductImages: 4,
     maxVariants: 2,
+    maxActiveServices: 6,
+    maxTeamMembers: 2,
+    maxMonthlyBookings: 40,
   },
   essential: {
     key: 'essential',
@@ -74,6 +83,9 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: 10,
     maxProductImages: null,
     maxVariants: null,
+    maxActiveServices: 30,
+    maxTeamMembers: 8,
+    maxMonthlyBookings: 300,
   },
   pro: {
     key: 'pro',
@@ -89,6 +101,9 @@ export const PLANS: Record<PlanKey, Plan> = {
     maxCustomSections: null,
     maxProductImages: null,
     maxVariants: null,
+    maxActiveServices: null,
+    maxTeamMembers: null,
+    maxMonthlyBookings: null,
   },
 }
 
@@ -106,6 +121,14 @@ export function effectivePlanKey(subscription: ShopSubscription | null | undefin
 
 export function effectivePlan(subscription: ShopSubscription | null | undefined): Plan {
   return PLANS[effectivePlanKey(subscription)]
+}
+
+export function canAddService(plan: Plan, currentActiveCount: number): boolean {
+  return plan.maxActiveServices === null || currentActiveCount < plan.maxActiveServices
+}
+
+export function canAddTeamMember(plan: Plan, currentActiveCount: number): boolean {
+  return plan.maxTeamMembers === null || currentActiveCount < plan.maxTeamMembers
 }
 
 export function canAddProduct(plan: Plan, currentActiveCount: number): boolean {

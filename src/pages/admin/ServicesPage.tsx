@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Scissors, Trash2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
+import { createCategory } from '@/services/category.service'
+import { slugify } from '@/utils/format'
 import {
   createService,
   deleteService,
@@ -11,6 +13,10 @@ import {
   type ServiceWithCategory,
 } from '@/services/service.service'
 import { formatCurrency } from '@/utils/format'
+import { useShopPlan } from '@/features/billing/useShopPlan'
+import { canAddService } from '@/config/plans'
+import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
+import { planLimitMessage } from '@/features/billing/planLimit'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -41,7 +47,8 @@ const EMPTY_FORM: ServiceForm = {
 export function ServicesPage() {
   usePageSeo({ title: 'Prestations — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
-  const { data: categories = [] } = useCategories(shop?.id)
+  const { plan } = useShopPlan(shop?.id)
+  const { data: categories = [] } = useCategories(shop?.id, 'service')
   const queryClient = useQueryClient()
   const toast = useToast()
   const currency = shop?.currency ?? 'XOF'
@@ -62,6 +69,18 @@ export function ServicesPage() {
     queryClient.invalidateQueries({ queryKey: ['services', 'admin', shop?.id] })
   }
 
+  const [newCategory, setNewCategory] = useState('')
+  const categoryMutation = useMutation({
+    mutationFn: (name: string) =>
+      createCategory({ shopId: shop!.id, name, slug: `${slugify(name)}-s`, kind: 'service' }),
+    onSuccess: (category) => {
+      queryClient.invalidateQueries({ queryKey: ['categories', shop?.id] })
+      setForm((current) => ({ ...current, categoryId: category.id }))
+      setNewCategory('')
+    },
+    onError: () => toast.error('Catégorie impossible (nom déjà utilisé ?).'),
+  })
+
   const saveMutation = useMutation({
     mutationFn: () => {
       const payload = {
@@ -81,7 +100,7 @@ export function ServicesPage() {
       setEditing(null)
       toast.success(editing ? 'Prestation mise à jour.' : 'Prestation créée.')
     },
-    onError: () => toast.error('Enregistrement impossible. Vérifiez les champs.'),
+    onError: (e) => toast.error(planLimitMessage(e) ?? 'Enregistrement impossible. Vérifiez les champs.'),
   })
 
   const toggleMutation = useMutation({
@@ -90,7 +109,7 @@ export function ServicesPage() {
       invalidate()
       toast.success(v.active ? 'Prestation activée.' : 'Prestation désactivée.')
     },
-    onError: () => toast.error('Impossible de modifier la prestation.'),
+    onError: (e) => toast.error(planLimitMessage(e) ?? 'Impossible de modifier la prestation.'),
   })
 
   const removeMutation = useMutation({
@@ -124,6 +143,9 @@ export function ServicesPage() {
     setFormOpen(true)
   }
 
+  const activeCount = services.filter((service) => service.active).length
+  const canCreate = canAddService(plan, activeCount)
+
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
 
@@ -136,11 +158,19 @@ export function ServicesPage() {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            disabled={!canCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             <Plus size={15} aria-hidden /> Nouvelle prestation
           </button>
         }
+      />
+
+      <PlanLimitBanner
+        used={activeCount}
+        max={plan.maxActiveServices}
+        singular="prestation active"
+        plural="prestations actives"
       />
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -257,10 +287,30 @@ export function ServicesPage() {
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
             >
               <option value="">Sans catégorie</option>
+              {form.categoryId && !categories.some((c) => c.id === form.categoryId) && (
+                <option value={form.categoryId}>{editing?.category?.name ?? 'Catégorie actuelle'}</option>
+              )}
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            <div className="mt-2 flex gap-2">
+              <input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Nouvelle catégorie (ex. Coupes)"
+                aria-label="Nom de la nouvelle catégorie"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => categoryMutation.mutate(newCategory.trim())}
+                disabled={!newCategory.trim() || categoryMutation.isPending}
+                className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              >
+                Ajouter
+              </button>
+            </div>
           </div>
           <div>
             <label htmlFor="service-description" className="block text-sm font-medium text-gray-700">Description</label>

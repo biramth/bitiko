@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { listCategories } from '@/services/category.service'
+import { listCategories, type CategoryKind } from '@/services/category.service'
 
-export function useCategories(shopId: string | undefined) {
+export function useCategories(shopId: string | undefined, kind: CategoryKind = 'product') {
   return useQuery({
-    queryKey: ['categories', shopId],
-    queryFn: () => listCategories(shopId as string),
+    queryKey: ['categories', shopId, kind],
+    queryFn: () => listCategories(shopId as string, kind),
     enabled: !!shopId,
   })
 }

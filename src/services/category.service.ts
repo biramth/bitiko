@@ -2,11 +2,15 @@ import { supabase } from '@/lib/supabaseClient'
 import { compressImageFile } from '@/utils/image'
 import type { Category } from '@/types'
 
-export async function listCategories(shopId: string): Promise<Category[]> {
+export type CategoryKind = 'product' | 'service'
+
+/** Catégories d'une boutique pour un catalogue : produits (défaut) ou prestations. */
+export async function listCategories(shopId: string, kind: CategoryKind = 'product'): Promise<Category[]> {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
     .eq('shop_id', shopId)
+    .eq('kind', kind)
     .order('position', { ascending: true })
     .order('name', { ascending: true })
   if (error) throw error
@@ -20,6 +24,7 @@ export async function createCategory(input: {
   emoji?: string | null
   description?: string | null
   color?: string | null
+  kind?: CategoryKind
 }): Promise<Category> {
   const { data, error } = await supabase
     .from('categories')
@@ -30,6 +35,7 @@ export async function createCategory(input: {
       emoji: input.emoji ?? null,
       description: input.description ?? null,
       color: input.color ?? null,
+      kind: input.kind ?? 'product',
     })
     .select()
     .single()

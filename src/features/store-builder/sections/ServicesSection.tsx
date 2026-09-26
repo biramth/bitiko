@@ -33,7 +33,7 @@ export function ServicesRenderer({
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchInput, setSearchInput] = useState(() => searchParams.get('q') ?? '')
   const search = useDebouncedValue(searchInput, 300)
-  const { data: categories } = useCategories(shop.id)
+  const { data: categories } = useCategories(shop.id, 'service')
 
   const fullToolbox = config.enableFilters === true
   const categorySlug = fullToolbox ? (searchParams.get('categorie') ?? '') : ''
