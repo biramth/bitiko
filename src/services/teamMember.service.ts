@@ -3,13 +3,15 @@ import type { Database } from '@/types/database.types'
 
 export type TeamMemberRow = Database['public']['Tables']['team_members']['Row']
 
-/** Équipe visible en vitrine (membres actifs, triés). */
-export async function listActiveTeamMembers(shopId: string): Promise<TeamMemberRow[]> {
+export type PublicTeamMember = Database['public']['Views']['team_members_public']['Row']
+
+/** Équipe visible en vitrine — via la vue publique : les contacts n'y figurent
+ *  que pour les équipiers dont le marchand a activé `show_contact`. */
+export async function listActiveTeamMembers(shopId: string): Promise<PublicTeamMember[]> {
   const { data, error } = await supabase
-    .from('team_members')
+    .from('team_members_public')
     .select('*')
     .eq('shop_id', shopId)
-    .eq('active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
   if (error) throw error
@@ -30,7 +32,7 @@ export async function listShopTeamMembers(shopId: string): Promise<TeamMemberRow
 
 export type TeamMemberInput = Pick<
   TeamMemberRow,
-  'shop_id' | 'name' | 'role' | 'specialty' | 'phone' | 'email' | 'avatar_url' | 'active'
+  'shop_id' | 'name' | 'role' | 'specialty' | 'phone' | 'email' | 'avatar_url' | 'active' | 'show_contact'
 >
 
 export async function createTeamMember(input: TeamMemberInput): Promise<TeamMemberRow> {

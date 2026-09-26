@@ -130,7 +130,7 @@ export function DashboardPage() {
   usePageSeo({ title: 'Tableau de bord — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { plan, isLoading: planLoading } = useShopPlan(shop?.id)
-  const { capabilities } = useWorkspaceModules()
+  const { capabilities, capabilitiesLoading } = useWorkspaceModules()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [copied, setCopied] = useState(false)
@@ -201,7 +201,7 @@ export function DashboardPage() {
     }
   }
 
-  if (isLoading || planLoading) return <PageLoader />
+  if (isLoading || planLoading || capabilitiesLoading) return <PageLoader />
   if (isError) return <ErrorMessage />
   if (!stats) return null
 

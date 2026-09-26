@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TOUR_PREPARE_EVENT, type GuidedTour, type TourPrepare } from './types'
 import { GUIDED_TOUR_BY_ID } from './tours'
+import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { isTourSeen, markTourSeen } from './storage'
 import { GuidedTourContext, type GuidedTourContextValue } from './useGuidedTour'
 import { TourOverlay } from './TourOverlay'
@@ -26,6 +27,11 @@ export function GuidedTourProvider({ children }: { children: ReactNode }) {
   const [activeTourId, setActiveTourId] = useState<string | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
   const launchTimerRef = useRef<number | null>(null)
+  const { capabilities } = useWorkspaceModules()
+  const capabilitiesRef = useRef(capabilities)
+  useEffect(() => {
+    capabilitiesRef.current = capabilities
+  }, [capabilities])
 
   const stopTour = useCallback(() => {
     if (launchTimerRef.current !== null) {
@@ -39,8 +45,13 @@ export function GuidedTourProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const begin = useCallback((id: string) => {
-    const tour = GUIDED_TOUR_BY_ID[id]
-    if (!tour) return
+    const base = GUIDED_TOUR_BY_ID[id]
+    if (!base) return
+    const caps = capabilitiesRef.current
+    const tour: GuidedTour = {
+      ...base,
+      steps: base.steps.filter((step) => !step.capability || caps === null || caps.has(step.capability)),
+    }
     setActiveTourId(id)
     setActiveTour(tour)
     setStepIndex(0)

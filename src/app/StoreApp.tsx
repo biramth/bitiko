@@ -11,6 +11,7 @@ import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
 // a Suspense boundary), so the home page doesn't ship the checkout funnel.
 const HomePage = lazy(() => import('@/pages/store/HomePage').then((m) => ({ default: m.HomePage })))
 const CatalogPage = lazy(() => import('@/pages/store/CatalogPage').then((m) => ({ default: m.CatalogPage })))
+const ServicesPage = lazy(() => import('@/pages/store/ServicesPage').then((m) => ({ default: m.ServicesPage })))
 const ProductPage = lazy(() => import('@/pages/store/ProductPage').then((m) => ({ default: m.ProductPage })))
 const CartPage = lazy(() => import('@/pages/store/CartPage').then((m) => ({ default: m.CartPage })))
 const CheckoutPage = lazy(() => import('@/pages/store/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
@@ -42,6 +43,7 @@ export function StoreApp() {
         <Route element={<StoreLayout />}>
           <Route index element={<StoreIndexRoute />} />
           <Route path="catalogue" element={<CatalogPage />} />
+          <Route path="prestations" element={<ServicesPage />} />
           <Route path="produits/:slug" element={<ProductPage />} />
           <Route path="panier" element={<CartPage />} />
           <Route path="commande" element={<CheckoutPage />} />

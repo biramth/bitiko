@@ -108,3 +108,11 @@ export function resolveZoneDeliveryFee(
   if (threshold != null && subtotal >= threshold) return 0
   return Math.max(0, Number(zoneFee ?? 0))
 }
+
+/** Date locale au format YYYY-MM-DD (jamais `toISOString()`, qui bascule en UTC
+ *  et décale la journée pour les fuseaux UTC+1 : Nigeria, Bénin…). */
+export function localDateIso(date: Date = new Date()): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}

@@ -6,11 +6,13 @@ describe('getStorefrontVocabulary', () => {
     expect(getStorefrontVocabulary(null)).toEqual({
       siteKind: 'Boutique en ligne',
       catalogLabel: 'Catalogue',
+      catalogHref: '/catalogue',
       cartLabel: 'Panier',
     })
     expect(getStorefrontVocabulary(new Set())).toEqual({
       siteKind: 'Boutique en ligne',
       catalogLabel: 'Catalogue',
+      catalogHref: '/catalogue',
       cartLabel: 'Panier',
     })
   })
@@ -27,6 +29,8 @@ describe('getStorefrontVocabulary', () => {
     expect(withProducts.catalogLabel).toBe('Boutique')
     const pureService = getStorefrontVocabulary(new Set(['HAS_APPOINTMENTS', 'HAS_SERVICES']))
     expect(pureService.catalogLabel).toBe('Prestations')
+    expect(pureService.catalogHref).toBe('/prestations')
+    expect(withProducts.catalogHref).toBe('/catalogue')
   })
 })
 

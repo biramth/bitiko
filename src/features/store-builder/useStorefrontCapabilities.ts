@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchBusinessCapabilities, fetchShopBusinessTypeSlug } from '@/services/businessType.service'
+import { fetchShopCapabilities } from '@/services/businessType.service'
 import type { Shop } from '@/types'
 
 /** Storefront capability set for adaptation (PHASE-07): which HAS_* codes the
@@ -10,16 +10,7 @@ import type { Shop } from '@/types'
 export function useStorefrontCapabilities(shop: Shop | null | undefined) {
   const { data } = useQuery({
     queryKey: ['storefront-capabilities', shop?.id],
-    queryFn: async (): Promise<Set<string> | null> => {
-      if (!shop?.id) return null
-      try {
-        const slug = await fetchShopBusinessTypeSlug(shop.id)
-        if (!slug) return null
-        return new Set(await fetchBusinessCapabilities(slug))
-      } catch {
-        return null
-      }
-    },
+    queryFn: (): Promise<Set<string> | null> => (shop?.id ? fetchShopCapabilities(shop.id) : Promise.resolve(null)),
     enabled: !!shop?.id,
     staleTime: 5 * 60 * 1000,
   })

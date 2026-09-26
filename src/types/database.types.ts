@@ -45,7 +45,10 @@ export type Database = {
           end_at: string
           id: string
           notes: string | null
+          service_duration: number | null
           service_id: string | null
+          service_name: string | null
+          service_price: number | null
           shop_id: string
           start_at: string
           status: string
@@ -58,7 +61,10 @@ export type Database = {
           end_at: string
           id?: string
           notes?: string | null
+          service_duration?: number | null
           service_id?: string | null
+          service_name?: string | null
+          service_price?: number | null
           shop_id: string
           start_at: string
           status?: string
@@ -71,7 +77,10 @@ export type Database = {
           end_at?: string
           id?: string
           notes?: string | null
+          service_duration?: number | null
           service_id?: string | null
+          service_name?: string | null
+          service_price?: number | null
           shop_id?: string
           start_at?: string
           status?: string
@@ -97,6 +106,53 @@ export type Database = {
             columns: ["team_member_id"]
             isOneToOne: false
             referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_settings: {
+        Row: {
+          close_time: string
+          max_days_ahead: number
+          open_days: number[]
+          open_time: string
+          reservation_minutes: number
+          shop_id: string
+          slot_minutes: number
+          table_capacity: number
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          close_time?: string
+          max_days_ahead?: number
+          open_days?: number[]
+          open_time?: string
+          reservation_minutes?: number
+          shop_id: string
+          slot_minutes?: number
+          table_capacity?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          close_time?: string
+          max_days_ahead?: number
+          open_days?: number[]
+          open_time?: string
+          reservation_minutes?: number
+          shop_id?: string
+          slot_minutes?: number
+          table_capacity?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_settings_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: true
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
@@ -850,6 +906,7 @@ export type Database = {
           rating: number | null
           role: string
           shop_id: string
+          show_contact: boolean
           sort_order: number
           specialty: string | null
           updated_at: string
@@ -865,6 +922,7 @@ export type Database = {
           rating?: number | null
           role?: string
           shop_id: string
+          show_contact?: boolean
           sort_order?: number
           specialty?: string | null
           updated_at?: string
@@ -880,6 +938,7 @@ export type Database = {
           rating?: number | null
           role?: string
           shop_id?: string
+          show_contact?: boolean
           sort_order?: number
           specialty?: string | null
           updated_at?: string
@@ -1283,7 +1342,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      team_members_public: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          name: string | null
+          phone: string | null
+          rating: number | null
+          role: string | null
+          shop_id: string | null
+          sort_order: number | null
+          specialty: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       business_type_capability_codes: {
@@ -1458,7 +1532,6 @@ export type Database = {
         Args: {
           p_customer_name: string
           p_customer_phone: string
-          p_end_at: string
           p_service_id: string
           p_shop_id: string
           p_start_at: string
@@ -1471,7 +1544,10 @@ export type Database = {
           end_at: string
           id: string
           notes: string | null
+          service_duration: number | null
           service_id: string | null
+          service_name: string | null
+          service_price: number | null
           shop_id: string
           start_at: string
           status: string
@@ -1483,6 +1559,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_booking_slots: {
+        Args: { p_date: string; p_service_id: string; p_shop_id: string; p_team_member_id: string | null }
+        Returns: { slot_start: string }[]
+      }
+      get_reservation_slots: {
+        Args: { p_date: string; p_party_size: number; p_shop_id: string }
+        Returns: { slot_start: string }[]
       }
       create_reservation: {
         Args: {

@@ -1,5 +1,6 @@
 import { Scissors } from 'lucide-react'
 import type { Service } from '@/features/services/useServices'
+import { formatCurrency } from '@/utils/format'
 
 interface ServiceCardProps {
   service: Service
@@ -33,13 +34,10 @@ export function ServiceCard({ service, currency }: ServiceCardProps) {
           )}
         </div>
         <p className="mt-3 font-bold text-brand-600">
-          {formatPrice(service.price, currency)}
+          {formatCurrency(service.price, currency)}
         </p>
       </div>
     </article>
   )
 }
 
-function formatPrice(price: number, currency: string): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: 0 }).format(price / 100)
-}

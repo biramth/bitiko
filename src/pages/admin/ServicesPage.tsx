@@ -69,7 +69,7 @@ export function ServicesPage() {
         category_id: form.categoryId || null,
         name: form.name.trim(),
         description: form.description.trim() || null,
-        price: Math.max(0, Math.round(Number(form.priceFcfa) * 100) || 0),
+        price: Math.max(0, Math.round(Number(form.priceFcfa)) || 0),
         duration_minutes: Math.max(5, Math.min(480, Number(form.duration) || 30)),
         active: form.active,
       }
@@ -100,7 +100,7 @@ export function ServicesPage() {
       setDeleteTarget(null)
       toast.success('Prestation supprimée.')
     },
-    onError: () => toast.error('Impossible de supprimer (des rendez-vous y sont liés ?).'),
+    onError: () => toast.error('Impossible de supprimer cette prestation.'),
   })
 
   const openCreate = () => {
@@ -114,7 +114,7 @@ export function ServicesPage() {
     setEditing(service)
     setForm({
       name: service.name,
-      priceFcfa: String(service.price / 100),
+      priceFcfa: String(service.price),
       duration: String(service.duration_minutes),
       description: service.description ?? '',
       categoryId: service.category_id ?? '',

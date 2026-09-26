@@ -22,6 +22,9 @@ export interface TourStep {
   placement?: 'top' | 'bottom' | 'left' | 'right'
   /** See `TourPrepare` — run before this step is shown. */
   prepare?: TourPrepare
+  /** Capability HAS_* requise : l'étape est retirée pour un métier qui ne
+   *  l'a pas (ex. pas de « Commandes » pour un salon). Inconnue = conservée. */
+  capability?: string
 }
 
 export interface GuidedTour {

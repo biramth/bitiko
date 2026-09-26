@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { fetchShopBusinessTypeSlug, fetchBusinessCapabilities } from '@/services/businessType.service'
+import { fetchShopCapabilities } from '@/services/businessType.service'
 import { WORKSPACE_MODULES, groupModules, resolveModules, sortGroupsForProfile } from './modules'
 
 /** Workspace navigation derived from `Business Type → Capabilities → Modules`
@@ -14,27 +14,24 @@ export function useWorkspaceModules() {
 
   const { data: caps } = useQuery({
     queryKey: ['workspace-capabilities', shop?.id],
-    queryFn: async (): Promise<Set<string> | null> => {
-      if (!shop?.id) return null
-      try {
-        const slug = await fetchShopBusinessTypeSlug(shop.id)
-        if (!slug) return null
-        return new Set(await fetchBusinessCapabilities(slug))
-      } catch {
-        return null
-      }
-    },
+    queryFn: (): Promise<Set<string> | null> => (shop?.id ? fetchShopCapabilities(shop.id) : Promise.resolve(null)),
     enabled: !!shop?.id,
     staleTime: 5 * 60 * 1000,
   })
 
-  const modules = resolveModules(WORKSPACE_MODULES, caps ?? null, {
+  // Chargement : les modules conditionnés par une capability restent masqués
+  // (ensemble vide) au lieu de s'afficher puis de disparaître. `null` (échec
+  // ou type inconnu) reste le seul cas « fail open ».
+  const capsLoading = !!shop?.id && caps === undefined
+  const resolvedCaps = capsLoading ? new Set<string>() : (caps ?? null)
+
+  const modules = resolveModules(WORKSPACE_MODULES, resolvedCaps, {
     teamAccess: plan.teamAccess,
   })
 
   // Personnaliser est hors groupe (niveau tableau de bord) : il concerne
   // tout le site client. L'ordre des groupes suit le profil métier.
-  const groups = sortGroupsForProfile(groupModules(modules), caps ?? null)
+  const groups = sortGroupsForProfile(groupModules(modules), resolvedCaps)
 
-  return { modules, groups, capabilities: caps ?? null, isReady: !!shop?.id }
+  return { modules, groups, capabilities: caps ?? null, capabilitiesLoading: capsLoading, isReady: !!shop?.id }
 }

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { sendEmail } from '../_lib/resendEmail.js'
+import { isCronAuthorized } from '../_lib/cronAuth.js'
 
 /**
  * Automation Engine dispatcher (PHASE-13): Business Event → rules → channel.
@@ -49,12 +50,9 @@ export function renderTemplate(template: string, vars: Record<string, unknown>):
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.authorization !== `Bearer ${cronSecret}`) {
-      res.status(401).json({ error: 'Unauthorized' })
-      return
-    }
+  if (!isCronAuthorized(req.headers.authorization)) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
   }
 
   try {

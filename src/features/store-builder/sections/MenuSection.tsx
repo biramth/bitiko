@@ -1,5 +1,6 @@
 import { Clock, UtensilsCrossed } from 'lucide-react'
 import { useActiveProducts } from '@/features/products/useProducts'
+import { formatCurrency } from '@/utils/format'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
@@ -118,8 +119,8 @@ function MenuItemCard({ item, currency, showPrices, showAllergens }: { item: any
       <div className="p-4">
         <h3 className="font-semibold text-[var(--shop-text)]">{item.name}</h3>
         {item.description && <p className="mt-1 text-sm text-[var(--shop-text)]/60 line-clamp-2">{item.description}</p>}
-        {showPrices && item.price && (
-          <p className="mt-2 font-bold text-brand-600">{formatPrice(item.price, currency)}</p>
+        {showPrices && item.price > 0 && (
+          <p className="mt-2 font-bold text-brand-600">{formatCurrency(item.price, currency)}</p>
         )}
         {showAllergens && item.allergens && item.allergens.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
@@ -141,9 +142,6 @@ function MenuItemCard({ item, currency, showPrices, showAllergens }: { item: any
   )
 }
 
-function formatPrice(price: number, currency: string): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: 0 }).format(price / 100)
-}
 
 export function MenuEditor({ config, onChange }: SectionEditorProps<MenuSectionConfig>) {
   return (

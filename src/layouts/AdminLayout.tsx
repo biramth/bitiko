@@ -69,7 +69,6 @@ const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
 const GROUP_ICONS: Record<string, typeof Store> = {
   Ventes: Receipt,
   Boutique: Store,
-  Site: Store,
   Services: Scissors,
   Équipe: Users,
 }
@@ -126,6 +125,18 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
     setPrevNavKey(navKey)
     setOpenGroup(activeKey)
   }
+  // La visite guidée pointe des liens rangés dans des groupes repliés : tant
+  // qu'elle est active, tous les groupes sont dépliés (event 'admin-menu-open').
+  const [tourExpanded, setTourExpanded] = useState(false)
+  useEffect(() => {
+    const onPrepare = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail
+      if (detail === 'admin-menu-open') setTourExpanded(true)
+      else if (detail === 'admin-menu-closed') setTourExpanded(false)
+    }
+    window.addEventListener(TOUR_PREPARE_EVENT, onPrepare)
+    return () => window.removeEventListener(TOUR_PREPARE_EVENT, onPrepare)
+  }, [])
   const settingsExpanded = openGroup === 'Paramètres'
   const [impersonation] = useState(() => getImpersonation())
   const [quitting, setQuitting] = useState(false)
@@ -201,7 +212,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
               <button
                 type="button"
                 onClick={() => setOpenGroup((open) => (open === group.label ? null : (group.label ?? null)))}
-                aria-expanded={openGroup === group.label}
+                aria-expanded={openGroup === group.label || tourExpanded}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
               >
                 {(() => {
@@ -215,7 +226,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
                   className={`transition-transform ${openGroup === group.label ? 'rotate-180' : ''}`}
                 />
               </button>
-              {openGroup === group.label && (
+              {(openGroup === group.label || tourExpanded) && (
                 <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
                   {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
                     <NavLink key={to} to={to} end={end} className={linkClass} data-guide={guide}>
@@ -234,32 +245,37 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
           ),
         )}
 
-        <button
-          type="button"
-          onClick={() => (collapsed ? undefined : setOpenGroup((open) => (open === 'Paramètres' ? null : 'Paramètres')))}
-          aria-expanded={settingsExpanded}
-          title={collapsed ? 'Paramètres' : undefined}
-          data-guide="guide-nav-parametres"
-          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            collapsed ? 'justify-center' : ''
-          } ${onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
-        >
-          {collapsed ? (
-            <Link to="/admin/parametres" aria-label="Paramètres" className="flex items-center justify-center">
-              <Settings size={17} aria-hidden />
-            </Link>
-          ) : (
-            <>
-              <Settings size={17} aria-hidden />
-              <span className="flex-1 text-left">Paramètres</span>
-              <ChevronDown
-                size={15}
-                aria-hidden
-                className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
-              />
-            </>
-          )}
-        </button>
+        {collapsed ? (
+          <Link
+            to="/admin/parametres"
+            aria-label="Paramètres"
+            title="Paramètres"
+            data-guide="guide-nav-parametres"
+            className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Settings size={17} aria-hidden />
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpenGroup((open) => (open === 'Paramètres' ? null : 'Paramètres'))}
+            aria-expanded={settingsExpanded}
+            data-guide="guide-nav-parametres"
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              onSettings ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Settings size={17} aria-hidden />
+            <span className="flex-1 text-left">Paramètres</span>
+            <ChevronDown
+              size={15}
+              aria-hidden
+              className={`transition-transform ${settingsExpanded ? 'rotate-180' : ''}`}
+            />
+          </button>
+        )}
         {!collapsed && settingsExpanded && (
           <div className="flex flex-col gap-1.5">
             {SETTINGS_GROUPS.map(({ label, keys }) => {

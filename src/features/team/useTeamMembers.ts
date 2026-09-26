@@ -19,9 +19,9 @@ export function useTeamMembers(shopId: string | undefined) {
       if (!shopId) return []
       const rows = await listActiveTeamMembers(shopId)
       return rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        role: r.role,
+        id: r.id ?? '',
+        name: r.name ?? '',
+        role: r.role ?? '',
         specialty: r.specialty ?? undefined,
         avatarUrl: r.avatar_url ?? undefined,
         phone: r.phone ?? undefined,

@@ -19,8 +19,6 @@ export interface Service {
   allergens?: string[]
 }
 
-export type ServiceFilters = { sort?: ServiceSort }
-
 interface UseActiveServicesOptions {
   shopId: string
   sort?: ServiceSort

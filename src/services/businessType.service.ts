@@ -114,3 +114,18 @@ export async function fetchShopBusinessTypeSlug(shopId: string): Promise<string 
   if (error) throw error
   return (data as string | null) ?? null
 }
+
+/** Capabilities d'une boutique pour le workspace et la vitrine. `null` =
+ *  inconnues (pas de type, échec réseau, type inconnu/déprécié => aucune
+ *  capability) : les appelants échouent en OUVERT plutôt que de cacher tout le
+ *  workspace d'un marchand existant. */
+export async function fetchShopCapabilities(shopId: string): Promise<Set<string> | null> {
+  try {
+    const slug = await fetchShopBusinessTypeSlug(shopId)
+    if (!slug) return null
+    const codes = await fetchBusinessCapabilities(slug)
+    return codes.length > 0 ? new Set(codes) : null
+  } catch {
+    return null
+  }
+}

@@ -9,6 +9,9 @@ export interface StorefrontVocabulary {
   siteKind: string
   /** Libellé de la page catalogue (route /catalogue inchangée). */
   catalogLabel: string
+  /** Cible du lien catalogue : `/prestations` quand la vitrine ne vend aucun
+   *  produit (un salon 100 % service n'a rien à lister sous `/catalogue`). */
+  catalogHref: string
   /** Libellé du panier (route /panier inchangée). */
   cartLabel: string
 }
@@ -16,6 +19,7 @@ export interface StorefrontVocabulary {
 const COMMERCE_VOCABULARY: StorefrontVocabulary = {
   siteKind: 'Boutique en ligne',
   catalogLabel: 'Catalogue',
+  catalogHref: '/catalogue',
   cartLabel: 'Panier',
 }
 
@@ -29,7 +33,7 @@ export function getStorefrontVocabulary(caps: Set<string> | null): StorefrontVoc
 
   // Restaurant : carte + réservation de tables, pas de rendez-vous.
   if (hasReservations && !hasAppointments) {
-    return { siteKind: 'Restaurant', catalogLabel: 'La carte', cartLabel: 'Panier' }
+    return { siteKind: 'Restaurant', catalogLabel: 'La carte', catalogHref: '/catalogue', cartLabel: 'Panier' }
   }
   // Salon / institut : rendez-vous ; la partie vente (s'il y en a une) est
   // une boutique annexe, la vitrine principale ce sont les prestations.
@@ -37,12 +41,13 @@ export function getStorefrontVocabulary(caps: Set<string> | null): StorefrontVoc
     return {
       siteKind: 'Salon & Institut',
       catalogLabel: hasProducts ? 'Boutique' : 'Prestations',
+      catalogHref: hasProducts ? '/catalogue' : '/prestations',
       cartLabel: 'Panier',
     }
   }
   // Service sans rendez-vous ni réservation (profil futur) : prestations d'abord.
   if (hasServices && !hasProducts) {
-    return { siteKind: 'Prestations & Services', catalogLabel: 'Prestations', cartLabel: 'Panier' }
+    return { siteKind: 'Prestations & Services', catalogLabel: 'Prestations', catalogHref: '/prestations', cartLabel: 'Panier' }
   }
   return COMMERCE_VOCABULARY
 }

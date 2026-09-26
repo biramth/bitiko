@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
-      urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`))
+      urls.push(urlEntry(`${origin}/`), urlEntry(`${origin}/catalogue`), urlEntry(`${origin}/prestations`))
 
       const isSubdomain = !!ROOT_DOMAIN && host.endsWith(`.${ROOT_DOMAIN}`)
       const slug = isSubdomain ? host.slice(0, -(ROOT_DOMAIN!.length + 1)) : null

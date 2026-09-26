@@ -1,3 +1,4 @@
+import { PLANS } from '@/config/plans'
 import type { GuidedTour } from './types'
 
 export const GUIDED_TOURS: GuidedTour[] = [
@@ -14,18 +15,21 @@ export const GUIDED_TOURS: GuidedTour[] = [
       {
         target: '[data-guide="guide-nav-commandes"]',
         prepare: 'admin-menu-open',
+        capability: 'HAS_ORDERS',
         title: 'Commandes',
         body: 'Chaque commande passée sur ta boutique arrive ici, avec le suivi du client. C’est ton tableau de bord commercial.',
       },
       {
         target: '[data-guide="guide-nav-produits"]',
         prepare: 'admin-menu-open',
+        capability: 'HAS_PRODUCTS',
         title: 'Produits',
-        body: 'Ajoute, modifie et organise tes produits. Le plan gratuit autorise jusqu’à 8 produits actifs et 4 photos par produit.',
+        body: `Ajoute, modifie et organise tes produits. Le plan gratuit autorise jusqu’à ${PLANS.free.maxActiveProducts} produits actifs et ${PLANS.free.maxProductImages} photos par produit.`,
       },
       {
         target: '[data-guide="guide-nav-personnaliser"]',
         prepare: 'admin-menu-open',
+        capability: 'HAS_SHOP',
         title: 'Personnaliser',
         body: 'Retouche ta boutique visuellement : blocs, couleurs, polices. L’aperçu se met à jour en direct, sans toucher au code.',
       },

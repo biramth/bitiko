@@ -231,11 +231,11 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
             Accueil
           </Link>
           <Link
-            to="/catalogue"
-            className={tab(pathname.startsWith('/catalogue'))}
-            aria-current={pathname.startsWith('/catalogue') ? 'page' : undefined}
+            to={vocab.catalogHref}
+            className={tab(pathname.startsWith(vocab.catalogHref))}
+            aria-current={pathname.startsWith(vocab.catalogHref) ? 'page' : undefined}
           >
-            <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith('/catalogue') ? 2.25 : 1.75} />
+            <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith(vocab.catalogHref) ? 2.25 : 1.75} />
             {vocab.catalogLabel}
           </Link>
           <Link

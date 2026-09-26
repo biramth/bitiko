@@ -24,10 +24,11 @@ interface TeamForm {
   specialty: string
   phone: string
   email: string
+  showContact: boolean
   active: boolean
 }
 
-const EMPTY_FORM: TeamForm = { name: '', role: '', specialty: '', phone: '', email: '', active: true }
+const EMPTY_FORM: TeamForm = { name: '', role: '', specialty: '', phone: '', email: '', showContact: false, active: true }
 
 export function TeamPage() {
   usePageSeo({ title: 'Équipe — Bitiko', noindex: true })
@@ -60,6 +61,7 @@ export function TeamPage() {
         specialty: form.specialty.trim() || null,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
+        show_contact: form.showContact,
         avatar_url: editing?.avatar_url ?? null,
         active: form.active,
       }
@@ -87,7 +89,7 @@ export function TeamPage() {
       setDeleteTarget(null)
       toast.success('Membre retiré.')
     },
-    onError: () => toast.error('Impossible de retirer (des rendez-vous y sont liés ?).'),
+    onError: () => toast.error('Impossible de retirer ce membre.'),
   })
 
   const openCreate = () => {
@@ -105,6 +107,7 @@ export function TeamPage() {
       specialty: member.specialty ?? '',
       phone: member.phone ?? '',
       email: member.email ?? '',
+      showContact: member.show_contact,
       active: member.active,
     })
     saveMutation.reset()
@@ -254,6 +257,15 @@ export function TeamPage() {
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.showContact}
+              onChange={(e) => setForm({ ...form, showContact: e.target.checked })}
+              className="accent-brand-600"
+            />
+            Afficher téléphone et email sur la vitrine
+          </label>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"
