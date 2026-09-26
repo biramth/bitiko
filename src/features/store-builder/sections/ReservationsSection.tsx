@@ -11,7 +11,7 @@ import {
 import { Spinner } from '@/components/ui/Spinner'
 import { createReservation, getReservationSlots } from '@/services/reservation.service'
 import { bookingErrorMessage } from '@/services/bookingSettings.service'
-import { notifyBooking } from '@/services/bookingNotify.service'
+import { kickAutomations, notifyBooking } from '@/services/bookingNotify.service'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { ReservationsSectionConfig, ThemeConfig } from '@/types/builder'
@@ -54,7 +54,7 @@ export function ReservationsRenderer({
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const normalized = normalizePhoneNumber(phone)
+      const normalized = normalizePhoneNumber(phone, settings?.country_code)
       if (!normalized.ok || !normalized.value) {
         throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
       }
@@ -69,6 +69,7 @@ export function ReservationsRenderer({
     onSuccess: (reservation) => {
       setBooked({ slot: reservation.start_at, party: reservation.party_size })
       void notifyBooking('reservation', reservation.id)
+      void kickAutomations(shop.id)
     },
     onError: (e) => setError(bookingErrorMessage(e)),
   })

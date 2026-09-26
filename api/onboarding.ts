@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 import { sendEmail } from './_lib/resendEmail.js'
 import { bookingNotificationEmailHtml, welcomeEmailHtml } from './_lib/emailTemplates.js'
+import { dispatchEvents } from './_lib/automationDispatch.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -227,6 +228,23 @@ async function handleBookingNotify(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
+ * Déclenche tout de suite le moteur d'automatisation pour UNE boutique (appelé
+ * par la vitrine après une commande ou une réservation), sans attendre le cron
+ * quotidien. Public mais inoffensif : il n'exécute que les règles activées par
+ * le propriétaire sur des événements non traités de cette boutique, et un
+ * événement n'est jamais traité deux fois (`processed`).
+ */
+async function handleAutomationKick(req: VercelRequest, res: VercelResponse) {
+  const { shopId } = req.body ?? {}
+  if (typeof shopId !== 'string' || !UUID_RE.test(shopId)) {
+    res.status(400).json({ error: 'Boutique invalide.' })
+    return
+  }
+  const result = await dispatchEvents(getSupabaseAdmin(), { shopId, limit: 20 })
+  res.status(200).json(result)
+}
+
+/**
  * Onboarding-time endpoint (check-email + welcome email), consolidated into
  * one function to stay under the Hobby plan's function limit — the rewrites
  * in vercel.json map the readable URLs onto `?action=`.
@@ -246,6 +264,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return
       case 'booking-notify':
         await handleBookingNotify(req, res)
+        return
+      case 'automation-kick':
+        await handleAutomationKick(req, res)
         return
       default:
         await handleCheckEmail(req, res)

@@ -51,6 +51,7 @@
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
     { "source": "/api/booking-notify", "destination": "/api/onboarding?action=booking-notify" },
+    { "source": "/api/automation-kick", "destination": "/api/onboarding?action=automation-kick" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },
     { "source": "/api/request-pro-upgrade", "destination": "/api/account?action=upgrade" },
     { "source": "/(.*)", "destination": "/index.html" }

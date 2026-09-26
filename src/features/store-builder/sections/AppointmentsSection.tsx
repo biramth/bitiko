@@ -15,7 +15,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { createAppointment, getBookingSlots } from '@/services/appointment.service'
 import { bookingErrorMessage } from '@/services/bookingSettings.service'
-import { notifyBooking } from '@/services/bookingNotify.service'
+import { kickAutomations, notifyBooking } from '@/services/bookingNotify.service'
 import { formatCurrency } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
@@ -63,7 +63,7 @@ export function AppointmentsRenderer({
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const normalized = normalizePhoneNumber(phone)
+      const normalized = normalizePhoneNumber(phone, settings?.country_code)
       if (!normalized.ok || !normalized.value) {
         throw new Error(PHONE_ERROR_MESSAGES[normalized.error ?? 'invalid_length'])
       }
@@ -79,6 +79,7 @@ export function AppointmentsRenderer({
     onSuccess: (appointment) => {
       setBooked({ slot: appointment.start_at, service: selectedService?.name ?? 'Prestation' })
       void notifyBooking('appointment', appointment.id)
+      void kickAutomations(shop.id)
     },
     onError: (e) => setError(bookingErrorMessage(e)),
   })

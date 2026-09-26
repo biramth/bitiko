@@ -110,9 +110,51 @@ export type Database = {
           },
         ]
       }
+      automation_rules: {
+        Row: {
+          channel: string
+          created_at: string
+          enabled: boolean
+          event_type: string
+          id: string
+          shop_id: string
+          template: { subject?: string; body?: string }
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          shop_id: string
+          template?: { subject?: string; body?: string }
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          shop_id?: string
+          template?: { subject?: string; body?: string }
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_settings: {
         Row: {
           close_time: string
+          country_code: string
           max_days_ahead: number
           open_days: number[]
           open_time: string
@@ -125,6 +167,7 @@ export type Database = {
         }
         Insert: {
           close_time?: string
+          country_code?: string
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string
@@ -137,6 +180,7 @@ export type Database = {
         }
         Update: {
           close_time?: string
+          country_code?: string
           max_days_ahead?: number
           open_days?: number[]
           open_time?: string
@@ -246,6 +290,7 @@ export type Database = {
           emoji: string | null
           id: string
           image_url: string | null
+          kind: string
           name: string
           position: number
           shop_id: string
@@ -258,6 +303,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          kind?: string
           name: string
           position?: number
           shop_id: string
@@ -270,6 +316,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           image_url?: string | null
+          kind?: string
           name?: string
           position?: number
           shop_id?: string

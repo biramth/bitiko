@@ -67,6 +67,9 @@ const ServicesPage = lazy(() =>
 const AppointmentsPage = lazy(() =>
   import('@/pages/admin/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })),
 )
+const NotificationsPage = lazy(() =>
+  import('@/pages/admin/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
+)
 const TeamPage = lazy(() => import('@/pages/admin/TeamPage').then((m) => ({ default: m.TeamPage })))
 const ReservationsPage = lazy(() =>
   import('@/pages/admin/ReservationsPage').then((m) => ({ default: m.ReservationsPage })),
@@ -237,6 +240,7 @@ export function PlatformRoutes() {
               <Route path="facturation" element={<Navigate to="/admin/parametres/facturation" replace />} />
               <Route path="parametres">
                 <Route index element={<Navigate to="general" replace />} />
+                <Route path="notifications" element={standalone(<NotificationsPage />)} />
                 <Route path=":section" element={standalone(<SettingsPage />)} />
               </Route>
             </Route>

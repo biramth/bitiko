@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient'
+import { kickAutomations } from '@/services/bookingNotify.service'
 import { ORDERS_PAGE_SIZE } from '@/config/constants'
 import { parseOrderOptions } from '@/utils/productOptions'
 import type { CartItem, Order, OrderStatus, OrderWithItems, PaymentMethod } from '@/types'
@@ -154,7 +155,9 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     p_status: status,
   })
   if (error) throw error
-  return data as Order
+  const order = data as Order
+  void kickAutomations(order.shop_id)
+  return order
 }
 
 /** Internal note, never shown to the customer. */

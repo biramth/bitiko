@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ChevronDown,
   ChevronsLeft,
+  Bell,
   ChevronsRight,
   CreditCard,
   ExternalLink,
@@ -51,6 +52,7 @@ const settingsSections = [
   { to: '/admin/parametres/shipping', key: 'shipping', label: 'Livraison & stock', icon: Truck },
   { to: '/admin/parametres/facturation', key: 'facturation', label: 'Facturation', icon: CreditCard },
   { to: '/admin/parametres/equipe', key: 'equipe', label: 'Équipe & accès', icon: Users },
+  { to: '/admin/parametres/notifications', key: 'notifications', label: 'Notifications', icon: Bell },
   { to: '/admin/parametres/compte', key: 'compte', label: 'Mon compte', icon: User },
 ]
 
@@ -59,7 +61,7 @@ const settingsSections = [
 const SETTINGS_GROUPS: { label: string; keys: string[] }[] = [
   { label: 'Boutique', keys: ['general', 'appearance', 'contact'] },
   { label: 'Ventes', keys: ['shipping'] },
-  { label: 'Compte', keys: ['facturation', 'equipe', 'compte'] },
+  { label: 'Compte', keys: ['facturation', 'equipe', 'notifications', 'compte'] },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
@@ -104,7 +106,12 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
     capabilities === null || capabilities.has('HAS_DELIVERY') || capabilities.has('HAS_PRODUCTS')
   const visibleSettingsSections = (
     shopRole && shopRole !== 'owner'
-      ? settingsSections.filter((s) => s.to !== '/admin/parametres/facturation' && s.to !== '/admin/parametres/equipe')
+      ? settingsSections.filter(
+          (s) =>
+            s.to !== '/admin/parametres/facturation' &&
+            s.to !== '/admin/parametres/equipe' &&
+            s.to !== '/admin/parametres/notifications',
+        )
       : settingsSections
   ).filter((s) => s.key !== 'shipping' || showShippingSection)
 
