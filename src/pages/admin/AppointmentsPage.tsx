@@ -295,7 +295,7 @@ export function AppointmentsPage() {
         title="Ajouter un rendez-vous"
         description={`Pour le ${formatLongDate(date)}. Utile quand un client vous appelle ou passe sans avoir réservé en ligne.`}
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>Annuler</Button>
             <Button
               onClick={() => createMutation.mutate()}
@@ -314,7 +314,7 @@ export function AppointmentsPage() {
               <option key={s.id} value={s.id}>{s.name} — {s.duration_minutes} min — {formatCurrency(s.price, currency)}</option>
             ))}
           </SelectField>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
               label="Heure de début"
               type="time"

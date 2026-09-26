@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   Check,
@@ -7,6 +7,8 @@ import {
   ImageOff,
   MessageCircle,
   Minus,
+  Pause,
+  Play,
   Plus,
   Share2,
   X,
@@ -185,6 +187,83 @@ function ProductDetails({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variant?.id, variant?.image_url])
 
+  // Carrousel auto : défile toutes les 4 s quand il y a plusieurs photos.
+  // En pause au survol / focus, 10 s après une navigation manuelle, dans la
+  // lightbox, ou si le visiteur préfère moins d'animations — avec un bouton
+  // pause/lecture explicite pour l'accessibilité.
+  const AUTOPLAY_MS = 4000
+  const [autoplayOn, setAutoplayOn] = useState(true)
+  const [hoverPaused, setHoverPaused] = useState(false)
+  const [cooldown, setCooldown] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const resumeTimeout = useRef<number | null>(null)
+  const touchStartX = useRef<number | null>(null)
+  const lastSwipeAt = useRef(0)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReducedMotion(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  useEffect(
+    () => () => {
+      if (resumeTimeout.current !== null) window.clearTimeout(resumeTimeout.current)
+    },
+    [],
+  )
+  const manualGo = useCallback(
+    (index: number) => {
+      if (galleryImages.length === 0) return
+      setActiveImage(((index % galleryImages.length) + galleryImages.length) % galleryImages.length)
+      setCooldown(true)
+      if (resumeTimeout.current !== null) window.clearTimeout(resumeTimeout.current)
+      resumeTimeout.current = window.setTimeout(() => setCooldown(false), 10000)
+    },
+    [galleryImages.length],
+  )
+  const canAutoplay =
+    galleryImages.length > 1 && autoplayOn && !hoverPaused && !cooldown && !reducedMotion && !lightboxOpen
+  useEffect(() => {
+    if (!canAutoplay) return
+    const id = window.setInterval(() => {
+      if (document.hidden) return
+      setActiveImage((i) => (i + 1) % galleryImages.length)
+    }, AUTOPLAY_MS)
+    return () => window.clearInterval(id)
+  }, [canAutoplay, galleryImages.length])
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartX.current
+    touchStartX.current = null
+    if (start == null) return
+    const dx = e.changedTouches[0].clientX - start
+    if (Math.abs(dx) > 40) {
+      lastSwipeAt.current = Date.now()
+      manualGo(activeImage + (dx < 0 ? 1 : -1))
+    }
+  }
+  const handleSlideClick = () => {
+    // Un swipe termine par un clic : on l'ignore pour ne pas ouvrir la lightbox.
+    if (Date.now() - lastSwipeAt.current < 500) return
+    if (galleryImages.length > 0) setLightboxOpen(true)
+  }
+  const handleGalleryKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight') manualGo(activeImage + 1)
+    else if (e.key === 'ArrowLeft') manualGo(activeImage - 1)
+  }
+  const selectImageAndVariant = (i: number) => {
+    manualGo(i)
+    // Cliquer la vignette d'une variante sélectionne la variante.
+    const img = galleryImages[i]
+    if (img?.variantId) {
+      const variantIdx = variants.findIndex((v) => v.id === img.variantId)
+      if (variantIdx >= 0) setSelectedVariant(variantIdx)
+    }
+  }
+
   const optionFields = useMemo(() => parseOptionFields(product.option_fields), [product.option_fields])
   const [optionValues, setOptionValues] = useState<Record<string, string>>({})
   const [optionError, setOptionError] = useState<{ fieldId: string; message: string } | null>(null)
@@ -274,12 +353,12 @@ function ProductDetails({
   return (
     <>
       <div className="mx-auto max-w-[var(--shop-content-width)] px-4 py-8 sm:px-6">
-        <nav className="mb-6 text-xs font-medium uppercase tracking-wide text-[var(--shop-text)]/40">
+        <nav className="mb-6 flex flex-wrap items-center gap-y-1 break-words text-xs font-medium uppercase tracking-wide text-[var(--shop-text)]/40">
           <Link to="/catalogue" className="hover:text-[var(--shop-text)]">Catalogue</Link>
           {product.category && (
             <>
-              <span className="mx-1.5">/</span>
-              <Link to={`/catalogue?categorie=${product.category.slug}`} className="hover:text-[var(--shop-text)]">{product.category.name}</Link>
+              <span className="mx-1.5 shrink-0">/</span>
+              <Link to={`/catalogue?categorie=${product.category.slug}`} className="min-w-0 break-words hover:text-[var(--shop-text)]">{product.category.name}</Link>
             </>
           )}
         </nav>
@@ -287,41 +366,143 @@ function ProductDetails({
         <div className={`grid gap-10 md:gap-14 ${galleryRight ? 'md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : 'md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'}`}>
           {config.showGallery && (
             <div className={galleryRight ? 'md:order-2' : undefined}>
-              <button
-                type="button"
-                onClick={() => galleryImages.length > 0 && setLightboxOpen(true)}
-                aria-label={galleryImages.length > 0 ? `Agrandir la photo de ${product.name}` : undefined}
-                disabled={galleryImages.length === 0}
-                style={{ borderRadius: 'var(--shop-radius)' }}
-                className="group relative aspect-[4/5] w-full overflow-hidden bg-sand-100"
-              >
-                {galleryImages[activeImage] ? (
-                  <>
-                    <FadeImage src={galleryImages[activeImage].public_url} alt={product.name} fetchPriority="high" srcSet={thumbSrcSet(galleryImages[activeImage].thumb_url, galleryImages[activeImage].public_url)} sizes="(max-width: 768px) 100vw, 640px" className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`} />
-                    <span className="pointer-events-none absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] opacity-0 transition-opacity group-hover:opacity-100">
+              {galleryImages.length === 0 ? (
+                <div
+                  className="flex aspect-[4/5] w-full items-center justify-center bg-sand-100"
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                >
+                  <div className="flex h-full w-full items-center justify-center text-ink-200">
+                    <ImageOff size={48} aria-hidden />
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="group/gallery relative"
+                  onMouseEnter={() => setHoverPaused(true)}
+                  onMouseLeave={() => setHoverPaused(false)}
+                  onFocus={() => setHoverPaused(true)}
+                  onBlur={() => setHoverPaused(false)}
+                  onKeyDown={handleGalleryKeyDown}
+                >
+                  <div
+                    className="overflow-hidden bg-sand-100"
+                    style={{ borderRadius: 'var(--shop-radius)' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <div
+                      className="flex transition-transform duration-500 ease-out motion-reduce:transition-none"
+                      style={{ transform: `translateX(-${activeImage * 100}%)` }}
+                      role="group"
+                      aria-roledescription="carrousel"
+                      aria-label={`Photos de ${product.name} — photo ${activeImage + 1} sur ${galleryImages.length}`}
+                    >
+                      {galleryImages.map((img, i) => (
+                        <button
+                          key={`${img.id}-${img.public_url}`}
+                          type="button"
+                          onClick={handleSlideClick}
+                          aria-label={`Agrandir la photo ${i + 1} de ${product.name}`}
+                          aria-hidden={i !== activeImage}
+                          tabIndex={i === activeImage ? 0 : -1}
+                          className="relative aspect-[4/5] w-full shrink-0 overflow-hidden"
+                        >
+                          <FadeImage
+                            src={img.public_url}
+                            alt={i === activeImage ? product.name : ''}
+                            fetchPriority={i === 0 ? 'high' : undefined}
+                            loading={i === 0 ? undefined : 'lazy'}
+                            decoding="async"
+                            srcSet={thumbSrcSet(img.thumb_url, img.public_url)}
+                            sizes="(max-width: 768px) 100vw, 640px"
+                            className={`h-full w-full object-cover ${outOfStock ? 'opacity-60 grayscale' : ''}`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {galleryImages.length > 1 && (
+                    <span
+                      className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white"
+                      aria-hidden
+                    >
+                      {activeImage + 1} / {galleryImages.length}
+                    </span>
+                  )}
+                  <div className="absolute right-3 top-3 flex gap-2">
+                    {galleryImages.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (resumeTimeout.current !== null) window.clearTimeout(resumeTimeout.current)
+                          setCooldown(false)
+                          setAutoplayOn((on) => !on)
+                        }}
+                        aria-label={autoplayOn ? 'Mettre le défilement auto en pause' : 'Relancer le défilement auto'}
+                        aria-pressed={autoplayOn}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] transition-opacity sm:opacity-0 sm:group-hover/gallery:opacity-100 sm:focus-visible:opacity-100"
+                      >
+                        {autoplayOn ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
+                      </button>
+                    )}
+                    <span className="pointer-events-none flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-[var(--shop-text)] transition-opacity sm:opacity-0 sm:group-hover/gallery:opacity-100">
                       <ZoomIn size={16} aria-hidden />
                     </span>
-                  </>
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-ink-200"><ImageOff size={48} aria-hidden /></div>
-                )}
-              </button>
+                  </div>
+                  {galleryImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          manualGo(activeImage - 1)
+                        }}
+                        aria-label="Photo précédente"
+                        className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[var(--shop-text)] shadow-sm transition hover:bg-white"
+                      >
+                        <ChevronLeft size={20} aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          manualGo(activeImage + 1)
+                        }}
+                        aria-label="Photo suivante"
+                        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[var(--shop-text)] shadow-sm transition hover:bg-white"
+                      >
+                        <ChevronRight size={20} aria-hidden />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5" role="tablist" aria-label="Choisir une photo">
+                        {galleryImages.map((img, i) => (
+                          <button
+                            key={`${img.id}-dot`}
+                            type="button"
+                            role="tab"
+                            aria-selected={i === activeImage}
+                            aria-label={`Photo ${i + 1}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              selectImageAndVariant(i)
+                            }}
+                            className={`h-1.5 rounded-full transition-all ${i === activeImage ? 'w-5 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/90'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               {galleryImages.length > 1 && (
-                <div className="mt-4 flex gap-4" role="tablist" aria-label={`Photos de ${product.name}`}>
+                <div className="mt-4 flex gap-3 overflow-x-auto pb-1" role="tablist" aria-label={`Photos de ${product.name}`}>
                   {galleryImages.map((img, i) => (
                     <button
                       key={`${img.id}-${img.public_url}`}
                       role="tab"
                       aria-selected={i === activeImage}
-                      onClick={() => {
-                        setActiveImage(i)
-                        // Clicking a variant's thumbnail selects that variant.
-                        if (img.variantId) {
-                          const variantIdx = variants.findIndex((v) => v.id === img.variantId)
-                          if (variantIdx >= 0) setSelectedVariant(variantIdx)
-                        }
-                      }}
-                      className={`h-16 w-16 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-[var(--shop-button)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                      onClick={() => selectImageAndVariant(i)}
+                      className={`h-16 w-16 shrink-0 overflow-hidden border-b-2 transition-colors ${i === activeImage ? 'border-[var(--shop-button)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
                     >
                       <FadeImage src={img.thumb_url ?? img.public_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
@@ -437,7 +618,7 @@ function ProductDetails({
               <StockBadge stock={displayStock} lowStockThreshold={lowStockThreshold} />
             </div>
             {config.showDescription && product.description && (
-              <p className="mt-6 whitespace-pre-line leading-relaxed text-[var(--shop-text)]/70">{product.description}</p>
+              <p className="mt-6 break-words whitespace-pre-line leading-relaxed text-[var(--shop-text)]/70">{product.description}</p>
             )}
 
             {config.showQuantity && (

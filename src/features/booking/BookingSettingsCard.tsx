@@ -305,7 +305,7 @@ function BookingSettingsForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <SelectField
                 label="Un créneau toutes les"
                 value={form.slot_minutes}
@@ -332,7 +332,7 @@ function BookingSettingsForm({
             </div>
 
             {showTables && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <TextField
                   label="Nombre de places en salle"
                   type="number"

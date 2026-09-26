@@ -488,7 +488,7 @@ export function OnboardingPage() {
             const active = step === s.number
             return (
               <div key={s.number} className="flex items-start">
-                <div className="flex w-12 flex-col items-center gap-1 sm:w-16">
+                <div className="flex w-10 flex-col items-center gap-1 sm:w-16">
                   <div
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
                       active
@@ -508,7 +508,7 @@ export function OnboardingPage() {
                     {s.label}
                   </span>
                 </div>
-                {i < STEPS.length - 1 && <span className="mx-0.5 mt-4 h-px w-4 shrink-0 bg-gray-200 sm:w-8" />}
+                {i < STEPS.length - 1 && <span className="mx-0.5 mt-4 h-px w-2 shrink-0 bg-gray-200 sm:w-8" />}
               </div>
             )
           })}
@@ -530,7 +530,7 @@ export function OnboardingPage() {
             <>
               <StepHeader step={4} />
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
                     Prénom

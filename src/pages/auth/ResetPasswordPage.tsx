@@ -65,7 +65,7 @@ export function ResetPasswordPage() {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center px-4 py-8">
         <Spinner label="Vérification du lien…" />
       </div>
     )

@@ -878,7 +878,7 @@ function ProductForm({
                 </span>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row [&>*]:w-full sm:[&>*]:w-auto">
               <button
                 type="button"
                 onClick={() => navigate('/admin/produits')}

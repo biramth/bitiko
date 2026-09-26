@@ -20,7 +20,7 @@ export function ImageRenderer({ config, sectionId, editable = false }: { config:
   if (!config.imageUrl) return null
 
   const content = (
-    <div className="aspect-[21/9] w-full overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
+    <div className="aspect-[16/10] w-full overflow-hidden bg-sand-100 sm:aspect-[21/9]" style={{ borderRadius: 'var(--shop-radius)' }}>
       {config.videoUrl ? (
         <video
           src={config.videoUrl}

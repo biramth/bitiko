@@ -123,7 +123,7 @@ function EntryForm({
         })}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           label={`Montant (${currencyLabel})`}
           type="number"
@@ -166,7 +166,7 @@ function EntryForm({
 
       <TextAreaField label="Note" rows={2} maxLength={500} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} hint="Facultatif : n° de facture, fournisseur…" />
 
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
         <Button variant="secondary" onClick={onClose}>Annuler</Button>
         <Button type="submit" loading={pending} disabled={!valid}>
           {entry ? 'Enregistrer' : 'Ajouter'}

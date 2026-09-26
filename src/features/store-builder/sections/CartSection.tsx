@@ -126,8 +126,8 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
       <div className={aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10' : undefined}>
       <ul className="mt-8 divide-y divide-[var(--shop-text)]/10 border-t border-[var(--shop-text)]/10">
         {items.map((item) => (
-          <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex gap-5 py-5">
-            <div className="h-24 w-24 shrink-0 overflow-hidden bg-sand-100" style={{ borderRadius: 'var(--shop-radius)' }}>
+          <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex gap-3 py-5 sm:gap-5">
+            <div className="h-20 w-20 shrink-0 overflow-hidden bg-sand-100 sm:h-24 sm:w-24" style={{ borderRadius: 'var(--shop-radius)' }}>
               {item.imageUrl ? (
                 <FadeImage src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
@@ -137,10 +137,10 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
               )}
             </div>
 
-            <div className="flex flex-1 flex-col justify-between">
+            <div className="flex min-w-0 flex-1 flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <Link to={`/produits/${item.slug}`} className="text-sm font-medium text-[var(--shop-text)] hover:underline">
+                <div className="min-w-0 flex-1">
+                  <Link to={`/produits/${item.slug}`} className="break-words text-sm font-medium text-[var(--shop-text)] hover:underline">
                     {item.name}
                   </Link>
                   {item.variantName && (
@@ -174,7 +174,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                     <span className="text-sm text-[var(--shop-text)]/60">Qté : {item.quantity}</span>
                   )}
                 </div>
-                <p className="font-semibold text-[var(--shop-text)]">
+                <p className="shrink-0 whitespace-nowrap font-semibold text-[var(--shop-text)]">
                   {formatCurrency(item.price * item.quantity, currency)}
                 </p>
               </div>

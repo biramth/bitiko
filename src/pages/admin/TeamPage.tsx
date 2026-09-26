@@ -186,7 +186,7 @@ export function TeamPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 sm:gap-3">
                     <Switch
                       checked={member.active}
                       label="Visible et réservable"
@@ -222,7 +222,7 @@ export function TeamPage() {
         onClose={() => setFormOpen(false)}
         title={editing ? 'Modifier cette personne' : 'Ajouter une personne'}
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <Button variant="secondary" onClick={() => setFormOpen(false)}>Annuler</Button>
             <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={!form.name.trim()}>
               Enregistrer
@@ -232,7 +232,7 @@ export function TeamPage() {
       >
         <div className="space-y-4">
           <TextField label="Nom" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField
               label="Poste"
               value={form.role}
@@ -249,7 +249,7 @@ export function TeamPage() {
           <div className="rounded-lg border border-gray-200 p-3">
             <p className="text-sm font-medium text-gray-700">Coordonnées</p>
             <p className="mt-0.5 text-xs text-gray-500">Facultatif. Elles ne sont montrées à vos clients que si vous cochez l’option ci-dessous.</p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField label="Téléphone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               <TextField label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>

@@ -186,7 +186,7 @@ function CheckoutFlow({
       {showTitle && (
         <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Finaliser la commande</h1>
       )}
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-[var(--shop-text)]/65" aria-label="Garanties de commande">
+      <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-[var(--shop-text)]/65 min-[380px]:grid-cols-2" aria-label="Garanties de commande">
         <p className="border border-[var(--shop-text)]/10 px-3 py-2">Prix et stock vérifiés à la commande</p>
         <p className="border border-[var(--shop-text)]/10 px-3 py-2">Paiement confirmé avec le vendeur sur WhatsApp</p>
       </div>
@@ -195,13 +195,13 @@ function CheckoutFlow({
         <ul className="space-y-1.5 text-sm text-[var(--shop-text)]/80">
           {items.map((item) => (
             <li key={`${item.productId}:${item.variantId ?? ''}:${optionsKey(item.options)}`} className="flex justify-between gap-4">
-              <span>
+              <span className="min-w-0 flex-1 break-words">
                 {item.variantName ? `${item.name} (${item.variantName})` : item.name} × {item.quantity}
                 {item.options && item.options.length > 0 && (
                   <span className="block text-xs text-[var(--shop-text)]/50">{formatOptionsInline(item.options)}</span>
                 )}
               </span>
-              <span>{formatCurrency(item.price * item.quantity, currency)}</span>
+              <span className="shrink-0 whitespace-nowrap">{formatCurrency(item.price * item.quantity, currency)}</span>
             </li>
           ))}
         </ul>
@@ -319,7 +319,7 @@ function CheckoutFlow({
           type="submit"
           disabled={mutation.isPending || demo}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="w-full bg-[var(--shop-button)] py-4 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full break-words bg-[var(--shop-button)] px-4 py-4 text-xs font-semibold uppercase leading-relaxed tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60 sm:text-sm"
         >
           {demo ? 'Aperçu — la commande est désactivée' : mutation.isPending ? 'Création de la commande…' : `Commander via WhatsApp · ${formatCurrency(estimate, currency)}`}
         </button>

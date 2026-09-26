@@ -257,7 +257,7 @@ export function LandingPage() {
             </a>
             <h1 className="mx-auto max-w-[620px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.3rem]">
               Vends, réserve et gère ton activité.{' '}
-              <span className="relative inline-block whitespace-nowrap">
+              <span className="relative inline-block whitespace-normal sm:whitespace-nowrap">
                 Un seul outil
                 <SquiggleUnderline />
               </span>
@@ -489,28 +489,30 @@ export function LandingPage() {
                 Ce qui change avec Bitiko.
               </h2>
             </Reveal>
-            <Reveal delay={150} className="overflow-hidden rounded-2xl border border-sand-200">
+            <Reveal delay={150} className="overflow-x-auto rounded-2xl border border-sand-200">
+              <div className="min-w-[560px]">
               <div className="grid grid-cols-[1fr_1px_1fr] border-b border-sand-200 bg-ink-800 text-xs font-semibold uppercase tracking-wider text-white">
-                <div className="px-5 py-3">Sans Bitiko</div>
+                <div className="px-3 py-3 sm:px-5">Sans Bitiko</div>
                 <div className="bg-ink-700" />
-                <div className="px-5 py-3">Avec Bitiko</div>
+                <div className="px-3 py-3 sm:px-5">Avec Bitiko</div>
               </div>
               {comparisonRows.map(({ before, after }, i) => (
                 <div
                   key={i}
                   className={`grid grid-cols-[1fr_1px_1fr] transition-colors duration-200 hover:bg-emerald-50/30 ${i < comparisonRows.length - 1 ? 'border-b border-sand-100' : ''}`}
                 >
-                  <div className="flex items-start gap-2.5 px-5 py-3.5">
+                  <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
                     <X size={14} className="mt-0.5 shrink-0 text-red-400" />
-                    <span className="text-sm text-ink-700/70">{before}</span>
+                    <span className="text-xs text-ink-700/70 sm:text-sm">{before}</span>
                   </div>
                   <div className="bg-sand-200" />
-                  <div className="flex items-start gap-2.5 px-5 py-3.5">
+                  <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
                     <Check size={14} className="mt-0.5 shrink-0 text-emerald-600" />
-                    <span className="text-sm font-medium text-ink-900">{after}</span>
+                    <span className="text-xs font-medium text-ink-900 sm:text-sm">{after}</span>
                   </div>
                 </div>
               ))}
+              </div>
             </Reveal>
           </div>
         </section>
@@ -610,7 +612,7 @@ export function LandingPage() {
               <Reveal delay={80}>
                 <div className="relative rounded-[20px] border border-brand-200 bg-brand-50/40 p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
                   {promo?.plan === 'essential' && (
-                    <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900"><Gift size={12} aria-hidden />{promo.days} jours offerts</span>
+                    <span className="absolute -top-3 left-1/2 inline-flex max-w-[90%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900"><Gift size={12} aria-hidden />{promo.days} jours offerts</span>
                   )}
                   <p className="text-sm font-bold text-ink-900">Essentiel</p>
                   <div className="mt-3 flex items-baseline justify-center gap-1"><span className="text-4xl font-bold text-ink-900">3 000 F</span><span className="text-sm text-ink-700/75">/mois</span></div>
@@ -638,7 +640,7 @@ export function LandingPage() {
               {/* Pro */}
               <Reveal delay={160}>
                 <div className="relative rounded-[20px] border border-brand-600 bg-brand-600 p-8 text-white shadow-[0_0_60px_rgba(194,72,28,0.15)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_70px_rgba(194,72,28,0.25)]">
-                  <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900">
+                  <span className="absolute -top-3 left-1/2 inline-flex max-w-[90%] -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md bg-gold-400 px-2.5 py-1 text-xs font-semibold text-ink-900">
                     {promo?.plan === 'pro' ? <><Gift size={12} aria-hidden />{promo.days} jours offerts</> : 'Le plus populaire'}
                   </span>
                   <p className="text-sm font-bold text-white">Pro</p>

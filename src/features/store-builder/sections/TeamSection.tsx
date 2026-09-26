@@ -102,21 +102,21 @@ function TeamCard({ member }: { member: any }) {
           />
         </div>
       )}
-      <div className="p-4">
-        <h3 className="font-heading font-semibold text-[var(--shop-text)]">{member.name}</h3>
-        {member.role && <p className="mt-1 text-sm text-[var(--shop-text)]/60">{member.role}</p>}
-        {member.specialty && <p className="mt-1 text-sm text-brand-600">{member.specialty}</p>}
-        <div className="mt-3 flex items-center gap-4 text-xs text-[var(--shop-text)]/60">
+      <div className="min-w-0 p-4">
+        <h3 className="break-words font-heading font-semibold text-[var(--shop-text)]">{member.name}</h3>
+        {member.role && <p className="mt-1 break-words text-sm text-[var(--shop-text)]/60">{member.role}</p>}
+        {member.specialty && <p className="mt-1 break-words text-sm text-brand-600">{member.specialty}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--shop-text)]/60">
           {member.phone && (
-            <span className="flex items-center gap-1">
-              <Phone size={12} />
-              {member.phone}
+            <span className="flex min-w-0 items-center gap-1">
+              <Phone size={12} className="shrink-0" />
+              <span className="truncate">{member.phone}</span>
             </span>
           )}
           {member.email && (
-            <span className="flex items-center gap-1">
-              <Mail size={12} />
-              {member.email}
+            <span className="flex min-w-0 items-center gap-1">
+              <Mail size={12} className="shrink-0" />
+              <span className="break-all">{member.email}</span>
             </span>
           )}
         </div>

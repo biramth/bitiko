@@ -24,7 +24,7 @@ export function SlotGrid({
             aria-checked={selected}
             onClick={() => onChange(slot)}
             style={{ borderRadius: 'var(--shop-radius)' }}
-            className={`border px-2 py-2 text-sm font-medium transition-colors ${
+            className={`min-h-[44px] border px-2 py-2 text-sm font-medium transition-colors ${
               selected
                 ? 'border-[var(--shop-button)] bg-[var(--shop-button)] text-[var(--shop-button-text)]'
                 : 'border-[var(--shop-text)]/20 text-[var(--shop-text)] hover:border-[var(--shop-text)]/60'
