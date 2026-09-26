@@ -209,7 +209,11 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="Tableau de bord"
-        subtitle="Vue d'ensemble de votre boutique : ventes, commandes et stock."
+        subtitle={
+          hasCommerce
+            ? 'Vue d’ensemble de votre boutique : ventes, commandes et stock.'
+            : 'Vue d’ensemble de votre activité : rendez-vous, prestations et équipe.'
+        }
         actions={
           <>
             {hasProducts && (

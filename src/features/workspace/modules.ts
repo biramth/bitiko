@@ -89,3 +89,15 @@ export function groupModules(modules: WorkspaceModule[]): { label?: string; item
     .sort(([a], [b]) => (order.get(a ?? '') ?? 0) - (order.get(b ?? '') ?? 0))
     .map(([label, items]) => ({ label, items }))
 }
+
+/** Relabels groups for the business profile. Sans commerce, le groupe
+ *  « Boutique » (qui ne contient plus que Personnaliser) devient « Site » :
+ *  un salon personnalise son site, pas une boutique. Capabilities inconnues
+ *  (null) = libellés historiques. Pure — unit-testée. */
+export function renameGroupsForProfile(
+  groups: { label?: string; items: WorkspaceModule[] }[],
+  caps: Set<string> | null,
+): { label?: string; items: WorkspaceModule[] }[] {
+  if (caps === null || caps.has('HAS_PRODUCTS')) return groups
+  return groups.map((group) => (group.label === 'Boutique' ? { ...group, label: 'Site' } : group))
+}

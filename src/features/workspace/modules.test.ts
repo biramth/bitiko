@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   WORKSPACE_MODULES,
   groupModules,
+  renameGroupsForProfile,
   resolveModules,
   type WorkspaceModule,
 } from './modules'
@@ -15,7 +16,6 @@ const COMMERCE_CAPS = new Set([
   'HAS_ANALYTICS',
 ])
 
-const SERVICE_CAPS = new Set(['HAS_APPOINTMENTS', 'HAS_SERVICES', 'HAS_CALENDAR', 'HAS_CUSTOMERS', 'HAS_TEAM'])
 
 describe('resolveModules', () => {
   it('shows every legacy module for a commerce capability set', () => {
@@ -38,9 +38,19 @@ describe('resolveModules', () => {
     ])
   })
 
-  it('shows service modules for a service business without commerce capabilities', () => {
-    const keys = resolveModules(WORKSPACE_MODULES, SERVICE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'customers', 'services', 'appointments', 'team'])
+  it('shows only service modules for a 100% service business (salon)', () => {
+    const caps = new Set([
+      'HAS_SHOP',
+      'HAS_SERVICES',
+      'HAS_APPOINTMENTS',
+      'HAS_CALENDAR',
+      'HAS_TEAM',
+      'HAS_ANALYTICS',
+      'HAS_REVIEWS',
+      'HAS_PROMOTIONS',
+    ])
+    const keys = resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true }).map((m) => m.key)
+    expect(keys).toEqual(['dashboard', 'services', 'appointments', 'team', 'customize'])
   })
 
   it('keeps only the dashboard for a known-but-empty capability set', () => {
@@ -81,5 +91,25 @@ describe('groupModules', () => {
   it('never shows a Services group for a commerce-only business', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
     expect(groups.map((g) => g.label)).not.toContain('Services')
+  })
+})
+
+describe('renameGroupsForProfile', () => {
+  it('renames Boutique to Site without commerce, keeps history on unknown', () => {
+    const commerce = renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true })), COMMERCE_CAPS)
+    expect(commerce.map((g) => g.label)).toContain('Boutique')
+    const salon = renameGroupsForProfile(
+      groupModules(
+        resolveModules(
+          WORKSPACE_MODULES,
+          new Set(['HAS_SHOP', 'HAS_SERVICES', 'HAS_APPOINTMENTS', 'HAS_TEAM']),
+          { teamAccess: true },
+        ),
+      ),
+      new Set(['HAS_SHOP', 'HAS_SERVICES', 'HAS_APPOINTMENTS', 'HAS_TEAM']),
+    )
+    expect(salon.map((g) => g.label)).toEqual([undefined, 'Services', 'Équipe', 'Site'])
+    const unknown = renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, null, { teamAccess: true })), null)
+    expect(unknown.map((g) => g.label)).toContain('Boutique')
   })
 })
