@@ -18,7 +18,7 @@ export function useSoftwareStructuredData() {
       operatingSystem: 'Web',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'XOF' },
       description:
-        'Bitiko donne à chaque activité sa présence en ligne : boutique e-commerce, prise de rendez-vous, catalogue de services.',
+        'Bitiko donne à chaque activité sa présence en ligne : boutique e-commerce, prise de rendez-vous, réservation de tables, catalogue de services et finances simples (bilan PDF et Excel).',
     })
     document.head.appendChild(script)
 

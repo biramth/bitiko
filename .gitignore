@@ -41,3 +41,6 @@ supabase/.branches
 # Playwright artifacts
 test-results/
 playwright-report/
+
+# Visuels marketing : fichiers temporaires de génération
+scripts/marketing/.tmp*/

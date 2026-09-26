@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "template:new": "node scripts/new-template.mjs"
+    "template:new": "node scripts/new-template.mjs",
+    "marketing:serve": "vite build --config scripts/marketing/vite.config.ts && vite preview --config scripts/marketing/vite.config.ts",
+    "marketing:shots": "node scripts/marketing/shots.mjs",
+    "marketing:video": "node scripts/marketing/video.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

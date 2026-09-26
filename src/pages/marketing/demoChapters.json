@@ -1,0 +1,15 @@
+{
+  "duration": 141,
+  "chapters": [
+    {
+      "id": "produits",
+      "label": "Vendre des produits",
+      "start": 4
+    },
+    {
+      "id": "services",
+      "label": "Proposer des services",
+      "start": 74
+    }
+  ]
+}
