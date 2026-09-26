@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { expect, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 export interface E2EUser {
   email: string

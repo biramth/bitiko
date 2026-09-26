@@ -92,7 +92,7 @@ Les clés Supabase se trouvent dans **Project Settings > API** du dashboard.
 ## Configuration Supabase
 
 1. Créer un nouveau projet sur https://supabase.com/dashboard.
-2. Dans **SQL Editor**, exécuter **tous** les fichiers de `supabase/migrations/` dans l'ordre numérique du préfixe (`0001` → `0020`, en incluant les deux `0010_*`). Le dossier fait foi — ne te fie pas à une liste figée ici, elle se périme à chaque nouvelle migration.
+2. Dans **SQL Editor**, exécuter **tous** les fichiers de `supabase/migrations/` dans l'ordre numérique du préfixe (`0001` → dernière migration, en incluant les deux `0010_*` ; aucun fichier `0067`–`0085` n'existe dans le dépôt). Le dossier fait foi — ne te fie pas à une liste figée ici, elle se périme à chaque nouvelle migration.
 3. (Optionnel) Régénérer les types TypeScript depuis le schéma réel :
    ```bash
    npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
@@ -159,7 +159,7 @@ Voir [`.env.example`](.env.example). Ne jamais commiter `.env` ou `.env.local` (
 Deux familles de variables, à ne pas confondre :
 
 - **Client (`VITE_*`)** — exposées dans le bundle, lisibles par n'importe qui. Uniquement `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`, `VITE_DEV_SHOP_SLUG`, `VITE_GA_MEASUREMENT_ID`. À définir dans `.env` (local) **et** dans Vercel.
-- **Serveur (sans préfixe)** — jamais exposées au navigateur, lues uniquement par les fonctions `api/` : `SUPABASE_SERVICE_ROLE_KEY`, `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `CRON_SECRET`. À définir **uniquement dans Vercel** (jamais dans un fichier `.env` commité).
+- **Serveur (sans préfixe)** — jamais exposées au navigateur, lues uniquement par les fonctions `api/` : `SUPABASE_SERVICE_ROLE_KEY`, `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `CRON_SECRET` (**obligatoire** : sans elle les crons refusent toute requête). À définir **uniquement dans Vercel** (jamais dans un fichier `.env` commité).
 
 > La clé `service_role` bypasse les RLS : ne la mettez jamais derrière un préfixe `VITE_` et ne la commitez jamais.
 
@@ -176,7 +176,7 @@ Vérifier aussi que `SUPABASE_SERVICE_ROLE_KEY` est bien déclarée pour **Previ
 
 ## Limite de fonctions serverless
 
-Le plan Vercel Hobby plafonne à **12 fonctions serverless par déploiement**. Chaque fichier sous `api/` (hors `api/_lib/`, préfixe réservé aux modules partagés) et `middleware.ts` en consomme une. Le compte actuel est proche du plafond : **avant d'ajouter un handler `api/*.ts`, regrouper une logique existante** (via un paramètre `?action=` + réécriture dans `vercel.json`, comme `api/admin/payments.ts` ou `api/sitemap.ts`) plutôt que de créer un fichier de plus.
+Le plan Vercel Hobby plafonne à **12 fonctions serverless par déploiement**. Chaque fichier sous `api/` (hors `api/_lib/`, préfixe réservé aux modules partagés) et `middleware.ts` en consomme une. Le compte actuel est proche du plafond : **avant d'ajouter un handler `api/*.ts`, regrouper une logique existante** (via un paramètre `?action=` + réécriture dans `vercel.json`, comme `api/admin/platform.ts`, `api/onboarding.ts` ou `api/sitemap.ts`) plutôt que de créer un fichier de plus.
 
 ## Tester les fonctions `api/` en local
 

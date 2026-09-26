@@ -68,6 +68,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 15 | [Performance + Security hardening](PHASE-15-hardening.md) | Budgets, durcissement complet browser→DB→infra, uploads, tenant isolation | 06–14 | ✅ TERMINÉ — 2026-09-25 (DEV) |
 | 16 | [Testing](PHASE-16-testing.md) | Unit + intégration + E2E + sécurité multi-tenant explicites | 03–15 | ✅ TERMINÉ — 2026-09-25 (DEV : unit 164 + matrice RLS effective ; E2E en suivi) |
 | 17 | [Production migration](PHASE-17-production.md) | Bascule dev→prod, REMOVE LEGACY, validation critères §67 de la mission | 16 | ⬜ NON DÉMARRÉ |
+| 18 | [Métiers, services et réservations](PHASE-18-metiers-services.md) | Chantier post-refonte : groupes métiers, services, réservations réelles, intégrité facturation | 16 | 🟨 EN COURS — 2026-09-26 (DEV, migrations 0121–0124 à appliquer) |
 
 ## 4. Livrable de fin de phase (obligatoire, format imposé)
 
