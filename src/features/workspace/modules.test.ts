@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   WORKSPACE_MODULES,
   groupModules,
-  renameGroupsForProfile,
   resolveModules,
   sortGroupsForProfile,
   type WorkspaceModule,
@@ -39,7 +38,7 @@ describe('resolveModules', () => {
     ])
   })
 
-  it('shows only service modules for a 100% service business (salon)', () => {
+  it('shows service modules without commerce capabilities', () => {
     const caps = new Set([
       'HAS_SHOP',
       'HAS_SERVICES',
@@ -86,6 +85,7 @@ describe('groupModules', () => {
   it('keeps ungrouped entries first, then group order of first appearance', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
     expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe'])
+    expect(groups[0]?.items.map((m) => m.key)).toEqual(['dashboard', 'customize'])
     expect(groups[1]?.items.map((m) => m.key)).toEqual(['orders', 'customers'])
   })
 
@@ -95,30 +95,10 @@ describe('groupModules', () => {
   })
 })
 
-describe('renameGroupsForProfile', () => {
-  it('renames Boutique to Site without commerce, keeps history on unknown', () => {
-    const commerce = renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true })), COMMERCE_CAPS)
-    expect(commerce.map((g) => g.label)).toContain('Boutique')
-    const salon = renameGroupsForProfile(
-      groupModules(
-        resolveModules(
-          WORKSPACE_MODULES,
-          new Set(['HAS_SHOP', 'HAS_SERVICES', 'HAS_APPOINTMENTS', 'HAS_TEAM']),
-          { teamAccess: true },
-        ),
-      ),
-      new Set(['HAS_SHOP', 'HAS_SERVICES', 'HAS_APPOINTMENTS', 'HAS_TEAM']),
-    )
-    expect(salon.map((g) => g.label)).toEqual([undefined, 'Services', 'Équipe', 'Site'])
-    const unknown = renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, null, { teamAccess: true })), null)
-    expect(unknown.map((g) => g.label)).toContain('Boutique')
-  })
-})
-
 describe('sortGroupsForProfile', () => {
   const labels = (caps: Set<string> | null) =>
     sortGroupsForProfile(
-      renameGroupsForProfile(groupModules(resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true })), caps),
+      groupModules(resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true })),
       caps,
     ).map((g) => g.label)
 

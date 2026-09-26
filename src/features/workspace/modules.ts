@@ -47,7 +47,10 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   // dans « Services » (sinon une boutique mode verrait un groupe Services
   // avec pour seul contenu l'Équipe).
   { key: 'team', label: 'Équipe', to: '/admin/equipe', icon: Users, group: 'Équipe', capabilities: ['HAS_TEAM'], enabled: true },
-  { key: 'customize', label: 'Personnaliser', to: '/admin/personnaliser', icon: Wand2, group: 'Boutique', guide: 'guide-nav-personnaliser', capabilities: ['HAS_SHOP'], enabled: true },
+  // Personnaliser concerne tout le site client (vitrine), pas le commerce :
+  // hors groupe, au niveau du tableau de bord. « Boutique » ne contient donc
+  // plus que Produits et redevient 100 % commerce.
+  { key: 'customize', label: 'Personnaliser', to: '/admin/personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser', capabilities: ['HAS_SHOP'], enabled: true },
 ]
 
 export interface ModuleContext {
@@ -90,21 +93,9 @@ export function groupModules(modules: WorkspaceModule[]): { label?: string; item
     .map(([label, items]) => ({ label, items }))
 }
 
-/** Relabels groups for the business profile. Sans commerce, le groupe
- *  « Boutique » (qui ne contient plus que Personnaliser) devient « Site » :
- *  un salon personnalise son site, pas une boutique. Capabilities inconnues
- *  (null) = libellés historiques. Pure — unit-testée. */
-export function renameGroupsForProfile(
-  groups: { label?: string; items: WorkspaceModule[] }[],
-  caps: Set<string> | null,
-): { label?: string; items: WorkspaceModule[] }[] {
-  if (caps === null || caps.has('HAS_PRODUCTS')) return groups
-  return groups.map((group) => (group.label === 'Boutique' ? { ...group, label: 'Site' } : group))
-}
-
 /** Orders groups for the business profile. Un métier de service voit
- *  « Services » juste sous le tableau de bord (son cœur d'activité), puis
- *  Ventes, Boutique/Site, Équipe. Commerce pur et capabilities inconnues :
+ *  « Services » juste sous le haut de navigation (son cœur d'activité), puis
+ *  Ventes, Boutique, Équipe. Commerce pur et capabilities inconnues :
  *  ordre historique inchangé. Tri stable — pure, unit-testée. */
 export function sortGroupsForProfile(
   groups: { label?: string; items: WorkspaceModule[] }[],
@@ -118,7 +109,7 @@ export function sortGroupsForProfile(
     if (label === undefined) return 0
     if (label === 'Services') return 1
     if (label === 'Ventes') return 2
-    if (label === 'Boutique' || label === 'Site') return 3
+    if (label === 'Boutique') return 3
     if (label === 'Équipe') return 4
     return 5
   }
