@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { CapabilityGate, RequirePlatformMember } from '@/features/platform/RequirePlatformMember'
 import { ProtectedRoute } from './ProtectedRoute'
+import { RequireCapabilities } from './RequireCapabilities'
 import { RequireShop } from './RequireShop'
 
 // The landing page and both shells are lazy like every other page: a landing
@@ -195,23 +196,39 @@ export function PlatformRoutes() {
           <Route element={<RequireShop />}>
             <Route element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
-              <Route path="produits" element={standalone(<ProductsPage />)} />
-              <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
-              <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
-              {/* Catégories lives as a tab of Produits now (?tab=categories) —
-                  the create-category form stays its own page, but the list
-                  itself no longer has a standalone route. */}
-              <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
-              <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
-              <Route path="commandes" element={standalone(<OrdersPage />)} />
-              <Route path="commandes/nouvelle" element={standalone(<NewOrderPage />)} />
-              <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
-              <Route path="clients" element={standalone(<CustomersPage />)} />
-              <Route path="prestations" element={standalone(<ServicesPage />)} />
-              <Route path="rendez-vous" element={standalone(<AppointmentsPage />)} />
-              <Route path="equipe" element={standalone(<TeamPage />)} />
-              <Route path="reservations" element={standalone(<ReservationsPage />)} />
-              <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              <Route element={<RequireCapabilities capabilities={['HAS_PRODUCTS']} />}>
+                <Route path="produits" element={standalone(<ProductsPage />)} />
+                <Route path="produits/nouveau" element={standalone(<ProductFormPage />)} />
+                <Route path="produits/:id" element={standalone(<ProductFormPage />)} />
+                {/* Catégories lives as a tab of Produits now (?tab=categories) —
+                    the create-category form stays its own page, but the list
+                    itself no longer has a standalone route. */}
+                <Route path="categories/nouveau" element={standalone(<CategoryFormPage />)} />
+                <Route path="categories" element={<Navigate to="/admin/produits?tab=categories" replace />} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_ORDERS']} />}>
+                <Route path="commandes" element={standalone(<OrdersPage />)} />
+                <Route path="commandes/nouvelle" element={standalone(<NewOrderPage />)} />
+                <Route path="commandes/:id" element={standalone(<OrderDetailPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_CUSTOMERS']} />}>
+                <Route path="clients" element={standalone(<CustomersPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_SERVICES']} />}>
+                <Route path="prestations" element={standalone(<ServicesPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_APPOINTMENTS']} />}>
+                <Route path="rendez-vous" element={standalone(<AppointmentsPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_TEAM']} />}>
+                <Route path="equipe" element={standalone(<TeamPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_RESERVATIONS']} />}>
+                <Route path="reservations" element={standalone(<ReservationsPage />)} />
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
+                <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
+              </Route>
               {/* Facturation moved into Paramètres (one less top-level nav
                   group in production, where it was the only item under
                   "Développer"). Kept as a redirect — Wave's own success/error

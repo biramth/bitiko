@@ -11,6 +11,8 @@ import {
   LogOut,
   Menu,
   Phone,
+  Receipt,
+  Scissors,
   Settings,
   Store,
   Truck,
@@ -61,6 +63,16 @@ const SETTINGS_GROUPS: { label: string; keys: string[] }[] = [
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
+
+/** Icône par groupe de navigation — même poids visuel que les boutons
+ *  Tableau de bord / Paramètres (aucun groupe « petit texte »). */
+const GROUP_ICONS: Record<string, typeof Store> = {
+  Ventes: Receipt,
+  Boutique: Store,
+  Site: Store,
+  Services: Scissors,
+  Équipe: Users,
+}
 
 /**
  * The sidebar content itself — shared by the desktop rail and the mobile
@@ -190,17 +202,21 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
                 type="button"
                 onClick={() => setOpenGroup((open) => (open === group.label ? null : (group.label ?? null)))}
                 aria-expanded={openGroup === group.label}
-                className="flex w-full items-center gap-2 rounded-lg px-3 pb-0.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/35 transition-colors hover:text-white/60"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
               >
+                {(() => {
+                  const GroupIcon = (group.label ? GROUP_ICONS[group.label] : undefined) ?? Store
+                  return <GroupIcon size={17} aria-hidden />
+                })()}
                 <span className="flex-1 text-left">{group.label}</span>
                 <ChevronDown
-                  size={13}
+                  size={15}
                   aria-hidden
                   className={`transition-transform ${openGroup === group.label ? 'rotate-180' : ''}`}
                 />
               </button>
               {openGroup === group.label && (
-                <div className="flex flex-col gap-0.5">
+                <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
                   {group.items.map(({ to, label, icon: Icon, end, guide, ordersBadge }) => (
                     <NavLink key={to} to={to} end={end} className={linkClass} data-guide={guide}>
                       <Icon size={17} aria-hidden />
