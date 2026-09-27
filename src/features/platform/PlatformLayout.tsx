@@ -4,6 +4,7 @@ import {
   Activity,
   BarChart3,
   Briefcase,
+  ChevronDown,
   CreditCard,
   Gift,
   Globe,
@@ -56,6 +57,14 @@ const TOOLS: Tool[] = [
 
 const GROUPS: Tool['group'][] = ['Pilotage', 'Croissance', 'Configuration', 'Équipe']
 
+/** Icône par groupe — même poids visuel que les liens, pas de petit texte seul. */
+const GROUP_ICONS: Record<Tool['group'], LucideIcon> = {
+  Pilotage: LayoutDashboard,
+  Croissance: Gift,
+  Configuration: Globe,
+  Équipe: Users,
+}
+
 function LogoMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -84,6 +93,23 @@ export function PlatformLayout() {
 
   const tools = TOOLS.filter((tool) => can(role, tool.capability))
 
+  // Accordéon unique : un seul groupe ouvert à la fois, suit la navigation.
+  // La route active rouvre son groupe ; un clic manuel ne vit que jusqu'à la
+  // prochaine navigation (même pattern que le layout admin).
+  const matchesRoute = (to: string, end?: boolean) =>
+    end ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`)
+  const visibleGroups = GROUPS.filter((group) => tools.some((tool) => tool.group === group))
+  const activeGroup = visibleGroups.find((group) =>
+    tools.some((tool) => tool.group === group && matchesRoute(tool.to, tool.end)),
+  )
+  const [openGroup, setOpenGroup] = useState<Tool['group'] | null>(activeGroup ?? visibleGroups[0] ?? null)
+  const [prevNavKey, setPrevNavKey] = useState(() => `${location.pathname}|${visibleGroups.join(',')}`)
+  const navKey = `${location.pathname}|${visibleGroups.join(',')}`
+  if (navKey !== prevNavKey) {
+    setPrevNavKey(navKey)
+    setOpenGroup(activeGroup ?? visibleGroups[0] ?? null)
+  }
+
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
       isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -111,21 +137,42 @@ export function PlatformLayout() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-3 px-3 py-2" aria-label="Outils plateforme">
+      <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2" aria-label="Outils plateforme">
         {GROUPS.map((group) => {
           const items = tools.filter((tool) => tool.group === group)
           if (items.length === 0) return null
+          const GroupIcon = GROUP_ICONS[group]
+          const expanded = openGroup === group
           return (
             <div key={group}>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/35">{group}</p>
-              <div className="space-y-0.5">
-                {items.map(({ to, label, icon: Icon, end }) => (
-                  <NavLink key={to} to={to} end={end} className={navClass}>
-                    <Icon size={17} aria-hidden />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenGroup((open) => (open === group ? null : group))}
+                aria-expanded={expanded}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  items.some(({ to, end }) => matchesRoute(to, end))
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <GroupIcon size={17} aria-hidden />
+                <span className="flex-1 text-left">{group}</span>
+                <ChevronDown
+                  size={15}
+                  aria-hidden
+                  className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {expanded && (
+                <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+                  {items.map(({ to, label, icon: Icon, end }) => (
+                    <NavLink key={to} to={to} end={end} className={navClass}>
+                      <Icon size={17} aria-hidden />
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
