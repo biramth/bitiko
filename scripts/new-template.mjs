@@ -37,9 +37,11 @@ const entry = `  {
     vertical: '${vertical}',
     label: '${label}',
     description: 'TODO : une phrase qui vend le style.',
-    swatch: ['# be6a5c — TODO accent', '#fff7f5 — TODO fond'],
-    themeColor: '#TODO',
-    themeConfig: baseTheme({ secondaryColor: '#TODO', textColor: '#1c1917', backgroundColor: '#ffffff', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    // TODO couleurs : remplace ces trois hex par de vraies couleurs (accent, fond, secondaire) —
+    // un hex invalide laissé ici passe les tests (chaîne valide) mais s'affiche cassé en silence.
+    swatch: ['#c2410c', '#fff7f5'],
+    themeColor: '#c2410c',
+    themeConfig: baseTheme({ secondaryColor: '#fff7f5', textColor: '#1c1917', backgroundColor: '#ffffff', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
     layout: {
       home: [
         header(),

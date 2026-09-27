@@ -71,6 +71,29 @@ describe('validateTemplateContent', () => {
       'themeConfig.font doit valoir sora-inter, inter ou sora.',
     )
   })
+
+  it('rejette un hex laissé en TODO ou un swatch cassé, silencieux sinon (scaffolder)', () => {
+    expect(validateTemplateContent({ ...VALID_CONTENT, themeColor: '#TODO' })).toContain(
+      'themeColor doit être une couleur hexadécimale (#rrggbb).',
+    )
+    expect(validateTemplateContent({ ...VALID_CONTENT, themeColor: '# be6a5c — TODO accent' }).length).toBeGreaterThan(0)
+    expect(
+      validateTemplateContent({ ...VALID_CONTENT, themeConfig: { ...VALID_CONTENT.themeConfig, secondaryColor: '#TODO' } }),
+    ).toContain('themeConfig.secondaryColor doit être une couleur hexadécimale (#rrggbb).')
+  })
+
+  it('accepte buttonColor vide (hérite de l’accent) mais rejette une valeur non-hex', () => {
+    expect(validateTemplateContent({ ...VALID_CONTENT, themeConfig: { ...VALID_CONTENT.themeConfig, buttonColor: '' } })).toEqual([])
+    expect(
+      validateTemplateContent({ ...VALID_CONTENT, themeConfig: { ...VALID_CONTENT.themeConfig, buttonColor: 'red' } }),
+    ).toContain('themeConfig.buttonColor doit être vide ou une couleur hexadécimale (#rrggbb).')
+  })
+
+  it('rejette un variant avec un themeColor invalide', () => {
+    expect(validateTemplateContent({ ...VALID_CONTENT, variants: [{ key: 'nuit', themeColor: 'pasunhex' }] })).toContain(
+      'variants[0] : key et themeColor (hex) requis.',
+    )
+  })
 })
 
 describe('mergeDbTemplates', () => {
