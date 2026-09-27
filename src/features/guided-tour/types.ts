@@ -1,3 +1,5 @@
+import type { Area } from '@/features/shop-settings/permissions'
+
 /** Mobile-only UI states a step needs before its target is on screen (the nav
  *  drawer, the builder's Blocs/Aperçu/Réglages panes). Broadcast as a
  *  `bitiko:tour-prepare` event — listeners ignore it on desktop layouts. */
@@ -29,6 +31,10 @@ export interface TourStep {
 
 export interface GuidedTour {
   id: string
+  /** Capability HAS_* requise pour proposer la visite (absente = pour tous les métiers). */
+  capability?: string
+  /** Zone d'accès requise (rôle) : la visite est masquée à qui ne peut pas ouvrir la page. */
+  area?: Area
   /** Route prefixes the tour is relevant on. The help menu navigates to the
    *  first one before launching; the tour is dropped if it's left mid-way. */
   pages: string[]

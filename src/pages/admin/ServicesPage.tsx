@@ -176,7 +176,7 @@ export function ServicesPage() {
                 <ExternalLink size={14} aria-hidden /> Voir sur mon site
               </a>
             )}
-            <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate}>
+            <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate} data-guide="guide-nouvelle-prestation">
               Nouvelle prestation
             </Button>
           </>
