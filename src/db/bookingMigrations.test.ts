@@ -67,6 +67,7 @@ beforeAll(async () => {
   await db.exec(read('0129_booking_weekly_hours.sql'))
   await db.exec(read('0130_finance_tools.sql'))
   await db.exec(read('0131_stock_alert_events.sql'))
+  await db.exec(read('0136_phone_triggers_security_definer.sql'))
 
   serviceId = (await rows<{ id: string }>('select id from services limit 1'))[0].id
   memberId = (await rows<{ id: string }>('select id from team_members limit 1'))[0].id
@@ -88,6 +89,7 @@ describe('migrations 0121 → 0123', () => {
     await db.exec(read('0128_countries_and_generic_phones.sql'))
     await db.exec(read('0129_booking_weekly_hours.sql'))
     await db.exec(read('0130_finance_tools.sql'))
+    await db.exec(read('0136_phone_triggers_security_definer.sql'))
     expect((await rows<{ price: number }>('select price from services'))[0].price).toBe(5000)
   })
 })
@@ -290,6 +292,27 @@ describe('pays et téléphones (0128)', () => {
     expect((await rows<{ timezone: string }>(`select (effective_booking_settings('${SHOP}')).timezone as timezone`))[0].timezone).toBe('Africa/Lagos')
     await db.exec(`update shops set country_code = 'SN', whatsapp_number = '771234567' where id = '${SHOP}'`)
     expect((await rows<{ timezone: string }>(`select (effective_booking_settings('${SHOP}')).timezone as timezone`))[0].timezone).toBe('Africa/Dakar')
+  })
+})
+
+describe('triggers téléphone appelés par un utilisateur (0136)', () => {
+  const asAuthenticated = async (sql: string) => {
+    await db.exec(`grant select, insert, update on public.shops, public.orders, public.profiles to authenticated; set role authenticated;`)
+    try {
+      return await db.exec(sql)
+    } finally {
+      await db.exec('reset role')
+    }
+  }
+
+  it('normalisent sans « permission denied » quand l’appelant n’a pas le droit sur normalize_phone', async () => {
+    await expect(asAuthenticated(`select normalize_phone('771234567','SN')`)).rejects.toThrow(/permission denied/)
+    await asAuthenticated(`update shops set whatsapp_number = '77 123 45 67', country_code = 'SN' where id = '${SHOP}'`)
+    await asAuthenticated(`insert into profiles(phone) values ('77 765 43 21')`)
+    await asAuthenticated(`insert into orders(shop_id, customer_phone) values ('${SHOP}', '77 000 11 22')`)
+    expect((await rows<{ w: string }>(`select whatsapp_number w from shops where id = '${SHOP}'`))[0].w).toBe('+221771234567')
+    expect((await rows<{ p: string }>(`select phone p from profiles where phone like '%7654321'`))[0].p).toBe('+221777654321')
+    await db.exec(`delete from profiles`)
   })
 })
 
