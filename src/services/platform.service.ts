@@ -46,6 +46,20 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   return data as unknown as PlatformStats
 }
 
+export interface PostHogAnalytics {
+  configured: boolean
+  funnel: { started: number; submitted: number; shop_created: number; first_item: number } | null
+  topEvents: { event: string; n: number }[]
+  topAdminPages: { path: string | null; views: number }[]
+}
+
+/** Statistiques produit (entonnoir d'inscription, évènements, pages admin) sourcées de
+ *  PostHog — complète get_platform_stats (trafic vitrine, self-hosted) sans le dupliquer.
+ *  `configured: false` quand PostHog n'a pas de clé serveur (POSTHOG_PERSONAL_API_KEY). */
+export async function getPostHogAnalytics(): Promise<PostHogAnalytics> {
+  return platformFetch<PostHogAnalytics>('/api/admin/analytics/posthog')
+}
+
 export interface PlatformShop {
   id: string
   name: string

@@ -18,6 +18,7 @@ import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { automatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { loadUserDirectory, runCampaignSend } from '../_lib/campaignSend.js'
+import { isPostHogConfigured, runHogQL } from '../_lib/posthogQuery.js'
 import { getAutomatedEmail, AUTOMATED_EMAIL_KEYS } from '../_lib/automatedEmails.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
@@ -114,6 +115,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleTemplateCompat(req, res)
     case 'template-delete':
       return handleTemplateDelete(req, res)
+    case 'analytics-posthog':
+      return handleAnalyticsPostHog(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -2176,6 +2179,84 @@ async function handleShopSuspension(req: VercelRequest, res: VercelResponse, sus
     res.status(200).json({ suspendedAt })
   } catch (err) {
     console.error('shop-suspension failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleAnalyticsPostHog(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    // Ouvert à tout membre plateforme (view_analytics est accordée aux 4 rôles,
+    // marketing y compris — voir src/features/platform/permissions.ts).
+    const member = await requireMember(req, res)
+    if (!member) return
+
+    if (!isPostHogConfigured()) {
+      res.status(200).json({ configured: false })
+      return
+    }
+
+    interface FunnelRow {
+      started: number
+      submitted: number
+      shop_created: number
+      first_item: number
+    }
+    interface EventRow {
+      event: string
+      n: number
+    }
+    interface PageRow {
+      path: string | null
+      views: number
+    }
+
+    const [funnelRows, topEvents, topAdminPages] = await Promise.all([
+      // Comptes distincts ayant déclenché chaque évènement sur 30 jours — un
+      // proxy simple de l'entonnoir (pas un enchaînement ordonné strict).
+      runHogQL<FunnelRow>(`
+        select
+          uniqIf(person_id, event = 'onboarding_started') as started,
+          uniqIf(person_id, event = 'onboarding_submitted') as submitted,
+          uniqIf(person_id, event = 'shop_created') as shop_created,
+          uniqIf(person_id, event in ('product_created', 'service_created')) as first_item
+        from events
+        where timestamp > now() - interval 30 day
+      `),
+      runHogQL<EventRow>(`
+        select event, count() as n
+        from events
+        where timestamp > now() - interval 7 day
+          and event not in ('$pageview', '$pageleave', '$autocapture', '$identify', '$feature_flag_called', '$web_vitals', '$set')
+        group by event
+        order by n desc
+        limit 12
+      `),
+      // Pages de l'admin marchand les plus vues — complète les stats de trafic
+      // vitrine existantes (get_platform_stats), qui excluent volontairement /admin.
+      runHogQL<PageRow>(`
+        select properties.$pathname as path, count() as views
+        from events
+        where event = '$pageview'
+          and timestamp > now() - interval 7 day
+          and properties.$pathname like '/admin%'
+        group by path
+        order by views desc
+        limit 10
+      `),
+    ])
+
+    res.status(200).json({
+      configured: true,
+      funnel: funnelRows[0] ?? { started: 0, submitted: 0, shop_created: 0, first_item: 0 },
+      topEvents,
+      topAdminPages,
+    })
+  } catch (err) {
+    console.error('platform analytics-posthog failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

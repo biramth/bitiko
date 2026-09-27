@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getPlatformStats } from '@/services/platform.service'
-import { AnalyticsPanel } from '@/features/platform/panels'
+import { AnalyticsPanel, PostHogAnalyticsPanel } from '@/features/platform/panels'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -12,10 +12,11 @@ export function PlatformAnalyticsPage() {
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-8">
       <PageHeader title="Analytiques" subtitle="Trafic et usage de la plateforme." />
-      <div className="mt-6">
+      <div className="mt-6 space-y-8">
         {stats.isLoading && <Spinner />}
         {stats.isError && <p className="text-sm text-red-600">{stats.error instanceof Error ? stats.error.message : 'Erreur.'}</p>}
         {stats.data && <AnalyticsPanel stats={stats.data} />}
+        <PostHogAnalyticsPanel />
       </div>
     </div>
   )
