@@ -246,6 +246,28 @@ export function welcomeEmailHtml({
   })
 }
 
+/** Relance unique, ~24 h après l'inscription, d'un compte qui n'a pas encore créé sa boutique. */
+export function onboardingNudgeEmailHtml({ origin, firstName }: { origin: string; firstName: string | null }): string {
+  const greeting = firstName ? `${escapeHtml(firstName)}, ` : ''
+  const steps = [
+    badge(0, 'Ton nom et ton activité', 'Boutique, salon, restauration… choisis ce qui te ressemble.'),
+    badge(1, 'Ton numéro WhatsApp', "C'est là que tes clients te contactent et passent commande."),
+    badge(2, "C'est en ligne", 'Ton site est prêt tout de suite, tu le peaufines ensuite à ton rythme.'),
+  ].join('')
+
+  return shell({
+    origin,
+    preheader: 'Il ne te manque que trois infos pour mettre ton activité en ligne.',
+    eyebrow: "Ton espace t'attend",
+    heading: `${greeting}ta boutique est à une minute`,
+    body: "Tu as créé ton compte Bitiko, mais ton activité n'est pas encore en ligne. Trois informations suffisent :",
+    extra: steps,
+    buttonLabel: 'Créer ma boutique',
+    buttonUrl: `${origin}/admin/onboarding`,
+    footnote: "Tu reçois ce message une seule fois, parce que ton compte n'a pas encore de boutique. Gratuit, sans carte bancaire.",
+  })
+}
+
 /**
  * Substitutes the campaign variables (case-insensitive) in raw merchant text.
  * Runs before HTML-escaping so a shop name containing "<" can't smuggle markup.

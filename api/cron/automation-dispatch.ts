@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js'
 import { isCronAuthorized } from '../_lib/cronAuth.js'
 import { dispatchEvents } from '../_lib/automationDispatch.js'
+import { runOnboardingNudges } from '../_lib/onboardingNudge.js'
 
 export { matchRules, renderTemplate } from '../_lib/automationDispatch.js'
 
@@ -10,6 +11,10 @@ export { matchRules, renderTemplate } from '../_lib/automationDispatch.js'
  * CRON_SECRET obligatoire. Le déclenchement immédiat, après une commande ou une
  * réservation, passe par api/onboarding.ts?action=automation-kick ; la logique
  * commune vit dans api/_lib/automationDispatch.ts.
+ *
+ * Passe aussi la relance des comptes sans boutique (api/_lib/onboardingNudge.ts) : Vercel Hobby
+ * limite à 2 crons, donc ce passage quotidien sert aux deux tâches. Un échec de la relance ne
+ * fait pas échouer le moteur d'automatisation.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isCronAuthorized(req.headers.authorization)) {
@@ -18,8 +23,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const result = await dispatchEvents(getSupabaseAdmin())
-    res.status(200).json(result)
+    const admin = getSupabaseAdmin()
+    const result = await dispatchEvents(admin)
+
+    let onboardingNudges: unknown
+    try {
+      const rootDomain = process.env.VITE_ROOT_DOMAIN
+      onboardingNudges = await runOnboardingNudges(admin, {
+        origin: rootDomain ? `https://${rootDomain}` : 'https://bitiko.shop',
+      })
+    } catch (nudgeErr) {
+      console.error('onboarding-nudges failed', nudgeErr)
+      onboardingNudges = { error: nudgeErr instanceof Error ? nudgeErr.message : 'Erreur inconnue.' }
+    }
+
+    res.status(200).json({ ...result, onboardingNudges })
   } catch (err) {
     console.error('automation-dispatch failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })

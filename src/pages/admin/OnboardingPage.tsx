@@ -18,11 +18,13 @@ import { Logo } from '@/components/ui/Logo'
 import { PhoneField } from '@/components/ui/PhoneField'
 import { DashboardGhost } from '@/features/onboarding/DashboardGhost'
 import { defaultProfile, detectCountryCode, readUserNames } from '@/features/onboarding/defaults'
+import { clearDraft, loadDraft, saveDraft } from '@/features/onboarding/draft'
+import { UserFacingError, describeOnboardingError } from '@/features/onboarding/errors'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/features/auth/AuthContext'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
 import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useMyShop'
-import { createShop, isSlugAvailable, sendWelcomeEmail } from '@/services/shop.service'
+import { createShop, getMyShops, isSlugAvailable, sendWelcomeEmail } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { listEnabledCountries } from '@/services/country.service'
 import { COUNTRY_PRESETS, DEFAULT_COUNTRY_CODE, getCountryPreset, phonePlaceholder } from '@/config/countries'
@@ -80,17 +82,26 @@ export function OnboardingPage() {
     return enabled.length > 0 ? enabled : [{ code: fallback.code, name: fallback.name }]
   }, [enabledCountries])
 
-  const [pickedCountry, setPickedCountry] = useState<string | null>(null)
+  // Brouillon : un rechargement ou un retour ne fait pas repartir de zéro.
+  const [draft] = useState(() => loadDraft(user?.id))
+  const [pickedCountry, setPickedCountry] = useState<string | null>(draft?.countryCode ?? null)
   // Pays choisi, sinon déduit du fuseau horaire ; toujours parmi les pays activés.
+  const allowedCountries = countryOptions.map((c) => c.code)
   const countryCode =
-    pickedCountry ?? detectCountryCode(Intl.DateTimeFormat().resolvedOptions().timeZone, countryOptions.map((c) => c.code))
+    pickedCountry && allowedCountries.includes(pickedCountry)
+      ? pickedCountry
+      : detectCountryCode(Intl.DateTimeFormat().resolvedOptions().timeZone, allowedCountries)
 
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
+  const [name, setName] = useState(draft?.name ?? '')
+  const [slug, setSlug] = useState(() => slugify(draft?.name ?? ''))
   const [editingSlug, setEditingSlug] = useState(false)
-  const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [businessType, setBusinessType] = useState('')
+  const [whatsappNumber, setWhatsappNumber] = useState(draft?.whatsappNumber ?? '')
+  const [businessType, setBusinessType] = useState(draft?.businessType ?? '')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    saveDraft(user?.id, { name, businessType, whatsappNumber, countryCode: pickedCountry })
+  }, [user?.id, name, businessType, whatsappNumber, pickedCountry])
 
   const typeOptions = useBusinessTypeOptions()
 
@@ -149,18 +160,22 @@ export function OnboardingPage() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('Not authenticated')
+      if (!user) throw new UserFacingError('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
       // Une session périmée (navigateurs intégrés, iOS notamment) laisse `user` rempli
       // alors que le jeton a disparu : on la confirme côté serveur pour donner un message clair.
       const { data: freshUserData, error: freshUserError } = await supabase.auth.getUser()
       if (freshUserError || !freshUserData.user) {
-        throw new Error('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
+        throw new UserFacingError('Ta session a expiré. Recharge la page et reconnecte-toi avant de réessayer.')
       }
       const owner = freshUserData.user
       const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
       if (!whatsappCheck.ok || !whatsappCheck.value) {
-        throw new Error(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
+        throw new UserFacingError(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
       }
+      // Création rejouable : si une tentative précédente a abouti sans que la réponse nous parvienne
+      // (réseau coupé), on reprend la boutique existante au lieu d'échouer sur « adresse prise ».
+      const alreadyCreated = (await getMyShops(owner.id)).find((shop) => shop.slug === slug)
+      if (alreadyCreated) return alreadyCreated
       const { firstName, lastName } = readUserNames(owner.user_metadata)
       // Le numéro personnel n'est plus demandé : le WhatsApp de la boutique sert de contact.
       await ensureProfile(owner.id, 'owner', { firstName, lastName, phone: whatsappCheck.value, countryCode })
@@ -175,6 +190,7 @@ export function OnboardingPage() {
       })
     },
     onSuccess: (shop) => {
+      clearDraft()
       queryClient.invalidateQueries({ queryKey: ['my-shop'] })
       // Une nouvelle boutique devient tout de suite l'espace de travail actif.
       selectShop(shop.id, queryClient)
@@ -183,7 +199,15 @@ export function OnboardingPage() {
       // Le paramètre `tour` ouvre une fois la visite guidée de bienvenue.
       navigate('/admin?tour=welcome', { replace: true })
     },
-    onError: (err: Error) => setError(err?.message || 'Impossible de créer ton espace. Réessaie.'),
+    onError: (err: unknown) => {
+      const info = describeOnboardingError(err)
+      setError(info.message)
+      trackEvent('onboarding_failed', { reason: info.slugTaken ? 'slug_taken' : 'error' })
+      if (info.slugTaken) {
+        setAvailability('taken')
+        setEditingSlug(true)
+      }
+    },
   })
 
   if (shopLoading || rolePending) return <PageLoader />
@@ -392,7 +416,7 @@ export function OnboardingPage() {
                 'Création de ta boutique…'
               ) : (
                 <>
-                  Créer ma boutique <ArrowRight size={16} aria-hidden />
+                  {error ? 'Réessayer' : 'Créer ma boutique'} <ArrowRight size={16} aria-hidden />
                 </>
               )}
             </button>

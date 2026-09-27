@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
@@ -231,6 +232,7 @@ function ProductForm({
       const product = isEditing
         ? await updateProduct(id as string, input)
         : await createProduct(input)
+      if (!isEditing) trackEvent('product_created')
 
       const previousIds = new Set((existingProduct?.variants ?? []).map((v) => v.id))
       const keptIds = new Set(variants.map((v) => v.id).filter((vid): vid is string => !!vid))

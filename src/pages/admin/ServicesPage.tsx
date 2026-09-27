@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Clock, ExternalLink, Pencil, Plus, Scissors, Trash2 } from 'lucide-react'
@@ -103,6 +104,7 @@ export function ServicesPage() {
       return editing ? updateService(editing.id, payload) : createService(payload)
     },
     onSuccess: () => {
+      if (!editing) trackEvent('service_created')
       invalidate()
       setFormOpen(false)
       setEditing(null)
