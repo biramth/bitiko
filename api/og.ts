@@ -181,18 +181,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pageSlug = path.slice('/pages/'.length).replace(/\/$/, '')
     const { data: pageData } = await supabase
       .from('pages')
-      .select('title, seo_title, seo_description')
+      .select('title, seo_title, seo_description, og_image, noindex')
       .eq('shop_id', shop.id)
       .eq('slug', pageSlug)
       .eq('is_published', true)
       .maybeSingle()
 
-    if (pageData) {
+    if (pageData && !(pageData as { noindex?: boolean | null }).noindex) {
       const title = pageData.seo_title || pageData.title || shop.name
       const description = pageData.seo_description || shopDescription
+      const image = (pageData as { og_image?: string | null }).og_image || shopImage
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-      res.status(200).send(page(title, description, `${origin}/pages/${pageSlug}`, shopImage, shop.name))
+      res.status(200).send(page(title, description, `${origin}/pages/${pageSlug}`, image, shop.name))
       return
     }
   }

@@ -35,12 +35,13 @@ import { sanitizeSections } from '@/features/store-builder/sanitizeSections'
 import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
-import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
+import { updateShop, uploadShopBanner, uploadShopLogo, uploadShopSectionImage } from '@/services/shop.service'
 import { generateHomeLayout } from '@/features/onboarding/generateStorefront'
 import { profileFromShop } from '@/features/onboarding/storeProfile'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { storefrontUrl } from '@/lib/tenant'
+import { SEO_DESCRIPTION_TARGET, SEO_TITLE_TARGET, scorePageSeo } from '@/seo/pageSeo'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { Dialog } from '@/components/ui/Dialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -1074,20 +1075,37 @@ function ShopBrandFields({ shop }: { shop: Shop }) {
   )
 }
 
-/** Référencement d'une page personnalisée (titre + description méta,
- *  utilisés par la vitrine via `StorePageView`). */
+/** Référencement d'une page personnalisée : titre, description, image de
+ *  partage et exclusion Google — utilisés par la vitrine (`StorePageView`),
+ *  les aperçus de partage (`api/og`) et le sitemap. La checklist donne un
+ *  retour immédiat, sans vocabulaire technique. */
 function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [seoTitle, setSeoTitle] = useState(page.seo_title ?? '')
   const [seoDescription, setSeoDescription] = useState(page.seo_description ?? '')
+  const [ogImage, setOgImage] = useState(page.og_image ?? '')
+  const [noindex, setNoindex] = useState(page.noindex ?? false)
   const [saving, setSaving] = useState(false)
-  const dirty = (seoTitle.trim() || null) !== page.seo_title || (seoDescription.trim() || null) !== page.seo_description
+  const [uploading, setUploading] = useState(false)
+
+  const dirty =
+    (seoTitle.trim() || null) !== page.seo_title ||
+    (seoDescription.trim() || null) !== page.seo_description ||
+    (ogImage.trim() || null) !== page.og_image ||
+    noindex !== (page.noindex ?? false)
+
+  const { checks, done } = scorePageSeo({ title: page.title, seoTitle, seoDescription, ogImage })
 
   const save = async () => {
     setSaving(true)
     try {
-      await updatePage(page.id, { seo_title: seoTitle.trim() || null, seo_description: seoDescription.trim() || null })
+      await updatePage(page.id, {
+        seo_title: seoTitle.trim() || null,
+        seo_description: seoDescription.trim() || null,
+        og_image: ogImage.trim() || null,
+        noindex,
+      })
       await queryClient.invalidateQueries({ queryKey: ['shop-pages', shopId] })
       toast.success('Référencement enregistré.')
     } catch {
@@ -1097,9 +1115,37 @@ function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
     }
   }
 
+  const uploadImage = async (file: File) => {
+    setUploading(true)
+    try {
+      const url = await uploadShopSectionImage(shopId, `page-seo-${page.id}`, file)
+      setOgImage(url)
+      toast.success('Image de partage ajoutée — pensez à enregistrer.')
+    } catch {
+      toast.error("Échec de l'envoi. Réessayez.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const previewTitle = seoTitle.trim() || page.title
+  const previewDescription = seoDescription.trim() || 'Le résumé de votre page apparaîtra ici.'
+
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/40 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Référencement (Google, partage)</p>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Référencement (Google, partage)</p>
+        <p className={`text-[11px] font-semibold ${done === 3 ? 'text-emerald-600' : 'text-amber-600'}`}>{done}/3</p>
+      </div>
+      <ul className="mb-3 space-y-1">
+        {checks.map((check) => (
+          <li key={check.key} className="flex items-center gap-1.5 text-[11px]">
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${check.ok ? 'bg-emerald-500' : 'bg-amber-400'}`} aria-hidden />
+            <span className="font-medium text-gray-600">{check.label} :</span>
+            <span className="truncate text-gray-400">{check.hint}</span>
+          </li>
+        ))}
+      </ul>
       <label className="block text-xs font-medium text-gray-600">Titre de la page</label>
       <input
         value={seoTitle}
@@ -1108,17 +1154,60 @@ function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
         maxLength={70}
         className={`${controlClass()} mt-1 !text-xs`}
       />
-      <label className="mt-2 block text-xs font-medium text-gray-600">Description</label>
+      <p className="mt-0.5 text-right text-[11px] text-gray-400">{seoTitle.length}/{SEO_TITLE_TARGET}</p>
+      <label className="mt-1 block text-xs font-medium text-gray-600">Description</label>
       <textarea
         value={seoDescription}
         onChange={(e) => setSeoDescription(e.target.value)}
         placeholder="Résumé affiché dans les résultats de recherche…"
         rows={2}
-        maxLength={160}
+        maxLength={165}
         className={`${controlClass()} mt-1 !text-xs`}
       />
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-gray-400">{seoDescription.length}/160</span>
+      <p className="mt-0.5 text-right text-[11px] text-gray-400">{seoDescription.length}/{SEO_DESCRIPTION_TARGET}</p>
+      <div className="mt-2">
+        <p className="text-xs font-medium text-gray-600">Image de partage (WhatsApp, Facebook)</p>
+        <div className="mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+          {ogImage.trim() ? (
+            <img src={ogImage} alt="Aperçu de partage" className="aspect-[1.91/1] w-full object-cover" />
+          ) : (
+            <p className="px-3 py-6 text-center text-[11px] text-gray-400">Aucune image : les partages afficheront le logo ou la bannière.</p>
+          )}
+          <div className="border-t border-gray-100 px-3 py-2">
+            <p className="truncate text-xs font-semibold text-gray-900">{previewTitle}</p>
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-gray-500">{previewDescription}</p>
+            <p className="mt-0.5 truncate text-[10px] uppercase text-gray-400">/pages/{page.slug}</p>
+          </div>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <label className="cursor-pointer rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-brand-700 hover:border-brand-300">
+            {uploading ? 'Envoi…' : ogImage.trim() ? "Changer l'image" : 'Ajouter une image'}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void uploadImage(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+          {ogImage.trim() && (
+            <button type="button" onClick={() => setOgImage('')} className="text-[11px] font-medium text-gray-400 hover:text-red-600">
+              Retirer
+            </button>
+          )}
+        </div>
+      </div>
+      <label className="mt-3 flex cursor-pointer items-start gap-2">
+        <input type="checkbox" checked={noindex} onChange={(e) => setNoindex(e.target.checked)} className="mt-0.5" />
+        <span className="text-[11px] leading-snug text-gray-600">
+          Masquer cette page de Google <span className="text-gray-400">(page en test, promo terminée…)</span>
+        </span>
+      </label>
+      <div className="mt-2 flex justify-end">
         <button
           type="button"
           onClick={save}

@@ -62,7 +62,7 @@ export async function createPage(shopId: string, title: string, slug: string): P
 
 export async function updatePage(
   pageId: string,
-  updates: Partial<Pick<StorePage, 'title' | 'slug' | 'seo_title' | 'seo_description' | 'is_published' | 'content' | 'draft_content'>>,
+  updates: Partial<Pick<StorePage, 'title' | 'slug' | 'seo_title' | 'seo_description' | 'og_image' | 'noindex' | 'is_published' | 'content' | 'draft_content'>>,
 ): Promise<StorePage> {
   const { data, error } = await supabase
     .from('pages')
@@ -92,4 +92,21 @@ export async function unpublishPage(pageId: string): Promise<StorePage> {
 /** Save a working copy without making it live. */
 export async function savePageDraft(pageId: string, sections: LayoutSection[]): Promise<StorePage> {
   return updatePage(pageId, { draft_content: sections })
+}
+
+/** Résout un ancien slug vers le slug actuel (redirection enregistrée au
+ *  renommage). Suit les chaînes (A→B→C), garde-fou anti-boucle. */
+export async function resolvePageRedirect(shopId: string, fromSlug: string, maxHops = 5): Promise<string | null> {
+  let current = fromSlug
+  for (let hop = 0; hop < maxHops; hop += 1) {
+    const { data, error } = await supabase
+      .from('page_redirects')
+      .select('to_slug')
+      .eq('shop_id', shopId)
+      .eq('from_slug', current)
+      .maybeSingle()
+    if (error || !data) return hop === 0 ? null : current
+    current = (data as { to_slug: string }).to_slug
+  }
+  return current
 }
