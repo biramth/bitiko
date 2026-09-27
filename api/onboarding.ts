@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 import { sendEmail } from './_lib/resendEmail.js'
-import { bookingNotificationEmailHtml, welcomeEmailHtml } from './_lib/emailTemplates.js'
+import { bookingNotificationEmailHtml, automatedEmailHtml } from './_lib/emailTemplates.js'
+import { getAutomatedEmail } from './_lib/automatedEmails.js'
 import { dispatchEvents } from './_lib/automationDispatch.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -123,16 +124,24 @@ async function handleSendWelcomeEmail(req: VercelRequest, res: VercelResponse) {
   const platformOrigin = rootDomain ? `https://${rootDomain}` : `${proto}://${req.headers.host}`
   const shopUrl = rootDomain ? `https://${shop.slug}.${rootDomain}` : platformOrigin
 
-  await sendEmail({
-    to: userData.user.email,
-    subject: `${shop.name} est en ligne — Bitiko`,
-    html: welcomeEmailHtml({
-      origin: platformOrigin,
-      shopName: shop.name,
-      shopUrl,
-      addProductUrl: `${platformOrigin}/admin/produits/nouveau`,
-    }),
+  // Email de bienvenue personnalisable depuis /plateforme/campagnes ; un email
+  // désactivé par l'équipe n'est tout simplement pas envoyé.
+  const template = await getAutomatedEmail(admin, 'welcome')
+  if (template && !template.is_enabled) {
+    res.status(200).json({ sent: false })
+    return
+  }
+  const ownerName =
+    (userData.user.user_metadata?.full_name as string | undefined)?.trim() ||
+    userData.user.email.split('@')[0]
+  const { subject, html } = automatedEmailHtml({
+    key: 'welcome',
+    origin: platformOrigin,
+    vars: { shopName: shop.name, shopUrl, ownerName },
+    override: template,
   })
+
+  await sendEmail({ to: userData.user.email, subject, html })
 
   res.status(200).json({ sent: true })
 }

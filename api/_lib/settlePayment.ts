@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabaseAdmin.js'
 import { sendEmail } from './resendEmail.js'
-import { proActivatedEmailHtml } from './emailTemplates.js'
+import { automatedEmailHtml } from './emailTemplates.js'
+import { getAutomatedEmail } from './automatedEmails.js'
 import { mirrorStatus } from './payments/engine.js'
 import { PLANS, type PlanKey } from '../../src/config/plans.js'
 import { nextSubscription } from './subscriptionPeriod.js'
@@ -78,20 +79,29 @@ export async function settlePaymentFromWaveSession(session: WaveCheckoutSession)
     }
 
     try {
-      const { data: shop } = await admin.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()
+      const { data: shop } = await admin.from('shops').select('name, slug, owner_id').eq('id', payment.shop_id).maybeSingle()
       const { data: ownerData } = shop ? await admin.auth.admin.getUserById(shop.owner_id) : { data: { user: null } }
       const rootDomain = process.env.VITE_ROOT_DOMAIN
       if (shop && ownerData.user?.email && rootDomain) {
-        await sendEmail({
-          to: ownerData.user.email,
-          subject: `Bienvenue dans Bitiko ${PLANS[payment.plan as keyof typeof PLANS].label} — ${shop.name}`,
-          html: proActivatedEmailHtml({
+        const template = await getAutomatedEmail(admin, 'plan-activated')
+        if (!template || template.is_enabled) {
+          const planLabel = PLANS[payment.plan as keyof typeof PLANS].label
+          const { subject, html } = automatedEmailHtml({
+            key: 'plan-activated',
             origin: `https://${rootDomain}`,
-            shopName: shop.name,
-            periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-            planLabel: PLANS[payment.plan as keyof typeof PLANS].label,
-          }),
-        })
+            vars: {
+              shopName: shop.name,
+              shopUrl: `https://${shop.slug}.${rootDomain}`,
+              ownerName:
+                (ownerData.user.user_metadata?.full_name as string | undefined)?.trim() ||
+                ownerData.user.email.split('@')[0],
+              planName: planLabel,
+              periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            },
+            override: template,
+          })
+          await sendEmail({ to: ownerData.user.email, subject, html })
+        }
       }
     } catch (emailErr) {
       console.error('settlePayment: confirmation email failed', emailErr)

@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   BadgeCheck,
   BellRing,
+  CalendarClock,
+  CalendarX,
   Copy,
   Eye,
   Mail,
@@ -13,20 +15,26 @@ import {
   Send,
   Sparkles,
   Trash2,
-  Wrench,
 } from 'lucide-react'
 import {
   deleteCampaign,
+  getCampaignDetail,
+  listAutomatedEmails,
   listCampaigns,
   previewCampaignAudience,
+  saveAutomatedEmail,
   saveCampaign,
   sendCampaign,
+  unscheduleCampaign,
+  type AutomatedEmailKey,
+  type AutomatedEmailRow,
   type CampaignAudience,
   type CampaignInput,
   type CampaignRow,
   type CampaignSendResult,
 } from '@/services/platform.service'
 import { Spinner } from '@/components/ui/Spinner'
+import { Switch } from '@/components/ui/Switch'
 import { buttonClass, controlClass } from '@/components/ui/styles'
 
 const VARIABLES = [
@@ -43,30 +51,88 @@ const BUTTON_LINK_VARIABLES = [
 interface Preset {
   key: string
   label: string
+  description: string
   name: string
   subject: string
   body: string
   audience: CampaignAudience
+  buttonLabel: string
+  buttonUrl: string
 }
+
+const ANY_AUDIENCE: CampaignAudience = { plan: 'any', logo: 'any', products: 'any', created_within_days: null }
 
 const PRESETS: Preset[] = [
   {
     key: 'blank',
     label: 'Campagne vierge',
+    description: 'Partir d’une page blanche, audience à choisir.',
     name: '',
     subject: '',
     body: '',
-    audience: { plan: 'any', logo: 'any', products: 'any', created_within_days: null },
+    audience: ANY_AUDIENCE,
+    buttonLabel: '',
+    buttonUrl: '',
+  },
+  {
+    key: 'nouveaute',
+    label: 'Annonce nouveauté',
+    description: 'Présenter une fonctionnalité à tous les commerçants.',
+    name: '',
+    subject: 'Du nouveau pour {{shop_name}}',
+    body: `Bonne nouvelle **{{owner_name}}** : [décris la nouveauté en une phrase].
+
+Concrètement, pour {{shop_name}} :
+- [bénéfice 1]
+- [bénéfice 2]
+
+Dis-moi ce que tu en penses en répondant à cet email.`,
+    audience: ANY_AUDIENCE,
+    buttonLabel: 'Découvrir',
+    buttonUrl: '/admin',
+  },
+  {
+    key: 'sans-produits',
+    label: 'Relance sans produits',
+    description: 'Boutiques en ligne sans catalogue : les aider à démarrer.',
+    name: '',
+    subject: '{{shop_name}} attend ses premiers produits',
+    body: `Bonjour **{{owner_name}}**, ta boutique {{shop_name}} est en ligne mais n’affiche encore aucun produit — c’est l’étape qui débloque les premières commandes.
+
+Ajoute ton premier article en quelques minutes : une photo, un prix, et c’est parti.
+
+Besoin d’aide ? Réponds à cet email, on te guide.`,
+    audience: { ...ANY_AUDIENCE, products: 'none' },
+    buttonLabel: 'Ajouter mon premier produit',
+    buttonUrl: '/admin/produits/nouveau',
+  },
+  {
+    key: 'renouvellement',
+    label: 'Rappel groupé',
+    description: 'Relancer les abonnés payants (complète le rappel automatique).',
+    name: '',
+    subject: 'Pensez à renouveler {{shop_name}}',
+    body: `Bonjour **{{owner_name}}**, ton abonnement sur {{shop_name}} arrive bientôt à échéance.
+
+Renouvelle à temps pour garder tes fonctionnalités sans interruption : produits illimités, éditeur complet, sans « Propulsé par Bitiko ».`,
+    audience: { ...ANY_AUDIENCE, plan: 'paid' },
+    buttonLabel: 'Renouveler mon abonnement',
+    buttonUrl: '/admin/parametres/facturation',
   },
 ]
 
 const SAMPLE = { shop_name: 'Awa Boutique', shop_url: 'awa.bitiko.shop', owner_name: 'Awa' }
+/** Exemples pour l'aperçu des variables propres aux emails automatiques. */
+const SAMPLE_AUTO = { plan_name: 'Pro', period_end: '27 octobre 2026', amount: '5 000 FCFA' }
 
 function substitute(text: string): string {
   return text
     .replace(/\{\{\s*shop_name\s*\}\}/gi, SAMPLE.shop_name)
     .replace(/\{\{\s*shop_url\s*\}\}/gi, SAMPLE.shop_url)
     .replace(/\{\{\s*owner_name\s*\}\}/gi, SAMPLE.owner_name)
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, SAMPLE_AUTO.plan_name)
+    .replace(/\{\{\s*period_end\s*\}\}/gi, SAMPLE_AUTO.period_end)
+    .replace(/\{\{\s*amount\s*\}\}/gi, SAMPLE_AUTO.amount)
 }
 
 /** Same idea for a link target: shop_url keeps its protocol, free text is URL-encoded. */
@@ -75,6 +141,9 @@ function substituteUrl(text: string): string {
     .replace(/\{\{\s*shop_url\s*\}\}/gi, `https://${SAMPLE.shop_url}`)
     .replace(/\{\{\s*shop_name\s*\}\}/gi, encodeURIComponent(SAMPLE.shop_name))
     .replace(/\{\{\s*owner_name\s*\}\}/gi, encodeURIComponent(SAMPLE.owner_name))
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.plan_name))
+    .replace(/\{\{\s*period_end\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.period_end))
+    .replace(/\{\{\s*amount\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.amount))
 }
 
 /** Renders **bold** as <strong> without dangerouslySetInnerHTML. */
@@ -96,11 +165,14 @@ function CampaignPreview({
   body,
   buttonLabel,
   buttonUrl,
+  heading,
 }: {
   subject: string
   body: string
   buttonLabel: string
   buttonUrl: string
+  /** Titre affiché à la place de l'objet (les emails auto ont leur propre titre). */
+  heading?: string
 }) {
   const paragraphs = substitute(body).split(/\n{2,}/)
   const previewSubject = substitute(subject)
@@ -112,7 +184,7 @@ function CampaignPreview({
         <p className="font-heading text-sm font-bold text-white">Bitiko</p>
       </div>
       <div className="bg-white px-6 py-6">
-        <h3 className="text-center text-lg font-semibold text-gray-900">{previewSubject || '(objet)'}</h3>
+        <h3 className="text-center text-lg font-semibold text-gray-900">{heading ?? (previewSubject || '(objet)')}</h3>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-gray-600">
           {paragraphs.map((para, i) => (
             <p key={i}>
@@ -182,45 +254,87 @@ function formatSendResult(result: CampaignSendResult): string {
   return `${result.sent} email(s) envoyé(s) sur ${result.recipientCount} destinataire(s)${suffix}.`
 }
 
-const STATUS_LABEL: Record<CampaignRow['status'], string> = { draft: 'Brouillon', sending: 'En cours', sent: 'Envoyée' }
+/** AAAA-MM-JJ → « 12 octobre 2026 » ; le jour choisi part le matin via le cron quotidien. */
+function formatDay(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return day
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+const STATUS_LABEL: Record<CampaignRow['status'], string> = {
+  draft: 'Brouillon',
+  scheduled: 'Programmée',
+  sending: 'En cours',
+  sent: 'Envoyée',
+}
 const STATUS_BADGE: Record<CampaignRow['status'], string> = {
   draft: 'bg-gray-100 text-gray-700',
+  scheduled: 'bg-blue-100 text-blue-800',
   sending: 'bg-amber-100 text-amber-800',
   sent: 'bg-emerald-100 text-emerald-800',
 }
 
 /**
- * Transactional emails already sent automatically by the platform. Shown on
- * the marketing workspace so the operator sees what the system sends on its
- * own; per-email editing is planned but not implemented yet.
+ * Emails transactionnels envoyés par la plateforme elle-même. L'objet, le
+ * contenu, le bouton et l'interrupteur se règlent dans l'éditeur ci-dessous ;
+ * la structure (titres, encadrés) reste dans le code pour garder un rendu
+ * soigné dans toutes les boîtes mail.
  */
-const AUTOMATED_EMAILS: { key: string; icon: ReactNode; name: string; trigger: string; recipient: string }[] = [
-  {
-    key: 'welcome',
+interface AutomatedMeta {
+  icon: ReactNode
+  name: string
+  trigger: string
+  recipient: string
+  variables: { token: string; label: string }[]
+  /** Titre tel qu'il part en vrai (plan et dates varient par destinataire). */
+  previewHeading: string
+}
+
+const AUTOMATED_ORDER: AutomatedEmailKey[] = ['welcome', 'plan-activated', 'renewal-reminder']
+
+const AUTOMATED_META: Record<AutomatedEmailKey, AutomatedMeta> = {
+  welcome: {
     icon: <Sparkles size={15} aria-hidden />,
     name: 'Email de bienvenue',
     trigger: 'À la mise en ligne d’une nouvelle boutique.',
     recipient: 'Le gérant',
+    variables: VARIABLES,
+    previewHeading: `🎉 ${SAMPLE.shop_name} est en ligne !`,
   },
-  {
-    key: 'plan-activated',
+  'plan-activated': {
     icon: <BadgeCheck size={15} aria-hidden />,
     name: 'Abonnement activé',
     trigger: 'Dès qu’un paiement est vérifié (Essentiel ou Pro).',
     recipient: 'Le gérant',
+    variables: [
+      ...VARIABLES,
+      { token: '{{plan_name}}', label: 'Nom de l’offre (Essentiel, Pro)' },
+      { token: '{{period_end}}', label: 'Fin de période (ex. 27 octobre 2026)' },
+    ],
+    previewHeading: '🎉 Bienvenue dans Bitiko Pro !',
   },
-  {
-    key: 'renewal-reminder',
+  'renewal-reminder': {
     icon: <BellRing size={15} aria-hidden />,
     name: 'Rappel de renouvellement',
     trigger: '2 à 3 jours avant l’échéance d’un abonnement actif.',
     recipient: 'Le gérant',
+    variables: [
+      ...VARIABLES,
+      { token: '{{plan_name}}', label: 'Nom de l’offre (Essentiel, Pro)' },
+      { token: '{{period_end}}', label: 'Date d’échéance' },
+      { token: '{{amount}}', label: 'Montant à payer (ex. 5 000 FCFA)' },
+    ],
+    previewHeading: 'Ton abonnement Pro expire bientôt',
   },
-]
+}
 
 export function CampaignsTool() {
   const queryClient = useQueryClient()
-  const [view, setView] = useState<'list' | 'compose'>('list')
+  const [view, setView] = useState<'list' | 'templates' | 'compose' | 'automated' | 'detail'>('list')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
@@ -228,10 +342,27 @@ export function CampaignsTool() {
   const [audience, setAudience] = useState<CampaignAudience>(PRESETS[0].audience)
   const [buttonLabel, setButtonLabel] = useState('')
   const [buttonUrl, setButtonUrl] = useState('')
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleNote, setScheduleNote] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [sentResult, setSentResult] = useState<string | null>(null)
+  const [autoResult, setAutoResult] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [editingAutoKey, setEditingAutoKey] = useState<AutomatedEmailKey | null>(null)
+  const [autoEnabled, setAutoEnabled] = useState(true)
+  const [autoSubject, setAutoSubject] = useState('')
+  const [autoBody, setAutoBody] = useState('')
+  const [autoButtonLabel, setAutoButtonLabel] = useState('')
+  const [autoButtonUrl, setAutoButtonUrl] = useState('')
 
   const campaigns = useQuery({ queryKey: ['platform-campaigns'], queryFn: listCampaigns, retry: false })
+  const automated = useQuery({ queryKey: ['platform-automated-emails'], queryFn: listAutomatedEmails, retry: false })
+  const detail = useQuery({
+    queryKey: ['platform-campaign-detail', detailId],
+    queryFn: () => getCampaignDetail(detailId!),
+    retry: false,
+    enabled: view === 'detail' && !!detailId,
+  })
 
   const debouncedAudience = useDebounced(audience)
   const preview = useQuery({
@@ -287,6 +418,54 @@ export function CampaignsTool() {
       invalidateCampaigns()
     },
   })
+  const schedule = useMutation({
+    mutationFn: async (day: string) => {
+      const input: CampaignInput = {
+        id: editingId ?? undefined,
+        name,
+        subject,
+        body,
+        audience,
+        buttonLabel: buttonLabel.trim(),
+        buttonUrl: buttonUrl.trim(),
+        scheduledFor: day,
+      }
+      return saveCampaign(input)
+    },
+    onSuccess: (_, day) => {
+      setSentResult(`Campagne programmée pour le ${formatDay(day)} : envoi le matin par le traitement quotidien.`)
+      setView('list')
+      setEditingId(null)
+      setScheduleDate('')
+      setScheduleNote(null)
+      invalidateCampaigns()
+    },
+  })
+  const unschedule = useMutation({
+    mutationFn: (id: string) => unscheduleCampaign(id),
+    onSuccess: () => {
+      setScheduleDate('')
+      setScheduleNote('Programmation annulée : la campagne est de nouveau un brouillon.')
+      invalidateCampaigns()
+    },
+  })
+  const saveAuto = useMutation({
+    mutationFn: () =>
+      saveAutomatedEmail({
+        key: editingAutoKey!,
+        subject: autoSubject,
+        body: autoBody,
+        buttonLabel: autoButtonLabel.trim(),
+        buttonUrl: autoButtonUrl.trim(),
+        isEnabled: autoEnabled,
+      }),
+    onSuccess: () => {
+      setAutoResult('Email automatique mis à jour : les prochains envois utilisent ce contenu.')
+      setView('list')
+      setEditingAutoKey(null)
+      queryClient.invalidateQueries({ queryKey: ['platform-automated-emails'] })
+    },
+  })
 
   /** Clears stale mutation errors so a previous failure isn't shown in a new context. */
   const openCompose = () => {
@@ -294,7 +473,12 @@ export function CampaignsTool() {
     send.reset()
     resume.reset()
     del.reset()
+    schedule.reset()
+    unschedule.reset()
+    saveAuto.reset()
     setSentResult(null)
+    setAutoResult(null)
+    setScheduleNote(null)
     setView('compose')
   }
 
@@ -304,8 +488,10 @@ export function CampaignsTool() {
     setSubject(preset.subject)
     setBody(preset.body)
     setAudience(preset.audience)
-    setButtonLabel('')
-    setButtonUrl('')
+    setButtonLabel(preset.buttonLabel)
+    setButtonUrl(preset.buttonUrl)
+    setScheduleDate('')
+    setScheduleNote(null)
     openCompose()
   }
 
@@ -317,6 +503,8 @@ export function CampaignsTool() {
     setAudience(campaign.audience ?? {})
     setButtonLabel(campaign.button_label ?? '')
     setButtonUrl(campaign.button_url ?? '')
+    setScheduleDate(campaign.scheduled_at?.slice(0, 10) ?? '')
+    setScheduleNote(null)
     openCompose()
   }
 
@@ -329,6 +517,18 @@ export function CampaignsTool() {
     setButtonLabel(campaign.button_label ?? '')
     setButtonUrl(campaign.button_url ?? '')
     openCompose()
+  }
+
+  const editAutomated = (key: AutomatedEmailKey, row: AutomatedEmailRow | undefined) => {
+    saveAuto.reset()
+    setAutoResult(null)
+    setEditingAutoKey(key)
+    setAutoEnabled(row?.is_enabled ?? true)
+    setAutoSubject(row?.subject ?? '')
+    setAutoBody(row?.body ?? '')
+    setAutoButtonLabel(row?.button_label ?? '')
+    setAutoButtonUrl(row?.button_url ?? '')
+    setView('automated')
   }
 
   const saveDraft = () => {
@@ -352,6 +552,10 @@ export function CampaignsTool() {
   }
 
   const canSend = name.trim() && subject.trim() && body.trim() && (preview.data?.withEmail ?? 0) > 0
+  const editingRow = editingId ? campaigns.data?.find((c) => c.id === editingId) : undefined
+  const editingScheduled = editingRow?.status === 'scheduled'
+  const canSchedule =
+    name.trim() && subject.trim() && body.trim() && !!scheduleDate && scheduleDate >= todayISO() && !schedule.isPending
 
   if (view === 'list') {
     return (
@@ -359,7 +563,7 @@ export function CampaignsTool() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => startNew(PRESETS[0])}
+            onClick={() => setView('templates')}
             className={buttonClass()}
           >
             <Plus size={16} aria-hidden /> Nouvelle campagne
@@ -369,40 +573,56 @@ export function CampaignsTool() {
         {sentResult && (
           <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sentResult}</p>
         )}
+        {autoResult && (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{autoResult}</p>
+        )}
         {resume.isError && <p className="text-sm text-red-600">{(resume.error as Error).message}</p>}
         {del.isError && <p className="text-sm text-red-600">{(del.error as Error).message}</p>}
+        {unschedule.isError && <p className="text-sm text-red-600">{(unschedule.error as Error).message}</p>}
 
         <section>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-gray-900">Emails automatisés</h2>
-            <span className="text-xs text-gray-400">Envoyés automatiquement · personnalisation à venir</span>
+            <span className="text-xs text-gray-400">Envoyés automatiquement par la plateforme</span>
           </div>
+          {automated.isError && (
+            <p className="mt-3 text-sm text-red-600">Impossible de charger les emails automatiques : la migration 0138 est peut-être manquante.</p>
+          )}
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {AUTOMATED_EMAILS.map((email) => (
-              <div key={email.key} className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-2 font-medium text-gray-900">
-                    <span className="text-brand-600">{email.icon}</span>
-                    {email.name}
-                  </span>
-                  <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                    Actif
-                  </span>
+            {AUTOMATED_ORDER.map((key) => {
+              const meta = AUTOMATED_META[key]
+              const row = automated.data?.find((t) => t.key === key)
+              const enabled = row?.is_enabled ?? true
+              return (
+                <div key={key} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 font-medium text-gray-900">
+                      <span className="text-brand-600">{meta.icon}</span>
+                      {meta.name}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {enabled ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">{meta.trigger}</p>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-400">Reçoit : {meta.recipient}</p>
+                    <button
+                      type="button"
+                      onClick={() => editAutomated(key, row)}
+                      disabled={automated.isPending || automated.isError}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      <Pencil size={12} aria-hidden /> Configurer
+                    </button>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">{email.trigger}</p>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <p className="text-xs text-gray-400">Reçoit : {email.recipient}</p>
-                  <button
-                    type="button"
-                    disabled
-                    title="Personnalisation bientôt disponible."
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    <Wrench size={12} aria-hidden /> Configurer
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 
@@ -463,7 +683,9 @@ export function CampaignsTool() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {new Date(campaign.sent_at ?? campaign.created_at).toLocaleDateString('fr-FR')}
+                        {campaign.status === 'scheduled' && campaign.scheduled_at
+                          ? formatDay(campaign.scheduled_at.slice(0, 10))
+                          : new Date(campaign.sent_at ?? campaign.created_at).toLocaleDateString('fr-FR')}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
@@ -488,7 +710,18 @@ export function CampaignsTool() {
                             </>
                           ) : (
                             <>
-                              {(campaign.status === 'draft' || campaign.status === 'sent') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDetailId(campaign.id)
+                                  setView('detail')
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                                title="Destinataires et échecs d’envoi"
+                              >
+                                <Eye size={13} aria-hidden /> Détail
+                              </button>
+                              {(campaign.status === 'draft' || campaign.status === 'scheduled' || campaign.status === 'sent') && (
                                 <button
                                   type="button"
                                   onClick={() => duplicate(campaign)}
@@ -498,7 +731,7 @@ export function CampaignsTool() {
                                   <Copy size={13} aria-hidden /> Dupliquer
                                 </button>
                               )}
-                              {campaign.status === 'draft' && (
+                              {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
                                 <>
                                   <button
                                     type="button"
@@ -516,6 +749,17 @@ export function CampaignsTool() {
                                     <Trash2 size={14} aria-hidden />
                                   </button>
                                 </>
+                              )}
+                              {campaign.status === 'scheduled' && (
+                                <button
+                                  type="button"
+                                  onClick={() => unschedule.mutate(campaign.id)}
+                                  disabled={unschedule.isPending}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
+                                  title="Annuler l’envoi programmé : la campagne redevient un brouillon."
+                                >
+                                  <CalendarX size={13} aria-hidden /> Déprogrammer
+                                </button>
                               )}
                               {campaign.status === 'sending' && (
                                 <button
@@ -548,6 +792,235 @@ export function CampaignsTool() {
   const count = preview.data?.count ?? 0
   const withEmail = preview.data?.withEmail ?? 0
 
+  if (view === 'automated' && editingAutoKey) {
+    const meta = AUTOMATED_META[editingAutoKey]
+    const canSaveAuto = autoSubject.trim() && autoBody.trim() && !saveAuto.isPending
+    return (
+      <div className="space-y-6">
+        <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+          <ArrowLeft size={15} aria-hidden /> Retour aux campagnes
+        </button>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-gray-900">{meta.name}</h3>
+              <p className="mt-1 text-xs text-gray-500">{meta.trigger} Reçoit : {meta.recipient}.</p>
+              <div className="mt-3">
+                <Switch checked={autoEnabled} onChange={setAutoEnabled} label={autoEnabled ? 'Email activé' : 'Email désactivé'} />
+              </div>
+              {!autoEnabled && (
+                <p className="mt-2 text-xs text-amber-700">Désactivé : cet email ne sera plus envoyé tant que l’interrupteur est coupé.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <label className="block text-xs font-medium text-gray-500">Objet de l’email</label>
+              <input
+                value={autoSubject}
+                onChange={(e) => setAutoSubject(e.target.value)}
+                maxLength={160}
+                placeholder="Ce que le commerçant voit dans sa boîte mail"
+                className={`${controlClass()} mt-1`}
+              />
+              <p className="mt-1 text-[11px] text-gray-400">
+                Les variables <span className="font-mono">&#123;&#123;…&#125;&#125;</span> fonctionnent aussi dans l’objet.
+              </p>
+              <label className="mt-4 block text-xs font-medium text-gray-500">Contenu</label>
+              <textarea
+                value={autoBody}
+                onChange={(e) => setAutoBody(e.target.value)}
+                rows={10}
+                maxLength={8000}
+                placeholder="Rédige ton message…"
+                className={`${controlClass()} mt-1 resize-y`}
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {meta.variables.map((variable) => (
+                  <button
+                    key={variable.token}
+                    type="button"
+                    onClick={() => setAutoBody((prev) => `${prev}${variable.token}`)}
+                    className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100"
+                    title={variable.label}
+                  >
+                    {variable.token}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">**gras** · double saut de ligne = nouveau paragraphe.</p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-gray-900">Bouton du mail</h3>
+              <label className="mt-3 block text-xs font-medium text-gray-500">Texte du bouton</label>
+              <input
+                value={autoButtonLabel}
+                onChange={(e) => setAutoButtonLabel(e.target.value)}
+                maxLength={60}
+                placeholder="Vide = texte par défaut"
+                className={`${controlClass()} mt-1`}
+              />
+              <label className="mt-4 block text-xs font-medium text-gray-500">Lien du bouton</label>
+              <input
+                value={autoButtonUrl}
+                onChange={(e) => setAutoButtonUrl(e.target.value)}
+                maxLength={2048}
+                placeholder="Vide = lien par défaut (/admin…)"
+                className={`${controlClass()} mt-1`}
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {meta.variables
+                  .filter((v) => v.token === '{{shop_url}}')
+                  .map((variable) => (
+                    <button
+                      key={variable.token}
+                      type="button"
+                      onClick={() => setAutoButtonUrl((prev) => `${prev}${variable.token}`)}
+                      className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100"
+                      title={variable.label}
+                    >
+                      {variable.token}
+                    </button>
+                  ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">Commence par / ou https:// — vide = lien par défaut.</p>
+            </div>
+
+            {saveAuto.isError && <p className="text-sm text-red-600">{(saveAuto.error as Error).message}</p>}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => saveAuto.mutate()}
+                disabled={!canSaveAuto}
+                className={buttonClass()}
+              >
+                {saveAuto.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Les prochains envois automatiques utilisent ce contenu ; les emails déjà partis ne changent pas.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Eye size={16} aria-hidden /> Aperçu
+            </h3>
+            <CampaignPreview
+              subject={autoSubject}
+              body={autoBody}
+              buttonLabel={autoButtonLabel}
+              buttonUrl={autoButtonUrl}
+              heading={meta.previewHeading}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (view === 'templates') {
+    return (
+      <div className="space-y-6">
+        <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+          <ArrowLeft size={15} aria-hidden /> Retour aux campagnes
+        </button>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Choisir un point de départ</h2>
+          <p className="mt-1 text-xs text-gray-500">Chaque modèle pré-remplit l’objet, le contenu, le bouton et l’audience — tout reste modifiable ensuite.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {PRESETS.map((preset) => (
+            <div key={preset.key} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5">
+              <p className="font-medium text-gray-900">{preset.label}</p>
+              <p className="mt-1 flex-1 text-xs text-gray-500">{preset.description}</p>
+              {preset.subject && <p className="mt-2 truncate text-xs text-gray-400">Objet : {preset.subject}</p>}
+              <button type="button" onClick={() => startNew(preset)} className={`${buttonClass()} mt-4 self-start`}>
+                Utiliser ce modèle
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (view === 'detail' && detailId) {
+    const detailCampaign = detail.data?.campaign ?? campaigns.data?.find((c) => c.id === detailId)
+    const sends = detail.data?.sends ?? []
+    const sentCount = sends.filter((s) => s.status === 'sent').length
+    const failedCount = sends.filter((s) => s.status === 'failed').length
+    return (
+      <div className="space-y-6">
+        <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+          <ArrowLeft size={15} aria-hidden /> Retour aux campagnes
+        </button>
+        {detailCampaign && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-medium text-gray-900">{detailCampaign.name}</h2>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE[detailCampaign.status]}`}>
+                {STATUS_LABEL[detailCampaign.status]}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">{detailCampaign.subject}</p>
+            <p className="mt-2 text-sm text-gray-600">
+              {sentCount} envoyé(s){failedCount > 0 && <span className="text-red-600"> · {failedCount} échec(s)</span>}
+              {sends.length === 0 && !detail.isPending && ' · aucun envoi pour l’instant'}
+            </p>
+          </div>
+        )}
+        {detail.isPending && <Spinner />}
+        {detail.isError && (
+          <p className="text-sm text-red-600">{detail.error instanceof Error ? detail.error.message : 'Erreur.'}</p>
+        )}
+        {detail.data && sends.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-100 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Boutique</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Statut</th>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {sends.map((sendRow, index) => (
+                    <tr key={`${sendRow.email}-${index}`}>
+                      <td className="px-4 py-3 font-medium text-gray-900">{sendRow.shop_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600">{sendRow.email}</td>
+                      <td className="px-4 py-3">
+                        {sendRow.status === 'sent' ? (
+                          <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                            Envoyé
+                          </span>
+                        ) : (
+                          <span className="inline-flex flex-col gap-1">
+                            <span className="inline-flex w-fit rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                              Échec
+                            </span>
+                            {sendRow.error && <span className="max-w-xs text-xs text-red-600">{sendRow.error}</span>}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {new Date(sendRow.created_at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
@@ -556,6 +1029,11 @@ export function CampaignsTool() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
+          {editingScheduled && scheduleDate && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              Envoi programmé pour le <strong>{formatDay(scheduleDate)}</strong>. Modifier le contenu ou l’audience conserve la programmation.
+            </div>
+          )}
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <label className="block text-xs font-medium text-gray-500">Nom interne</label>
             <input
@@ -715,6 +1193,55 @@ export function CampaignsTool() {
 
           {save.isError && <p className="text-sm text-red-600">{(save.error as Error).message}</p>}
           {send.isError && <p className="text-sm text-red-600">{(send.error as Error).message}</p>}
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <CalendarClock size={15} aria-hidden /> Programmer l’envoi
+            </h3>
+            <p className="mt-1 text-xs text-gray-500">
+              La campagne part le matin du jour choisi, via le traitement quotidien — sans rester connecté.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500">Jour d’envoi</label>
+                <input
+                  type="date"
+                  value={scheduleDate}
+                  min={todayISO()}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className={`${controlClass()} mt-1`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => schedule.mutate(scheduleDate)}
+                disabled={!canSchedule}
+                title={
+                  !name.trim() || !subject.trim() || !body.trim()
+                    ? 'Renseigne le nom, l’objet et le contenu.'
+                    : !scheduleDate || scheduleDate < todayISO()
+                      ? 'Choisis un jour d’envoi à venir.'
+                      : undefined
+                }
+                className={buttonClass()}
+              >
+                <CalendarClock size={15} aria-hidden /> {schedule.isPending ? 'Programmation…' : editingScheduled ? 'Reprogrammer' : 'Programmer'}
+              </button>
+              {editingScheduled && (
+                <button
+                  type="button"
+                  onClick={() => editingId && unschedule.mutate(editingId)}
+                  disabled={unschedule.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  <CalendarX size={15} aria-hidden /> {unschedule.isPending ? 'Annulation…' : 'Annuler la programmation'}
+                </button>
+              )}
+            </div>
+            {scheduleNote && <p className="mt-2 text-xs font-medium text-emerald-700">{scheduleNote}</p>}
+            {schedule.isError && <p className="mt-2 text-sm text-red-600">{(schedule.error as Error).message}</p>}
+            {unschedule.isError && <p className="mt-2 text-sm text-red-600">{(unschedule.error as Error).message}</p>}
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <button

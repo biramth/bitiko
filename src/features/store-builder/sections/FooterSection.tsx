@@ -129,6 +129,21 @@ export function FooterRenderer({
     </a>
   ) : null
 
+  // Sur mobile le pied de page complet disparaît : la marque survit en
+  // pastille flottante au-dessus de la barre d'onglets (même breakpoint
+  // `sm` que MobileTabBar). L'option Pro « masquer » s'applique aussi ici.
+  const brandingPill = showBitikoBranding ? (
+    <a
+      href={platformUrl()}
+      aria-label="Propulsé par Bitiko"
+      style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom) + 0.75rem)' }}
+      className="fixed right-4 z-30 inline-flex animate-branding-bob items-center gap-1.5 rounded-full border border-white/15 bg-ink-900/85 py-1.5 pl-2 pr-3 text-[11px] font-medium text-white shadow-xl shadow-black/25 backdrop-blur sm:hidden"
+    >
+      <Logo size={16} withWordmark={false} />
+      Propulsé par <span className="font-bold text-gold-400">Bitiko</span>
+    </a>
+  ) : null
+
   const copyright = (
     <InlineStyleToolbar
       editable={editable}
@@ -221,16 +236,19 @@ export function FooterRenderer({
   }
 
   return (
-    <footer
-      className="text-[var(--footer-text)]"
-      style={{
-        backgroundColor: footerBackground,
-        '--footer-text': footer.textColor || '#fffbf5',
-        '--footer-button': footer.buttonColor || 'var(--shop-button)',
-        '--footer-button-text': 'var(--shop-button-text)',
-      } as React.CSSProperties}
-    >
-      {body}
-    </footer>
+    <>
+      <footer
+        className="hidden text-[var(--footer-text)] sm:block"
+        style={{
+          backgroundColor: footerBackground,
+          '--footer-text': footer.textColor || '#fffbf5',
+          '--footer-button': footer.buttonColor || 'var(--shop-button)',
+          '--footer-button-text': 'var(--shop-button-text)',
+        } as React.CSSProperties}
+      >
+        {body}
+      </footer>
+      {brandingPill}
+    </>
   )
 }

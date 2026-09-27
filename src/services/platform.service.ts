@@ -166,9 +166,10 @@ export interface CampaignRow {
   subject: string
   body: string
   audience: CampaignAudience
-  status: 'draft' | 'sending' | 'sent'
+  status: 'draft' | 'scheduled' | 'sending' | 'sent'
   created_at: string
   sent_at: string | null
+  scheduled_at: string | null
   recipient_count: number
   sent_count: number
   failed_count: number
@@ -190,6 +191,8 @@ export interface CampaignInput {
   audience: CampaignAudience
   buttonLabel?: string
   buttonUrl?: string
+  /** Jour d'envoi programmé (AAAA-MM-JJ) ; absent = brouillon conservé ou envoi immédiat. */
+  scheduledFor?: string
 }
 
 export async function listCampaigns(): Promise<CampaignRow[]> {
@@ -198,7 +201,18 @@ export async function listCampaigns(): Promise<CampaignRow[]> {
 }
 
 export function saveCampaign(input: CampaignInput): Promise<{ id: string }> {
-  return platformFetch('/api/admin/campaigns/save', { method: 'POST', body: JSON.stringify(input) })
+  // Le serveur parle snake_case : la traduction se fait ici, à l'unique
+  // point de sortie, pour que le bouton survive à l'enregistrement.
+  const { buttonLabel, buttonUrl, scheduledFor, ...rest } = input
+  return platformFetch('/api/admin/campaigns/save', {
+    method: 'POST',
+    body: JSON.stringify({
+      ...rest,
+      button_label: buttonLabel,
+      button_url: buttonUrl,
+      scheduled_for: scheduledFor ?? null,
+    }),
+  })
 }
 
 export function previewCampaignAudience(audience: CampaignAudience): Promise<CampaignAudiencePreview> {
@@ -221,6 +235,64 @@ export interface CampaignSendResult {
 
 export function deleteCampaign(id: string): Promise<{ ok: true }> {
   return platformFetch('/api/admin/campaigns/delete', { method: 'POST', body: JSON.stringify({ id }) })
+}
+
+/** Repasse une campagne programmée en brouillon (la date est effacée). */
+export function unscheduleCampaign(id: string): Promise<{ ok: true }> {
+  return platformFetch('/api/admin/campaigns/unschedule', { method: 'POST', body: JSON.stringify({ id }) })
+}
+
+export interface CampaignSendRow {
+  email: string
+  status: 'sent' | 'failed'
+  error: string | null
+  created_at: string
+  shop_name: string | null
+}
+
+export interface CampaignDetail {
+  campaign: CampaignRow
+  sends: CampaignSendRow[]
+}
+
+/** Campagne + tentatives d'envoi (boutique, email, statut, motif d'échec). */
+export function getCampaignDetail(id: string): Promise<CampaignDetail> {
+  return platformFetch(`/api/admin/campaigns/detail?id=${encodeURIComponent(id)}`)
+}
+
+export type AutomatedEmailKey = 'welcome' | 'plan-activated' | 'renewal-reminder'
+
+export interface AutomatedEmailRow {
+  key: AutomatedEmailKey
+  subject: string
+  body: string
+  button_label: string | null
+  button_url: string | null
+  is_enabled: boolean
+  updated_at: string
+}
+
+export interface AutomatedEmailInput {
+  key: AutomatedEmailKey
+  subject: string
+  body: string
+  buttonLabel: string
+  buttonUrl: string
+  isEnabled: boolean
+}
+
+/** Contenus éditables des emails automatiques (bienvenue, activation, relance). */
+export async function listAutomatedEmails(): Promise<AutomatedEmailRow[]> {
+  const { templates } = await platformFetch<{ templates: AutomatedEmailRow[] }>('/api/admin/automated-emails')
+  return templates
+}
+
+export function saveAutomatedEmail(input: AutomatedEmailInput): Promise<{ ok: true }> {
+  const { key, subject, body, buttonLabel, buttonUrl, isEnabled } = input
+  return platformFetch('/api/admin/automated-emails/save', {
+    method: 'POST',
+    body: JSON.stringify({ key, subject, body, button_label: buttonLabel, button_url: buttonUrl, is_enabled: isEnabled }),
+  })
 }
 
 /** Opens/closes a country for merchants (super-admin "Pays" tool). */
