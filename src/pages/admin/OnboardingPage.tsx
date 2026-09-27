@@ -25,7 +25,7 @@ import { useMyShop, useMyShops, selectShop } from '@/features/shop-settings/useM
 import { createShop, isSlugAvailable, sendWelcomeEmail } from '@/services/shop.service'
 import { ensureProfile } from '@/services/profile.service'
 import { listEnabledCountries } from '@/services/country.service'
-import { COUNTRY_PRESETS, getCountryPreset, phonePlaceholder } from '@/config/countries'
+import { COUNTRY_PRESETS, DEFAULT_COUNTRY_CODE, getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { STORE_TEMPLATES } from '@/config/storeTemplates'
 import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
 import { fetchBusinessCapabilities } from '@/services/businessType.service'
@@ -75,7 +75,9 @@ export function OnboardingPage() {
   const countryOptions = useMemo(() => {
     const presetCodes = new Set(COUNTRY_PRESETS.map((c) => c.code))
     const enabled = enabledCountries.filter((c) => presetCodes.has(c.code)).map((c) => ({ code: c.code, name: c.name }))
-    return enabled.length > 0 ? enabled : COUNTRY_PRESETS.map((c) => ({ code: c.code, name: c.name }))
+    // Échec ou liste vide : on ne propose que le pays par défaut, jamais tous les pays.
+    const fallback = getCountryPreset(DEFAULT_COUNTRY_CODE)
+    return enabled.length > 0 ? enabled : [{ code: fallback.code, name: fallback.name }]
   }, [enabledCountries])
 
   const [pickedCountry, setPickedCountry] = useState<string | null>(null)

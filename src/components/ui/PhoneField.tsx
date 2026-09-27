@@ -91,21 +91,33 @@ export function PhoneField({
           invalid ? 'border-red-300' : 'border-gray-200'
         }`}
       >
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listId}
-          aria-label={`Indicatif : ${current.name} ${current.dialCode}`}
-          className="flex shrink-0 items-center gap-1.5 rounded-l-lg border-r border-gray-200 bg-gray-50 px-3 text-sm text-gray-800 transition-colors hover:bg-gray-100"
-        >
-          <span className="text-base leading-none" aria-hidden>
-            {flagEmoji(current.code)}
+        {countries.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-label={`Indicatif : ${current.name} ${current.dialCode}`}
+            className="flex shrink-0 items-center gap-1.5 rounded-l-lg border-r border-gray-200 bg-gray-50 px-3 text-sm text-gray-800 transition-colors hover:bg-gray-100"
+          >
+            <span className="text-base leading-none" aria-hidden>
+              {flagEmoji(current.code)}
+            </span>
+            <span className="font-medium tabular-nums">{current.dialCode}</span>
+            <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+          </button>
+        ) : (
+          <span
+            className="flex shrink-0 items-center gap-1.5 rounded-l-lg border-r border-gray-200 bg-gray-50 px-3 text-sm text-gray-800"
+            title={current.name}
+          >
+            <span className="text-base leading-none" aria-hidden>
+              {flagEmoji(current.code)}
+            </span>
+            <span className="font-medium tabular-nums">{current.dialCode}</span>
           </span>
-          <span className="font-medium tabular-nums">{current.dialCode}</span>
-          <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-        </button>
+        )}
         <input
           id={inputId}
           type="tel"
@@ -119,7 +131,7 @@ export function PhoneField({
         />
       </div>
 
-      {open && (
+      {open && countries.length > 1 && (
         <div className="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl shadow-ink-900/10 sm:right-auto sm:w-72">
           <div className="relative border-b border-gray-100">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden />
