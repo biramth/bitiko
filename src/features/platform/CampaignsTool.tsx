@@ -13,20 +13,24 @@ import {
   Send,
   Sparkles,
   Trash2,
-  Wrench,
 } from 'lucide-react'
 import {
   deleteCampaign,
+  listAutomatedEmails,
   listCampaigns,
   previewCampaignAudience,
+  saveAutomatedEmail,
   saveCampaign,
   sendCampaign,
+  type AutomatedEmailKey,
+  type AutomatedEmailRow,
   type CampaignAudience,
   type CampaignInput,
   type CampaignRow,
   type CampaignSendResult,
 } from '@/services/platform.service'
 import { Spinner } from '@/components/ui/Spinner'
+import { Switch } from '@/components/ui/Switch'
 import { buttonClass, controlClass } from '@/components/ui/styles'
 
 const VARIABLES = [
@@ -61,12 +65,17 @@ const PRESETS: Preset[] = [
 ]
 
 const SAMPLE = { shop_name: 'Awa Boutique', shop_url: 'awa.bitiko.shop', owner_name: 'Awa' }
+/** Exemples pour l'aperçu des variables propres aux emails automatiques. */
+const SAMPLE_AUTO = { plan_name: 'Pro', period_end: '27 octobre 2026', amount: '5 000 FCFA' }
 
 function substitute(text: string): string {
   return text
     .replace(/\{\{\s*shop_name\s*\}\}/gi, SAMPLE.shop_name)
     .replace(/\{\{\s*shop_url\s*\}\}/gi, SAMPLE.shop_url)
     .replace(/\{\{\s*owner_name\s*\}\}/gi, SAMPLE.owner_name)
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, SAMPLE_AUTO.plan_name)
+    .replace(/\{\{\s*period_end\s*\}\}/gi, SAMPLE_AUTO.period_end)
+    .replace(/\{\{\s*amount\s*\}\}/gi, SAMPLE_AUTO.amount)
 }
 
 /** Same idea for a link target: shop_url keeps its protocol, free text is URL-encoded. */
@@ -75,6 +84,9 @@ function substituteUrl(text: string): string {
     .replace(/\{\{\s*shop_url\s*\}\}/gi, `https://${SAMPLE.shop_url}`)
     .replace(/\{\{\s*shop_name\s*\}\}/gi, encodeURIComponent(SAMPLE.shop_name))
     .replace(/\{\{\s*owner_name\s*\}\}/gi, encodeURIComponent(SAMPLE.owner_name))
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.plan_name))
+    .replace(/\{\{\s*period_end\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.period_end))
+    .replace(/\{\{\s*amount\s*\}\}/gi, encodeURIComponent(SAMPLE_AUTO.amount))
 }
 
 /** Renders **bold** as <strong> without dangerouslySetInnerHTML. */
@@ -96,11 +108,14 @@ function CampaignPreview({
   body,
   buttonLabel,
   buttonUrl,
+  heading,
 }: {
   subject: string
   body: string
   buttonLabel: string
   buttonUrl: string
+  /** Titre affiché à la place de l'objet (les emails auto ont leur propre titre). */
+  heading?: string
 }) {
   const paragraphs = substitute(body).split(/\n{2,}/)
   const previewSubject = substitute(subject)
@@ -112,7 +127,7 @@ function CampaignPreview({
         <p className="font-heading text-sm font-bold text-white">Bitiko</p>
       </div>
       <div className="bg-white px-6 py-6">
-        <h3 className="text-center text-lg font-semibold text-gray-900">{previewSubject || '(objet)'}</h3>
+        <h3 className="text-center text-lg font-semibold text-gray-900">{heading ?? (previewSubject || '(objet)')}</h3>
         <div className="mt-4 space-y-3 text-sm leading-relaxed text-gray-600">
           {paragraphs.map((para, i) => (
             <p key={i}>
@@ -190,37 +205,62 @@ const STATUS_BADGE: Record<CampaignRow['status'], string> = {
 }
 
 /**
- * Transactional emails already sent automatically by the platform. Shown on
- * the marketing workspace so the operator sees what the system sends on its
- * own; per-email editing is planned but not implemented yet.
+ * Emails transactionnels envoyés par la plateforme elle-même. L'objet, le
+ * contenu, le bouton et l'interrupteur se règlent dans l'éditeur ci-dessous ;
+ * la structure (titres, encadrés) reste dans le code pour garder un rendu
+ * soigné dans toutes les boîtes mail.
  */
-const AUTOMATED_EMAILS: { key: string; icon: ReactNode; name: string; trigger: string; recipient: string }[] = [
-  {
-    key: 'welcome',
+interface AutomatedMeta {
+  icon: ReactNode
+  name: string
+  trigger: string
+  recipient: string
+  variables: { token: string; label: string }[]
+  /** Titre tel qu'il part en vrai (plan et dates varient par destinataire). */
+  previewHeading: string
+}
+
+const AUTOMATED_ORDER: AutomatedEmailKey[] = ['welcome', 'plan-activated', 'renewal-reminder']
+
+const AUTOMATED_META: Record<AutomatedEmailKey, AutomatedMeta> = {
+  welcome: {
     icon: <Sparkles size={15} aria-hidden />,
     name: 'Email de bienvenue',
     trigger: 'À la mise en ligne d’une nouvelle boutique.',
     recipient: 'Le gérant',
+    variables: VARIABLES,
+    previewHeading: `🎉 ${SAMPLE.shop_name} est en ligne !`,
   },
-  {
-    key: 'plan-activated',
+  'plan-activated': {
     icon: <BadgeCheck size={15} aria-hidden />,
     name: 'Abonnement activé',
     trigger: 'Dès qu’un paiement est vérifié (Essentiel ou Pro).',
     recipient: 'Le gérant',
+    variables: [
+      ...VARIABLES,
+      { token: '{{plan_name}}', label: 'Nom de l’offre (Essentiel, Pro)' },
+      { token: '{{period_end}}', label: 'Fin de période (ex. 27 octobre 2026)' },
+    ],
+    previewHeading: '🎉 Bienvenue dans Bitiko Pro !',
   },
-  {
-    key: 'renewal-reminder',
+  'renewal-reminder': {
     icon: <BellRing size={15} aria-hidden />,
     name: 'Rappel de renouvellement',
     trigger: '2 à 3 jours avant l’échéance d’un abonnement actif.',
     recipient: 'Le gérant',
+    variables: [
+      ...VARIABLES,
+      { token: '{{plan_name}}', label: 'Nom de l’offre (Essentiel, Pro)' },
+      { token: '{{period_end}}', label: 'Date d’échéance' },
+      { token: '{{amount}}', label: 'Montant à payer (ex. 5 000 FCFA)' },
+    ],
+    previewHeading: 'Ton abonnement Pro expire bientôt',
   },
-]
+}
 
 export function CampaignsTool() {
   const queryClient = useQueryClient()
-  const [view, setView] = useState<'list' | 'compose'>('list')
+  const [view, setView] = useState<'list' | 'compose' | 'automated'>('list')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
@@ -229,9 +269,17 @@ export function CampaignsTool() {
   const [buttonLabel, setButtonLabel] = useState('')
   const [buttonUrl, setButtonUrl] = useState('')
   const [sentResult, setSentResult] = useState<string | null>(null)
+  const [autoResult, setAutoResult] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [editingAutoKey, setEditingAutoKey] = useState<AutomatedEmailKey | null>(null)
+  const [autoEnabled, setAutoEnabled] = useState(true)
+  const [autoSubject, setAutoSubject] = useState('')
+  const [autoBody, setAutoBody] = useState('')
+  const [autoButtonLabel, setAutoButtonLabel] = useState('')
+  const [autoButtonUrl, setAutoButtonUrl] = useState('')
 
   const campaigns = useQuery({ queryKey: ['platform-campaigns'], queryFn: listCampaigns, retry: false })
+  const automated = useQuery({ queryKey: ['platform-automated-emails'], queryFn: listAutomatedEmails, retry: false })
 
   const debouncedAudience = useDebounced(audience)
   const preview = useQuery({
@@ -287,6 +335,23 @@ export function CampaignsTool() {
       invalidateCampaigns()
     },
   })
+  const saveAuto = useMutation({
+    mutationFn: () =>
+      saveAutomatedEmail({
+        key: editingAutoKey!,
+        subject: autoSubject,
+        body: autoBody,
+        buttonLabel: autoButtonLabel.trim(),
+        buttonUrl: autoButtonUrl.trim(),
+        isEnabled: autoEnabled,
+      }),
+    onSuccess: () => {
+      setAutoResult('Email automatique mis à jour : les prochains envois utilisent ce contenu.')
+      setView('list')
+      setEditingAutoKey(null)
+      queryClient.invalidateQueries({ queryKey: ['platform-automated-emails'] })
+    },
+  })
 
   /** Clears stale mutation errors so a previous failure isn't shown in a new context. */
   const openCompose = () => {
@@ -294,7 +359,9 @@ export function CampaignsTool() {
     send.reset()
     resume.reset()
     del.reset()
+    saveAuto.reset()
     setSentResult(null)
+    setAutoResult(null)
     setView('compose')
   }
 
@@ -329,6 +396,18 @@ export function CampaignsTool() {
     setButtonLabel(campaign.button_label ?? '')
     setButtonUrl(campaign.button_url ?? '')
     openCompose()
+  }
+
+  const editAutomated = (key: AutomatedEmailKey, row: AutomatedEmailRow | undefined) => {
+    saveAuto.reset()
+    setAutoResult(null)
+    setEditingAutoKey(key)
+    setAutoEnabled(row?.is_enabled ?? true)
+    setAutoSubject(row?.subject ?? '')
+    setAutoBody(row?.body ?? '')
+    setAutoButtonLabel(row?.button_label ?? '')
+    setAutoButtonUrl(row?.button_url ?? '')
+    setView('automated')
   }
 
   const saveDraft = () => {
@@ -369,40 +448,55 @@ export function CampaignsTool() {
         {sentResult && (
           <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{sentResult}</p>
         )}
+        {autoResult && (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{autoResult}</p>
+        )}
         {resume.isError && <p className="text-sm text-red-600">{(resume.error as Error).message}</p>}
         {del.isError && <p className="text-sm text-red-600">{(del.error as Error).message}</p>}
 
         <section>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-gray-900">Emails automatisés</h2>
-            <span className="text-xs text-gray-400">Envoyés automatiquement · personnalisation à venir</span>
+            <span className="text-xs text-gray-400">Envoyés automatiquement par la plateforme</span>
           </div>
+          {automated.isError && (
+            <p className="mt-3 text-sm text-red-600">Impossible de charger les emails automatiques : la migration 0138 est peut-être manquante.</p>
+          )}
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {AUTOMATED_EMAILS.map((email) => (
-              <div key={email.key} className="rounded-xl border border-gray-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-2 font-medium text-gray-900">
-                    <span className="text-brand-600">{email.icon}</span>
-                    {email.name}
-                  </span>
-                  <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                    Actif
-                  </span>
+            {AUTOMATED_ORDER.map((key) => {
+              const meta = AUTOMATED_META[key]
+              const row = automated.data?.find((t) => t.key === key)
+              const enabled = row?.is_enabled ?? true
+              return (
+                <div key={key} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 font-medium text-gray-900">
+                      <span className="text-brand-600">{meta.icon}</span>
+                      {meta.name}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {enabled ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">{meta.trigger}</p>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-400">Reçoit : {meta.recipient}</p>
+                    <button
+                      type="button"
+                      onClick={() => editAutomated(key, row)}
+                      disabled={automated.isPending || automated.isError}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      <Pencil size={12} aria-hidden /> Configurer
+                    </button>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">{email.trigger}</p>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <p className="text-xs text-gray-400">Reçoit : {email.recipient}</p>
-                  <button
-                    type="button"
-                    disabled
-                    title="Personnalisation bientôt disponible."
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    <Wrench size={12} aria-hidden /> Configurer
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 
@@ -547,6 +641,135 @@ export function CampaignsTool() {
 
   const count = preview.data?.count ?? 0
   const withEmail = preview.data?.withEmail ?? 0
+
+  if (view === 'automated' && editingAutoKey) {
+    const meta = AUTOMATED_META[editingAutoKey]
+    const canSaveAuto = autoSubject.trim() && autoBody.trim() && !saveAuto.isPending
+    return (
+      <div className="space-y-6">
+        <button type="button" onClick={() => setView('list')} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+          <ArrowLeft size={15} aria-hidden /> Retour aux campagnes
+        </button>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-gray-900">{meta.name}</h3>
+              <p className="mt-1 text-xs text-gray-500">{meta.trigger} Reçoit : {meta.recipient}.</p>
+              <div className="mt-3">
+                <Switch checked={autoEnabled} onChange={setAutoEnabled} label={autoEnabled ? 'Email activé' : 'Email désactivé'} />
+              </div>
+              {!autoEnabled && (
+                <p className="mt-2 text-xs text-amber-700">Désactivé : cet email ne sera plus envoyé tant que l’interrupteur est coupé.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <label className="block text-xs font-medium text-gray-500">Objet de l’email</label>
+              <input
+                value={autoSubject}
+                onChange={(e) => setAutoSubject(e.target.value)}
+                maxLength={160}
+                placeholder="Ce que le commerçant voit dans sa boîte mail"
+                className={`${controlClass()} mt-1`}
+              />
+              <p className="mt-1 text-[11px] text-gray-400">
+                Les variables <span className="font-mono">&#123;&#123;…&#125;&#125;</span> fonctionnent aussi dans l’objet.
+              </p>
+              <label className="mt-4 block text-xs font-medium text-gray-500">Contenu</label>
+              <textarea
+                value={autoBody}
+                onChange={(e) => setAutoBody(e.target.value)}
+                rows={10}
+                maxLength={8000}
+                placeholder="Rédige ton message…"
+                className={`${controlClass()} mt-1 resize-y`}
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {meta.variables.map((variable) => (
+                  <button
+                    key={variable.token}
+                    type="button"
+                    onClick={() => setAutoBody((prev) => `${prev}${variable.token}`)}
+                    className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100"
+                    title={variable.label}
+                  >
+                    {variable.token}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">**gras** · double saut de ligne = nouveau paragraphe.</p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-gray-900">Bouton du mail</h3>
+              <label className="mt-3 block text-xs font-medium text-gray-500">Texte du bouton</label>
+              <input
+                value={autoButtonLabel}
+                onChange={(e) => setAutoButtonLabel(e.target.value)}
+                maxLength={60}
+                placeholder="Vide = texte par défaut"
+                className={`${controlClass()} mt-1`}
+              />
+              <label className="mt-4 block text-xs font-medium text-gray-500">Lien du bouton</label>
+              <input
+                value={autoButtonUrl}
+                onChange={(e) => setAutoButtonUrl(e.target.value)}
+                maxLength={2048}
+                placeholder="Vide = lien par défaut (/admin…)"
+                className={`${controlClass()} mt-1`}
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {meta.variables
+                  .filter((v) => v.token === '{{shop_url}}')
+                  .map((variable) => (
+                    <button
+                      key={variable.token}
+                      type="button"
+                      onClick={() => setAutoButtonUrl((prev) => `${prev}${variable.token}`)}
+                      className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-100"
+                      title={variable.label}
+                    >
+                      {variable.token}
+                    </button>
+                  ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">Commence par / ou https:// — vide = lien par défaut.</p>
+            </div>
+
+            {saveAuto.isError && <p className="text-sm text-red-600">{(saveAuto.error as Error).message}</p>}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => saveAuto.mutate()}
+                disabled={!canSaveAuto}
+                className={buttonClass()}
+              >
+                {saveAuto.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Les prochains envois automatiques utilisent ce contenu ; les emails déjà partis ne changent pas.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Eye size={16} aria-hidden /> Aperçu
+            </h3>
+            <CampaignPreview
+              subject={autoSubject}
+              body={autoBody}
+              buttonLabel={autoButtonLabel}
+              buttonUrl={autoButtonUrl}
+              heading={meta.previewHeading}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

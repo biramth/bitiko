@@ -17,7 +17,8 @@ import { deleteUserCompletely } from '../_lib/userDeletion.js'
 import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { recordUsage } from '../_lib/usage.js'
-import { campaignEmailHtml, proActivatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
+import { campaignEmailHtml, automatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
+import { getAutomatedEmail, AUTOMATED_EMAIL_KEYS } from '../_lib/automatedEmails.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
 import { grantedSubscription, nextSubscription } from '../_lib/subscriptionPeriod.js'
@@ -81,6 +82,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleCountrySet(req, res)
     case 'campaign-delete':
       return handleCampaignDelete(req, res)
+    case 'automated-list':
+      return handleAutomatedList(req, res)
+    case 'automated-save':
+      return handleAutomatedSave(req, res)
     case 'promo-list':
       return handlePromoList(req, res)
     case 'promo-save':
@@ -1043,6 +1048,100 @@ async function handleCampaignDelete(req: VercelRequest, res: VercelResponse) {
 }
 
 // ---------------------------------------------------------------------------
+// Emails automatiques (bienvenue, abonnement activé, rappel de
+// renouvellement) : la structure reste dans le code, l'équipe édite l'objet,
+// le contenu, le bouton et l'interrupteur depuis /plateforme/campagnes.
+// Même accès que les campagnes : tout membre de la plateforme (c'est le
+// travail du rôle marketing) ; la route frontend exige déjà `send_campaigns`.
+// ---------------------------------------------------------------------------
+
+async function handleAutomatedList(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+
+    const admin = getSupabaseAdmin()
+    const { data, error } = await admin
+      .from('automated_emails')
+      .select('key, subject, body, button_label, button_url, is_enabled, updated_at')
+      .order('key')
+    if (error) throw error
+
+    res.status(200).json({ templates: data ?? [] })
+  } catch (err) {
+    console.error('platform automated-list failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleAutomatedSave(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    const member = await requireMember(req, res)
+    if (!member) return
+
+    const { key, subject, body, button_label, button_url, is_enabled } = (req.body ?? {}) as Record<string, unknown>
+    if (typeof key !== 'string' || !(AUTOMATED_EMAIL_KEYS as string[]).includes(key)) {
+      res.status(400).json({ error: 'Email automatique inconnu.' })
+      return
+    }
+    if (typeof subject !== 'string' || !subject.trim() || subject.length > 160) {
+      res.status(400).json({ error: 'Objet invalide (160 caractères max).' })
+      return
+    }
+    if (typeof body !== 'string' || !body.trim() || body.length > 8000) {
+      res.status(400).json({ error: 'Contenu invalide (8000 caractères max).' })
+      return
+    }
+    if (button_label != null && (typeof button_label !== 'string' || button_label.length > 60)) {
+      res.status(400).json({ error: 'Texte du bouton invalide (60 caractères max).' })
+      return
+    }
+    if (button_url != null && (typeof button_url !== 'string' || button_url.length > 2048)) {
+      res.status(400).json({ error: 'Lien du bouton invalide (2048 caractères max).' })
+      return
+    }
+    const trimmedUrl = typeof button_url === 'string' ? button_url.trim() : ''
+    if (trimmedUrl && !/^(\/(?!\/)|https?:\/\/)/.test(trimmedUrl)) {
+      res.status(400).json({ error: 'Lien du bouton invalide : commence par / ou https://.' })
+      return
+    }
+    if (typeof is_enabled !== 'boolean') {
+      res.status(400).json({ error: 'Interrupteur actif/inactif manquant.' })
+      return
+    }
+
+    const admin = getSupabaseAdmin()
+    const { error } = await admin.from('automated_emails').upsert(
+      {
+        key,
+        subject: subject.trim(),
+        body,
+        button_label: typeof button_label === 'string' ? button_label.trim() : '',
+        button_url: trimmedUrl,
+        is_enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: member.id,
+      },
+      { onConflict: 'key' },
+    )
+    if (error) throw error
+
+    res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error('platform automated-save failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Promotions (free months of a paid plan, redeemed through the
 // redeem_promo_code RPC). A code grants real value, so beyond "is a platform
 // member" the caller's role must hold the `send_campaigns` capability.
@@ -1852,22 +1951,30 @@ async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
     if (upsertSubError) throw upsertSubError
 
     try {
-      const { data: shop } = await supabase.from('shops').select('name, owner_id').eq('id', payment.shop_id).maybeSingle()
+      const { data: shop } = await supabase.from('shops').select('name, slug, owner_id').eq('id', payment.shop_id).maybeSingle()
       const ownerId = shop?.owner_id
       const { data: ownerData } = ownerId ? await supabase.auth.admin.getUserById(ownerId) : { data: { user: null } }
       const rootDomain = process.env.VITE_ROOT_DOMAIN
       const origin = rootDomain ? `https://${rootDomain}` : `${(req.headers['x-forwarded-proto'] as string) ?? 'https'}://${req.headers.host}`
       if (shop && ownerData.user?.email) {
-        await sendEmail({
-          to: ownerData.user.email,
-          subject: `Bienvenue dans Bitiko ${verifiedPlan.label} — ${shop.name}`,
-          html: proActivatedEmailHtml({
+        const template = await getAutomatedEmail(supabase, 'plan-activated')
+        if (!template || template.is_enabled) {
+          const { subject, html } = automatedEmailHtml({
+            key: 'plan-activated',
             origin,
-            shopName: shop.name,
-            periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-            planLabel: verifiedPlan.label,
-          }),
-        })
+            vars: {
+              shopName: shop.name,
+              shopUrl: rootDomain && shop.slug ? `https://${shop.slug}.${rootDomain}` : origin,
+              ownerName:
+                (ownerData.user.user_metadata?.full_name as string | undefined)?.trim() ||
+                ownerData.user.email.split('@')[0],
+              planName: verifiedPlan.label,
+              periodEndLabel: new Date(periodEnd).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            },
+            override: template,
+          })
+          await sendEmail({ to: ownerData.user.email, subject, html })
+        }
       }
     } catch (emailErr) {
       console.error('admin approve-payment: confirmation email failed', emailErr)

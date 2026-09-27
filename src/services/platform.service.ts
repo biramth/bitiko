@@ -223,6 +223,41 @@ export function deleteCampaign(id: string): Promise<{ ok: true }> {
   return platformFetch('/api/admin/campaigns/delete', { method: 'POST', body: JSON.stringify({ id }) })
 }
 
+export type AutomatedEmailKey = 'welcome' | 'plan-activated' | 'renewal-reminder'
+
+export interface AutomatedEmailRow {
+  key: AutomatedEmailKey
+  subject: string
+  body: string
+  button_label: string | null
+  button_url: string | null
+  is_enabled: boolean
+  updated_at: string
+}
+
+export interface AutomatedEmailInput {
+  key: AutomatedEmailKey
+  subject: string
+  body: string
+  buttonLabel: string
+  buttonUrl: string
+  isEnabled: boolean
+}
+
+/** Contenus éditables des emails automatiques (bienvenue, activation, relance). */
+export async function listAutomatedEmails(): Promise<AutomatedEmailRow[]> {
+  const { templates } = await platformFetch<{ templates: AutomatedEmailRow[] }>('/api/admin/automated-emails')
+  return templates
+}
+
+export function saveAutomatedEmail(input: AutomatedEmailInput): Promise<{ ok: true }> {
+  const { key, subject, body, buttonLabel, buttonUrl, isEnabled } = input
+  return platformFetch('/api/admin/automated-emails/save', {
+    method: 'POST',
+    body: JSON.stringify({ key, subject, body, button_label: buttonLabel, button_url: buttonUrl, is_enabled: isEnabled }),
+  })
+}
+
 /** Opens/closes a country for merchants (super-admin "Pays" tool). */
 export function setCountryEnabled(code: string, enabled: boolean): Promise<{ ok: true; code: string; enabled: boolean }> {
   return platformFetch('/api/admin/countries/set', { method: 'POST', body: JSON.stringify({ code, enabled }) })

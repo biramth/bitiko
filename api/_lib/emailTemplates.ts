@@ -161,89 +161,166 @@ export function proUpgradeRequestEmailHtml({
   </div>`
 }
 
-export function proActivatedEmailHtml({
-  origin,
-  shopName,
-  periodEndLabel,
-  planLabel = 'Pro',
-}: {
-  origin: string
-  shopName: string
-  periodEndLabel: string
-  planLabel?: string
-}): string {
-  const perks = [
-    badge(0, 'Produits illimités', 'Fini la limite de 8 produits actifs.'),
-    badge(1, 'Éditeur visuel complet', 'Tous les templates et blocs de personnalisation débloqués.'),
-    badge(2, 'Sans "Propulsé par Bitiko"', 'Ta boutique passe sur ton nom, pas sur le nôtre.'),
-  ].join('')
+// ---------------------------------------------------------------------------
+// Emails automatiques personnalisables (table `automated_emails`, migration
+// 0138, édités depuis /plateforme/campagnes). La structure — habillage,
+// titres, encadrés conseils — reste dans le code ; l'objet, le contenu, le
+// bouton et l'interrupteur actif/inactif vivent en base. Sans surcharge
+// (ligne absente), le contenu historique est utilisé.
+// ---------------------------------------------------------------------------
 
-  return shell({
-    origin,
-    preheader: `${escapeHtml(shopName)} est maintenant en ${escapeHtml(planLabel)} — actif jusqu'au ${periodEndLabel}.`,
-    eyebrow: 'Abonnement activé',
-    heading: `🎉 Bienvenue dans Bitiko ${planLabel} !`,
-    body: `Ton paiement a été vérifié — <strong>${escapeHtml(shopName)}</strong> est maintenant en ${escapeHtml(planLabel)}, actif jusqu'au <strong>${periodEndLabel}</strong>.`,
-    extra: perks,
-    buttonLabel: 'Aller sur mon tableau de bord',
-    buttonUrl: `${origin}/admin`,
-    footnote: 'Une question sur ton abonnement ? Réponds directement à cet email.',
-  })
-}
+export type AutomatedEmailKey = 'welcome' | 'plan-activated' | 'renewal-reminder'
 
-export function renewalReminderEmailHtml({
-  origin,
-  shopName,
-  periodEndLabel,
-  amountLabel,
-}: {
-  origin: string
-  shopName: string
-  periodEndLabel: string
-  amountLabel: string
-}): string {
-  return shell({
-    origin,
-    preheader: `L'abonnement Pro de ${escapeHtml(shopName)} expire le ${periodEndLabel}.`,
-    eyebrow: 'Renouvellement',
-    heading: 'Ton abonnement Pro expire bientôt',
-    body: `L'abonnement Pro de <strong>${escapeHtml(shopName)}</strong> arrive à échéance le <strong>${periodEndLabel}</strong>. Renouvelle-le pour ${amountLabel} afin de garder tes fonctionnalités Pro sans interruption.`,
-    buttonLabel: 'Renouveler mon abonnement',
-    buttonUrl: `${origin}/admin/parametres/facturation`,
-    footnote: "Sans renouvellement, ta boutique repasse automatiquement en plan gratuit à la date d'échéance — tes produits et données restent intacts.",
-  })
-}
-
-export function welcomeEmailHtml({
-  origin,
-  shopName,
-  shopUrl,
-  addProductUrl,
-}: {
-  origin: string
+export interface AutomatedEmailVars {
   shopName: string
   shopUrl: string
-  addProductUrl: string
-}): string {
-  const cleanShopUrl = shopUrl.replace(/^https?:\/\//, '')
-  const steps = [
-    badge(0, 'Ajoute tes produits', 'Photo, prix, stock — quelques minutes suffisent pour ton premier article.'),
-    badge(1, 'Partage ton lien', 'Envoie-le à tes clients sur WhatsApp, Instagram ou Facebook.'),
-    badge(2, 'Reçois tes commandes', 'Chaque commande arrive directement sur ton WhatsApp, prête à confirmer.'),
-  ].join('')
+  ownerName: string
+  planName?: string
+  periodEndLabel?: string
+  amountLabel?: string
+}
 
-  return shell({
-    origin,
-    preheader: `${escapeHtml(shopName)} est prête — ajoute ton premier produit pour commencer à vendre.`,
+export interface AutomatedEmailOverride {
+  subject: string
+  body: string
+  buttonLabel: string | null
+  buttonUrl: string | null
+}
+
+function substituteAutomatedVariables(text: string, vars: AutomatedEmailVars): string {
+  return substituteCampaignVariables(text, { shopName: vars.shopName, shopUrl: vars.shopUrl, ownerName: vars.ownerName })
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, vars.planName ?? '')
+    .replace(/\{\{\s*period_end\s*\}\}/gi, vars.periodEndLabel ?? '')
+    .replace(/\{\{\s*amount\s*\}\}/gi, vars.amountLabel ?? '')
+}
+
+function substituteAutomatedUrl(url: string, vars: AutomatedEmailVars): string {
+  return substituteCampaignUrl(url, { shopName: vars.shopName, shopUrl: vars.shopUrl, ownerName: vars.ownerName })
+    .replace(/\{\{\s*plan_name\s*\}\}/gi, encodeURIComponent(vars.planName ?? ''))
+    .replace(/\{\{\s*period_end\s*\}\}/gi, encodeURIComponent(vars.periodEndLabel ?? ''))
+    .replace(/\{\{\s*amount\s*\}\}/gi, encodeURIComponent(vars.amountLabel ?? ''))
+}
+
+interface AutomatedEmailConfig {
+  eyebrow: string
+  heading: (vars: AutomatedEmailVars) => string
+  footnote: string
+  urlChip: boolean
+  extra: 'welcome-steps' | 'plan-perks' | null
+  defaultSubject: string
+  defaultBody: string
+  defaultButtonLabel: string
+  defaultButtonUrl: string
+}
+
+const AUTOMATED_EMAILS: Record<AutomatedEmailKey, AutomatedEmailConfig> = {
+  welcome: {
     eyebrow: 'Vendez sur WhatsApp',
-    heading: `🎉 ${escapeHtml(shopName)} est en ligne !`,
-    body: 'Ta boutique est prête à recevoir tes clients. Voici comment démarrer :',
-    urlChip: escapeHtml(cleanShopUrl),
-    extra: steps,
-    buttonLabel: 'Ajouter mon premier produit',
-    buttonUrl: addProductUrl,
+    heading: (vars) => `🎉 ${escapeHtml(vars.shopName)} est en ligne !`,
     footnote: "Besoin d'aide pour démarrer ? Réponds simplement à cet email, on te répond directement.",
-  })
+    urlChip: true,
+    extra: 'welcome-steps',
+    defaultSubject: '{{shop_name}} est en ligne — Bitiko',
+    defaultBody: 'Ta boutique est prête à recevoir tes clients. Voici comment démarrer :',
+    defaultButtonLabel: 'Ajouter mon premier produit',
+    defaultButtonUrl: '/admin/produits/nouveau',
+  },
+  'plan-activated': {
+    eyebrow: 'Abonnement activé',
+    heading: (vars) => `🎉 Bienvenue dans Bitiko ${escapeHtml(vars.planName ?? 'Pro')} !`,
+    footnote: 'Une question sur ton abonnement ? Réponds directement à cet email.',
+    urlChip: false,
+    extra: 'plan-perks',
+    defaultSubject: 'Bienvenue dans Bitiko {{plan_name}} — {{shop_name}}',
+    defaultBody: `Ton paiement a été vérifié — **{{shop_name}}** est maintenant en {{plan_name}}, actif jusqu'au **{{period_end}}**.`,
+    defaultButtonLabel: 'Aller sur mon tableau de bord',
+    defaultButtonUrl: '/admin',
+  },
+  'renewal-reminder': {
+    eyebrow: 'Renouvellement',
+    heading: (vars) => `Ton abonnement ${escapeHtml(vars.planName ?? 'Pro')} expire bientôt`,
+    footnote:
+      "Sans renouvellement, ta boutique repasse automatiquement en plan gratuit à la date d'échéance — tes produits et données restent intacts.",
+    urlChip: false,
+    extra: null,
+    defaultSubject: 'Ton abonnement expire bientôt — {{shop_name}}',
+    defaultBody: `L'abonnement {{plan_name}} de **{{shop_name}}** arrive à échéance le **{{period_end}}**. Renouvelle-le pour {{amount}} afin de garder tes fonctionnalités {{plan_name}} sans interruption.`,
+    defaultButtonLabel: 'Renouveler mon abonnement',
+    defaultButtonUrl: '/admin/parametres/facturation',
+  },
+}
+
+function automatedExtra(kind: 'welcome-steps' | 'plan-perks'): string {
+  const items =
+    kind === 'welcome-steps'
+      ? [
+          ['Ajoute tes produits', 'Photo, prix, stock — quelques minutes suffisent pour ton premier article.'],
+          ['Partage ton lien', 'Envoie-le à tes clients sur WhatsApp, Instagram ou Facebook.'],
+          ['Reçois tes commandes', 'Chaque commande arrive directement sur ton WhatsApp, prête à confirmer.'],
+        ]
+      : [
+          ['Produits illimités', 'Fini la limite de 8 produits actifs.'],
+          ['Éditeur visuel complet', 'Tous les templates et blocs de personnalisation débloqués.'],
+          ['Sans "Propulsé par Bitiko"', 'Ta boutique passe sur ton nom, pas sur le nôtre.'],
+        ]
+  return items.map(([title, description], index) => badge(index, title, description)).join('')
+}
+
+/** Résout le lien du bouton : variables substituées, chemin relatif préfixé
+ *  par l'origine, repli sur le tableau de bord si le résultat n'est pas
+ *  http(s) — la validation serveur garantit déjà ce format, ceci est la
+ *  ceinture de sécurité au rendu. */
+function resolveAutomatedButtonUrl(rawUrl: string, vars: AutomatedEmailVars, origin: string, fallbackPath: string): string {
+  const substituted = substituteAutomatedUrl(rawUrl, vars).trim() || fallbackPath
+  const absolute = substituted.startsWith('/') ? `${origin}${substituted}` : substituted
+  return /^https?:\/\//i.test(absolute) ? absolute : `${origin}/admin`
+}
+
+/**
+ * Rend un email automatique : objet (texte brut pour l'en-tête) + HTML dans
+ * l'habillage Bitiko. Mêmes règles de sécurité que les campagnes — variables
+ * substituées avant échappement, seul **gras** autorisé ensuite.
+ */
+export function automatedEmailHtml({
+  key,
+  origin,
+  vars,
+  override,
+}: {
+  key: AutomatedEmailKey
+  origin: string
+  vars: AutomatedEmailVars
+  override: AutomatedEmailOverride | null
+}): { subject: string; html: string } {
+  const config = AUTOMATED_EMAILS[key]
+  const customized = override && override.subject.trim() && override.body.trim() ? override : null
+  const subject = substituteAutomatedVariables(customized ? customized.subject : config.defaultSubject, vars)
+  const body = renderCampaignBody(
+    substituteAutomatedVariables(customized ? customized.body : config.defaultBody, vars),
+    { shopName: vars.shopName, shopUrl: vars.shopUrl, ownerName: vars.ownerName },
+  )
+  const buttonLabel = escapeHtml(
+    substituteAutomatedVariables(customized?.buttonLabel?.trim() || config.defaultButtonLabel, vars),
+  )
+  const buttonUrl = escapeHtml(
+    resolveAutomatedButtonUrl(customized?.buttonUrl?.trim() || config.defaultButtonUrl, vars, origin, config.defaultButtonUrl),
+  )
+
+  return {
+    subject,
+    html: shell({
+      origin,
+      preheader: escapeHtml(subject),
+      eyebrow: config.eyebrow,
+      heading: config.heading(vars),
+      body,
+      urlChip: config.urlChip ? escapeHtml(vars.shopUrl.replace(/^https?:\/\//, '')) : undefined,
+      extra: config.extra ? automatedExtra(config.extra) : undefined,
+      buttonLabel,
+      buttonUrl,
+      footnote: config.footnote,
+    }),
+  }
 }
 
 /** Relance unique, ~24 h après l'inscription, d'un compte qui n'a pas encore créé sa boutique. */
