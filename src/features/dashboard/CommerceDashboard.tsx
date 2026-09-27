@@ -189,7 +189,7 @@ export function CommerceDashboard({
             <h3 className="mt-1 text-lg font-semibold text-gray-900">Comprenez ce qui se vend vraiment</h3>
             <p className="mt-1 max-w-xl text-sm text-gray-600">Panier moyen, produits les plus vendus et tendances détaillées sont disponibles à partir de l’offre Essentiel.</p>
           </div>
-          <Link to="/admin/parametres/facturation" className="mt-4 inline-flex shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:mt-0">
+          <Link to="/admin/parametres/compte?billing=1" className="mt-4 inline-flex shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:mt-0">
             Voir les offres
           </Link>
         </div>

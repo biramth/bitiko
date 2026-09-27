@@ -703,7 +703,7 @@ function ProductForm({
                   <p className="text-sm text-amber-800">
                     Vous avez atteint la limite de {maxActiveProducts} produits actifs du plan
                     gratuit. Ce produit sera enregistré comme inactif.{' '}
-                    <Link to="/admin/parametres/facturation" className="font-semibold underline underline-offset-2">
+                    <Link to="/admin/parametres/compte?billing=1" className="font-semibold underline underline-offset-2">
                       Passez à Pro
                     </Link>{' '}
                     pour activer des produits illimités.

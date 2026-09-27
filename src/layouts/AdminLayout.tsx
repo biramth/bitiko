@@ -6,17 +6,13 @@ import {
   ChevronsLeft,
   Bell,
   ChevronsRight,
-  CreditCard,
   ExternalLink,
-  ImagePlus,
   LogOut,
   Menu,
-  Phone,
   Receipt,
   Scissors,
   Settings,
   Store,
-  Truck,
   User,
   Users,
   X,
@@ -48,23 +44,15 @@ import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 // Groups render as a single-open accordion (chevron + auto-open on the active
 // route); the collapsed rail and the mobile drawer share this component.
 
+// Général/Apparence/Contact & devise/Livraison ont fusionné en une seule
+// page « Boutique » (SettingsPage.tsx) et Facturation a déménagé dans Mon
+// compte (bouton « Changer d'abonnement », en pop-up) : plus besoin de
+// sous-groupes ici, la liste plate suffit.
 const settingsSections = [
-  { to: '/admin/parametres/general', key: 'general', label: 'Général', icon: Store },
-  { to: '/admin/parametres/appearance', key: 'appearance', label: 'Apparence', icon: ImagePlus },
-  { to: '/admin/parametres/contact', key: 'contact', label: 'Contact & devise', icon: Phone },
-  { to: '/admin/parametres/shipping', key: 'shipping', label: 'Livraison & stock', icon: Truck },
-  { to: '/admin/parametres/facturation', key: 'facturation', label: 'Facturation', icon: CreditCard },
+  { to: '/admin/parametres/boutique', key: 'boutique', label: 'Boutique', icon: Store },
   { to: '/admin/parametres/equipe', key: 'equipe', label: 'Accès collaborateurs', icon: Users },
   { to: '/admin/parametres/notifications', key: 'notifications', label: 'Notifications', icon: Bell },
   { to: '/admin/parametres/compte', key: 'compte', label: 'Mon compte', icon: User },
-]
-
-/** Paramètres regroupés comme le reste du workspace : Boutique (le lieu),
- *  Ventes (livraison & stock), Compte (facturation, accès, profil). */
-const SETTINGS_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Boutique', keys: ['general', 'appearance', 'contact'] },
-  { label: 'Ventes', keys: ['shipping'] },
-  { label: 'Compte', keys: ['facturation', 'equipe', 'notifications', 'compte'] },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'bitiko-admin-sidebar-collapsed'
@@ -136,18 +124,13 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   const showSettings = canAccess(shopRole, 'settings')
   const location = useLocation()
   const onSettings = location.pathname.startsWith('/admin/parametres')
-  // Livraison & stock n'a de sens qu'avec livraison ou catalogue : un salon
-  // 100 % rendez-vous ne le voit ni ici ni dans la page Paramètres.
-  const showShippingSection =
-    capabilities === null || capabilities.has('HAS_DELIVERY') || capabilities.has('HAS_PRODUCTS')
   const SETTINGS_AREAS: Record<string, Area> = {
-    '/admin/parametres/facturation': 'billing',
     '/admin/parametres/equipe': 'team_settings',
     '/admin/parametres/notifications': 'notifications',
   }
-  const visibleSettingsSections = settingsSections
-    .filter((s) => !SETTINGS_AREAS[s.to] || canAccess(shopRole, SETTINGS_AREAS[s.to]))
-    .filter((s) => s.key !== 'shipping' || showShippingSection)
+  const visibleSettingsSections = settingsSections.filter(
+    (s) => !SETTINGS_AREAS[s.to] || canAccess(shopRole, SETTINGS_AREAS[s.to]),
+  )
 
   // Accordéon unique : un seul groupe ouvert à la fois, suit la navigation.
   // La route active rouvre son groupe ; un clic manuel ne vit que jusqu'à la
@@ -315,26 +298,13 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
           </button>
         ))}
         {showSettings && !collapsed && settingsExpanded && (
-          <div className="flex flex-col gap-1.5">
-            {SETTINGS_GROUPS.map(({ label, keys }) => {
-              const items = visibleSettingsSections.filter((s) => keys.includes(s.key))
-              if (items.length === 0) return null
-              return (
-                <div key={label}>
-                  <p className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
-                    {label}
-                  </p>
-                  <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                    {items.map(({ to, label: itemLabel, icon: Icon }) => (
-                      <NavLink key={to} to={to} className={settingsSubLinkClass}>
-                        <Icon size={14} aria-hidden />
-                        {itemLabel}
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
+          <div className="ml-4 flex flex-col gap-0.5 border-l border-white/10 pl-3">
+            {visibleSettingsSections.map(({ to, label: itemLabel, icon: Icon }) => (
+              <NavLink key={to} to={to} className={settingsSubLinkClass}>
+                <Icon size={14} aria-hidden />
+                {itemLabel}
+              </NavLink>
+            ))}
           </div>
         )}
       </nav>

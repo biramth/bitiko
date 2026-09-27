@@ -76,7 +76,7 @@ function StoreBuilderLock() {
         outils avancés de personnalisation.
       </p>
       <Link
-        to="/admin/parametres/facturation"
+        to="/admin/parametres/compte?billing=1"
         className="mt-2 flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
       >
         <Wand2 size={15} aria-hidden /> Passer à Pro

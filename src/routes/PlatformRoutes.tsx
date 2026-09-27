@@ -292,15 +292,17 @@ export function PlatformRoutes() {
                   <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
                 </Route>
               </Route>
-              {/* Facturation moved into Paramètres (one less top-level nav
-                  group in production, where it was the only item under
-                  "Développer"). Kept as a redirect — Wave's own success/error
-                  URLs and every internal link were updated, but this catches
-                  anything external (an old bookmark, a cached email). */}
-              <Route path="facturation" element={<Navigate to="/admin/parametres/facturation" replace />} />
+              {/* Facturation is now the "Changer d'abonnement" button in Mon
+                  compte (Paramètres), opened as a pop-up — there is no
+                  standalone Facturation page anymore. Every internal link
+                  and Wave's own success/error URLs point straight at
+                  /admin/parametres/compte?billing=1; this old top-level path
+                  stays as a redirect only for what we don't control —
+                  a stale bookmark, a cached email. */}
+              <Route path="facturation" element={<Navigate to="/admin/parametres/compte?billing=1" replace />} />
               <Route element={<RequireArea area="settings" />}>
                 <Route path="parametres">
-                  <Route index element={<Navigate to="general" replace />} />
+                  <Route index element={<Navigate to="boutique" replace />} />
                   <Route element={<RequireArea area="notifications" />}>
                     <Route path="notifications" element={standalone(<NotificationsPage />)} />
                   </Route>

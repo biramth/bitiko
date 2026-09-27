@@ -246,7 +246,7 @@ const AUTOMATED_EMAILS: Record<AutomatedEmailKey, AutomatedEmailConfig> = {
     defaultSubject: 'Ton abonnement expire bientôt — {{shop_name}}',
     defaultBody: `L'abonnement {{plan_name}} de **{{shop_name}}** arrive à échéance le **{{period_end}}**. Renouvelle-le pour {{amount}} afin de garder tes fonctionnalités {{plan_name}} sans interruption.`,
     defaultButtonLabel: 'Renouveler mon abonnement',
-    defaultButtonUrl: '/admin/parametres/facturation',
+    defaultButtonUrl: '/admin/parametres/compte?billing=1',
   },
 }
 
