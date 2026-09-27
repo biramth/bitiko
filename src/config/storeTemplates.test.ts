@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { resolveTemplateVariant } from '@/types/builder'
 import { availableVerticals, STORE_TEMPLATE_BY_KEY, templatesForVertical } from './storeTemplates'
 
-describe('business groups (10 groupes)', () => {
-  it('exposes 10 verticals with at least one template', () => {
+describe('business groups (10 groupes + librairie, 0138)', () => {
+  it('exposes 11 verticals with at least one template', () => {
     expect(availableVerticals().map((v) => v.key)).toEqual([
       'restauration',
       'mode',
@@ -15,14 +15,18 @@ describe('business groups (10 groupes)', () => {
       'epicerie_fine',
       'fleurs_cadeaux',
       'artisanat',
+      'librairie',
     ])
   })
 
   it('offers at least two templates per group', () => {
-    for (const vertical of availableVerticals()) {
+    // Librairie (0138) démarre avec un seul gabarit dédié — d'autres pourront
+    // s'ajouter plus tard (activité ≠ gabarit), ce n'est pas encore le cas.
+    for (const vertical of availableVerticals().filter((v) => v.key !== 'librairie')) {
       const templates = templatesForVertical(vertical.key)
       expect(templates.length, vertical.key).toBeGreaterThanOrEqual(2)
     }
+    expect(templatesForVertical('librairie').map((t) => t.key)).toEqual(['librairie'])
   })
 
   it('returns the exact template first for each group', () => {

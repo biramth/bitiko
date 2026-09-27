@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  BookOpen,
   Pencil,
   Shirt,
   ShoppingBasket,
@@ -47,6 +48,7 @@ const VERTICAL_ICONS: Record<string, LucideIcon> = {
   epicerie: ShoppingBasket,
   beaute: Sparkles,
   tech: Smartphone,
+  librairie: BookOpen,
 }
 
 const fieldClass =

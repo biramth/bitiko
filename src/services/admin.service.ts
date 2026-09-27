@@ -164,6 +164,8 @@ export interface AdminTemplate {
   description: string | null
   status: 'active' | 'deprecated' | 'draft'
   content: Record<string, unknown> | null
+  /** Activité à laquelle ce gabarit appartient à l'origine (0138) ; null = purement partagé. */
+  owner_business_type_id: string | null
   updated_at: string
   shops: number
 }
@@ -177,7 +179,7 @@ export interface TemplateCatalog {
 export async function listTemplateCatalog(): Promise<TemplateCatalog> {
   const res = await fetch('/api/admin/templates', { headers: await authHeader() })
   const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'Impossible de charger les gabarits.')
+  if (!res.ok) throw new Error(body.error ?? 'Impossible de charger les templates.')
   return body as TemplateCatalog
 }
 
@@ -188,6 +190,7 @@ export async function saveTemplate(input: {
   description?: string | null
   status: string
   content?: Record<string, unknown> | null
+  ownerBusinessTypeId?: string | null
   create: boolean
 }): Promise<string> {
   const res = await fetch('/api/admin/templates/save', {
@@ -196,7 +199,7 @@ export async function saveTemplate(input: {
     body: JSON.stringify(input),
   })
   const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? "Impossible d'enregistrer le gabarit.")
+  if (!res.ok) throw new Error(body.error ?? "Impossible d'enregistrer le template.")
   return body.id as string
 }
 
@@ -216,4 +219,4 @@ export async function deleteTemplate(id: string): Promise<void> {
     body: JSON.stringify({ id }),
   })
   const body = await res.json()
-  if (!res.ok) throw new Error(body.error ?? 'Impossible de supprimer le gabarit.')}
+  if (!res.ok) throw new Error(body.error ?? 'Impossible de supprimer le template.')}

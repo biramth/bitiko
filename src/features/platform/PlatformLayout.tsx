@@ -52,7 +52,7 @@ const TOOLS: Tool[] = [
   { to: '/plateforme/sante', label: 'Santé', icon: Activity, capability: 'view_health', group: 'Pilotage' },
   { to: '/plateforme/journal', label: 'Journal', icon: ScrollText, capability: 'manage_team', group: 'Équipe' },
   { to: '/plateforme/types', label: 'Types d’activité', icon: Briefcase, capability: 'manage_business_types', group: 'Configuration' },
-  { to: '/plateforme/gabarits', label: 'Gabarits', icon: LayoutTemplate, capability: 'manage_business_types', group: 'Configuration' },
+  { to: '/plateforme/templates', label: 'Templates', icon: LayoutTemplate, capability: 'manage_business_types', group: 'Configuration' },
 ]
 
 const GROUPS: Tool['group'][] = ['Pilotage', 'Croissance', 'Configuration', 'Équipe']

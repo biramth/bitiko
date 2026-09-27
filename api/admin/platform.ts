@@ -1430,7 +1430,7 @@ async function requireCatalogMember(req: VercelRequest, res: VercelResponse): Pr
   const member = await requireMember(req, res)
   if (!member) return null
   if (!canManageCatalog(member.role)) {
-    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue gabarits.' })
+    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue templates.' })
     return null
   }
   return member
@@ -1446,7 +1446,7 @@ async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
     const admin = getSupabaseAdmin()
     const { data: templates, error: templatesError } = await admin
       .from('templates')
-      .select('id, slug, name, description, status, content, updated_at')
+      .select('id, slug, name, description, status, content, owner_business_type_id, updated_at')
       .order('slug')
     if (templatesError) throw templatesError
     const { data: types, error: typesError } = await admin
@@ -1491,13 +1491,14 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
   try {
     const member = await requireCatalogMember(req, res)
     if (!member) return
-    const { id, slug, name, description, status, content, create } = (req.body ?? {}) as {
+    const { id, slug, name, description, status, content, ownerBusinessTypeId, create } = (req.body ?? {}) as {
       id?: unknown
       slug?: unknown
       name?: unknown
       description?: unknown
       status?: unknown
       content?: unknown
+      ownerBusinessTypeId?: unknown
       create?: unknown
     }
     const cleanName = typeof name === 'string' ? name.trim() : ''
@@ -1513,8 +1514,25 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
       res.status(400).json({ error: 'Le contenu doit être un objet JSON ou null.' })
       return
     }
+    if (ownerBusinessTypeId !== null && ownerBusinessTypeId !== undefined && typeof ownerBusinessTypeId !== 'string') {
+      res.status(400).json({ error: 'Propriétaire invalide.' })
+      return
+    }
 
     const admin = getSupabaseAdmin()
+    const ownerId = typeof ownerBusinessTypeId === 'string' && ownerBusinessTypeId ? ownerBusinessTypeId : null
+    if (ownerId) {
+      const { data: ownerRow, error: ownerError } = await admin
+        .from('business_types')
+        .select('id')
+        .eq('id', ownerId)
+        .maybeSingle()
+      if (ownerError) throw ownerError
+      if (!ownerRow) {
+        res.status(400).json({ error: "Ce type d'activité est introuvable." })
+        return
+      }
+    }
     if (create) {
       const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
       if (!SLUG_RE.test(cleanSlug)) {
@@ -1529,6 +1547,7 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
           description: typeof description === 'string' ? description.trim() || null : null,
           status: status as string,
           content: (content ?? null) as never,
+          owner_business_type_id: ownerId,
         })
         .select('id')
         .single()
@@ -1560,12 +1579,13 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
         description: typeof description === 'string' ? description.trim() || null : null,
         status: status as string,
         content: (content ?? null) as never,
+        owner_business_type_id: ownerId,
       })
       .eq('id', id)
       .select('id')
     if (error) throw error
     if (!data || data.length === 0) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
     await logAudit({
@@ -1591,7 +1611,7 @@ async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
     if (!member) return
     const { templateId, typeIds } = (req.body ?? {}) as { templateId?: unknown; typeIds?: unknown }
     if (typeof templateId !== 'string' || !templateId) {
-      res.status(400).json({ error: 'Gabarit manquant.' })
+      res.status(400).json({ error: 'Template manquant.' })
       return
     }
     if (!Array.isArray(typeIds) || !typeIds.every((t): t is string => typeof t === 'string')) {
@@ -1607,7 +1627,7 @@ async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
       .maybeSingle()
     if (templateError) throw templateError
     if (!templateRow) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
     if (typeIds.length > 0) {
@@ -1669,7 +1689,7 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
       .maybeSingle()
     if (templateError) throw templateError
     if (!template) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
     // Garde-fou : un gabarit utilisé par des boutiques ne se supprime pas —
@@ -1681,7 +1701,7 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
     if (countError) throw countError
     if ((count ?? 0) > 0) {
       res.status(409).json({
-        error: `Impossible : ${count} boutique(s) utilisent encore ce gabarit. Passe-le en déprécié.`,
+        error: `Impossible : ${count} boutique(s) utilisent encore ce template. Passe-le en déprécié.`,
       })
       return
     }

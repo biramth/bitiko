@@ -226,13 +226,15 @@ export function PlatformRoutes() {
               )}
             />
             <Route
-              path="plateforme/gabarits"
+              path="plateforme/templates"
               element={standalone(
                 <CapabilityGate capability="manage_business_types">
                   <PlatformTemplatesPage />
                 </CapabilityGate>,
               )}
             />
+            {/* Ancien chemin (avant le renommage gabarit → template) : garde les liens déjà en place. */}
+            <Route path="plateforme/gabarits" element={<Navigate to="/plateforme/templates" replace />} />
           </Route>
         </Route>
       </Route>

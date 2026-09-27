@@ -647,6 +647,39 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     },
   },
   {
+    key: 'librairie',
+    vertical: 'librairie',
+    label: 'Librairie',
+    description: 'Chaleureux et studieux — pour une librairie, une papeterie ou un point presse.',
+    swatch: ['#1e3a5f', '#f7f1e3'],
+    themeColor: '#1e3a5f',
+    themeConfig: baseTheme({ secondaryColor: '#f7f1e3', textColor: '#1c1917', buttonColor: '#1e3a5f', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Librairie & papeterie',
+          heading: 'Des mots et des idées à portée de clic',
+          subheading: 'Livres, carnets et fournitures — commandez et récupérez ou faites-vous livrer.',
+        }),
+        promo({
+          heading: 'Coup de cœur du mois',
+          body: 'Une sélection resserrée de titres et de fournitures à ne pas manquer.',
+          buttonLabel: 'Découvrir',
+        }),
+        categories({ heading: 'Nos rayons' }),
+        products({ heading: 'Nos références', limit: 16 }),
+        text({
+          heading: 'Pourquoi nous choisir',
+          body: 'Un choix soigné de livres, carnets et fournitures, avec des conseils pour trouver ce qu\'il vous faut.',
+          align: 'center',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Toutes nos références'),
+    },
+  },
+  {
     key: 'minimal',
     vertical: 'mode',
     label: 'Minimal',
@@ -949,6 +982,7 @@ export function availableVerticals(): Vertical[] {
  *  seuls les types historiques hors des 10 groupes ont besoin d'un alias. */
 const BUSINESS_TYPE_VERTICAL: Record<string, string> = {
   food_services: 'epicerie',
+  // Coiffure est dépréciée (doublon de Beauté & Bien-être, 0138) : alias conservé
+  // pour toute donnée historique qui la référencerait encore.
   coiffure: 'beaute',
-  librairie: 'epicerie',
 }

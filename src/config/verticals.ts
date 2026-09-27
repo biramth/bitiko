@@ -5,9 +5,9 @@ export interface Vertical {
 }
 
 /**
- * Les 10 groupes d'activité — choisis à l'onboarding, modifiables ensuite
- * dans Réglages. Les clés correspondent aux slugs du référentiel
- * `business_types` (migration 0116) ; le fallback local (DB indisponible)
+ * Les groupes d'activité — choisis à l'onboarding, modifiables ensuite dans
+ * Réglages. Les clés correspondent aux slugs du référentiel `business_types`
+ * (migration 0116, + `librairie` en 0138) ; le fallback local (DB indisponible)
  * passe par `availableVerticals` dans storeTemplates.ts, qui ne retient que
  * les groupes ayant au moins un gabarit.
  */
@@ -22,6 +22,7 @@ export const VERTICALS: Vertical[] = [
   { key: 'epicerie_fine', label: 'Alimentation & Épicerie fine', description: 'Produits locaux, chocolaterie, épices, fruits et légumes, viande, poisson, artisanat gourmand.' },
   { key: 'fleurs_cadeaux', label: 'Fleurs & Cadeaux', description: 'Fleuriste, bouquets, cadeaux, coffrets, personnalisation, événementiel.' },
   { key: 'artisanat', label: 'Artisanat & Création', description: 'Poterie, maroquinerie, sculpture, peinture, objets faits main, créations personnalisées.' },
+  { key: 'librairie', label: 'Librairie & Papeterie', description: 'Livres, carnets, fournitures, presse, papeterie scolaire et de bureau.' },
 ]
 
 export const VERTICAL_BY_KEY: Record<string, Vertical> = Object.fromEntries(
