@@ -344,7 +344,7 @@ function AccountSection({ shop }: { shop: NonNullable<ReturnType<typeof useMySho
         </div>
       </Card>
 
-      <Dialog open={billingOpen} onClose={() => setBillingOpen(false)} title="Changer d'abonnement" size="lg">
+      <Dialog open={billingOpen} onClose={() => setBillingOpen(false)} title="Changer d'abonnement" size="xl">
         <BillingForShop shopId={shop.id} />
       </Dialog>
 

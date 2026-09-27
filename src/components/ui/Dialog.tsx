@@ -9,7 +9,7 @@ interface DialogProps {
   description?: string
   children?: React.ReactNode
   footer?: React.ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   titleClassName?: string
 }
 
@@ -74,7 +74,7 @@ export function Dialog({
   if (!open) return null
 
   const panelSize =
-    size === 'sm' ? 'max-w-sm' : size === 'md' ? 'max-w-lg' : 'max-w-2xl'
+    size === 'sm' ? 'max-w-sm' : size === 'md' ? 'max-w-lg' : size === 'lg' ? 'max-w-2xl' : 'max-w-4xl'
 
   return createPortal(
     <div
