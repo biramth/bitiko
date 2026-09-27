@@ -399,6 +399,9 @@ export interface CampaignEmailInput {
   buttonLabel?: string
   /** Target of the call-to-action button; empty falls back to the dashboard. */
   buttonUrl?: string
+  /** Lien de désabonnement signé (api/_lib/unsubscribeToken.ts) — calculé par
+   *  l'appelant, qui en a aussi besoin pour l'en-tête List-Unsubscribe. */
+  unsubscribeUrl: string
 }
 
 /**
@@ -415,6 +418,7 @@ export function campaignEmailHtml({
   ownerName,
   buttonLabel,
   buttonUrl,
+  unsubscribeUrl,
 }: CampaignEmailInput): string {
   const vars = { shopName, shopUrl, ownerName }
   const effectiveSubject = substituteCampaignVariables(subject, vars)
@@ -428,7 +432,7 @@ export function campaignEmailHtml({
     body: renderCampaignBody(body, vars),
     buttonLabel: escapeHtml(buttonLabel?.trim() || 'Ouvrir mon tableau de bord'),
     buttonUrl: escapeHtml(effectiveButtonUrl),
-    footnote: 'Tu reçois cet email car tu as une boutique sur Bitiko. Réponds directement à cet email pour toute question.',
+    footnote: `Tu reçois cet email car tu as une boutique sur Bitiko. Réponds directement à cet email pour toute question.<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:#9c3814;text-decoration:underline;">Se désabonner de ces emails</a>`,
   })
 }
 
