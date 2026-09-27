@@ -281,15 +281,15 @@ export function BillingForShop({ shopId }: { shopId: string }) {
               ) : (
                 <div className="mt-5 space-y-2">
                   {isTouchPrimary ? (
-                    <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
                       <CreditCard size={15} /> Payer avec Wave
                     </a>
                   ) : (
-                    <button type="button" onClick={() => setQrDialogPlan(key)} className={buttonClass({ size: 'lg', fullWidth: true })}>
+                    <button type="button" onClick={() => setQrDialogPlan(key)} className={buttonClass({ fullWidth: true })}>
                       <CreditCard size={15} /> Payer avec Wave
                     </button>
                   )}
-                  <button type="button" onClick={() => setProofPlan(key)} className={buttonClass({ variant: 'secondary', size: 'lg', fullWidth: true })}>
+                  <button type="button" onClick={() => setProofPlan(key)} className={buttonClass({ variant: 'secondary', fullWidth: true })}>
                     <CheckCircle2 size={14} />
                     Envoyer ma preuve de paiement
                   </button>
