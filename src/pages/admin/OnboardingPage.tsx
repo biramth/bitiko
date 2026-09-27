@@ -56,7 +56,7 @@ const fieldClass =
 
 /**
  * Création de la boutique : une fenêtre posée sur un aperçu du tableau de bord,
- * trois informations (nom, activité, WhatsApp). Tout le reste — gabarit, description,
+ * trois informations (nom, activité, WhatsApp). Tout le reste — template, description,
  * livraison, logo, profil — est déduit du métier ou se complète ensuite depuis
  * le tableau de bord.
  */
@@ -107,9 +107,9 @@ export function OnboardingPage() {
 
   const typeOptions = useBusinessTypeOptions()
 
-  // Gabarits et capacités compatibles avec l'activité choisie (pilotés par la base).
+  // Templates et capacités compatibles avec l'activité choisie (pilotés par la base).
   // Tant que le résultat ne correspond pas à l'activité courante, la création reste
-  // bloquée : sinon la boutique partirait avec le gabarit de repli.
+  // bloquée : sinon la boutique partirait avec le template de repli.
   const [compat, setCompat] = useState<{ type: string; slugs: string[] | null; caps: string[] | null } | null>(null)
 
   useEffect(() => {

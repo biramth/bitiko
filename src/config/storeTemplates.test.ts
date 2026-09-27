@@ -20,8 +20,8 @@ describe('business groups (10 groupes + librairie, 0138)', () => {
   })
 
   it('offers at least two templates per group', () => {
-    // Librairie (0138) démarre avec un seul gabarit dédié — d'autres pourront
-    // s'ajouter plus tard (activité ≠ gabarit), ce n'est pas encore le cas.
+    // Librairie (0138) démarre avec un seul template dédié — d'autres pourront
+    // s'ajouter plus tard (activité ≠ template), ce n'est pas encore le cas.
     for (const vertical of availableVerticals().filter((v) => v.key !== 'librairie')) {
       const templates = templatesForVertical(vertical.key)
       expect(templates.length, vertical.key).toBeGreaterThanOrEqual(2)
@@ -59,7 +59,7 @@ describe('business groups (10 groupes + librairie, 0138)', () => {
   })
 })
 
-describe('gabarit hybride Beauté', () => {
+describe('template hybride Beauté', () => {
   const types = STORE_TEMPLATE_BY_KEY['beaute']!.layout.home.map((section) => section.type)
 
   it('réunit prestations, rendez-vous et boutique', () => {
@@ -72,7 +72,7 @@ describe('gabarit hybride Beauté', () => {
   })
 })
 
-describe('gabarits restauration', () => {
+describe('templates restauration', () => {
   for (const key of ['restauration', 'bistrot']) {
     const home = STORE_TEMPLATE_BY_KEY[key]!.layout.home.map((section) => section.type)
 
@@ -83,7 +83,7 @@ describe('gabarits restauration', () => {
   }
 })
 
-describe('gabarits salon', () => {
+describe('templates salon', () => {
   for (const key of ['coiffure', 'barber', 'institut', 'onglerie']) {
     const template = STORE_TEMPLATE_BY_KEY[key]!
 
@@ -96,7 +96,7 @@ describe('gabarits salon', () => {
   }
 })
 
-describe('tous les gabarits', () => {
+describe('tous les templates', () => {
   for (const template of Object.values(STORE_TEMPLATE_BY_KEY)) {
     const home = template.layout.home.map((section) => section.type)
 

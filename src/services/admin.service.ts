@@ -154,7 +154,7 @@ export async function saveBusinessTypeCapabilities(typeId: string, codes: string
   if (!res.ok) throw new Error(body.error ?? 'Impossible d’enregistrer les capabilities.')}
 
 // ---------------------------------------------------------------------------
-// Catalogue gabarits : templates + compatibilités (owner/admin plateforme).
+// Catalogue templates : templates + compatibilités (owner/admin plateforme).
 // ---------------------------------------------------------------------------
 
 export interface AdminTemplate {
@@ -164,7 +164,7 @@ export interface AdminTemplate {
   description: string | null
   status: 'active' | 'deprecated' | 'draft'
   content: Record<string, unknown> | null
-  /** Activité à laquelle ce gabarit appartient à l'origine (0138) ; null = purement partagé. */
+  /** Activité à laquelle ce template appartient à l'origine (0138) ; null = purement partagé. */
   owner_business_type_id: string | null
   updated_at: string
   shops: number

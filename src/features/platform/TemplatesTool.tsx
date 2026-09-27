@@ -38,7 +38,7 @@ function contentOf(template: AdminTemplate): string {
   )
 }
 
-/** Catalogue des gabarits (admin plateforme) : identité, compatibilités types
+/** Catalogue des templates (admin plateforme) : identité, compatibilités types
  *  et surcharge de contenu sans déploiement. Owner/admin only, serveur. */
 export function TemplatesTool() {
   const toast = useToast()
@@ -153,7 +153,7 @@ export function TemplatesTool() {
       }
     }
     // Nouveau slug sans entrée code : le contenu doit être complet (vertical,
-    // thème, layout), sinon le gabarit resterait invisible des pickers.
+    // thème, layout), sinon le template resterait invisible des pickers.
     if ((creating || !STORE_TEMPLATE_BY_KEY[form.slug]) && parsed !== null) {
       const errors = validateTemplateContent(parsed)
       const t = parsed as Record<string, unknown>

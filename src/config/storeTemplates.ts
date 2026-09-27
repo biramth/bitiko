@@ -183,8 +183,8 @@ const baseTheme = (overrides: Partial<ThemeConfig>): ThemeConfig => ({
   ...overrides,
 })
 
-/** Les gabarits prêts à l'emploi d'une boutique : quatre genres commerce
- *  (mode, épicerie, beauté, high-tech) plus deux gabarits service (coiffure,
+/** Les templates prêts à l'emploi d'une boutique : quatre genres commerce
+ *  (mode, épicerie, beauté, high-tech) plus deux templates service (coiffure,
  *  restaurant). Chaque home porte des textes écrits pour son métier, pour
  *  qu'une boutique fraîchement créée ressemble d'emblée à un vrai commerce. */
 export const STORE_TEMPLATES: StoreTemplate[] = [
@@ -259,7 +259,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#be185d', '#fdf2f8'],
     themeColor: '#be185d',
     themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
-    // Gabarit hybride : le type « Beauté & Bien-être » porte à la fois les
+    // Template hybride : le type « Beauté & Bien-être » porte à la fois les
     // prestations (rendez-vous, équipe) et la vente de produits. Chaque section
     // s'efface d'elle-même si la boutique n'a pas la capability correspondante.
     layout: {
@@ -978,7 +978,7 @@ export function availableVerticals(): Vertical[] {
 }
 
 /** Business-type slugs (DB referential, voir migration 0116) résolus vers le
- *  vertical de leurs gabarits. La plupart des slugs sont déjà des verticals ;
+ *  vertical de leurs templates. La plupart des slugs sont déjà des verticals ;
  *  seuls les types historiques hors des 10 groupes ont besoin d'un alias. */
 const BUSINESS_TYPE_VERTICAL: Record<string, string> = {
   food_services: 'epicerie',

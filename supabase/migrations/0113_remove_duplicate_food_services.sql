@@ -25,7 +25,7 @@ BEGIN
   UPDATE public.shops SET business_type_id = resto_id WHERE business_type_id = food_id;
   UPDATE public.shops SET business_type = 'restauration' WHERE business_type = 'food_services';
 
-  -- 2. Mappings gabarits et capabilities de food_services.
+  -- 2. Mappings templates et capabilities de food_services.
   DELETE FROM public.template_business_types WHERE business_type_id = food_id;
   DELETE FROM public.business_type_capabilities WHERE business_type_id = food_id;
 

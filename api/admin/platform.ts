@@ -1419,8 +1419,8 @@ async function handleBizTypeCapabilities(req: VercelRequest, res: VercelResponse
 }
 
 // ---------------------------------------------------------------------------
-// Catalogue gabarits : templates + compatibilités types, owner/admin only.
-// `content` (jsonb) surcharge le gabarit code sans déploiement ; NULL = le
+// Catalogue templates : templates + compatibilités types, owner/admin only.
+// `content` (jsonb) surcharge le template code sans déploiement ; NULL = le
 // code fait foi. Slugs immuables, retrait via status=deprecated.
 // ---------------------------------------------------------------------------
 
@@ -1459,8 +1459,8 @@ async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
       .from('template_business_types')
       .select('template_id, business_type_id')
     if (mapError) throw mapError
-    // Boutiques utilisant chaque gabarit (template_id) : la suppression est
-    // refusée tant qu'un gabarit est en usage.
+    // Boutiques utilisant chaque template (template_id) : la suppression est
+    // refusée tant qu'un template est en usage.
     const { data: shopRows, error: shopsError } = await admin.from('shops').select('template_id')
     if (shopsError) throw shopsError
     const shopsByTemplate = new Map<string, number>()
@@ -1692,7 +1692,7 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
       res.status(404).json({ error: 'Template introuvable.' })
       return
     }
-    // Garde-fou : un gabarit utilisé par des boutiques ne se supprime pas —
+    // Garde-fou : un template utilisé par des boutiques ne se supprime pas —
     // il se déprécie (les vitrines existantes continuent de fonctionner).
     const { count, error: countError } = await admin
       .from('shops')

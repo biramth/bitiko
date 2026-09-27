@@ -9,7 +9,7 @@ export interface Vertical {
  * Réglages. Les clés correspondent aux slugs du référentiel `business_types`
  * (migration 0116, + `librairie` en 0138) ; le fallback local (DB indisponible)
  * passe par `availableVerticals` dans storeTemplates.ts, qui ne retient que
- * les groupes ayant au moins un gabarit.
+ * les groupes ayant au moins un template.
  */
 export const VERTICALS: Vertical[] = [
   { key: 'restauration', label: 'Restauration', description: 'Restaurant, traiteur, fast-food, snack, pâtisserie, boulangerie, café, food truck, livraison de repas.' },

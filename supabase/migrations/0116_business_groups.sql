@@ -112,7 +112,7 @@ on conflict (slug) do nothing;
 delete from public.template_business_types
 where business_type_id in (select id from public.business_types where slug in ('coiffure', 'librairie'));
 
--- Compatibilité groupe → template (le front choisit le gabarit exact en premier).
+-- Compatibilité groupe → template (le front choisit le template exact en premier).
 insert into public.template_business_types (template_id, business_type_id)
 select t.id, b.id
 from public.templates t

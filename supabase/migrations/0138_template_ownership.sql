@@ -1,28 +1,28 @@
 -- 0138_template_ownership.sql
 --
--- Dichotomie activité/gabarit (suite) : un gabarit peut être partagé entre plusieurs
+-- Dichotomie activité/template (suite) : un template peut être partagé entre plusieurs
 -- activités (`template_business_types`, inchangé), mais chaque activité doit avoir au
--- moins un gabarit qui lui appartient en propre.
+-- moins un template qui lui appartient en propre.
 --
--- 1. `templates.owner_business_type_id` : à quelle activité ce gabarit appartient
---    à l'origine. Nullable — un gabarit purement partagé peut rester sans propriétaire ;
---    l'outil admin (Plateforme → Gabarits) signale alors les activités actives qui n'en
+-- 1. `templates.owner_business_type_id` : à quelle activité ce template appartient
+--    à l'origine. Nullable — un template purement partagé peut rester sans propriétaire ;
+--    l'outil admin (Plateforme → Templates) signale alors les activités actives qui n'en
 --    possèdent aucun, sans rien bloquer.
 --
--- 2. Backfill sans ambiguïté : les 9 gabarits dont le slug est identique à celui de
+-- 2. Backfill sans ambiguïté : les 9 templates dont le slug est identique à celui de
 --    l'activité qu'ils servaient à l'origine (mode, épicerie, beauté, tech,
 --    cosmétiques, épicerie fine, fleurs & cadeaux, artisanat, restauration).
---    `deco` reste volontairement sans propriétaire (3 gabarits compatibles — maison,
+--    `deco` reste volontairement sans propriétaire (3 templates compatibles — maison,
 --    mode, scandi — aucun ne porte son nom) : à l'équipe de trancher via l'outil admin.
 --
 -- 3. Coiffure & Librairie : à la réorganisation en 10 groupes (0116), les deux ont
---    perdu toute compatibilité de gabarit et ont disparu du picker d'onboarding
+--    perdu toute compatibilité de template et ont disparu du picker d'onboarding
 --    (aucune boutique n'utilise l'un ou l'autre aujourd'hui — vérifié en prod).
 --      - Coiffure double « Beauté & Bien-être » (dont la description couvre déjà
 --        coiffure/barber) : passe en status='deprecated', reste en base pour toute
 --        donnée historique qui la référencerait.
 --      - Librairie est une activité à part entière (aucun des 10 groupes ne la
---        couvre) : redevient un groupe pickable, avec son propre gabarit dédié
+--        couvre) : redevient un groupe pickable, avec son propre template dédié
 --        (contenu dans src/config/storeTemplates.ts, vertical 'librairie').
 --        Ses capacités (0112 : HAS_SHOP/HAS_PRODUCTS/HAS_ORDERS/HAS_DELIVERY…)
 --        n'ont pas bougé et restent adaptées.
@@ -35,7 +35,7 @@ alter table public.templates
 create index if not exists templates_owner_business_type_idx
   on public.templates (owner_business_type_id);
 
--- 2. Backfill des paires sans ambiguïté (slug de gabarit = slug d'activité).
+-- 2. Backfill des paires sans ambiguïté (slug de template = slug d'activité).
 update public.templates t
 set owner_business_type_id = b.id
 from public.business_types b
@@ -48,7 +48,7 @@ update public.business_types
 set status = 'deprecated'
 where slug = 'coiffure' and status <> 'deprecated';
 
--- 3b. Librairie : activité à part entière, redevient pickable avec son propre gabarit.
+-- 3b. Librairie : activité à part entière, redevient pickable avec son propre template.
 insert into public.templates (slug, name, description) values
   ('librairie', 'Librairie', 'Vitrine chaleureuse pour librairie, papeterie ou point presse.')
 on conflict (slug) do nothing;

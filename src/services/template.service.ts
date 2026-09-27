@@ -63,8 +63,8 @@ export function resolvePickerTemplates(
 }
 
 // ── Contenu piloté par données (sans déploiement) ──────────────────────────
-// `templates.content` (édité depuis l'admin plateforme) surcharge le gabarit
-// code de même slug, ou ajoute un gabarit 100 % base s'il porte un vertical.
+// `templates.content` (édité depuis l'admin plateforme) surcharge le template
+// code de même slug, ou ajoute un template 100 % base s'il porte un vertical.
 // Tout le reste (compatibilités, statuts) continue de passer par le catalogue.
 
 export interface DbTemplateRow {
@@ -92,7 +92,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
-/** Valide un contenu de gabarit (éditeur admin, scaffolder, seed). Retourne
+/** Valide un contenu de template (éditeur admin, scaffolder, seed). Retourne
  *  la liste des erreurs — vide = valide. Pure — unit-testée. */
 export function validateTemplateContent(input: unknown): string[] {
   const errors: string[] = []
@@ -172,7 +172,7 @@ export async function fetchTemplateContents(): Promise<DbTemplateRow[]> {
   return (data ?? []) as DbTemplateRow[]
 }
 
-/** Fusionne code + base : surcharge les slugs connus, ajoute les gabarits
+/** Fusionne code + base : surcharge les slugs connus, ajoute les templates
  *  100 % base portant un vertical. Pure — unit-testée. */
 export function mergeDbTemplates(
   code: StoreTemplate[],
@@ -182,7 +182,7 @@ export function mergeDbTemplates(
   const merged = code.map((template) => {
     const row = rows.find((r) => r.slug === template.key)
     if (!row?.content) return template
-    // Contenu invalide = on garde le gabarit code (fail-open, jamais de
+    // Contenu invalide = on garde le template code (fail-open, jamais de
     // frontstore cassé par une édition admin).
     if (validateTemplateContent(row.content).length > 0) return template
     const { vertical: _vertical, ...content } = row.content
