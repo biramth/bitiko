@@ -18,7 +18,7 @@ import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { automatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { loadUserDirectory, runCampaignSend } from '../_lib/campaignSend.js'
-import { isPostHogConfigured, runHogQL } from '../_lib/posthogQuery.js'
+import { currentEnvironment, isPostHogConfigured, runHogQL } from '../_lib/posthogQuery.js'
 import { getAutomatedEmail, AUTOMATED_EMAIL_KEYS } from '../_lib/automatedEmails.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
@@ -2214,6 +2214,12 @@ async function handleAnalyticsPostHog(req: VercelRequest, res: VercelResponse) {
       views: number
     }
 
+    // Un seul projet PostHog partagé entre `develop` (Preview) et `main`
+    // (Production) — voir AGENTS.md. Les évènements sont taggés `environment`
+    // côté client (src/lib/posthog.ts) ; on filtre dessus ici pour que le
+    // panneau ne mélange jamais le trafic de test et le trafic réel.
+    const env = currentEnvironment()
+
     const [funnelRows, topEvents, topAdminPages] = await Promise.all([
       // Comptes distincts ayant déclenché chaque évènement sur 30 jours — un
       // proxy simple de l'entonnoir (pas un enchaînement ordonné strict).
@@ -2225,11 +2231,13 @@ async function handleAnalyticsPostHog(req: VercelRequest, res: VercelResponse) {
           uniqIf(person_id, event in ('product_created', 'service_created')) as first_item
         from events
         where timestamp > now() - interval 30 day
+          and properties.environment = '${env}'
       `),
       runHogQL<EventRow>(`
         select event, count() as n
         from events
         where timestamp > now() - interval 7 day
+          and properties.environment = '${env}'
           and event not in ('$pageview', '$pageleave', '$autocapture', '$identify', '$feature_flag_called', '$web_vitals', '$set')
         group by event
         order by n desc
@@ -2242,6 +2250,7 @@ async function handleAnalyticsPostHog(req: VercelRequest, res: VercelResponse) {
         from events
         where event = '$pageview'
           and timestamp > now() - interval 7 day
+          and properties.environment = '${env}'
           and properties.$pathname like '/admin%'
         group by path
         order by views desc

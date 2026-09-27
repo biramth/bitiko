@@ -12,6 +12,13 @@ import posthog from 'posthog-js'
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined
 const POSTHOG_HOST = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://eu.i.posthog.com'
 
+// Un seul projet PostHog partagé entre `develop` (Preview Vercel) et `main`
+// (Production) — voir src/lib/tenant.ts pour VITE_VERCEL_ENV, injecté au build
+// par vite.config.ts depuis la variable Vercel du même nom. Cette propriété
+// distingue le trafic des deux environnements dans les insights/HogQL
+// (`properties.environment = 'prod'`) sans dupliquer projet ni dashboards.
+const ENVIRONMENT = import.meta.env.VITE_VERCEL_ENV === 'production' ? 'prod' : 'dev'
+
 declare global {
   interface Window {
     posthogCapture?: (name: string, params?: Record<string, unknown>) => void
@@ -39,6 +46,7 @@ export function initPostHog(): void {
     disable_session_recording: true,
     capture_heatmaps: false,
   })
+  posthog.register({ environment: ENVIRONMENT })
   window.posthogCapture = (name, params) => posthog.capture(name, params)
   initialized = true
 }

@@ -16,6 +16,14 @@ export function isPostHogConfigured(): boolean {
   return !!API_KEY && !!PROJECT_ID
 }
 
+/** 'prod' sur la Production Vercel, 'dev' partout ailleurs (Preview, local) — un
+ *  seul projet PostHog partagé entre `main` et `develop` (voir AGENTS.md), les
+ *  évènements sont taggés `environment` côté client (src/lib/posthog.ts) et les
+ *  requêtes HogQL filtrent dessus pour ne jamais mélanger les deux trafics. */
+export function currentEnvironment(): 'prod' | 'dev' {
+  return process.env.VERCEL_ENV === 'production' ? 'prod' : 'dev'
+}
+
 /** Exécute une requête HogQL et renvoie les lignes sous forme d'objets {colonne: valeur}. */
 export async function runHogQL<T = Record<string, unknown>>(query: string): Promise<T[]> {
   if (!API_KEY || !PROJECT_ID) {
