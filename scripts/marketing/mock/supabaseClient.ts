@@ -152,7 +152,7 @@ monthly.forEach((m, i) => {
 const tables: Record<string, unknown[]> = {
   finance_entries: financeEntries,
   shop_subscriptions: plan === 'free' ? [] : [{ shop_id: shopId, plan, status: 'active', current_period_end: iso(new Date(Date.now() + 20 * 86400000)), updated_at: iso(now) }],
-  shops: [shop],
+  shops: profile === 'noshop' ? [] : [shop],
   services: isShop ? [] : services,
   team_members: isShop ? [] : team,
   appointments: isShop ? [] : appointments,
@@ -269,7 +269,7 @@ export const supabase = {
   },
   from: (t: string) => makeQuery(t),
   rpc: async (name: string, args: Record<string, string>) => {
-    if (name === 'get_platform_role') return { data: 'owner', error: null }
+    if (name === 'get_platform_role') return { data: profile === 'noshop' ? null : 'owner', error: null }
     if (name === 'get_platform_shops') return { data: platformShops(), error: null }
     if (name === 'get_platform_stats') {
       const day = 86400000
