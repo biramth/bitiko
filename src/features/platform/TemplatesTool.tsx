@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { LayoutTemplate, Plus, Trash2 } from 'lucide-react'
+import { Eye, LayoutTemplate, Plus, Star, Trash2 } from 'lucide-react'
+import { Dialog } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -14,6 +15,9 @@ import {
 } from '@/services/admin.service'
 import { STORE_TEMPLATE_BY_KEY, STORE_TEMPLATES } from '@/config/storeTemplates'
 import { validateTemplateContent } from '@/services/template.service'
+import { TemplateContentPreview, type Section } from './TemplateContentPreview'
+import { DEFAULT_THEME_CONFIG } from '@/config/themeTokens'
+import type { ThemeConfig } from '@/types/builder'
 import { buttonClass } from '@/components/ui/styles'
 
 const STATUSES = ['active', 'deprecated', 'draft'] as const
@@ -22,6 +26,10 @@ const STATUS_LABEL: Record<string, string> = {
   active: 'Actif',
   deprecated: 'Déprécié',
   draft: 'Brouillon',
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
 const inputClass =
@@ -38,7 +46,7 @@ function contentOf(template: AdminTemplate): string {
   )
 }
 
-/** Catalogue des gabarits (admin plateforme) : identité, compatibilités types
+/** Catalogue des templates (admin plateforme) : identité, compatibilités types
  *  et surcharge de contenu sans déploiement. Owner/admin only, serveur. */
 export function TemplatesTool() {
   const toast = useToast()
@@ -53,8 +61,10 @@ export function TemplatesTool() {
   const [form, setForm] = useState({ slug: '', name: '', description: '', status: 'active' })
   const [contentText, setContentText] = useState('')
   const [checkedTypes, setCheckedTypes] = useState<string[]>([])
+  const [ownerBusinessTypeId, setOwnerBusinessTypeId] = useState('')
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
   const [duplicateFrom, setDuplicateFrom] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const reload = async () => {
     setLoading(true)
@@ -80,6 +90,7 @@ export function TemplatesTool() {
     setContentText(contentOf(selected))
     setValidationErrors(null)
     setCheckedTypes(catalog.mappings.filter((m) => m.template_id === selected.id).map((m) => m.business_type_id))
+    setOwnerBusinessTypeId(selected.owner_business_type_id ?? '')
   }, [selectedId, catalog]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startCreate = () => {
@@ -88,6 +99,7 @@ export function TemplatesTool() {
     setForm({ slug: '', name: '', description: '', status: 'draft' })
     setContentText('')
     setCheckedTypes([])
+    setOwnerBusinessTypeId('')
     setValidationErrors(null)
     setDuplicateFrom('')
   }
@@ -101,6 +113,20 @@ export function TemplatesTool() {
     }
   }
 
+  // Un nouveau slug sans entrée code doit être complet (vertical, thème, layout),
+  // sinon le template resterait invisible des pickers — appliqué par « Valider »
+  // ET par « Enregistrer », qui affichaient auparavant deux règles différentes.
+  const isNewSlug = creating || !STORE_TEMPLATE_BY_KEY[form.slug]
+  const checkContent = (parsed: Record<string, unknown> | null): string[] => {
+    if (parsed === null) return []
+    const errors = validateTemplateContent(parsed)
+    if (!isNewSlug) return errors
+    const missing: string[] = []
+    if (!parsed.themeColor || !parsed.themeConfig || !parsed.layout) missing.push('themeColor, themeConfig et layout sont requis pour un nouveau template.')
+    if (!parsed.vertical) missing.push('vertical est requis pour un nouveau template.')
+    return [...missing, ...errors]
+  }
+
   const handleValidate = () => {
     const parsed = parseContent()
     if (parsed === undefined) {
@@ -109,26 +135,35 @@ export function TemplatesTool() {
     }
     if (parsed === null) {
       setValidationErrors([])
-      toast.success('Aucune surcharge : le gabarit code fera foi.')
+      toast.success('Aucune surcharge : le template code fera foi.')
       return
     }
-    const errors = validateTemplateContent(parsed)
+    const errors = checkContent(parsed)
     setValidationErrors(errors)
     if (errors.length === 0) toast.success('Contenu valide.')
   }
 
   const handleDuplicate = () => {
-    const source = STORE_TEMPLATE_BY_KEY[duplicateFrom]
-    if (!source) return
+    // La liste couvre les deux origines : gabarits du code (STORE_TEMPLATES) et
+    // gabarits créés uniquement en base par un·e collègue (catalog.templates.content).
+    const dbSource = catalog?.templates.find((t) => t.slug === duplicateFrom && t.content)
+    const codeSource = STORE_TEMPLATE_BY_KEY[duplicateFrom]
+    if (dbSource?.content) {
+      setContentText(JSON.stringify(dbSource.content, null, 2))
+      setValidationErrors(null)
+      toast.success(`Contenu dupliqué depuis « ${dbSource.name} » — adapte puis enregistre.`)
+      return
+    }
+    if (!codeSource) return
     setContentText(
       JSON.stringify(
-        { themeColor: source.themeColor, themeConfig: source.themeConfig, layout: source.layout, variants: source.variants ?? [] },
+        { themeColor: codeSource.themeColor, themeConfig: codeSource.themeConfig, layout: codeSource.layout, variants: codeSource.variants ?? [] },
         null,
         2,
       ),
     )
     setValidationErrors(null)
-    toast.success(`Contenu dupliqué depuis « ${source.label} » — adapte puis enregistre.`)
+    toast.success(`Contenu dupliqué depuis « ${codeSource.label} » — adapte puis enregistre.`)
   }
 
   const handleSave = async () => {
@@ -141,27 +176,11 @@ export function TemplatesTool() {
       toast.error('Le nom est requis.')
       return
     }
-    if (parsed !== null) {
-      const errors = validateTemplateContent(parsed)
+    const errors = checkContent(parsed)
+    if (errors.length > 0) {
       setValidationErrors(errors)
-      if (errors.length > 0) {
-        toast.error('Contenu invalide — corrige avant d’enregistrer.')
-        return
-      }
-    }
-    // Nouveau slug sans entrée code : le contenu doit être complet (vertical,
-    // thème, layout), sinon le gabarit resterait invisible des pickers.
-    if ((creating || !STORE_TEMPLATE_BY_KEY[form.slug]) && parsed !== null) {
-      const errors = validateTemplateContent(parsed)
-      const t = parsed as Record<string, unknown>
-      const missing: string[] = []
-      if (!t.themeColor || !t.themeConfig || !t.layout) missing.push('themeColor, themeConfig et layout sont requis pour un nouveau gabarit.')
-      if (!t.vertical) missing.push('vertical est requis pour un nouveau gabarit.')
-      if (missing.length > 0 || errors.length > 0) {
-        setValidationErrors([...missing, ...errors])
-        toast.error('Contenu incomplet pour un nouveau gabarit.')
-        return
-      }
+      toast.error('Contenu invalide — corrige avant d’enregistrer.')
+      return
     }
     setSaving(true)
     try {
@@ -172,10 +191,11 @@ export function TemplatesTool() {
         description: form.description.trim() || null,
         status: form.status,
         content: parsed,
+        ownerBusinessTypeId: ownerBusinessTypeId || null,
         create: creating,
       })
       await saveTemplateCompat(templateId || selected?.id || '', checkedTypes)
-      toast.success('Gabarit enregistré.')
+      toast.success('Template enregistré.')
       setCreating(false)
       await reload()
     } catch (e) {
@@ -190,7 +210,7 @@ export function TemplatesTool() {
     setDeleting(true)
     try {
       await deleteTemplate(deleteTarget.id)
-      toast.success('Gabarit supprimé.')
+      toast.success('Template supprimé.')
       setDeleteTarget(null)
       if (selectedId === deleteTarget.id) setSelectedId(null)
       await reload()
@@ -204,15 +224,24 @@ export function TemplatesTool() {
   if (loading) return <Spinner />
   if (!catalog) return <EmptyState icon={LayoutTemplate} title="Catalogue inaccessible" />
 
+  const ownedTypeIds = new Set(catalog.templates.map((t) => t.owner_business_type_id).filter((id): id is string => !!id))
+  const typesWithoutOwnedTemplate = catalog.types.filter((type) => !ownedTypeIds.has(type.id))
+
   return (
     <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
       <div>
+        {typesWithoutOwnedTemplate.length > 0 && (
+          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="font-medium">Aucun template propre :</p>
+            <p className="mt-0.5">{typesWithoutOwnedTemplate.map((t) => t.name).join(', ')}</p>
+          </div>
+        )}
         <button
           type="button"
           onClick={startCreate}
           className="mb-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
-          <Plus size={15} aria-hidden /> Nouveau gabarit
+          <Plus size={15} aria-hidden /> Nouveau template
         </button>
         <ul className="space-y-1">
           {catalog.templates.map((template) => (
@@ -236,6 +265,12 @@ export function TemplatesTool() {
                     {template.content ? ' · surcharge' : ''}
                     {template.shops > 0 ? ` · ${template.shops} boutique(s)` : ''}
                   </span>
+                  {template.owner_business_type_id && (
+                    <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-brand-600">
+                      <Star size={10} aria-hidden fill="currentColor" />
+                      {catalog.types.find((t) => t.id === template.owner_business_type_id)?.name ?? 'Propre'}
+                    </span>
+                  )}
                 </span>
               </button>
               <button
@@ -254,9 +289,16 @@ export function TemplatesTool() {
 
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         {!selected && !creating ? (
-          <p className="text-sm text-gray-500">Sélectionne un gabarit ou crée-en un nouveau.</p>
+          <p className="text-sm text-gray-500">Sélectionne un template ou crée-en un nouveau.</p>
         ) : (
           <div className="space-y-4">
+            {creating && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Pour un vrai nouveau style, le chemin code (<code className="font-mono">npm run template:new</code>, voir
+                docs/templates.md) reste le plus sûr — testé, revu, versionné. Ce formulaire sert aux ajustements urgents ou
+                expérimentaux, sans déploiement.
+              </p>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="template-slug" className="block text-sm font-medium text-gray-700">Slug (immuable)</label>
@@ -265,7 +307,7 @@ export function TemplatesTool() {
                   value={form.slug}
                   disabled={!creating}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="mon-gabarit → lettres, chiffres, _"
+                  placeholder="mon-template → lettres, chiffres, _"
                   className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
                 />
               </div>
@@ -303,6 +345,33 @@ export function TemplatesTool() {
             </div>
 
             <div>
+              <label htmlFor="template-owner" className="block text-sm font-medium text-gray-700">
+                Propriétaire (activité d’origine)
+              </label>
+              <select
+                id="template-owner"
+                value={ownerBusinessTypeId}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setOwnerBusinessTypeId(id)
+                  // Un propriétaire non coché dans les compatibilités resterait invisible
+                  // du picker de cette activité — on l'ajoute, modifiable ensuite.
+                  if (id) setCheckedTypes((prev) => (prev.includes(id) ? prev : [...prev, id]))
+                }}
+                className={inputClass}
+              >
+                <option value="">Aucun (template partagé)</option>
+                {catalog.types.map((type) => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-400">
+                L’activité à laquelle ce template appartient à l’origine. Une activité doit toujours posséder au moins un
+                template propre — les autres restent des compatibilités partagées ci-dessous.
+              </p>
+            </div>
+
+            <div>
               <span className="block text-sm font-medium text-gray-700">Types d’activité compatibles</span>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {catalog.types.map((type) => {
@@ -328,7 +397,7 @@ export function TemplatesTool() {
             <div>
               <div className="flex items-center justify-between gap-2">
                 <label htmlFor="template-content" className="block text-sm font-medium text-gray-700">
-                  Contenu JSON (vide = gabarit code)
+                  Contenu JSON (vide = template code)
                 </label>
                 <div className="flex items-center gap-2">
                   <select
@@ -341,6 +410,11 @@ export function TemplatesTool() {
                     {STORE_TEMPLATES.map((t) => (
                       <option key={t.key} value={t.key}>{t.label}</option>
                     ))}
+                    {(catalog?.templates ?? [])
+                      .filter((t) => t.content && !STORE_TEMPLATE_BY_KEY[t.slug])
+                      .map((t) => (
+                        <option key={t.id} value={t.slug}>{t.name} (base)</option>
+                      ))}
                   </select>
                   <button
                     type="button"
@@ -356,6 +430,13 @@ export function TemplatesTool() {
                     className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Valider
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    <Eye size={12} aria-hidden /> Aperçu
                   </button>
                 </div>
               </div>
@@ -397,14 +478,44 @@ export function TemplatesTool() {
         )}
       </div>
 
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title="Aperçu"
+        description="Statique : couleurs, ordre des blocs et textes réels ; les sections à données (produits, équipe…) sont génériques."
+        size="lg"
+      >
+        {(() => {
+          const parsed = parseContent()
+          if (parsed === undefined) return <p className="text-sm text-red-600">JSON invalide — corrige-le avant l’aperçu.</p>
+          const base = STORE_TEMPLATE_BY_KEY[form.slug]
+          const effective = base
+            ? { themeColor: base.themeColor, themeConfig: base.themeConfig, layout: base.layout, ...(parsed ?? {}) }
+            : parsed
+          if (!effective || !effective.layout || !isRecord(effective.layout) || !Array.isArray((effective.layout as Record<string, unknown>).home)) {
+            return <p className="text-sm text-gray-500">Rien à prévisualiser : ajoute au moins themeColor, themeConfig et layout.home.</p>
+          }
+          const layout = effective.layout as { home: Section[] }
+          return (
+            <TemplateContentPreview
+              themeColor={(effective.themeColor as string) ?? '#d9612e'}
+              themeConfig={(effective.themeConfig as ThemeConfig) ?? DEFAULT_THEME_CONFIG}
+              home={layout.home}
+            />
+          )
+        })()}
+      </Dialog>
+
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Supprimer ce gabarit ?"
+        title="Supprimer ce template ?"
         description={
           deleteTarget
             ? deleteTarget.shops > 0
               ? `« ${deleteTarget.name} » est utilisé par ${deleteTarget.shops} boutique(s) : suppression refusée. Passe-le en déprécié pour le retirer des pickers sans casser les vitrines.`
-              : `« ${deleteTarget.name} » (${deleteTarget.slug}) sera définitivement supprimé du catalogue, avec ses compatibilités. Les vitrines existantes n’en dépendent pas.`
+              : deleteTarget.owner_business_type_id
+                ? `« ${deleteTarget.name} » (${deleteTarget.slug}) sera définitivement supprimé, avec ses compatibilités — et c'est le template propre de « ${catalog.types.find((t) => t.id === deleteTarget.owner_business_type_id)?.name ?? '?'} », qui réapparaîtra donc dans l'alerte « aucun template propre ».`
+                : `« ${deleteTarget.name} » (${deleteTarget.slug}) sera définitivement supprimé du catalogue, avec ses compatibilités. Les vitrines existantes n’en dépendent pas.`
             : undefined
         }
         confirmLabel={deleteTarget && deleteTarget.shops > 0 ? 'Compris' : 'Supprimer'}

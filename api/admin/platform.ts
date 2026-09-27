@@ -18,6 +18,7 @@ import { logAdminAudit } from '../_lib/auditLog.js'
 import { sendEmail } from '../_lib/resendEmail.js'
 import { automatedEmailHtml, teamWelcomeEmailHtml } from '../_lib/emailTemplates.js'
 import { loadUserDirectory, runCampaignSend } from '../_lib/campaignSend.js'
+import { currentEnvironment, isPostHogConfigured, runHogQL } from '../_lib/posthogQuery.js'
 import { getAutomatedEmail, AUTOMATED_EMAIL_KEYS } from '../_lib/automatedEmails.js'
 import { can } from '../../src/features/platform/permissions.js'
 import { PLANS } from '../../src/config/plans.js'
@@ -114,6 +115,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleTemplateCompat(req, res)
     case 'template-delete':
       return handleTemplateDelete(req, res)
+    case 'analytics-posthog':
+      return handleAnalyticsPostHog(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -1419,8 +1422,8 @@ async function handleBizTypeCapabilities(req: VercelRequest, res: VercelResponse
 }
 
 // ---------------------------------------------------------------------------
-// Catalogue gabarits : templates + compatibilités types, owner/admin only.
-// `content` (jsonb) surcharge le gabarit code sans déploiement ; NULL = le
+// Catalogue templates : templates + compatibilités types, owner/admin only.
+// `content` (jsonb) surcharge le template code sans déploiement ; NULL = le
 // code fait foi. Slugs immuables, retrait via status=deprecated.
 // ---------------------------------------------------------------------------
 
@@ -1430,7 +1433,7 @@ async function requireCatalogMember(req: VercelRequest, res: VercelResponse): Pr
   const member = await requireMember(req, res)
   if (!member) return null
   if (!canManageCatalog(member.role)) {
-    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue gabarits.' })
+    res.status(403).json({ error: 'Seuls les propriétaires et administrateurs gèrent le catalogue templates.' })
     return null
   }
   return member
@@ -1446,7 +1449,7 @@ async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
     const admin = getSupabaseAdmin()
     const { data: templates, error: templatesError } = await admin
       .from('templates')
-      .select('id, slug, name, description, status, content, updated_at')
+      .select('id, slug, name, description, status, content, owner_business_type_id, updated_at')
       .order('slug')
     if (templatesError) throw templatesError
     const { data: types, error: typesError } = await admin
@@ -1459,8 +1462,8 @@ async function handleTemplateList(req: VercelRequest, res: VercelResponse) {
       .from('template_business_types')
       .select('template_id, business_type_id')
     if (mapError) throw mapError
-    // Boutiques utilisant chaque gabarit (template_id) : la suppression est
-    // refusée tant qu'un gabarit est en usage.
+    // Boutiques utilisant chaque template (template_id) : la suppression est
+    // refusée tant qu'un template est en usage.
     const { data: shopRows, error: shopsError } = await admin.from('shops').select('template_id')
     if (shopsError) throw shopsError
     const shopsByTemplate = new Map<string, number>()
@@ -1491,13 +1494,14 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
   try {
     const member = await requireCatalogMember(req, res)
     if (!member) return
-    const { id, slug, name, description, status, content, create } = (req.body ?? {}) as {
+    const { id, slug, name, description, status, content, ownerBusinessTypeId, create } = (req.body ?? {}) as {
       id?: unknown
       slug?: unknown
       name?: unknown
       description?: unknown
       status?: unknown
       content?: unknown
+      ownerBusinessTypeId?: unknown
       create?: unknown
     }
     const cleanName = typeof name === 'string' ? name.trim() : ''
@@ -1513,8 +1517,25 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
       res.status(400).json({ error: 'Le contenu doit être un objet JSON ou null.' })
       return
     }
+    if (ownerBusinessTypeId !== null && ownerBusinessTypeId !== undefined && typeof ownerBusinessTypeId !== 'string') {
+      res.status(400).json({ error: 'Propriétaire invalide.' })
+      return
+    }
 
     const admin = getSupabaseAdmin()
+    const ownerId = typeof ownerBusinessTypeId === 'string' && ownerBusinessTypeId ? ownerBusinessTypeId : null
+    if (ownerId) {
+      const { data: ownerRow, error: ownerError } = await admin
+        .from('business_types')
+        .select('id')
+        .eq('id', ownerId)
+        .maybeSingle()
+      if (ownerError) throw ownerError
+      if (!ownerRow) {
+        res.status(400).json({ error: "Ce type d'activité est introuvable." })
+        return
+      }
+    }
     if (create) {
       const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : ''
       if (!SLUG_RE.test(cleanSlug)) {
@@ -1529,6 +1550,7 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
           description: typeof description === 'string' ? description.trim() || null : null,
           status: status as string,
           content: (content ?? null) as never,
+          owner_business_type_id: ownerId,
         })
         .select('id')
         .single()
@@ -1560,12 +1582,13 @@ async function handleTemplateSave(req: VercelRequest, res: VercelResponse) {
         description: typeof description === 'string' ? description.trim() || null : null,
         status: status as string,
         content: (content ?? null) as never,
+        owner_business_type_id: ownerId,
       })
       .eq('id', id)
       .select('id')
     if (error) throw error
     if (!data || data.length === 0) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
     await logAudit({
@@ -1591,7 +1614,7 @@ async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
     if (!member) return
     const { templateId, typeIds } = (req.body ?? {}) as { templateId?: unknown; typeIds?: unknown }
     if (typeof templateId !== 'string' || !templateId) {
-      res.status(400).json({ error: 'Gabarit manquant.' })
+      res.status(400).json({ error: 'Template manquant.' })
       return
     }
     if (!Array.isArray(typeIds) || !typeIds.every((t): t is string => typeof t === 'string')) {
@@ -1607,7 +1630,7 @@ async function handleTemplateCompat(req: VercelRequest, res: VercelResponse) {
       .maybeSingle()
     if (templateError) throw templateError
     if (!templateRow) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
     if (typeIds.length > 0) {
@@ -1669,10 +1692,10 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
       .maybeSingle()
     if (templateError) throw templateError
     if (!template) {
-      res.status(404).json({ error: 'Gabarit introuvable.' })
+      res.status(404).json({ error: 'Template introuvable.' })
       return
     }
-    // Garde-fou : un gabarit utilisé par des boutiques ne se supprime pas —
+    // Garde-fou : un template utilisé par des boutiques ne se supprime pas —
     // il se déprécie (les vitrines existantes continuent de fonctionner).
     const { count, error: countError } = await admin
       .from('shops')
@@ -1681,7 +1704,7 @@ async function handleTemplateDelete(req: VercelRequest, res: VercelResponse) {
     if (countError) throw countError
     if ((count ?? 0) > 0) {
       res.status(409).json({
-        error: `Impossible : ${count} boutique(s) utilisent encore ce gabarit. Passe-le en déprécié.`,
+        error: `Impossible : ${count} boutique(s) utilisent encore ce template. Passe-le en déprécié.`,
       })
       return
     }
@@ -2156,6 +2179,93 @@ async function handleShopSuspension(req: VercelRequest, res: VercelResponse, sus
     res.status(200).json({ suspendedAt })
   } catch (err) {
     console.error('shop-suspension failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+async function handleAnalyticsPostHog(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  try {
+    // Ouvert à tout membre plateforme (view_analytics est accordée aux 4 rôles,
+    // marketing y compris — voir src/features/platform/permissions.ts).
+    const member = await requireMember(req, res)
+    if (!member) return
+
+    if (!isPostHogConfigured()) {
+      res.status(200).json({ configured: false })
+      return
+    }
+
+    interface FunnelRow {
+      started: number
+      submitted: number
+      shop_created: number
+      first_item: number
+    }
+    interface EventRow {
+      event: string
+      n: number
+    }
+    interface PageRow {
+      path: string | null
+      views: number
+    }
+
+    // Un seul projet PostHog partagé entre `develop` (Preview) et `main`
+    // (Production) — voir AGENTS.md. Les évènements sont taggés `environment`
+    // côté client (src/lib/posthog.ts) ; on filtre dessus ici pour que le
+    // panneau ne mélange jamais le trafic de test et le trafic réel.
+    const env = currentEnvironment()
+
+    const [funnelRows, topEvents, topAdminPages] = await Promise.all([
+      // Comptes distincts ayant déclenché chaque évènement sur 30 jours — un
+      // proxy simple de l'entonnoir (pas un enchaînement ordonné strict).
+      runHogQL<FunnelRow>(`
+        select
+          uniqIf(person_id, event = 'onboarding_started') as started,
+          uniqIf(person_id, event = 'onboarding_submitted') as submitted,
+          uniqIf(person_id, event = 'shop_created') as shop_created,
+          uniqIf(person_id, event in ('product_created', 'service_created')) as first_item
+        from events
+        where timestamp > now() - interval 30 day
+          and properties.environment = '${env}'
+      `),
+      runHogQL<EventRow>(`
+        select event, count() as n
+        from events
+        where timestamp > now() - interval 7 day
+          and properties.environment = '${env}'
+          and event not in ('$pageview', '$pageleave', '$autocapture', '$identify', '$feature_flag_called', '$web_vitals', '$set')
+        group by event
+        order by n desc
+        limit 12
+      `),
+      // Pages de l'admin marchand les plus vues — complète les stats de trafic
+      // vitrine existantes (get_platform_stats), qui excluent volontairement /admin.
+      runHogQL<PageRow>(`
+        select properties.$pathname as path, count() as views
+        from events
+        where event = '$pageview'
+          and timestamp > now() - interval 7 day
+          and properties.environment = '${env}'
+          and properties.$pathname like '/admin%'
+        group by path
+        order by views desc
+        limit 10
+      `),
+    ])
+
+    res.status(200).json({
+      configured: true,
+      funnel: funnelRows[0] ?? { started: 0, submitted: 0, shop_created: 0, first_item: 0 },
+      topEvents,
+      topAdminPages,
+    })
+  } catch (err) {
+    console.error('platform analytics-posthog failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

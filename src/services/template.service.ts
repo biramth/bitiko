@@ -63,8 +63,8 @@ export function resolvePickerTemplates(
 }
 
 // ── Contenu piloté par données (sans déploiement) ──────────────────────────
-// `templates.content` (édité depuis l'admin plateforme) surcharge le gabarit
-// code de même slug, ou ajoute un gabarit 100 % base s'il porte un vertical.
+// `templates.content` (édité depuis l'admin plateforme) surcharge le template
+// code de même slug, ou ajoute un template 100 % base s'il porte un vertical.
 // Tout le reste (compatibilités, statuts) continue de passer par le catalogue.
 
 export interface DbTemplateRow {
@@ -87,25 +87,39 @@ const KNOWN_SECTION_TYPES = new Set(Object.keys(CORE_SECTION_REGISTRY).concat('l
 
 const THEME_FONTS = new Set(['sora-inter', 'inter', 'sora'])
 const TEXT_SCALES: TextScale[] = ['sm', 'base', 'lg']
+const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
-/** Valide un contenu de gabarit (éditeur admin, scaffolder, seed). Retourne
+/** Un hex `#TODO` ou un swatch cassé (« # abc123 — commentaire ») passe un simple `typeof === 'string'` :
+ *  ce format garde ces erreurs visibles au lieu de laisser un template s'afficher cassé en silence. */
+function isHexColor(value: unknown): boolean {
+  return typeof value === 'string' && HEX_COLOR.test(value.trim())
+}
+
+/** Valide un contenu de template (éditeur admin, scaffolder, seed). Retourne
  *  la liste des erreurs — vide = valide. Pure — unit-testée. */
 export function validateTemplateContent(input: unknown): string[] {
   const errors: string[] = []
   if (!isRecord(input)) return ['Le contenu doit être un objet JSON.']
-  if (input.themeColor !== undefined && typeof input.themeColor !== 'string') {
-    errors.push('themeColor doit être une chaîne.')
+  if (input.themeColor !== undefined && !isHexColor(input.themeColor)) {
+    errors.push('themeColor doit être une couleur hexadécimale (#rrggbb).')
   }
   if (input.themeConfig !== undefined) {
     if (!isRecord(input.themeConfig)) {
       errors.push('themeConfig doit être un objet.')
     } else {
       const theme = input.themeConfig as Record<string, unknown>
-      for (const key of ['secondaryColor', 'textColor', 'backgroundColor', 'buttonColor', 'font', 'textScale', 'radius', 'contentWidth']) {
+      for (const key of ['secondaryColor', 'textColor', 'backgroundColor']) {
+        if (!isHexColor(theme[key])) errors.push(`themeConfig.${key} doit être une couleur hexadécimale (#rrggbb).`)
+      }
+      // '' = hérite de l'accent (voir themeConfigToCssVars) : seule une valeur non vide doit être un hex.
+      if (theme.buttonColor !== undefined && theme.buttonColor !== '' && !isHexColor(theme.buttonColor)) {
+        errors.push('themeConfig.buttonColor doit être vide ou une couleur hexadécimale (#rrggbb).')
+      }
+      for (const key of ['font', 'textScale', 'radius', 'contentWidth']) {
         if (typeof theme[key] !== 'string') errors.push(`themeConfig.${key} doit être une chaîne.`)
       }
       if (theme.font !== undefined && !THEME_FONTS.has(theme.font as string)) {
@@ -145,8 +159,8 @@ export function validateTemplateContent(input: unknown): string[] {
       errors.push('variants doit être une liste.')
     } else {
       input.variants.forEach((variant, index) => {
-        if (!isRecord(variant) || typeof variant.key !== 'string' || typeof variant.themeColor !== 'string') {
-          errors.push(`variants[${index}] : key et themeColor requis.`)
+        if (!isRecord(variant) || typeof variant.key !== 'string' || !isHexColor(variant.themeColor)) {
+          errors.push(`variants[${index}] : key et themeColor (hex) requis.`)
         }
         if (isRecord(variant) && variant.themeConfig !== undefined) {
           const nested = validateTemplateContent({ themeConfig: variant.themeConfig })
@@ -172,7 +186,7 @@ export async function fetchTemplateContents(): Promise<DbTemplateRow[]> {
   return (data ?? []) as DbTemplateRow[]
 }
 
-/** Fusionne code + base : surcharge les slugs connus, ajoute les gabarits
+/** Fusionne code + base : surcharge les slugs connus, ajoute les templates
  *  100 % base portant un vertical. Pure — unit-testée. */
 export function mergeDbTemplates(
   code: StoreTemplate[],
@@ -182,7 +196,7 @@ export function mergeDbTemplates(
   const merged = code.map((template) => {
     const row = rows.find((r) => r.slug === template.key)
     if (!row?.content) return template
-    // Contenu invalide = on garde le gabarit code (fail-open, jamais de
+    // Contenu invalide = on garde le template code (fail-open, jamais de
     // frontstore cassé par une édition admin).
     if (validateTemplateContent(row.content).length > 0) return template
     const { vertical: _vertical, ...content } = row.content

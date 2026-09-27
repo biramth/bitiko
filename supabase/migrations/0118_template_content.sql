@@ -1,14 +1,14 @@
--- 0118 : les gabarits deviennent pilotés par données.
---   - `templates.content` (jsonb, null = gabarit code) : themeColor,
+-- 0118 : les templates deviennent pilotés par données.
+--   - `templates.content` (jsonb, null = template code) : themeColor,
 --     themeConfig, layout, variants, vertical — éditable sans déploiement
---     depuis l'admin plateforme (page Gabarits).
---   - 10 nouveaux gabarits catalogue (1 par groupe) + compatibilités.
+--     depuis l'admin plateforme (page Templates).
+--   - 10 nouveaux templates catalogue (1 par groupe) + compatibilités.
 -- Idempotent, re-exécutable.
 
 alter table public.templates add column if not exists content jsonb;
 
 comment on column public.templates.content is
-  'Surcharge sans déploiement (admin plateforme) : { themeColor, themeConfig, layout, variants?, vertical? }. NULL = le gabarit code fait foi.';
+  'Surcharge sans déploiement (admin plateforme) : { themeColor, themeConfig, layout, variants?, vertical? }. NULL = le template code fait foi.';
 
 insert into public.templates (slug, name, description) values
   ('bistrot', 'Bistrot', 'Ardoise et craie — bistrot de quartier, ambiance feutrée.'),
@@ -23,8 +23,8 @@ insert into public.templates (slug, name, description) values
   ('galerie', 'Galerie', 'Murs blancs — l’atelier exposé comme une galerie.')
 on conflict (slug) do nothing;
 
--- Compatibilité groupe → gabarit (l'existant est conservé : choix élargi,
--- le gabarit exact reste proposé en premier côté front).
+-- Compatibilité groupe → template (l'existant est conservé : choix élargi,
+-- le template exact reste proposé en premier côté front).
 insert into public.template_business_types (template_id, business_type_id)
 select t.id, b.id
 from public.templates t

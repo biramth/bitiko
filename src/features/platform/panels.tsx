@@ -16,6 +16,7 @@ import {
 import { listPendingPayments, approvePayment, rejectPayment } from '@/services/admin.service'
 import {
   getPlatformStats,
+  getPostHogAnalytics,
   type PlatformVisitsByDay,
 } from '@/services/platform.service'
 import { PLANS, PLAN_BADGE, PLAN_LABELS } from '@/config/plans'
@@ -174,6 +175,89 @@ export function AnalyticsPanel({ stats }: { stats: Awaited<ReturnType<typeof get
           title="Sources de trafic"
           empty="Aucun référent externe."
           rows={(stats.top_referrers ?? []).map((r) => ({ label: r.referrer, value: r.visits }))}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Entonnoir d'inscription : comptes distincts ayant déclenché chaque évènement sur
+ *  30 jours (un proxy simple, pas un enchaînement ordonné strict). */
+function OnboardingFunnel({ funnel }: { funnel: { started: number; submitted: number; shop_created: number; first_item: number } }) {
+  const steps: { label: string; value: number }[] = [
+    { label: 'Onboarding commencé', value: funnel.started },
+    { label: 'Formulaire envoyé', value: funnel.submitted },
+    { label: 'Boutique créée', value: funnel.shop_created },
+    { label: 'Premier produit/prestation', value: funnel.first_item },
+  ]
+  const max = Math.max(1, funnel.started)
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <h3 className="text-sm font-semibold text-gray-900">Entonnoir d’inscription (30 j)</h3>
+      <p className="mt-1 text-xs text-gray-500">Comptes distincts ayant atteint chaque étape — pas un enchaînement ordonné strict.</p>
+      <ol className="mt-4 space-y-3">
+        {steps.map((step, index) => {
+          const pct = funnel.started > 0 ? Math.round((step.value / funnel.started) * 100) : 0
+          return (
+            <li key={step.label} className="text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-gray-700">{step.label}</span>
+                <span className="shrink-0 font-medium text-gray-900">
+                  {step.value}
+                  {index > 0 && funnel.started > 0 && <span className="ml-1.5 text-xs font-normal text-gray-400">({pct}%)</span>}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-gray-100">
+                <div className="h-1.5 rounded-full bg-brand-400" style={{ width: `${Math.max(4, (step.value / max) * 100)}%` }} />
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+/** Statistiques produit sourcées de PostHog : entonnoir d'inscription, évènements les plus
+ *  déclenchés et pages de l'admin marchand les plus vues — complète AnalyticsPanel (trafic
+ *  vitrine) sans le dupliquer. Masqué proprement si PostHog n'a pas de clé côté serveur. */
+export function PostHogAnalyticsPanel() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['platform-posthog-analytics'],
+    queryFn: getPostHogAnalytics,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  if (isLoading) return <Spinner />
+  if (isError) return <p className="text-sm text-red-600">{error instanceof Error ? error.message : 'Erreur.'}</p>
+  if (!data) return null
+  if (!data.configured) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+        PostHog n’est pas configuré sur ce serveur (variables <code className="font-mono text-xs">POSTHOG_PERSONAL_API_KEY</code> /{' '}
+        <code className="font-mono text-xs">POSTHOG_PROJECT_ID</code> absentes) — entonnoir d’inscription et évènements
+        indisponibles.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+        <BarChart3 size={15} className="text-gray-400" aria-hidden /> Produit (PostHog)
+      </h3>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <OnboardingFunnel funnel={data.funnel ?? { started: 0, submitted: 0, shop_created: 0, first_item: 0 }} />
+        <RankList
+          title="Évènements les plus fréquents (7 j)"
+          empty="Aucun évènement enregistré."
+          rows={data.topEvents.map((e) => ({ label: e.event, value: e.n }))}
+        />
+        <RankList
+          title="Pages admin les plus vues (7 j)"
+          empty="Aucune page vue."
+          rows={data.topAdminPages.filter((p) => p.path).map((p) => ({ label: p.path as string, value: p.views }))}
         />
       </div>
     </div>

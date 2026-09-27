@@ -1,5 +1,5 @@
--- 0117 : gabarits Barber + Institut pour Beauté & Bien-être (multi-template
--- par métier : le type beaute devient compatible avec 3 gabarits).
+-- 0117 : templates Barber + Institut pour Beauté & Bien-être (multi-template
+-- par métier : le type beaute devient compatible avec 3 templates).
 -- Idempotent, re-exécutable.
 
 insert into public.templates (slug, name, description) values

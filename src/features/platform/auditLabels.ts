@@ -8,7 +8,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   payment_approve: 'Paiement validé',
   payment_reject: 'Paiement refusé',
   promo_save: 'Promotion enregistrée',
-  template_save: 'Gabarit enregistré',
+  template_save: 'Template enregistré',
   subscription_grant: 'Abonnement offert / prolongé',
   shop_suspend: 'Boutique suspendue',
   shop_unsuspend: 'Suspension levée',

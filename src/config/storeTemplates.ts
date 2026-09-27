@@ -183,8 +183,8 @@ const baseTheme = (overrides: Partial<ThemeConfig>): ThemeConfig => ({
   ...overrides,
 })
 
-/** Les gabarits prêts à l'emploi d'une boutique : quatre genres commerce
- *  (mode, épicerie, beauté, high-tech) plus deux gabarits service (coiffure,
+/** Les templates prêts à l'emploi d'une boutique : quatre genres commerce
+ *  (mode, épicerie, beauté, high-tech) plus deux templates service (coiffure,
  *  restaurant). Chaque home porte des textes écrits pour son métier, pour
  *  qu'une boutique fraîchement créée ressemble d'emblée à un vrai commerce. */
 export const STORE_TEMPLATES: StoreTemplate[] = [
@@ -259,7 +259,7 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     swatch: ['#be185d', '#fdf2f8'],
     themeColor: '#be185d',
     themeConfig: baseTheme({ secondaryColor: '#fce7f3', textColor: '#1c1917', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
-    // Gabarit hybride : le type « Beauté & Bien-être » porte à la fois les
+    // Template hybride : le type « Beauté & Bien-être » porte à la fois les
     // prestations (rendez-vous, équipe) et la vente de produits. Chaque section
     // s'efface d'elle-même si la boutique n'a pas la capability correspondante.
     layout: {
@@ -647,6 +647,39 @@ export const STORE_TEMPLATES: StoreTemplate[] = [
     },
   },
   {
+    key: 'librairie',
+    vertical: 'librairie',
+    label: 'Librairie',
+    description: 'Chaleureux et studieux — pour une librairie, une papeterie ou un point presse.',
+    swatch: ['#1e3a5f', '#f7f1e3'],
+    themeColor: '#1e3a5f',
+    themeConfig: baseTheme({ secondaryColor: '#f7f1e3', textColor: '#1c1917', buttonColor: '#1e3a5f', font: 'sora', textScale: 'base', radius: 'md', contentWidth: 'normal' }),
+    layout: {
+      home: [
+        header(),
+        hero({
+          eyebrow: 'Librairie & papeterie',
+          heading: 'Des mots et des idées à portée de clic',
+          subheading: 'Livres, carnets et fournitures — commandez et récupérez ou faites-vous livrer.',
+        }),
+        promo({
+          heading: 'Coup de cœur du mois',
+          body: 'Une sélection resserrée de titres et de fournitures à ne pas manquer.',
+          buttonLabel: 'Découvrir',
+        }),
+        categories({ heading: 'Nos rayons' }),
+        products({ heading: 'Nos références', limit: 16 }),
+        text({
+          heading: 'Pourquoi nous choisir',
+          body: 'Un choix soigné de livres, carnets et fournitures, avec des conseils pour trouver ce qu\'il vous faut.',
+          align: 'center',
+        }),
+        footer(),
+      ],
+      ...systemLayout('Toutes nos références'),
+    },
+  },
+  {
     key: 'minimal',
     vertical: 'mode',
     label: 'Minimal',
@@ -945,10 +978,11 @@ export function availableVerticals(): Vertical[] {
 }
 
 /** Business-type slugs (DB referential, voir migration 0116) résolus vers le
- *  vertical de leurs gabarits. La plupart des slugs sont déjà des verticals ;
+ *  vertical de leurs templates. La plupart des slugs sont déjà des verticals ;
  *  seuls les types historiques hors des 10 groupes ont besoin d'un alias. */
 const BUSINESS_TYPE_VERTICAL: Record<string, string> = {
   food_services: 'epicerie',
+  // Coiffure est dépréciée (doublon de Beauté & Bien-être, 0140) : alias conservé
+  // pour toute donnée historique qui la référencerait encore.
   coiffure: 'beaute',
-  librairie: 'epicerie',
 }

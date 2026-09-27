@@ -4,7 +4,7 @@
 -- ouvre l'écriture au PROPRIÉTAIRE de la boutique, avec des garde-fous côté
 -- base (le frontend n'est jamais la seule barrière) :
 --   * une règle par (boutique, événement, canal) ;
---   * gabarit borné (taille) ; au plus 30 règles par boutique ;
+--   * template borné (taille) ; au plus 30 règles par boutique ;
 --   * seuls les canaux réellement branchés (log, email) sont activables ;
 --     whatsapp/sms/push restent dormants, comme au dispatcher.
 -- Idempotent, re-exécutable.

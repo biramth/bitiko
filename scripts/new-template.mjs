@@ -1,7 +1,7 @@
-// Scaffolder gabarit : génère une entrée prête à coller dans
+// Scaffolder template : génère une entrée prête à coller dans
 // src/config/storeTemplates.ts (tableau STORE_TEMPLATES).
 //
-// Usage : npm run template:new -- key=mon-gabarit vertical=beaute [label="Mon gabarit"]
+// Usage : npm run template:new -- key=mon-template vertical=beaute [label="Mon template"]
 //
 // Règles (rappelées aussi dans docs/templates.md) :
 //   - key : slug unique, minuscules/chiffres/underscores (même règle qu'en base).
@@ -9,7 +9,7 @@
 //   - le rendu est validé par les tests (vitest storeTemplates) : types de
 //     sections connus, theme complet, clé unique.
 // Après collage : adapte textes/couleurs/sections, lance npm run test,
-// puis déclare le slug en base (admin plateforme → Gabarits, ou migration)
+// puis déclare le slug en base (admin plateforme → Templates, ou migration)
 // pour qu'il apparaisse dans les pickers pilotés par compatibilités.
 
 const args = Object.fromEntries(
@@ -37,9 +37,11 @@ const entry = `  {
     vertical: '${vertical}',
     label: '${label}',
     description: 'TODO : une phrase qui vend le style.',
-    swatch: ['# be6a5c — TODO accent', '#fff7f5 — TODO fond'],
-    themeColor: '#TODO',
-    themeConfig: baseTheme({ secondaryColor: '#TODO', textColor: '#1c1917', backgroundColor: '#ffffff', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
+    // TODO couleurs : remplace ces trois hex par de vraies couleurs (accent, fond, secondaire) —
+    // un hex invalide laissé ici passe les tests (chaîne valide) mais s'affiche cassé en silence.
+    swatch: ['#c2410c', '#fff7f5'],
+    themeColor: '#c2410c',
+    themeConfig: baseTheme({ secondaryColor: '#fff7f5', textColor: '#1c1917', backgroundColor: '#ffffff', font: 'sora', textScale: 'base', radius: 'lg', contentWidth: 'normal' }),
     layout: {
       home: [
         header(),

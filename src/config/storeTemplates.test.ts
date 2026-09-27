@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { resolveTemplateVariant } from '@/types/builder'
 import { availableVerticals, STORE_TEMPLATE_BY_KEY, templatesForVertical } from './storeTemplates'
 
-describe('business groups (10 groupes)', () => {
-  it('exposes 10 verticals with at least one template', () => {
+describe('business groups (10 groupes + librairie, 0140)', () => {
+  it('exposes 11 verticals with at least one template', () => {
     expect(availableVerticals().map((v) => v.key)).toEqual([
       'restauration',
       'mode',
@@ -15,14 +15,18 @@ describe('business groups (10 groupes)', () => {
       'epicerie_fine',
       'fleurs_cadeaux',
       'artisanat',
+      'librairie',
     ])
   })
 
   it('offers at least two templates per group', () => {
-    for (const vertical of availableVerticals()) {
+    // Librairie (0140) démarre avec un seul template dédié — d'autres pourront
+    // s'ajouter plus tard (activité ≠ template), ce n'est pas encore le cas.
+    for (const vertical of availableVerticals().filter((v) => v.key !== 'librairie')) {
       const templates = templatesForVertical(vertical.key)
       expect(templates.length, vertical.key).toBeGreaterThanOrEqual(2)
     }
+    expect(templatesForVertical('librairie').map((t) => t.key)).toEqual(['librairie'])
   })
 
   it('returns the exact template first for each group', () => {
@@ -55,7 +59,7 @@ describe('business groups (10 groupes)', () => {
   })
 })
 
-describe('gabarit hybride Beauté', () => {
+describe('template hybride Beauté', () => {
   const types = STORE_TEMPLATE_BY_KEY['beaute']!.layout.home.map((section) => section.type)
 
   it('réunit prestations, rendez-vous et boutique', () => {
@@ -68,7 +72,7 @@ describe('gabarit hybride Beauté', () => {
   })
 })
 
-describe('gabarits restauration', () => {
+describe('templates restauration', () => {
   for (const key of ['restauration', 'bistrot']) {
     const home = STORE_TEMPLATE_BY_KEY[key]!.layout.home.map((section) => section.type)
 
@@ -79,7 +83,7 @@ describe('gabarits restauration', () => {
   }
 })
 
-describe('gabarits salon', () => {
+describe('templates salon', () => {
   for (const key of ['coiffure', 'barber', 'institut', 'onglerie']) {
     const template = STORE_TEMPLATE_BY_KEY[key]!
 
@@ -92,7 +96,7 @@ describe('gabarits salon', () => {
   }
 })
 
-describe('tous les gabarits', () => {
+describe('tous les templates', () => {
   for (const template of Object.values(STORE_TEMPLATE_BY_KEY)) {
     const home = template.layout.home.map((section) => section.type)
 

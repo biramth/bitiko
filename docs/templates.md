@@ -1,13 +1,13 @@
-# Gabarits : ajouter un style sans casser la boutique
+# Templates : ajouter un style sans casser la boutique
 
 Trois chemins, du plus simple au plus puissant. Dans tous les cas, les
-pickers (onboarding, onglet Styles, Réglages) suivent les **compatibilités
-type → gabarit en base** : un gabarit n'apparaît que pour ses types mappés.
+pickers (Réglages, admin plateforme) suivent les **compatibilités type →
+template en base** : un template n'apparaît que pour ses types mappés.
 
-## 1. Variante de style (même gabarit, autre look)
+## 1. Variante de style (même template, autre look)
 
 Le moins cher : mêmes pages et blocs, autre thème. Dans
-`src/config/storeTemplates.ts`, ajoute une entrée à `variants` du gabarit :
+`src/config/storeTemplates.ts`, ajoute une entrée à `variants` du template :
 
 ```ts
 variants: [
@@ -25,10 +25,10 @@ variants: [
 Zéro migration, zéro API : l'onglet Styles affiche la pastille et la preview
 est immédiate. Exemples : Barber (Cuir & Laiton, Bordeaux).
 
-## 2. Nouveau gabarit (code, avec déploiement)
+## 2. Nouveau template (code, avec déploiement)
 
 ```bash
-npm run template:new -- key=mon_gabarit vertical=beaute label="Mon gabarit"
+npm run template:new -- key=mon_template vertical=beaute label="Mon template"
 ```
 
 Colle l'entrée générée dans `STORE_TEMPLATES`, adapte textes/couleurs/sections
@@ -37,19 +37,21 @@ Colle l'entrée générée dans `STORE_TEMPLATES`, adapte textes/couleurs/sectio
 `categories`, `featuredProducts`, `featuredServices`), puis :
 
 1. `npm run test` — les tests valident types de sections, thème et unicité.
-2. Déclare le slug en base (admin plateforme → Gabarits, ou migration) +
-   compatibilité vers le(s) type(s) : sans mapping, le gabarit reste invisible
-   des pickers pilotés par DB.
+2. Déclare le slug en base (admin plateforme → Templates, ou migration) +
+   compatibilité vers le(s) type(s) : sans mapping, le template reste invisible
+   des pickers pilotés par DB. Une activité doit toujours avoir au moins un
+   template qui lui appartient (`templates.owner_business_type_id`, 0140) —
+   l'admin signale les activités qui n'en ont aucun.
 
 Règles : `key` unique et immuable (minuscules, chiffres, `_`) ; ne réutilise
-jamais la clé d'un gabarit existant.
+jamais la clé d'un template existant.
 
-## Supprimer un gabarit
+## Supprimer un template
 
-Admin plateforme → Gabarits → corbeille. Garde-fous serveur :
+Admin plateforme → Templates → corbeille. Garde-fous serveur :
 
 - **En usage** (≥ 1 boutique avec ce `template_id`) : suppression **refusée
-  (409)**. Passe le gabarit en `deprecated` : il disparaît des pickers mais
+  (409)**. Passe le template en `deprecated` : il disparaît des pickers mais
   les vitrines existantes continuent de fonctionner.
 - **Inutilisé** : suppression définitive (compatibilités supprimées en
   cascade). Si le slug a aussi une entrée code, c'est la version code qui
@@ -57,22 +59,24 @@ Admin plateforme → Gabarits → corbeille. Garde-fous serveur :
 
 ## Parcours inscription
 
-L'inscrit choisit son **type** (étape précédente), puis l'étape style lui
-propose **les gabarits compatibles avec ce type, gabarit exact en premier**
-(ex. Restaurant → Restaurant, Bistrot, puis Épicerie). Le défaut suit
-automatiquement le premier de la liste dès que les compatibilités arrivent.
+L'onboarding choisit **automatiquement** le premier template compatible avec
+l'activité sélectionnée (le propre de l'activité en premier, ex. Restaurant →
+Restaurant, Bistrot, puis Épicerie) — pas de choix de style à cette étape. Le
+choix d'un autre template compatible depuis la personnalisation est prévu
+comme chantier à part (voir PLAN.md).
 
-## 3. Surcharge sans déploiement (admin plateforme → Gabarits)
+## 3. Surcharge sans déploiement (admin plateforme → Templates)
 
-Pour un besoin urgent ou une expérimentation : **Dupliquer depuis** un gabarit
-→ adapte le JSON → **Valider** → Enregistrer. Le contenu invalide est refusé
-côté front (fail-open : le gabarit code reste affiché). Champs : `themeColor`,
-`themeConfig`, `layout`, `variants`, et `vertical` (requis pour un slug sans
-entrée code).
+Pour un besoin urgent ou une expérimentation : **Dupliquer depuis** un
+template → adapte le JSON → **Valider** → Enregistrer. Le contenu invalide
+est refusé côté front (fail-open : le template code reste affiché). Champs :
+`themeColor`, `themeConfig`, `layout`, `variants`, et `vertical` (requis pour
+un slug sans entrée code).
 
 ## Rappel d'architecture
 
-- Le vertical n'est qu'un filtre ; un métier porte N gabarits.
+- Le vertical n'est qu'un filtre ; un métier porte N templates, mais doit
+  toujours en posséder au moins un en propre (0140).
 - Une variante ne change jamais les pages, seulement le thème.
 - `shop.template_id` reste toujours une clé connue (les variantes résolues
   gardent la clé de base).

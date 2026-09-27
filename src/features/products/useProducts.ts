@@ -41,7 +41,7 @@ export function useRelatedProducts(
 /** Nombre de produits montrés par une section « sélection » dont le commerçant n'a rien choisi. */
 export const FEATURED_FALLBACK_COUNT = 4
 
-/** Produits choisis à la main ; sans choix, les plus récents — un gabarit neuf
+/** Produits choisis à la main ; sans choix, les plus récents — un template neuf
  *  affiche ainsi sa sélection dès le premier produit ajouté. */
 export function useFeaturedProducts(shopId: string | undefined, productIds: string[]) {
   return useQuery({

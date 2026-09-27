@@ -242,7 +242,7 @@ describe('règles d’automatisation (0127)', () => {
     await db.exec(`insert into automation_rules(shop_id,event_type,channel,enabled) values ('${SHOP}','ORDER_PAID','whatsapp',false)`)
   })
 
-  it('plafonne à 30 règles par boutique et borne la taille du gabarit', async () => {
+  it('plafonne à 30 règles par boutique et borne la taille du template', async () => {
     for (let i = 0; i < 28; i++) {
       await db.exec(`insert into automation_rules(shop_id,event_type,channel) values ('${SHOP}','EVT_${i}','log')`)
     }

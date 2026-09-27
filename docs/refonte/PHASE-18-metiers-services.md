@@ -1,7 +1,7 @@
 # PHASE 18 — Métiers, services et réservations (chantier post-refonte)
 
 > État : 🟨 EN COURS — 2026-09-26 (DEV : migrations **0121 → 0128 appliquées** le 2026-09-26, prod non touchée).
-> Origine : audit du 2026-09-26 sur le chantier « 10 groupes métiers + services + gabarits » (commits `a491480` → `b63b7c9`, migrations 0112–0120), resté hors `PLAN.md`.
+> Origine : audit du 2026-09-26 sur le chantier « 10 groupes métiers + services + templates » (commits `a491480` → `b63b7c9`, migrations 0112–0120), resté hors `PLAN.md`.
 
 ## Objectif
 
@@ -63,7 +63,7 @@ automatiquement : elles s'appliquent **par environnement** (`npx supabase db pus
 - **`0126` catégories** : `categories.kind` (`product` | `service`), backfill, garde-fou à l'attache ; création de catégories de
   prestation depuis le formulaire de prestation. Les catégories partagées existantes restent `product`.
 - **`0127` + Notifications** : le propriétaire crée ses règles email (`/admin/parametres/notifications`, RLS owner write, une règle par
-  événement/canal, ≤ 30 règles, gabarit borné, canaux non branchés refusés). Le dispatcher est partagé
+  événement/canal, ≤ 30 règles, template borné, canaux non branchés refusés). Le dispatcher est partagé
   (`api/_lib/automationDispatch.ts`) et déclenché **tout de suite** après commande / changement de statut / réservation
   (`/api/automation-kick`, sans attendre le cron quotidien).
 - **`0128` multi-pays (fusion du chantier `stash@{0}` « pr1-wip-backup-develop »)** : `currencies` / `countries`
@@ -115,4 +115,4 @@ schéma appliqué hors dépôt.
 
 - Valeurs finales des plafonds de plan 0125 (proposition de départ, pas une décision).
 - Un plan « Business » / prix (`plans.ts` reste la source des prix ; `plan_entitlements` non lu par l'app).
-- Multi-pays : ouvrir d'autres pays (règles de numérotation à valider par pays, gabarits / textes / devises hors XOF), supprimer `stash@{0}` une fois relu.
+- Multi-pays : ouvrir d'autres pays (règles de numérotation à valider par pays, templates / textes / devises hors XOF), supprimer `stash@{0}` une fois relu.
