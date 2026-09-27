@@ -16,7 +16,7 @@ export function UpgradeHint({ title, children, planLabel }: { title: string; chi
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="mt-0.5 text-sm text-gray-600">{children}</p>
           <Link
-            to="/admin/parametres/facturation"
+            to="/admin/parametres/compte?billing=1"
             className="mt-2 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-800"
           >
             Passer au plan {planLabel}

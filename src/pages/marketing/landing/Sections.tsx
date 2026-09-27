@@ -53,7 +53,7 @@ const audiences = [
     kicker: 'Tu proposes des services',
     title: 'Un agenda qui se remplit tout seul.',
     description: 'Tes clients réservent un créneau libre ou une table, à toute heure. Tu confirmes d\'un clic, avec tes vrais horaires.',
-    points: ['Horaires différents chaque jour, pauses, congés', 'Alerte email à chaque nouvelle demande', 'Équipe, prestations et tarifs'],
+    points: ['Horaires différents chaque jour, pauses, congés', 'Alerte WhatsApp à chaque nouvelle demande', 'Équipe, prestations et tarifs'],
     shot: { name: 'reserver', alt: 'Réservation d\'un créneau sur le site d\'un salon Bitiko' },
     cta: 'Voir le côté services',
   },
@@ -279,7 +279,7 @@ const TOUR: Record<string, TourTab> = {
         eyebrow: 'Rendez-vous',
         title: 'Ton agenda se remplit tout seul. Tu confirmes d\'un clic.',
         description: 'Chaque demande arrive dans ton agenda avec la prestation, l\'heure, la personne de l\'équipe et les boutons Appeler et WhatsApp. Confirme, refuse ou marque comme terminé.',
-        points: ['Vue jour et semaine, demandes à confirmer en évidence', 'Email de prévenance à chaque nouvelle demande', 'Le client ne peut choisir que des créneaux réellement libres'],
+        points: ['Vue jour et semaine, demandes à confirmer en évidence', 'Alerte WhatsApp à chaque nouvelle demande', 'Le client ne peut choisir que des créneaux réellement libres'],
         shot: { name: 'agenda', alt: 'Agenda des rendez-vous Bitiko : semaine, demandes à confirmer, boutons Confirmer et Refuser' },
       },
       {

@@ -809,7 +809,7 @@ export function CategoriesPage() {
         isPending={updateDetailsMutation.isPending}
         isPro={hasPaidPlan}
         availableColors={availableColors}
-        onLockedFeature={() => navigate('/admin/parametres/facturation')}
+        onLockedFeature={() => navigate('/admin/parametres/compte?billing=1')}
         onClose={() => setEditTarget(null)}
       />
 

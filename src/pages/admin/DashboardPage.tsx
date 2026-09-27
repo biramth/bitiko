@@ -187,13 +187,13 @@ export function DashboardPage() {
             ...(hasProducts
               ? [{ done: stats.totalProducts > 0, label: 'Ajoutez vos premiers produits', to: '/admin/produits/nouveau' }]
               : []),
-            { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/contact' },
+            { done: !!shop.whatsapp_number, label: 'Vérifiez votre numéro WhatsApp', to: '/admin/parametres/boutique' },
             ...(hasCommerce && hasDelivery
-              ? [{ done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/shipping' }]
+              ? [{ done: hasDeliveryZones, label: 'Configurez vos zones de livraison', to: '/admin/parametres/boutique' }]
               : []),
-            { done: !!shop.logo_url, label: 'Ajoutez votre logo', hint: 'icône du site et aperçus partagés', to: '/admin/parametres/appearance', optional: true },
-            { done: !!shop.description, label: 'Décrivez votre activité', hint: 'aide à être trouvé sur Google', to: '/admin/parametres/general', optional: true },
-            { done: !!shop.banner_url, label: 'Ajoutez une bannière', hint: 'aperçu quand vous partagez le lien sur WhatsApp', to: '/admin/parametres/appearance', optional: true },
+            { done: !!shop.logo_url, label: 'Ajoutez votre logo', hint: 'icône du site et aperçus partagés', to: '/admin/parametres/boutique', optional: true },
+            { done: !!shop.description, label: 'Décrivez votre activité', hint: 'aide à être trouvé sur Google', to: '/admin/parametres/boutique', optional: true },
+            { done: !!shop.banner_url, label: 'Ajoutez une bannière', hint: 'aperçu quand vous partagez le lien sur WhatsApp', to: '/admin/parametres/boutique', optional: true },
             ...(hasCommerce
               ? [{ done: stats.totalOrders > 0, label: 'Recevez votre première commande', hint: 'partagez le lien de votre site' }]
               : []),

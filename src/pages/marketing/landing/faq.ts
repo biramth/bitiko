@@ -20,7 +20,7 @@ export const faq = [
   {
     question: 'Comment mes clients réservent-ils, et comment suis-je prévenu ?',
     answer:
-      'Le client choisit une prestation (ou une table), un jour et un créneau libre sur ton site, puis laisse son nom et son numéro. Tu reçois un email et la demande apparaît dans ton agenda : tu confirmes ou tu refuses d\'un clic, puis tu préviens ton client par téléphone ou WhatsApp depuis la même fiche. Les commandes de la boutique, elles, arrivent sur ton WhatsApp.',
+      'Le client choisit une prestation (ou une table), un jour et un créneau libre sur ton site, puis laisse son nom et son numéro. La demande t\'arrive sur ton WhatsApp, formatée, et apparaît dans ton agenda : tu confirmes ou tu refuses d\'un clic, puis tu préviens ton client par téléphone ou WhatsApp depuis la même fiche. Comme pour les commandes de la boutique.',
   },
   {
     question: 'Les horaires peuvent-ils être différents selon les jours ?',

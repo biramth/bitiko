@@ -72,8 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: plan.priceXof,
       currency: 'XOF',
       clientReference,
-      successUrl: `${origin}/admin/parametres/facturation?reference=${clientReference}`,
-      errorUrl: `${origin}/admin/parametres/facturation?paiement=echec`,
+      successUrl: `${origin}/admin/parametres/compte?billing=1&reference=${clientReference}`,
+      errorUrl: `${origin}/admin/parametres/compte?billing=1&paiement=echec`,
     })
 
     const admin = getSupabaseAdmin()

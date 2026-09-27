@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
+import { useShopPlan } from '@/features/billing/useShopPlan'
 import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { getImpersonation } from '@/lib/supportSession'
 import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
@@ -54,6 +55,7 @@ import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
 import { BREACHED_PASSWORD_MESSAGE, isPasswordBreached } from '@/utils/password'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { Dialog } from '@/components/ui/Dialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Lock } from 'lucide-react'
@@ -67,14 +69,10 @@ const CURRENCIES = ['XOF', 'XAF', 'GNF', 'NGN', 'GHS', 'KES', 'MAD', 'EUR', 'USD
 const inputClass =
   'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type SectionKey = 'general' | 'appearance' | 'contact' | 'shipping' | 'facturation' | 'compte' | 'equipe'
+type SectionKey = 'boutique' | 'compte' | 'equipe'
 
 const SECTIONS: { key: SectionKey; label: string; icon: typeof Phone }[] = [
-  { key: 'general', label: 'Général', icon: Store },
-  { key: 'appearance', label: 'Apparence', icon: ImagePlus },
-  { key: 'contact', label: 'Contact & devise', icon: Phone },
-  { key: 'shipping', label: 'Livraison & stock', icon: Truck },
-  { key: 'facturation', label: 'Facturation', icon: CreditCard },
+  { key: 'boutique', label: 'Boutique', icon: Store },
   { key: 'equipe', label: 'Accès collaborateurs', icon: Users },
   { key: 'compte', label: 'Mon compte', icon: User },
 ]
@@ -106,11 +104,27 @@ function Card({
   )
 }
 
-function AccountSection() {
-  const { user, updateFullName, updateEmail, updatePassword, signOut } = useAuth()
+function AccountSection({ shop }: { shop: NonNullable<ReturnType<typeof useMyShop>['data']> }) {
+  const { user, updateFullName, updatePassword, signOut } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   const [impersonation] = useState(() => getImpersonation())
+  const { plan, isLoading: planLoading } = useShopPlan(shop.id)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [billingOpen, setBillingOpen] = useState(false)
+  useEffect(() => {
+    if (searchParams.get('billing') !== '1') return
+    setBillingOpen(true)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('billing')
+        return next
+      },
+      { replace: true },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Google-only accounts have no 'email' identity — they've never set a
   // password, so this card offers to add one rather than "change" it.
   const hasPassword = user?.identities?.some((i) => i.provider === 'email') ?? true
@@ -119,10 +133,6 @@ function AccountSection() {
   const [fullName, setFullName] = useState(initialFullName)
   const [nameStatus, setNameStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const nameDirty = fullName.trim() !== initialFullName.trim()
-
-  const [email, setEmail] = useState(user?.email ?? '')
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'saving' | 'sent' | 'error'>('idle')
-  const [emailError, setEmailError] = useState<string | null>(null)
 
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -174,22 +184,6 @@ function AccountSection() {
       setNameStatus('saved')
       setTimeout(() => setNameStatus('idle'), 2500)
       toast.success('Nom enregistré.')
-    }
-  }
-
-  const handleSaveEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setEmailError(null)
-    if (email.trim() === user?.email) return
-    setEmailStatus('saving')
-    const { error } = await updateEmail(email.trim())
-    if (error) {
-      setEmailStatus('error')
-      setEmailError(error)
-      toast.error(error || "Impossible de modifier l'e-mail.")
-    } else {
-      setEmailStatus('sent')
-      toast.info("Lien de confirmation envoyé à l'adresse indiquée.")
     }
   }
 
@@ -278,37 +272,10 @@ function AccountSection() {
       </Card>
 
       <Card icon={MessageCircle} title="Adresse e-mail" description="Utilisée pour vous connecter à Bitiko.">
-        <form onSubmit={handleSaveEmail} className="space-y-3">
-          <div>
-            <label htmlFor="accountEmail" className="block text-sm font-medium text-gray-700">
-              E-mail
-            </label>
-            <input
-              id="accountEmail"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          {emailStatus === 'sent' && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-              Un lien de confirmation a été envoyé à cette adresse. Le changement prendra effet une fois le lien
-              ouvert.
-            </p>
-          )}
-          {emailError && <p className="text-sm text-red-600">{emailError}</p>}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={emailStatus === 'saving' || !email.trim() || email.trim() === user?.email}
-              className={buttonClass()}
-            >
-              {emailStatus === 'saving' ? 'Envoi…' : "Changer l'e-mail"}
-            </button>
-          </div>
-        </form>
+        <p className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-gray-700">{user?.email}</p>
+        <p className="text-xs text-gray-500">
+          Non modifiable directement — contactez le support si vous devez changer d'adresse.
+        </p>
       </Card>
 
       <Card
@@ -364,6 +331,22 @@ function AccountSection() {
           </div>
         </form>
       </Card>
+
+      <Card icon={CreditCard} title="Abonnement" description="Le plan de cette boutique et ses options de paiement.">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Plan actuel</p>
+            <p className="font-heading text-base font-semibold text-gray-900">{planLoading ? '…' : plan.label}</p>
+          </div>
+          <button type="button" onClick={() => setBillingOpen(true)} className={buttonClass()}>
+            Changer d'abonnement
+          </button>
+        </div>
+      </Card>
+
+      <Dialog open={billingOpen} onClose={() => setBillingOpen(false)} title="Changer d'abonnement" size="lg">
+        <BillingForShop shopId={shop.id} />
+      </Dialog>
 
       <section className="rounded-xl border border-red-200 bg-white">
         <header className="flex items-start gap-3 border-b border-red-100 px-4 py-3.5 sm:px-5 sm:py-4">
@@ -433,25 +416,14 @@ export function SettingsPage() {
   const { data: shop, isLoading } = useMyShop()
   const { section: sectionParam } = useParams<{ section: string }>()
   const { role: shopRole, isLoading: roleLoading } = useShopRole()
-  const { capabilities } = useWorkspaceModules()
 
   if (isLoading || roleLoading) return <PageLoader />
   if (!shop) return <p className="text-sm text-gray-500">Aucune boutique configurée.</p>
   if (!SECTIONS.some((s) => s.key === sectionParam)) {
-    return <Navigate to="/admin/parametres/general" replace />
+    return <Navigate to="/admin/parametres/boutique" replace />
   }
-  // Livraison & stock n'existe que pour les métiers qui livrent ou vendent
-  // (masqué de la nav le cas échéant — garde-fou anti lien direct).
-  if (
-    sectionParam === 'shipping' &&
-    capabilities !== null &&
-    !capabilities.has('HAS_DELIVERY') &&
-    !capabilities.has('HAS_PRODUCTS')
-  ) {
-    return <Navigate to="/admin/parametres/general" replace />
-  }
-  // Billing + team are owner-only (also hidden from the nav for staff).
-  if ((sectionParam === 'facturation' || sectionParam === 'equipe') && shopRole !== 'owner') {
+  // Team stays owner-only (also hidden from the nav for staff).
+  if (sectionParam === 'equipe' && shopRole !== 'owner') {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white px-6 py-12 text-center">
         <p className="font-heading text-lg font-bold text-gray-900">Réservé au propriétaire</p>
@@ -477,9 +449,12 @@ function SettingsForm({
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+  // Livraison & stock n'a de sens qu'avec livraison ou catalogue — même règle
+  // que la nav (AdminLayout.tsx) : un salon 100 % rendez-vous ne la voit pas.
+  const { capabilities } = useWorkspaceModules()
+  const showShipping = capabilities === null || capabilities.has('HAS_DELIVERY') || capabilities.has('HAS_PRODUCTS')
 
   const [name, setName] = useState(shop.name)
   const [description, setDescription] = useState(shop.description ?? '')
@@ -743,31 +718,26 @@ function SettingsForm({
     setError(null)
     if (!name.trim()) {
       setError('Le nom de la boutique est requis.')
-      navigate('/admin/parametres/general')
       return
     }
     const whatsappCheck = normalizePhoneNumber(whatsappNumber, countryCode)
     if (!whatsappCheck.ok) {
       setError(PHONE_ERROR_MESSAGES[whatsappCheck.error ?? 'invalid_length'])
-      navigate('/admin/parametres/contact')
       return
     }
     if (!/^[A-Z]{3}$/.test(currency.trim().toUpperCase())) {
       setError('Code devise invalide. Utilisez un code ISO 4217 à 3 lettres (ex. XOF, EUR).')
-      navigate('/admin/parametres/contact')
       return
     }
     if (freeDeliveryThreshold.trim()) {
       const thresholdCheck = normalizePrice(freeDeliveryThreshold)
       if (!thresholdCheck.ok) {
         setError(PRICE_ERROR_MESSAGES[thresholdCheck.error ?? 'invalid'])
-        navigate('/admin/parametres/shipping')
         return
       }
     }
     if (!/^#[0-9a-fA-F]{6}$/.test(themeColor)) {
       setError('Couleur invalide.')
-      navigate('/admin/parametres/appearance')
       return
     }
     saveMutation.mutate()
@@ -832,9 +802,15 @@ function SettingsForm({
   return (
     <div className="mx-auto max-w-5xl">
       <header>
-        <h1 className="text-xl font-semibold text-gray-900">Paramètres</h1>
+        <h1 className="text-xl font-semibold text-gray-900">
+          {section === 'compte' ? 'Mon compte' : section === 'equipe' ? 'Accès collaborateurs' : 'Boutique'}
+        </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Personnalisez l'apparence, la livraison et le stock de votre boutique.
+          {section === 'compte'
+            ? 'Votre profil, votre sécurité et votre abonnement.'
+            : section === 'equipe'
+              ? 'Invitez des collaborateurs à gérer cette boutique avec vous.'
+              : "Le nom, l'apparence, le contact et la livraison de votre boutique."}
         </p>
       </header>
 
@@ -844,15 +820,12 @@ function SettingsForm({
           was just the same navigation shown twice. */}
 
       {section === 'compte' ? (
-        <AccountSection />
-      ) : section === 'facturation' ? (
-        <BillingForShop shopId={shop.id} />
+        <AccountSection shop={shop} />
       ) : section === 'equipe' ? (
         <TeamSection shop={shop} />
       ) : (
       <form onSubmit={handleSubmit} className="mt-6">
         <div className="space-y-6">
-          {section === 'general' && (
             <Card icon={Store} title="Général" description="Le nom, la description et le genre de votre boutique.">
               <div>
                 <label htmlFor="shopName" className="block text-sm font-medium text-gray-700">
@@ -902,9 +875,7 @@ function SettingsForm({
                 </p>
               </div>
             </Card>
-          )}
 
-          {section === 'appearance' && (
             <Card icon={ImagePlus} title="Apparence" description="Logo, bannière et couleurs affichés sur la boutique.">
               {(() => {
                 const template = shop.template_id ? STORE_TEMPLATE_BY_KEY[shop.template_id] : undefined
@@ -1056,9 +1027,7 @@ function SettingsForm({
                 )}
               </div>
             </Card>
-          )}
 
-          {section === 'contact' && (
             <Card icon={Phone} title="Contact & devise" description="Comment vos clients vous joignent et paient.">
               <div>
                 <label htmlFor="countryCode" className="block text-sm font-medium text-gray-700">
@@ -1196,9 +1165,8 @@ function SettingsForm({
                 </div>
               </div>
             </Card>
-          )}
 
-          {section === 'shipping' && (
+          {showShipping && (
             <Card icon={Truck} title="Livraison & stock" description="Les zones de livraison et les règles appliquées à vos commandes.">
               <p className="rounded-lg bg-sand-50 px-3 py-2 text-xs text-ink-700/70">
                 La livraison est facturée selon la zone choisie par le client au moment du paiement.

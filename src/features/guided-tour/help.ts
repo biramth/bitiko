@@ -16,11 +16,11 @@ export interface HelpShortcut {
 /** « Que veux-tu faire ? » : les réglages que les nouveaux marchands cherchent le plus. */
 export const HELP_SHORTCUTS: HelpShortcut[] = [
   { key: 'share', label: 'Copier le lien de ma boutique', action: 'copy-link' },
-  { key: 'logo', label: 'Ajouter mon logo', to: '/admin/parametres/appearance', area: 'settings' },
-  { key: 'whatsapp', label: 'Modifier mon numéro WhatsApp', to: '/admin/parametres/contact', area: 'settings' },
-  { key: 'delivery', label: 'Régler la livraison', to: '/admin/parametres/shipping', capability: 'HAS_DELIVERY', area: 'settings' },
+  { key: 'logo', label: 'Ajouter mon logo', to: '/admin/parametres/boutique', area: 'settings' },
+  { key: 'whatsapp', label: 'Modifier mon numéro WhatsApp', to: '/admin/parametres/boutique', area: 'settings' },
+  { key: 'delivery', label: 'Régler la livraison', to: '/admin/parametres/boutique', capability: 'HAS_DELIVERY', area: 'settings' },
   { key: 'hours', label: 'Régler mes horaires de réservation', to: '/admin/rendez-vous', capability: 'HAS_APPOINTMENTS' },
-  { key: 'plan', label: 'Changer de formule', to: '/admin/parametres/facturation', area: 'billing' },
+  { key: 'plan', label: 'Changer de formule', to: '/admin/parametres/compte?billing=1', area: 'billing' },
 ]
 
 /** « /admin » (accueil) ne doit pas compter comme la page courante de toutes les pages de l'admin. */

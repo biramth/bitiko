@@ -162,7 +162,7 @@ function PlanGauge({ active, max, label }: { active: number; max: number; label:
           {pct >= 100
             ? 'Limite atteinte : les nouveaux produits seront enregistrés inactifs. '
             : 'Vous approchez de la limite des produits actifs. '}
-          <Link to="/admin/parametres/facturation" className="font-medium text-brand-700 underline underline-offset-2">
+          <Link to="/admin/parametres/compte?billing=1" className="font-medium text-brand-700 underline underline-offset-2">
             Passer à Pro
           </Link>
         </p>

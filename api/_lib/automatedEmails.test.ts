@@ -33,13 +33,13 @@ describe('automatedEmailHtml', () => {
         subject: 'Plus que quelques jours, {{shop_name}} ({{plan_name}})',
         body: 'Bonjour {{owner_name}}, ton offre **{{plan_name}}** se termine le {{period_end}} : {{amount}} pour continuer.',
         buttonLabel: 'Je renouvelle',
-        buttonUrl: '/admin/parametres/facturation',
+        buttonUrl: '/admin/parametres/compte?billing=1',
       },
     })
     expect(subject).toBe('Plus que quelques jours, Awa Boutique (Essentiel)')
     expect(html).toContain('Bonjour Awa, ton offre <strong>Essentiel</strong> se termine le 27 octobre 2026')
     expect(html).toContain('5 000 FCFA pour continuer.')
-    expect(html).toContain('https://bitiko.shop/admin/parametres/facturation')
+    expect(html).toContain('https://bitiko.shop/admin/parametres/compte?billing=1')
     expect(html).toContain('Je renouvelle')
   })
 

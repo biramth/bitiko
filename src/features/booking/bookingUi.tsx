@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, MessageCircle } from 'lucide-react'
 import { formatSlotTime } from './bookingUtils'
 
 export function SlotGrid({
@@ -38,7 +38,17 @@ export function SlotGrid({
   )
 }
 
-export function BookingSuccess({ title, detail, onReset }: { title: string; detail: string; onReset: () => void }) {
+export function BookingSuccess({
+  title,
+  detail,
+  whatsappUrl,
+  onReset,
+}: {
+  title: string
+  detail: string
+  whatsappUrl?: string | null
+  onReset: () => void
+}) {
   return (
     <div
       role="status"
@@ -48,7 +58,19 @@ export function BookingSuccess({ title, detail, onReset }: { title: string; deta
       <CheckCircle2 className="mx-auto mb-2" size={28} aria-hidden />
       <p className="font-semibold">{title}</p>
       <p className="mt-1 text-sm">{detail}</p>
-      <button type="button" onClick={onReset} className="mt-4 text-sm font-medium underline underline-offset-2">
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ borderRadius: 'var(--shop-radius)' }}
+          className="mt-4 inline-flex items-center justify-center gap-2 border border-emerald-400 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+        >
+          <MessageCircle size={16} className="shrink-0" aria-hidden />
+          Rouvrir la conversation WhatsApp
+        </a>
+      )}
+      <button type="button" onClick={onReset} className="mt-4 block w-full text-sm font-medium underline underline-offset-2">
         Faire une autre demande
       </button>
     </div>

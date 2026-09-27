@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Crown, MailPlus, Trash2, Users } from 'lucide-react'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { UpgradeTeaserDialog } from '@/features/billing/UpgradeTeaserDialog'
 import {
   SHOP_MEMBER_ROLE_LABELS,
   inviteShopMember,
@@ -29,6 +30,7 @@ export function TeamSection({ shop }: { shop: Shop }) {
   const { plan, isLoading: planLoading } = useShopPlan(shop.id)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<ShopMemberRole>('vendeur')
+  const [upsellOpen, setUpsellOpen] = useState(false)
 
   const { data: members, isLoading, isError } = useQuery({
     queryKey: ['shop-members', shop.id],
@@ -63,27 +65,29 @@ export function TeamSection({ shop }: { shop: Shop }) {
   })
 
   if (planLoading) return <Spinner />
-  if (!plan.teamAccess) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-6 py-10 text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-amber-500">
-          <Crown size={22} aria-hidden />
-        </span>
-        <h2 className="font-heading text-lg font-bold text-gray-900">L'équipe, c'est Pro</h2>
-        <p className="max-w-sm text-sm text-gray-600">
-          Invitez un manager ou un vendeur sur cette boutique : catalogue, commandes et clients partagés,
-          paramètres et facturation réservés au propriétaire.
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-4">
+      {!plan.teamAccess && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-amber-500">
+            <Crown size={18} aria-hidden />
+          </span>
+          <p className="text-sm text-amber-800">
+            L'accès collaborateurs fait partie du plan Pro. Préparez votre invitation ci-dessous — on vous proposera
+            de passer au plan supérieur au moment de l'envoyer.
+          </p>
+        </div>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (email.trim()) inviteMutation.mutate()
+          if (!email.trim()) return
+          if (!plan.teamAccess) {
+            setUpsellOpen(true)
+            return
+          }
+          inviteMutation.mutate()
         }}
         className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row"
       >
@@ -170,6 +174,13 @@ export function TeamSection({ shop }: { shop: Shop }) {
         Manager : catalogue, commandes et clients comme vous. Vendeur : lecture + avancement des commandes.
         Paramètres, facturation et équipe restent au propriétaire.
       </p>
+
+      <UpgradeTeaserDialog
+        open={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        feature="L'accès collaborateurs"
+        description="Passez au plan Pro pour inviter votre équipe sur cette boutique."
+      />
     </div>
   )
 }

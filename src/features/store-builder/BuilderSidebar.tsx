@@ -234,7 +234,7 @@ export function BuilderSidebar({
                         </p>
                         {cat === 'content' && contentLimitReached && (
                           <Link
-                            to="/admin/parametres/facturation"
+                            to="/admin/parametres/compte?billing=1"
                             onClick={() => setAddMenuOpen(false)}
                             className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:text-amber-700"
                           >

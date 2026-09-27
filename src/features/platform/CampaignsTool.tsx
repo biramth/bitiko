@@ -117,7 +117,7 @@ Besoin d’aide ? Réponds à cet email, on te guide.`,
 Renouvelle à temps pour garder tes fonctionnalités sans interruption : produits illimités, éditeur complet, sans « Propulsé par Bitiko ».`,
     audience: { ...ANY_AUDIENCE, plan: 'paid' },
     buttonLabel: 'Renouveler mon abonnement',
-    buttonUrl: '/admin/parametres/facturation',
+    buttonUrl: '/admin/parametres/compte?billing=1',
   },
 ]
 

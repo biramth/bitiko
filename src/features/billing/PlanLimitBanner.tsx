@@ -26,7 +26,7 @@ export function PlanLimitBanner({
         {reached ? ' — limite du plan atteinte.' : ''}
       </span>
       {reached && (
-        <Link to="/admin/parametres/facturation" className="font-medium text-brand-700 hover:text-brand-800">
+        <Link to="/admin/parametres/compte?billing=1" className="font-medium text-brand-700 hover:text-brand-800">
           Voir les plans
         </Link>
       )}

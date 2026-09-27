@@ -374,7 +374,7 @@ export function LandingPage() {
                 <ul className="space-y-3.5">
                   {[
                     'Un vrai catalogue en ligne — ton client voit, compare, commande ou réserve à 23h',
-                    'Commande sur ton WhatsApp, formatée ; rendez-vous par email et dans ton agenda',
+                    'Commandes, rendez-vous et réservations sur ton WhatsApp, formatés, et dans ton agenda',
                     'Stock et planning mis à jour automatiquement — plus de double réservation ni rupture',
                     'Secteurs et villes avec tarifs — le client choisit, le prix s\'applique',
                     'Dashboard unifié — tu vois ventes, rendez-vous, stock et finances sans ouvrir un carnet',
@@ -408,14 +408,14 @@ export function LandingPage() {
                 Le client commande ou réserve en ligne. Tu es prévenu tout de suite.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Zéro appli à télécharger. Les commandes arrivent sur ton WhatsApp, les demandes de rendez-vous et de table par email et dans ton agenda.
+                Zéro appli à télécharger. Commandes, demandes de rendez-vous et de table arrivent sur ton WhatsApp, et dans ton agenda.
               </p>
             </Reveal>
             <div className="grid gap-8 sm:grid-cols-3 sm:items-start">
               {[
                 { step: '1', title: 'Le client choisit', desc: 'Il parcourt ton catalogue, ajoute au panier ou réserve un créneau, choisit sa ville et son mode de paiement.' },
                 { step: '2', title: 'L\'opération est enregistrée', desc: 'Stock décrémenté ou créneau réservé, frais calculés, total validé — tout côté serveur en 1 seconde.' },
-                { step: '3', title: 'Tu es prévenu', desc: 'Commande : un message WhatsApp formaté (nom, détails, total, ville). Rendez-vous ou table : un email et la demande dans ton agenda, à confirmer d\'un clic.' },
+                { step: '3', title: 'Tu es prévenu', desc: 'Un message WhatsApp formaté (nom, détails, créneau ou total) et la demande dans ton agenda, à confirmer d\'un clic.' },
               ].map(({ step, title, desc }, i) => (
                 <Reveal key={step} delay={i * 120} className="relative text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-lg font-bold text-white shadow-md">{step}</div>

@@ -214,7 +214,7 @@ export function CategoryFormPage() {
                   uploading={uploadingImage}
                   isPro={isPro}
                   availableColors={availableColors}
-                  onLockedFeature={() => navigate('/admin/parametres/facturation')}
+                  onLockedFeature={() => navigate('/admin/parametres/compte?billing=1')}
                   onColorChange={setColor}
                   onFileSelected={handleFileSelected}
                   onRemoveImage={() => {
