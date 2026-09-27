@@ -67,7 +67,6 @@
     { "source": "/api/admin/analytics/posthog", "destination": "/api/admin/platform?action=analytics-posthog" },
     { "source": "/api/check-email", "destination": "/api/onboarding?action=check-email" },
     { "source": "/api/send-welcome-email", "destination": "/api/onboarding?action=welcome" },
-    { "source": "/api/booking-notify", "destination": "/api/onboarding?action=booking-notify" },
     { "source": "/api/automation-kick", "destination": "/api/onboarding?action=automation-kick" },
     { "source": "/api/campaigns/unsubscribe", "destination": "/api/onboarding?action=unsubscribe" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },

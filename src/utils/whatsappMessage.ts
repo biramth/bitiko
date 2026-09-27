@@ -60,3 +60,25 @@ export function buildWhatsAppUrl(whatsappNumber: string, message: string): strin
   const digitsOnly = whatsappNumber.replace(/[^0-9]/g, '')
   return `https://wa.me/${digitsOnly}?text=${encodeURIComponent(message)}`
 }
+
+/** The booking message the customer sends to the shop on WhatsApp, right after
+ *  a rendez-vous/réservation request — same pattern as the order message: no
+ *  "Bonjour", straight to the point since it stands in for a phone call. */
+export function buildBookingWhatsAppMessage(params: {
+  kind: 'appointment' | 'reservation'
+  detail: string
+  whenLabel: string
+  customerName: string
+  customerPhone: string
+}): string {
+  const lines = [
+    params.kind === 'appointment' ? 'Nouvelle demande de rendez-vous' : 'Nouvelle demande de réservation',
+    '',
+    params.detail,
+    params.whenLabel,
+    '',
+    `Nom : ${params.customerName}`,
+    `Téléphone : ${params.customerPhone}`,
+  ]
+  return lines.join('\n')
+}

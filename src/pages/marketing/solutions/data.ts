@@ -87,7 +87,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     benefits: [
       { title: 'Vos vrais horaires, jour par jour', text: 'Ouvert le samedi jusqu’à 17 h, fermé le dimanche, pause de 13 h à 15 h en semaine ? Réglez chaque journée séparément, ajoutez vos congés : la cliente ne voit que des créneaux réellement libres.' },
       { title: 'Zéro double réservation', text: 'Un créneau pris est aussitôt bloqué, y compris pour la personne de l’équipe choisie. Plus de rendez-vous oubliés ou superposés dans un carnet.' },
-      { title: 'Vous êtes prévenu tout de suite', text: 'Chaque nouvelle demande vous arrive par email et dans votre agenda, avec les boutons Appeler et WhatsApp pour répondre en un geste.' },
+      { title: 'Vous êtes prévenu tout de suite', text: 'Chaque nouvelle demande vous arrive formatée sur votre WhatsApp et dans votre agenda, avec les boutons Appeler et WhatsApp pour répondre en un geste.' },
       { title: 'Vos prestations et vos prix en ligne', text: 'Coupe, tresses, soin du visage, manucure : nom, durée et tarif. La cliente sait ce qu’elle réserve et combien cela coûte avant de venir.' },
     ],
     steps: [
@@ -100,7 +100,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       'Agenda jour et semaine, demandes à confirmer mises en évidence',
       'Équipe : chaque rendez-vous attribué à une personne, spécialités affichées',
       'Boutons Appeler et WhatsApp sur chaque rendez-vous',
-      'Alerte email à chaque nouvelle demande',
+      'Alerte WhatsApp à chaque nouvelle demande',
       'Vente de produits en complément (soins, cosmétiques) dans le même espace',
     ],
     shots: [
@@ -111,7 +111,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     faq: [
       { question: 'Mes clientes doivent-elles installer une application ?', answer: 'Non. Elles réservent depuis le navigateur de leur téléphone, sur votre lien. Rien à télécharger, aucun compte à créer.' },
       { question: 'Puis-je avoir des horaires différents selon les jours ?', answer: 'Oui. Vous réglez chaque jour séparément (plusieurs plages possibles pour une pause) et vous marquez vos jours de congé.' },
-      { question: 'Comment suis-je prévenu d’une nouvelle réservation ?', answer: 'Par email et dans votre agenda Bitiko. Vous confirmez ou refusez d’un clic, puis vous répondez à la cliente par téléphone ou WhatsApp depuis la même fiche.' },
+      { question: 'Comment suis-je prévenu d’une nouvelle réservation ?', answer: 'Sur votre WhatsApp, formaté, et dans votre agenda Bitiko. Vous confirmez ou refusez d’un clic, puis vous répondez à la cliente par téléphone ou WhatsApp depuis la même fiche.' },
       { question: 'Combien de prestations et de rendez-vous en ligne sur le plan gratuit ?', answer: `Le plan Découverte inclut ${free.maxActiveServices} prestations actives, ${free.maxTeamMembers} personnes d’équipe et ${free.maxMonthlyBookings} demandes de rendez-vous par mois. Les plans payants augmentent ces limites.` },
     ],
     related: ['prestataires-services', 'restaurant', 'finances-commercants'],
@@ -154,7 +154,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     faq: [
       { question: 'Bitiko prend-il une commission sur mes commandes ?', answer: 'Non, jamais. Vous gardez 100 % du prix de vos plats. Vous ne payez que l’abonnement si vous choisissez un plan payant.' },
       { question: 'Puis-je limiter le nombre de couverts par service ?', answer: 'Oui : vous indiquez la capacité de votre salle et la durée moyenne d’un repas. Bitiko n’accepte que les réservations qui rentrent.' },
-      { question: 'Comment les commandes arrivent-elles ?', answer: 'Sur votre WhatsApp avec le nom du client, les plats, le total et le quartier de livraison, et dans votre tableau de bord. Les réservations de table arrivent aussi par email.' },
+      { question: 'Comment les commandes arrivent-elles ?', answer: 'Sur votre WhatsApp avec le nom du client, les plats, le total et le quartier de livraison, et dans votre tableau de bord. Les réservations de table arrivent aussi sur votre WhatsApp, formatées.' },
       { question: 'Le client peut-il payer en ligne ?', answer: 'Le client choisit espèces à la livraison ou mobile money ; vous confirmez le paiement avec lui sur WhatsApp. Aucune plateforme de paiement compliquée à configurer.' },
     ],
     related: ['boutique-en-ligne', 'salon-coiffure-beaute', 'finances-commercants'],
@@ -229,7 +229,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       'Disponibilités jour par jour, pauses et congés',
       'Agenda avec demandes à confirmer et statuts (confirmé, terminé, annulé)',
       'Équipe et attribution des rendez-vous',
-      'Notification email à chaque demande',
+      'Notification WhatsApp à chaque demande',
       'Recettes des rendez-vous terminés reprises automatiquement dans votre bilan',
     ],
     shots: [

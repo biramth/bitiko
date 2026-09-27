@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { BookingSuccess, SlotGrid } from '@/features/booking/bookingUi'
 import {
@@ -11,8 +11,9 @@ import {
 import { Spinner } from '@/components/ui/Spinner'
 import { createReservation, getReservationSlots } from '@/services/reservation.service'
 import { bookingErrorMessage } from '@/services/bookingSettings.service'
-import { kickAutomations, notifyBooking } from '@/services/bookingNotify.service'
-import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
+import { kickAutomations } from '@/services/bookingNotify.service'
+import { buildBookingWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
+import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { ReservationsSectionConfig, ThemeConfig } from '@/types/builder'
 import { sectionHeadingClass } from '@/config/themeTokens'
@@ -41,7 +42,8 @@ export function ReservationsRenderer({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [booked, setBooked] = useState<{ slot: string; party: number } | null>(null)
+  const [booked, setBooked] = useState<{ slot: string; party: number; whatsappUrl: string | null } | null>(null)
+  const whatsappWindowRef = useRef<Window | null>(null)
 
   const party = Math.max(1, Math.min(100, Number(partySize) || 1))
 
@@ -67,11 +69,26 @@ export function ReservationsRenderer({
       })
     },
     onSuccess: (reservation) => {
-      setBooked({ slot: reservation.start_at, party: reservation.party_size })
-      void notifyBooking('reservation', reservation.id)
+      const whenLabel = `${new Date(reservation.start_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(reservation.start_at, timeZone)}`
+      const message = buildBookingWhatsAppMessage({
+        kind: 'reservation',
+        detail: `Table pour ${reservation.party_size}`,
+        whenLabel,
+        customerName: name.trim(),
+        customerPhone: formatPhoneNumberForDisplay(reservation.customer_phone),
+      })
+      const whatsappUrl = buildWhatsAppUrl(shop.whatsapp_number, message)
+      const whatsappWindow = whatsappWindowRef.current
+      if (whatsappWindow) whatsappWindow.location.href = whatsappUrl
+      else window.setTimeout(() => window.open(whatsappUrl, '_blank', 'noopener'), 0)
+      setBooked({ slot: reservation.start_at, party: reservation.party_size, whatsappUrl })
       void kickAutomations(shop.id)
     },
-    onError: (e) => setError(bookingErrorMessage(e)),
+    onError: (e) => {
+      whatsappWindowRef.current?.close()
+      whatsappWindowRef.current = null
+      setError(bookingErrorMessage(e))
+    },
   })
 
   const reset = () => {
@@ -104,7 +121,8 @@ export function ReservationsRenderer({
       {booked ? (
         <BookingSuccess
           title="Demande envoyée !"
-          detail={`Table pour ${booked.party} — ${new Date(booked.slot).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(booked.slot, timeZone)}. Vous serez contacté·e pour confirmation.`}
+          detail={`Table pour ${booked.party} — ${new Date(booked.slot).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(booked.slot, timeZone)}. Confirmez-la sur WhatsApp pour être prise en compte plus vite.`}
+          whatsappUrl={booked.whatsappUrl}
           onReset={reset}
         />
       ) : (
@@ -114,6 +132,7 @@ export function ReservationsRenderer({
             e.preventDefault()
             if (!canSubmit) return
             setError(null)
+            whatsappWindowRef.current = window.open('', '_blank')
             bookMutation.mutate()
           }}
         >

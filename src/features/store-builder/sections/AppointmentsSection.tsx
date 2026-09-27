@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Calendar } from 'lucide-react'
 import { useActiveServices } from '@/features/services/useServices'
@@ -15,9 +15,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { createAppointment, getBookingSlots } from '@/services/appointment.service'
 import { bookingErrorMessage } from '@/services/bookingSettings.service'
-import { kickAutomations, notifyBooking } from '@/services/bookingNotify.service'
+import { kickAutomations } from '@/services/bookingNotify.service'
+import { buildBookingWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
 import { formatCurrency } from '@/utils/format'
-import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
+import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { AppointmentsSectionConfig, ThemeConfig } from '@/types/builder'
 import { sectionHeadingClass } from '@/config/themeTokens'
@@ -50,7 +51,8 @@ export function AppointmentsRenderer({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [booked, setBooked] = useState<{ slot: string; service: string } | null>(null)
+  const [booked, setBooked] = useState<{ slot: string; service: string; whatsappUrl: string | null } | null>(null)
+  const whatsappWindowRef = useRef<Window | null>(null)
 
   const selectedService = services.find((s) => s.id === serviceId)
 
@@ -77,11 +79,27 @@ export function AppointmentsRenderer({
       })
     },
     onSuccess: (appointment) => {
-      setBooked({ slot: appointment.start_at, service: selectedService?.name ?? 'Prestation' })
-      void notifyBooking('appointment', appointment.id)
+      const serviceName = selectedService?.name ?? 'Prestation'
+      const whenLabel = `${new Date(appointment.start_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(appointment.start_at, timeZone)}`
+      const message = buildBookingWhatsAppMessage({
+        kind: 'appointment',
+        detail: serviceName,
+        whenLabel,
+        customerName: name.trim(),
+        customerPhone: formatPhoneNumberForDisplay(appointment.customer_phone),
+      })
+      const whatsappUrl = buildWhatsAppUrl(shop.whatsapp_number, message)
+      const whatsappWindow = whatsappWindowRef.current
+      if (whatsappWindow) whatsappWindow.location.href = whatsappUrl
+      else window.setTimeout(() => window.open(whatsappUrl, '_blank', 'noopener'), 0)
+      setBooked({ slot: appointment.start_at, service: serviceName, whatsappUrl })
       void kickAutomations(shop.id)
     },
-    onError: (e) => setError(bookingErrorMessage(e)),
+    onError: (e) => {
+      whatsappWindowRef.current?.close()
+      whatsappWindowRef.current = null
+      setError(bookingErrorMessage(e))
+    },
   })
 
   const reset = () => {
@@ -119,7 +137,8 @@ export function AppointmentsRenderer({
       {!servicesLoading && services.length > 0 && booked && (
         <BookingSuccess
           title="Demande envoyée !"
-          detail={`${booked.service} — ${new Date(booked.slot).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(booked.slot, timeZone)}. Vous serez contacté·e pour confirmation.`}
+          detail={`${booked.service} — ${new Date(booked.slot).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })} à ${formatSlotTime(booked.slot, timeZone)}. Confirmez-la sur WhatsApp pour être prise en compte plus vite.`}
+          whatsappUrl={booked.whatsappUrl}
           onReset={reset}
         />
       )}
@@ -131,6 +150,7 @@ export function AppointmentsRenderer({
             e.preventDefault()
             if (!canSubmit) return
             setError(null)
+            whatsappWindowRef.current = window.open('', '_blank')
             bookMutation.mutate()
           }}
         >
