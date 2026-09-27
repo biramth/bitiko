@@ -6,10 +6,15 @@ const VercelAnalytics = lazy(() =>
 const SpeedInsights = lazy(() =>
   import('@vercel/speed-insights/react').then((m) => ({ default: m.SpeedInsights })),
 )
+const PostHogTracking = lazy(() =>
+  import('@/components/PostHogTracking').then((m) => ({ default: m.PostHogTracking })),
+)
 
-/** Third-party beacons load after the page is interactive — never in the
- *  LCP/FCP critical path. Split into their own chunks (lazy) and mounted
- *  once the browser idles (or after a bounded timeout). */
+/** Third-party beacons (Vercel Analytics/Speed Insights, PostHog) load after
+ *  the page is interactive — never in the LCP/FCP critical path. Split into
+ *  their own chunks (lazy) and mounted once the browser idles (or after a
+ *  bounded timeout). Rendered inside BrowserRouter + AuthProvider (see
+ *  main.tsx) — PostHogTracking needs both. */
 export function DeferredThirdParty() {
   const [ready, setReady] = useState(false)
 
@@ -28,6 +33,7 @@ export function DeferredThirdParty() {
     <Suspense fallback={null}>
       <VercelAnalytics />
       <SpeedInsights />
+      <PostHogTracking />
     </Suspense>
   )
 }
