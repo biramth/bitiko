@@ -4,7 +4,7 @@ import { useTenant } from '@/features/tenant/TenantContext'
 import { getEffectiveRegistry } from '@/features/store-builder/effectiveRegistry'
 import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/features/store-builder/previewBridge'
 import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
-import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
+import { getPageBySlug, getPublishedPageBySlug, resolvePageRedirect } from '@/services/page.service'
 import { sanitizeSections, sectionVisibleWithRegistry } from '@/features/store-builder/sanitizeSections'
 import { isSectionScheduledVisible } from '@/types/builder'
 import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
@@ -32,6 +32,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   // separate synchronous setState at the top of the effect.
   const [pageResult, setPageResult] = useState<{ slug: string; page: StorePage | null } | null>(null)
   const [live, setLive] = useState<{ sections: LayoutSection[]; themeColor: string; themeConfig: ThemeConfig } | null>(null)
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!shop) return
@@ -67,14 +68,33 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
     return () => window.removeEventListener('message', handleMessage)
   }, [isDraftPreview])
 
+  // Ancien slug renommé : suit la redirection enregistrée (remplace
+  // l'historique pour ne pas piéger le bouton retour dans une boucle).
+  useEffect(() => {
+    if (isDraftPreview || pageLoading || page || !shop) return
+    let cancelled = false
+    resolvePageRedirect(shop.id, slug).then((target) => {
+      if (!cancelled && target) setRedirectTo(`/pages/${target}`)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isDraftPreview, pageLoading, page, shop, slug])
+
+  useEffect(() => {
+    if (redirectTo) window.location.replace(redirectTo)
+  }, [redirectTo])
+
   usePageSeo({
     title: page ? `${page.seo_title?.trim() || page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
     description: page?.seo_description ?? shop?.description ?? undefined,
+    image: page?.og_image ?? shop?.banner_url ?? shop?.logo_url,
+    noindex: page?.noindex,
     siteName: shop?.name,
   })
 
   if (!shop) return null
-  if (pageLoading) return null
+  if (pageLoading || redirectTo) return null
 
   // In the embedded builder preview, the parent streams live draft sections.
   // A standalone "Prévisualiser" tab has no parent to stream from, so it

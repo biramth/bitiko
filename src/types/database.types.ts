@@ -705,6 +705,8 @@ export type Database = {
           draft_content: LayoutSection[] | null
           id: string
           is_published: boolean
+          noindex: boolean
+          og_image: string | null
           seo_description: string | null
           seo_title: string | null
           shop_id: string
@@ -718,6 +720,8 @@ export type Database = {
           draft_content?: LayoutSection[] | null
           id?: string
           is_published?: boolean
+          noindex?: boolean
+          og_image?: string | null
           seo_description?: string | null
           seo_title?: string | null
           shop_id: string
@@ -731,6 +735,8 @@ export type Database = {
           draft_content?: LayoutSection[] | null
           id?: string
           is_published?: boolean
+          noindex?: boolean
+          og_image?: string | null
           seo_description?: string | null
           seo_title?: string | null
           shop_id?: string
@@ -741,6 +747,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pages_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_redirects: {
+        Row: {
+          created_at: string
+          from_slug: string
+          id: string
+          shop_id: string
+          to_slug: string
+        }
+        Insert: {
+          created_at?: string
+          from_slug: string
+          id?: string
+          shop_id: string
+          to_slug: string
+        }
+        Update: {
+          created_at?: string
+          from_slug?: string
+          id?: string
+          shop_id?: string
+          to_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_redirects_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops"

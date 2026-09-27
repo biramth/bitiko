@@ -8,11 +8,15 @@ function xmlEscape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-function urlEntry(loc: string, opts?: { lastmod?: string; changefreq?: string; priority?: string }): string {
+function urlEntry(
+  loc: string,
+  opts?: { lastmod?: string; changefreq?: string; priority?: string; images?: string[] },
+): string {
   const extra = [
     opts?.lastmod ? `<lastmod>${opts.lastmod}</lastmod>` : '',
     opts?.changefreq ? `<changefreq>${opts.changefreq}</changefreq>` : '',
     opts?.priority ? `<priority>${opts.priority}</priority>` : '',
+    ...(opts?.images ?? []).map((src) => `<image:image><image:loc>${xmlEscape(src)}</image:loc></image:image>`),
   ].join('')
   return `  <url><loc>${xmlEscape(loc)}</loc>${extra}</url>`
 }
@@ -108,21 +112,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const [{ data: products }, { data: pages }] = await Promise.all([
             supabase
               .from('products')
-              .select('slug, updated_at')
+              .select('id, slug, updated_at')
               .eq('shop_id', shop.id)
               .eq('active', true),
             supabase
               .from('pages')
-              .select('slug')
+              .select('slug, updated_at, og_image, noindex')
               .eq('shop_id', shop.id)
               .eq('is_published', true),
           ])
 
-          for (const product of products ?? []) {
-            urls.push(urlEntry(`${origin}/produits/${product.slug}`, { lastmod: dateOnly(product.updated_at), changefreq: 'weekly', priority: '0.6' }))
+          // Première photo de chaque produit (vitrine + aperçus de partage).
+          const productIds = (products ?? []).map((p) => (p as { id: string }).id)
+          let firstImageByProduct = new Map<string, string>()
+          if (productIds.length > 0) {
+            const { data: images } = await supabase
+              .from('product_images')
+              .select('product_id, public_url, sort_order')
+              .in('product_id', productIds)
+              .order('sort_order', { ascending: true })
+            for (const img of (images ?? []) as { product_id: string; public_url: string }[]) {
+              if (!firstImageByProduct.has(img.product_id)) firstImageByProduct.set(img.product_id, img.public_url)
+            }
           }
-          for (const page of pages ?? []) {
-            urls.push(urlEntry(`${origin}/pages/${page.slug}`, { changefreq: 'weekly', priority: '0.5' }))
+
+          for (const product of (products ?? []) as { id: string; slug: string; updated_at: string }[]) {
+            const image = firstImageByProduct.get(product.id)
+            urls.push(
+              urlEntry(`${origin}/produits/${product.slug}`, {
+                lastmod: dateOnly(product.updated_at),
+                changefreq: 'weekly',
+                priority: '0.6',
+                images: image ? [image] : undefined,
+              }),
+            )
+          }
+          for (const page of (pages ?? []) as { slug: string; updated_at: string; og_image: string | null; noindex: boolean }[]) {
+            if (page.noindex) continue
+            urls.push(
+              urlEntry(`${origin}/pages/${page.slug}`, {
+                lastmod: dateOnly(page.updated_at),
+                changefreq: 'weekly',
+                priority: '0.5',
+                images: page.og_image ? [page.og_image] : undefined,
+              }),
+            )
           }
         }
       }
@@ -133,7 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
     ...urls,
     '</urlset>',
     '',
