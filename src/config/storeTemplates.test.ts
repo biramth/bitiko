@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { resolveTemplateVariant } from '@/types/builder'
 import { availableVerticals, STORE_TEMPLATE_BY_KEY, templatesForVertical } from './storeTemplates'
 
-describe('business groups (10 groupes + librairie, 0138)', () => {
+describe('business groups (10 groupes + librairie, 0140)', () => {
   it('exposes 11 verticals with at least one template', () => {
     expect(availableVerticals().map((v) => v.key)).toEqual([
       'restauration',
@@ -20,7 +20,7 @@ describe('business groups (10 groupes + librairie, 0138)', () => {
   })
 
   it('offers at least two templates per group', () => {
-    // Librairie (0138) démarre avec un seul template dédié — d'autres pourront
+    // Librairie (0140) démarre avec un seul template dédié — d'autres pourront
     // s'ajouter plus tard (activité ≠ template), ce n'est pas encore le cas.
     for (const vertical of availableVerticals().filter((v) => v.key !== 'librairie')) {
       const templates = templatesForVertical(vertical.key)

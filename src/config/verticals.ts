@@ -7,7 +7,7 @@ export interface Vertical {
 /**
  * Les groupes d'activité — choisis à l'onboarding, modifiables ensuite dans
  * Réglages. Les clés correspondent aux slugs du référentiel `business_types`
- * (migration 0116, + `librairie` en 0138) ; le fallback local (DB indisponible)
+ * (migration 0116, + `librairie` en 0140) ; le fallback local (DB indisponible)
  * passe par `availableVerticals` dans storeTemplates.ts, qui ne retient que
  * les groupes ayant au moins un template.
  */

@@ -40,7 +40,7 @@ Colle l'entrée générée dans `STORE_TEMPLATES`, adapte textes/couleurs/sectio
 2. Déclare le slug en base (admin plateforme → Templates, ou migration) +
    compatibilité vers le(s) type(s) : sans mapping, le template reste invisible
    des pickers pilotés par DB. Une activité doit toujours avoir au moins un
-   template qui lui appartient (`templates.owner_business_type_id`, 0138) —
+   template qui lui appartient (`templates.owner_business_type_id`, 0140) —
    l'admin signale les activités qui n'en ont aucun.
 
 Règles : `key` unique et immuable (minuscules, chiffres, `_`) ; ne réutilise
@@ -76,7 +76,7 @@ un slug sans entrée code).
 ## Rappel d'architecture
 
 - Le vertical n'est qu'un filtre ; un métier porte N templates, mais doit
-  toujours en posséder au moins un en propre (0138).
+  toujours en posséder au moins un en propre (0140).
 - Une variante ne change jamais les pages, seulement le thème.
 - `shop.template_id` reste toujours une clé connue (les variantes résolues
   gardent la clé de base).

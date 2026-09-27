@@ -164,7 +164,7 @@ export interface AdminTemplate {
   description: string | null
   status: 'active' | 'deprecated' | 'draft'
   content: Record<string, unknown> | null
-  /** Activité à laquelle ce template appartient à l'origine (0138) ; null = purement partagé. */
+  /** Activité à laquelle ce template appartient à l'origine (0140) ; null = purement partagé. */
   owner_business_type_id: string | null
   updated_at: string
   shops: number

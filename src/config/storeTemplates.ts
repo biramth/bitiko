@@ -982,7 +982,7 @@ export function availableVerticals(): Vertical[] {
  *  seuls les types historiques hors des 10 groupes ont besoin d'un alias. */
 const BUSINESS_TYPE_VERTICAL: Record<string, string> = {
   food_services: 'epicerie',
-  // Coiffure est dépréciée (doublon de Beauté & Bien-être, 0138) : alias conservé
+  // Coiffure est dépréciée (doublon de Beauté & Bien-être, 0140) : alias conservé
   // pour toute donnée historique qui la référencerait encore.
   coiffure: 'beaute',
 }

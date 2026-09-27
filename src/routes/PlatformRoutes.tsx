@@ -233,7 +233,7 @@ export function PlatformRoutes() {
                 </CapabilityGate>,
               )}
             />
-            {/* Ancien chemin (avant le renommage en « templates », 0138) : garde les liens déjà en place. */}
+            {/* Ancien chemin (avant le renommage en « templates », 0140) : garde les liens déjà en place. */}
             <Route path="plateforme/gabarits" element={<Navigate to="/plateforme/templates" replace />} />
           </Route>
         </Route>
