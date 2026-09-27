@@ -1,4 +1,4 @@
-import type { ContentWidth, FontChoice, RadiusScale, ThemeConfig } from '@/types/builder'
+import type { ContentWidth, FontChoice, HeadingScale, RadiusScale, SectionSpacing, ThemeConfig } from '@/types/builder'
 
 export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   secondaryColor: '#f7e6d0',
@@ -10,10 +10,16 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
   secondaryButtonTextColor: '',
   tertiaryButtonColor: '',
   tertiaryButtonTextColor: '',
+  headerBackgroundColor: '',
+  headerTextColor: '',
+  announcementBackgroundColor: '',
+  announcementTextColor: '',
   font: 'sora-inter',
   textScale: 'base',
+  headingScale: 'base',
   radius: 'none',
   contentWidth: 'normal',
+  sectionSpacing: 'normal',
 }
 
 export const RADIUS_CSS: Record<RadiusScale, string> = {
@@ -33,6 +39,16 @@ export const FONT_CSS: Record<FontChoice, { heading: string; body: string }> = {
   'sora-inter': { heading: '"Sora", "Inter", system-ui, sans-serif', body: '"Inter", system-ui, sans-serif' },
   inter: { heading: '"Inter", system-ui, sans-serif', body: '"Inter", system-ui, sans-serif' },
   sora: { heading: '"Sora", "Inter", system-ui, sans-serif', body: '"Sora", "Inter", system-ui, sans-serif' },
+  system: { heading: 'system-ui, -apple-system, "Segoe UI", sans-serif', body: 'system-ui, -apple-system, "Segoe UI", sans-serif' },
+  serif: { heading: 'Georgia, "Times New Roman", serif', body: 'Georgia, "Times New Roman", serif' },
+}
+
+export const FONT_LABELS: Record<FontChoice, string> = {
+  'sora-inter': 'Sora + Inter (par défaut)',
+  inter: 'Inter partout',
+  sora: 'Sora partout',
+  system: 'Système (léger, rapide)',
+  serif: 'Serif (élégant)',
 }
 
 /** Builds the inline CSS custom properties a shop's theme resolves to. */
@@ -60,7 +76,36 @@ export function themeConfigToCssVars(themeColor: string, config: ThemeConfig): R
     '--shop-content-width': CONTENT_WIDTH_CSS[config.contentWidth] ?? CONTENT_WIDTH_CSS.normal,
     '--shop-font-heading': font.heading,
     '--shop-font-body': font.body,
+    // En-tête et annonce : vides = repli boutique historique (aucun changement
+    // visuel pour les shops existants tant que le marchand ne règle rien).
+    '--shop-header-bg': config.headerBackgroundColor || background,
+    '--shop-header-text': config.headerTextColor || textColor,
+    '--shop-announcement-bg': config.announcementBackgroundColor || config.tertiaryButtonColor || accent,
+    '--shop-announcement-text': config.announcementTextColor || config.tertiaryButtonTextColor || '#ffffff',
+    '--shop-section-gap': SECTION_SPACING_CSS[config.sectionSpacing ?? 'normal'] ?? SECTION_SPACING_CSS.normal,
   }
+}
+
+const SECTION_SPACING_CSS: Record<SectionSpacing, string> = {
+  compact: '1.25rem',
+  normal: '2.5rem',
+  spacious: '4rem',
+}
+
+/** La taille des titres suit `headingScale` quand il est réglé, sinon
+ *  `textScale` (boutiques existantes inchangées). */
+export function headingScaleOf(config: ThemeConfig): HeadingScale {
+  return config.headingScale ?? config.textScale ?? 'base'
+}
+
+/** Classe de titre à utiliser dans les sections (préfère le réglage dédié). */
+export function sectionHeadingClass(config: ThemeConfig): string {
+  return SECTION_HEADING_SCALE[headingScaleOf(config)]
+}
+
+/** Classe de titre hero (préfère le réglage dédié). */
+export function heroHeadingClass(config: ThemeConfig): string {
+  return HEADING_SCALE[headingScaleOf(config)]
 }
 
 /** Heading size classes per text-scale step, used by the storefront hero.

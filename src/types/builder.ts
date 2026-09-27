@@ -422,13 +422,35 @@ export type LayoutSection = {
      *  the shop's business type lacks any listed capability — this is how a
      *  coiffeur frontstore drops e-commerce blocks without code branches. */
     capabilities?: string[]
+    /** Planification d'affichage (dates ISO, null = sans limite). Masqué sur la
+     *  vitrine hors fenêtre, toujours visible dans l'aperçu du builder. */
+    visibleFrom?: string | null
+    visibleTo?: string | null
   }
 }[SectionType]
 
-export type FontChoice = 'sora-inter' | 'inter' | 'sora'
+/** True quand une section planifiée doit s'afficher à `now` (vitrine réelle).
+ *  Dates invalides/absentes = sans limite (fail-open, boutiques existantes
+ *  inchangées). */
+export function isSectionScheduledVisible(section: Pick<LayoutSection, 'visibleFrom' | 'visibleTo'>, now: Date = new Date()): boolean {
+  const time = now.getTime()
+  if (section.visibleFrom) {
+    const from = new Date(section.visibleFrom).getTime()
+    if (Number.isFinite(from) && time < from) return false
+  }
+  if (section.visibleTo) {
+    const to = new Date(section.visibleTo).getTime()
+    if (Number.isFinite(to) && time > to) return false
+  }
+  return true
+}
+
+export type FontChoice = 'sora-inter' | 'inter' | 'sora' | 'system' | 'serif'
 export type TextScale = 'sm' | 'base' | 'lg'
 export type RadiusScale = 'none' | 'md' | 'lg' | 'full'
 export type ContentWidth = 'narrow' | 'normal' | 'wide'
+export type HeadingScale = 'sm' | 'base' | 'lg'
+export type SectionSpacing = 'compact' | 'normal' | 'spacious'
 
 export interface ThemeConfig {
   secondaryColor: string
@@ -451,6 +473,19 @@ export interface ThemeConfig {
    *  Vide = accent principal / blanc. */
   tertiaryButtonColor?: string
   tertiaryButtonTextColor?: string
+  /** En-tête global (fond + texte). Vide = fond de la boutique / texte global.
+   *  Les réglages par bloc restent prioritaires quand ils existent. */
+  headerBackgroundColor?: string
+  headerTextColor?: string
+  /** Barre d'annonce globale (fond + texte). Vide = bouton tertiaire
+   *  (comportement historique) — le réglage par bloc reste prioritaire. */
+  announcementBackgroundColor?: string
+  announcementTextColor?: string
+  /** Taille des titres (indépendante de la taille des textes). Absent =
+   *  suit `textScale` (comportement historique). */
+  headingScale?: HeadingScale
+  /** Respiration verticale entre les blocs. Absent = `normal`. */
+  sectionSpacing?: SectionSpacing
 }
 
 /** A store-wide WIP snapshot: the global theme, the home page sections and
@@ -468,6 +503,11 @@ export interface BuilderDraft {
    *  alongside the rest of the draft so `shops.template_id` stays in sync
    *  with what's actually live instead of only reflecting onboarding. */
   templateId?: string
+  /** Publication programmée (ISO datetime, null = aucune). Stockée dans le
+   *  brouillon existant : aucune migration requise. Le builder publie
+   *  automatiquement à l'ouverture quand l'échéance est dépassée ; le cron
+   *  serveur reste un suivi (piste CMS). */
+  scheduledAt?: string | null
 }
 
 /** System storefront pages (catalogue, product, cart, checkout). The published

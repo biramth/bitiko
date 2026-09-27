@@ -121,6 +121,43 @@ export function pickBrandPalette(pixels: Uint8ClampedArray): { primary: string |
 }
 
 /**
+ * Suggests a brand palette from a remote image URL (e.g. the shop's stored
+ * logo). Best-effort: resolves empty/null on any failure (CORS, réseau…) —
+ * never throws, so the caller simply keeps the current theme instead.
+ */
+export function extractPaletteFromUrl(url: string): Promise<{ primary: string | null; secondary: string | null }> {
+  return new Promise((resolve) => {
+    const empty = { primary: null, secondary: null }
+    try {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        try {
+          const size = 48
+          const canvas = document.createElement('canvas')
+          canvas.width = size
+          canvas.height = size
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(empty)
+            return
+          }
+          ctx.drawImage(img, 0, 0, size, size)
+          const { data } = ctx.getImageData(0, 0, size, size)
+          resolve(pickBrandPalette(data))
+        } catch {
+          resolve(empty)
+        }
+      }
+      img.onerror = () => resolve(empty)
+      img.src = url
+    } catch {
+      resolve(empty)
+    }
+  })
+}
+
+/**
  * Loads an image file, downsamples it onto an off-screen canvas, and
  * suggests a brand palette from its pixels (see `pickBrandPalette`).
  * Best-effort: resolves empty/null on any failure — never throws, so a logo

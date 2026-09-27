@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Plus, Trash2 } from 'lucide-react'
+import { CalendarClock, Copy, Eye, EyeOff, GripVertical, HelpCircle, Lock, Plus, Trash2 } from 'lucide-react'
 import { getAddableSectionTypes, type SectionRegistry } from './sectionRegistry'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import type { LayoutSection, SectionType } from '@/types/builder'
@@ -163,6 +163,11 @@ export function BuilderSidebar({
                       {def?.pinned && <span className="block text-[10px] uppercase tracking-wide text-gray-400">Global</span>}
                       {!def?.pinned && section.type === protectedType && (
                         <span className="block text-[10px] uppercase tracking-wide text-gray-400">Indispensable</span>
+                      )}
+                      {(section.visibleFrom || section.visibleTo) && (
+                        <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-brand-600" title="Affichage planifié">
+                          <CalendarClock size={10} aria-hidden /> Planifié
+                        </span>
                       )}
                     </span>
                   </button>

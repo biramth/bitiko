@@ -1,6 +1,6 @@
 import { Plus, Quote, Trash2 } from 'lucide-react'
 import type { TestimonialsSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
@@ -37,7 +37,7 @@ export function TestimonialsRenderer({
             value={config.heading}
             onCommit={(heading) => patch({ heading })}
             placeholder="Elles parlent de nous"
-            className={`text-center font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`text-center font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

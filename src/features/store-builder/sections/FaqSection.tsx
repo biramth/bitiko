@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, HelpCircle, Plus, Trash2 } from 'lucide-react'
 import type { FaqLayout, FaqSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
@@ -43,7 +43,7 @@ export function FaqRenderer({
             value={config.heading}
             onCommit={(heading) => patch({ heading })}
             placeholder="Questions fréquentes"
-            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

@@ -178,7 +178,9 @@ function AnnouncementBar({
     </>
   )
 
-  const colors = { backgroundColor: config.backgroundColor || 'var(--shop-tertiary-button)', color: config.textColor || 'var(--shop-tertiary-button-text)' }
+  // Priorité : réglage du bloc > réglage global du thème > repli historique
+  // (bouton tertiaire). Les boutiques existantes ne changent pas d'aspect.
+  const colors = { backgroundColor: config.backgroundColor || 'var(--shop-announcement-bg)', color: config.textColor || 'var(--shop-announcement-text)' }
 
   if (pill) {
     return (

@@ -5,6 +5,7 @@ import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
 import { isPreviewUpdateMessage, PREVIEW_READY, type PreviewUpdateMessage } from './previewBridge'
 import { useIsDraftPreview } from './useEmbeddedPreview'
 import type { Shop } from '@/types'
+import { isSectionScheduledVisible } from '@/types/builder'
 import type { LayoutSection, SystemTemplateKey, ThemeConfig } from '@/types/builder'
 
 export type EffectiveTemplateKey = 'home' | SystemTemplateKey
@@ -87,7 +88,10 @@ export function useEffectiveConfig(
     themeConfig = draftThemeConfig ?? shop?.theme_config ?? DEFAULT_THEME_CONFIG
   }
 
-  const announcementSection = sections.find((s) => s.type === 'announcement' && s.visible)
+  // Planification d'affichage : appliquée aux clients uniquement. Dans le
+  // builder (aperçu brouillon), tout reste visible pour rester éditable.
+  const inScheduleWindow = (s: LayoutSection) => isDraftPreview || isSectionScheduledVisible(s)
+  const announcementSection = sections.find((s) => s.type === 'announcement' && s.visible && inScheduleWindow(s))
   const headerSection = sections.find((s) => s.type === 'header' && s.visible)
   const footerSection = sections.find((s) => s.type === 'footer' && s.visible)
   const bodySections = sections.filter(

@@ -5,7 +5,7 @@ import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
 import type { FeaturedProductsSectionConfig, GridLayout, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useInlineEdit } from '../inline/useInlineEdit'
@@ -30,7 +30,7 @@ export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId,
             value={config.heading || 'Sélection'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

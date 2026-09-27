@@ -1,8 +1,17 @@
 import { PREVIEW_SELECT } from './previewBridge'
 import { getEffectiveRegistry } from './effectiveRegistry'
 import { sanitizeSections, sectionVisibleWithRegistry } from './sanitizeSections'
+import { isSectionScheduledVisible } from '@/types/builder'
 import type { Shop } from '@/types'
 import type { LayoutSection, ThemeConfig } from '@/types/builder'
+
+/** Marge ajoutée entre deux blocs quand le marchand a choisi un espacement
+ *  explicite. `normal`/absent = aucun style (aspect historique inchangé). */
+function sectionGap(themeConfig: ThemeConfig): string | undefined {
+  if (themeConfig.sectionSpacing === 'compact') return '-0.75rem'
+  if (themeConfig.sectionSpacing === 'spacious') return '1.5rem'
+  return undefined
+}
 
 /** Renders a list of body sections (header/footer are handled separately by
  *  StoreLayout). In embedded-preview mode each block is wrapped with a
@@ -29,9 +38,16 @@ export function SectionList({
   capabilities?: Set<string> | null
 }) {
   const registry = getEffectiveRegistry(shop.template_id)
+  const gap = sectionGap(themeConfig)
+  // Planification : masquée pour les clients (et l'onglet de prévisualisation),
+  // toujours affichée dans l'aperçu intégré du builder pour rester éditable.
+  const visibleSections = sanitizeSections(sections).filter((section) => {
+    if (!isEmbeddedPreview && !isSectionScheduledVisible(section)) return false
+    return true
+  })
   return (
     <>
-      {sanitizeSections(sections).map((section) => {
+      {visibleSections.map((section, index) => {
         const def = registry[section.type]
         if (!sectionVisibleWithRegistry(section, def?.capabilities, capabilities)) return null
         const Renderer = def?.Renderer
@@ -39,10 +55,12 @@ export function SectionList({
         const content = (
           <Renderer shop={shop} config={section.config} themeConfig={themeConfig} sectionId={section.id} editable={inlineEditable} />
         )
-        if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>
+        const gapStyle = gap && index > 0 ? { marginTop: gap } : undefined
+        if (!isEmbeddedPreview) return <div key={section.id} style={gapStyle}>{content}</div>
         return (
           <div
             key={section.id}
+            style={gapStyle}
             data-preview-section
             onClick={(e) => {
               // Note: no preventDefault here — themed links (product cards,

@@ -8,7 +8,7 @@ import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import { buildDemoCart } from '../demoCart'
 import type { Shop } from '@/types'
 import type { CartLayout, CartSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
@@ -102,7 +102,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
     <div className={`mx-auto max-w-[min(48rem,var(--shop-content-width))] px-4 py-8 sm:px-6 ${aside ? 'lg:max-w-[var(--shop-content-width)]' : ''}`}>
       {(config.heading || !isDemo) && (
         <div className="flex items-start justify-between gap-4">
-          {config.heading ? <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1> : <span />}
+          {config.heading ? <h1 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1> : <span />}
           {!isDemo && (
             <button
               type="button"

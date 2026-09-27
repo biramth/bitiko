@@ -15,7 +15,7 @@ import { kickAutomations, notifyBooking } from '@/services/bookingNotify.service
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { ReservationsSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useInlineEdit } from '../inline/useInlineEdit'
@@ -94,7 +94,7 @@ export function ReservationsRenderer({
             value={config.heading || 'Réserver une table'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

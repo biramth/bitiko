@@ -4,7 +4,7 @@ import { useCategories } from '@/features/categories/useCategories'
 import { readableTextColor } from '@/features/categories/categoryTile'
 import type { Shop } from '@/types'
 import type { CategoriesSectionConfig, CategoriesLayout, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { thumbSrcSet } from '@/utils/image'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
@@ -73,7 +73,7 @@ export function CategoriesRenderer({ shop, config, themeConfig, sectionId, edita
             value={config.heading}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`mb-4 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`mb-4 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

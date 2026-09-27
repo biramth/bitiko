@@ -43,7 +43,7 @@ function resolveHeaderNavLinks(
   return links
 }
 
-const nativeLinkClass = 'text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] transition-opacity hover:opacity-60'
+const nativeLinkClass = 'text-xs font-semibold uppercase tracking-widest text-[var(--shop-header-text)] transition-opacity hover:opacity-60'
 const ctaLinkClass = 'inline-flex items-center rounded-lg bg-[var(--shop-button)] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90'
 const ghostLinkClass = 'inline-flex items-center rounded-lg border border-[var(--shop-secondary-button-text)]/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50'
 
@@ -86,7 +86,7 @@ export function HeaderRenderer({
   const hasNav = navLinks.length > 0 || (editable && usesCustomMenu)
 
   const logo = (
-    <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-[var(--shop-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
+    <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-[var(--shop-header-text)]" style={{ fontFamily: 'var(--shop-font-heading)' }}>
       {header.showLogo && shop?.logo_url ? (
         <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 shrink-0 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : header.showLogo ? (
@@ -122,7 +122,7 @@ export function HeaderRenderer({
               setMenu(header.menu!.filter((_, i) => i !== index))
             }}
             aria-label="Supprimer ce lien"
-            className="shrink-0 text-[var(--shop-text)]/40 opacity-0 transition-opacity group-hover/navlink:opacity-100 hover:text-red-600"
+            className="shrink-0 text-[var(--shop-header-text)]/40 opacity-0 transition-opacity group-hover/navlink:opacity-100 hover:text-red-600"
           >
             <Trash2 size={12} aria-hidden />
           </button>
@@ -148,7 +148,7 @@ export function HeaderRenderer({
         e.stopPropagation()
         setMenu([...(header.menu ?? []), { label: 'Nouveau lien', href: '/catalogue' }])
       }}
-      className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/40 transition-opacity hover:text-[var(--shop-text)]"
+      className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-widest text-[var(--shop-header-text)]/40 transition-opacity hover:text-[var(--shop-header-text)]"
     >
       <Plus size={13} aria-hidden /> Lien
     </button>
@@ -168,7 +168,7 @@ export function HeaderRenderer({
         onClick={() => setMobileMenuOpen((open) => !open)}
         aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
         aria-expanded={mobileMenuOpen}
-        className="flex items-center -m-2 p-2 text-[var(--shop-text)] sm:hidden"
+        className="flex items-center -m-2 p-2 text-[var(--shop-header-text)] sm:hidden"
       >
         {mobileMenuOpen ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
       </button>
@@ -177,7 +177,7 @@ export function HeaderRenderer({
   const cart = !vocab.showCart ? null : (
     <Link
       to="/panier"
-      className="relative -m-2 flex items-center p-2 text-[var(--shop-text)] transition-opacity hover:opacity-60"
+      className="relative -m-2 flex items-center p-2 text-[var(--shop-header-text)] transition-opacity hover:opacity-60"
       aria-label={`Panier, ${itemCount} article${itemCount > 1 ? 's' : ''}`}
     >
       <ShoppingCart size={22} aria-hidden strokeWidth={1.5} />
@@ -227,7 +227,7 @@ export function HeaderRenderer({
   }
 
   return (
-    <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-bg)]/95 backdrop-blur`}>
+    <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-header-bg)]/95 backdrop-blur`}>
       {bar}
       {mobileMenuOpen && navLinks.length > 0 && (
         <nav className="max-h-[70vh] overflow-y-auto border-t border-ink-900/10 px-4 py-2 sm:hidden">
@@ -239,7 +239,7 @@ export function HeaderRenderer({
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:border-ink-900/40'}
+                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:opacity-60' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:border-ink-900/40'}
               >
                 {link.label}
               </a>
@@ -248,7 +248,7 @@ export function HeaderRenderer({
                 key={link.key}
                 to={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60' : link.primary ? 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:border-ink-900/40'}
+                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:opacity-60' : link.primary ? 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:border-ink-900/40'}
               >
                 {link.label}
               </Link>
@@ -257,7 +257,7 @@ export function HeaderRenderer({
           <Link
             to="/compte"
             onClick={() => setMobileMenuOpen(false)}
-            className="mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-text)]/70 hover:border-ink-900/40"
+            className="mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)]/70 hover:border-ink-900/40"
           >
             Mon compte
           </Link>

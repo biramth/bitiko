@@ -13,7 +13,7 @@ import { SERVICES_PAGE_SIZE } from '@/config/constants'
 import type { ServiceFilters } from '@/services/service.service'
 import type { Shop } from '@/types'
 import type { GridLayout, ServicesSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useInlineEdit } from '../inline/useInlineEdit'
@@ -96,7 +96,7 @@ export function ServicesRenderer({
             value={config.heading || 'Nos prestations'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`min-w-0 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`min-w-0 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />
