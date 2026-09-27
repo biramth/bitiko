@@ -50,6 +50,8 @@
     { "source": "/api/admin/campaigns/audience", "destination": "/api/admin/platform?action=campaign-audience" },
     { "source": "/api/admin/campaigns/send", "destination": "/api/admin/platform?action=campaign-send" },
     { "source": "/api/admin/campaigns/delete", "destination": "/api/admin/platform?action=campaign-delete" },
+    { "source": "/api/admin/campaigns/unschedule", "destination": "/api/admin/platform?action=campaign-unschedule" },
+    { "source": "/api/admin/campaigns/detail", "destination": "/api/admin/platform?action=campaign-detail" },
     { "source": "/api/admin/automated-emails", "destination": "/api/admin/platform?action=automated-list" },
     { "source": "/api/admin/automated-emails/save", "destination": "/api/admin/platform?action=automated-save" },
     { "source": "/api/admin/promos", "destination": "/api/admin/platform?action=promo-list" },
