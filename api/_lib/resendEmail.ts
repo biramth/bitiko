@@ -5,16 +5,18 @@ interface SendEmailInput {
   to: string
   subject: string
   html: string
+  /** En-têtes email additionnels (ex. List-Unsubscribe pour les campagnes). */
+  headers?: Record<string, string>
 }
 
 /** Transactional/marketing sends outside Supabase Auth's own mailer (which only covers signup/recovery/email-change). */
-export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
+export async function sendEmail({ to, subject, html, headers }: SendEmailInput): Promise<void> {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured on the server.')
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from: FROM, to, subject, html, ...(headers ? { headers } : {}) }),
   })
 
   if (!res.ok) {

@@ -4,6 +4,7 @@ import { sendEmail } from './_lib/resendEmail.js'
 import { bookingNotificationEmailHtml, automatedEmailHtml } from './_lib/emailTemplates.js'
 import { getAutomatedEmail } from './_lib/automatedEmails.js'
 import { dispatchEvents } from './_lib/automationDispatch.js'
+import { isValidUnsubscribeToken } from './_lib/unsubscribeToken.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -253,18 +254,82 @@ async function handleAutomationKick(req: VercelRequest, res: VercelResponse) {
   res.status(200).json(result)
 }
 
+function unsubscribePage(message: string, ok: boolean): string {
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Désabonnement — Bitiko</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f3ead9;font-family:Arial,Helvetica,sans-serif;padding:24px}
+.card{max-width:420px;background:#fff;border-radius:16px;padding:40px 32px;text-align:center;box-shadow:0 10px 30px rgba(34,31,69,.08)}
+h1{font-size:18px;color:#221f45;margin:0 0 8px}p{font-size:14px;color:#5b5686;line-height:1.6;margin:0}
+.mark{width:48px;height:48px;border-radius:12px;background:#221f45;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-family:Arial,sans-serif}</style>
+</head><body><div class="card"><div class="mark">B</div><h1>${ok ? 'Désabonnement confirmé' : 'Lien invalide'}</h1><p>${message}</p></div></body></html>`
+}
+
+/**
+ * Un clic (ou le bouton « Se désabonner » d'une boîte mail, RFC 8058 —
+ * requête POST automatique) retire le compte des campagnes email (promos,
+ * annonces). N'affecte jamais les emails transactionnels (bienvenue,
+ * abonnement activé, rappel d'échéance), déclenchés par l'action du
+ * destinataire, pas par une campagne. Public par nature : cliqué depuis une
+ * boîte mail, jamais connecté — le jeton signé (api/_lib/unsubscribeToken.ts)
+ * est la seule protection contre le désabonnement d'un autre compte.
+ */
+async function handleCampaignUnsubscribe(req: VercelRequest, res: VercelResponse) {
+  const userId = typeof req.query.u === 'string' ? req.query.u : ''
+  const token = typeof req.query.t === 'string' ? req.query.t : ''
+
+  if (!UUID_RE.test(userId) || !token || !isValidUnsubscribeToken(userId, token)) {
+    if (req.method === 'POST') {
+      res.status(400).json({ error: 'Lien invalide.' })
+    } else {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.status(400).send(unsubscribePage('Ce lien de désabonnement est invalide ou a expiré.', false))
+    }
+    return
+  }
+
+  const { error } = await getSupabaseAdmin()
+    .from('campaign_unsubscribes')
+    .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true })
+  if (error) throw error
+
+  if (req.method === 'POST') {
+    // Gmail/Yahoo/Outlook (List-Unsubscribe-Post) n'attendent aucun corps.
+    res.status(200).end()
+    return
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.status(200).send(unsubscribePage('Tu ne recevras plus les emails de campagne (promos, annonces) de Bitiko. Les emails liés à ton compte (bienvenue, abonnement, rappels) continuent normalement.', true))
+}
+
 /**
  * Onboarding-time endpoint (check-email + welcome email), consolidated into
  * one function to stay under the Hobby plan's function limit — the rewrites
  * in vercel.json map the readable URLs onto `?action=`.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const action = typeof req.query.action === 'string' ? req.query.action : 'check-email'
+
+  // Seul le désabonnement est atteint depuis un lien d'email (GET) ou par le
+  // clic en un geste d'un client mail (POST sans JSON) — tout le reste de cet
+  // endpoint reste POST-only, appelé depuis l'application.
+  if (action === 'unsubscribe') {
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' })
+      return
+    }
+    try {
+      await handleCampaignUnsubscribe(req, res)
+    } catch (err) {
+      console.error('campaign-unsubscribe failed', err)
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+    }
+    return
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return
   }
-
-  const action = typeof req.query.action === 'string' ? req.query.action : 'check-email'
 
   try {
     switch (action) {

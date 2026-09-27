@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from './supabaseAdmin.js'
 import { sendEmail } from './resendEmail.js'
 import { campaignEmailHtml } from './emailTemplates.js'
 import { recordUsage } from './usage.js'
+import { buildUnsubscribeUrl } from './unsubscribeToken.js'
 
 /**
  * Moteur d'envoi des campagnes, partagé entre l'envoi immédiat de l'équipe
@@ -158,6 +159,7 @@ export async function runCampaignSend(
           const owner = directory.get(recipient.owner_id)
           if (!owner?.email) return { recipient, skipped: true as const }
           const shopUrl = rootDomain ? `https://${recipient.slug}.${rootDomain}` : origin
+          const unsubscribeUrl = buildUnsubscribeUrl(origin, recipient.owner_id)
           try {
             await sendEmail({
               to: owner.email,
@@ -171,7 +173,14 @@ export async function runCampaignSend(
                 ownerName: owner.name,
                 buttonLabel: campaign.button_label ?? undefined,
                 buttonUrl: campaign.button_url ?? undefined,
+                unsubscribeUrl,
               }),
+              // RFC 8058 : permet à Gmail/Yahoo/Outlook d'afficher un bouton
+              // de désabonnement en un clic sans ouvrir l'email.
+              headers: {
+                'List-Unsubscribe': `<${unsubscribeUrl}>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              },
             })
             return { recipient, skipped: false as const, ok: true as const, email: owner.email }
           } catch (sendErr) {
