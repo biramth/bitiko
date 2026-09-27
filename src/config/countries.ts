@@ -79,3 +79,8 @@ export const COUNTRY_TIMEZONES: Record<string, string> = {
 export function defaultTimezoneForCountry(code: string | null | undefined): string {
   return COUNTRY_TIMEZONES[code ?? ''] ?? COUNTRY_TIMEZONES[DEFAULT_COUNTRY_CODE]
 }
+
+/** Drapeau emoji d'un code pays ISO (« SN » → 🇸🇳). */
+export function flagEmoji(code: string): string {
+  return String.fromCodePoint(...[...code.toUpperCase()].map((char) => 127397 + char.charCodeAt(0)))
+}

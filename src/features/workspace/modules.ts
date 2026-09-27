@@ -39,13 +39,13 @@ export interface WorkspaceModule {
 export const WORKSPACE_MODULES: WorkspaceModule[] = [
   { key: 'dashboard', label: 'Tableau de bord', to: '/admin', icon: LayoutDashboard, end: true, guide: 'guide-nav-dashboard', enabled: true },
   { key: 'orders', label: 'Commandes', to: '/admin/commandes', icon: ShoppingBag, group: 'Ventes', guide: 'guide-nav-commandes', ordersBadge: true, capabilities: ['HAS_ORDERS'], enabled: true },
-  { key: 'customers', label: 'Clients', to: '/admin/clients', icon: Users, group: 'Ventes', capabilities: ['HAS_CUSTOMERS'], enabled: true },
+  { key: 'customers', label: 'Clients', to: '/admin/clients', icon: Users, group: 'Ventes', guide: 'guide-nav-clients', capabilities: ['HAS_CUSTOMERS'], enabled: true },
   { key: 'products', label: 'Produits', to: '/admin/produits', icon: Package, group: 'Boutique', guide: 'guide-nav-produits', capabilities: ['HAS_PRODUCTS'], enabled: true },
   // L'agenda d'abord (ce que le commerçant consulte chaque jour), le catalogue
   // de prestations ensuite (réglé une fois).
-  { key: 'appointments', label: 'Rendez-vous', to: '/admin/rendez-vous', icon: CalendarDays, group: 'Services', capabilities: ['HAS_APPOINTMENTS'], enabled: true },
+  { key: 'appointments', label: 'Rendez-vous', to: '/admin/rendez-vous', icon: CalendarDays, group: 'Services', guide: 'guide-nav-rendez-vous', capabilities: ['HAS_APPOINTMENTS'], enabled: true },
   { key: 'reservations', label: 'Réservations de table', to: '/admin/reservations', icon: BookOpen, group: 'Services', capabilities: ['HAS_RESERVATIONS'], enabled: true },
-  { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', capabilities: ['HAS_SERVICES'], enabled: true },
+  { key: 'services', label: 'Prestations', to: '/admin/prestations', icon: Scissors, group: 'Services', guide: 'guide-nav-prestations', capabilities: ['HAS_SERVICES'], enabled: true },
   // L'équipe (vitrine) est transversale : son propre groupe, jamais noyée
   // dans « Services » (sinon une boutique mode verrait un groupe Services
   // avec pour seul contenu l'Équipe).

@@ -128,11 +128,12 @@ export function OrdersPage() {
         subtitle="Suivez et traitez les commandes reçues via WhatsApp et la boutique."
         actions={
           <>
-            <Button variant="secondary" icon={<Download size={15} aria-hidden />} loading={exporting} onClick={exportOrders}>
+            <Button variant="secondary" icon={<Download size={15} aria-hidden />} loading={exporting} onClick={exportOrders} data-guide="guide-export-commandes">
               Exporter (Excel)
             </Button>
             <Link
               to="/admin/commandes/nouvelle"
+              data-guide="guide-nouvelle-commande"
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
               <Plus size={15} aria-hidden /> Nouvelle commande
@@ -142,7 +143,7 @@ export function OrdersPage() {
       />
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" data-guide="guide-statuts-commandes">
           {STATUS_FILTERS.map((status) => {
           const count =
             status === 'all' ? (counts?.total ?? 0) : (counts?.counts[status as OrderStatus] ?? 0)
