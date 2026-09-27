@@ -10,6 +10,8 @@ export interface BuilderSnapshot {
   sections: LayoutSection[]
   themeColor: string
   themeConfig: ThemeConfig
+  /** Publication programmée (ISO datetime, null = aucune). */
+  scheduledAt?: string | null
 }
 
 /** Decouples the builder from the entity it's editing (the whole store or a
@@ -23,6 +25,7 @@ export interface BuilderTarget {
   initialSections: LayoutSection[]
   initialThemeColor: string
   initialThemeConfig: ThemeConfig
+  initialScheduledAt?: string | null
   /** What's currently live for this context — lets "Annuler les
    *  modifications" throw away the draft and go back to it in one action. */
   publishedSnapshot: BuilderSnapshot
@@ -56,13 +59,14 @@ export function useBuilderState(target: BuilderTarget) {
     sections: target.initialSections,
     themeColor: target.initialThemeColor,
     themeConfig: target.initialThemeConfig,
+    scheduledAt: target.initialScheduledAt ?? null,
   }))
   const [past, setPast] = useState<BuilderSnapshot[]>([])
   const [future, setFuture] = useState<BuilderSnapshot[]>([])
   const [dirty, setDirty] = useState(false)
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
 
-  const { sections, themeColor, themeConfig } = snapshot
+  const { sections, themeColor, themeConfig, scheduledAt } = snapshot
 
   const selectedSection = sections.find((s) => s.id === selectedSectionId) ?? null
 
@@ -155,9 +159,16 @@ export function useBuilderState(target: BuilderTarget) {
   /** Apply a store-wide template: keep the visible buffer's history, persist the
    *  whole-store draft, and make the current context show the template's layout
    *  for it. */
+  const updateSectionMeta = (id: string, patch: { visibleFrom?: string | null; visibleTo?: string | null }) => {
+    commit({
+      ...snapshot,
+      sections: sections.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    })
+  }
+
   const applyTemplate = (template: StoreTemplate) => {
     const sections = target.templateSections ? target.templateSections(template, snapshot.sections) : template.layout.home
-    commit({ sections, themeColor: template.themeColor, themeConfig: template.themeConfig })
+    commit({ sections, themeColor: template.themeColor, themeConfig: template.themeConfig, scheduledAt: snapshot.scheduledAt })
     setSelectedSectionId(null)
     if (target.storeApplyDraft) {
       void target
@@ -173,6 +184,8 @@ export function useBuilderState(target: BuilderTarget) {
   const setThemeColor = (color: string) => commit({ ...snapshot, themeColor: color })
 
   const setThemeConfig = (config: ThemeConfig) => commit({ ...snapshot, themeConfig: config })
+
+  const setScheduledAt = (value: string | null) => commit({ ...snapshot, scheduledAt: value })
 
   const undo = () => {
     if (past.length === 0) return
@@ -199,7 +212,11 @@ export function useBuilderState(target: BuilderTarget) {
   }
 
   const saveDraftMutation = useMutation({
-    mutationFn: () => target.saveDraft({ sections, themeColor, themeConfig }),
+    // Accepte un snapshot explicite : les mises à jour d'état React étant
+    // asynchrones, `setX()` suivi d'un `mutateAsync()` immédiat sauverait
+    // sinon l'ancienne valeur (ex. programmation d'une publication).
+    mutationFn: (override?: BuilderSnapshot) =>
+      target.saveDraft(override ?? { sections, themeColor, themeConfig, scheduledAt }),
     onSuccess: () => {
       setDirty(false)
       invalidate()
@@ -207,8 +224,10 @@ export function useBuilderState(target: BuilderTarget) {
   })
 
   const publishMutation = useMutation({
-    mutationFn: () => target.publish({ sections, themeColor, themeConfig }),
+    mutationFn: (override?: BuilderSnapshot) =>
+      target.publish(override ?? { sections, themeColor, themeConfig, scheduledAt }),
     onSuccess: () => {
+      setSnapshot((prev) => ({ ...prev, scheduledAt: null }))
       setDirty(false)
       invalidate()
     },
@@ -234,6 +253,7 @@ export function useBuilderState(target: BuilderTarget) {
     sections,
     themeColor,
     themeConfig,
+    scheduledAt: scheduledAt ?? null,
     dirty,
     selectedSection,
     selectedSectionId,
@@ -243,10 +263,12 @@ export function useBuilderState(target: BuilderTarget) {
     duplicateSection,
     toggleVisible,
     updateSectionConfig,
+    updateSectionMeta,
     reorderSection,
     applyTemplate,
     setThemeColor,
     setThemeConfig,
+    setScheduledAt,
     undo,
     redo,
     canUndo: past.length > 0,

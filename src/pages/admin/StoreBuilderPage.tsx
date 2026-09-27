@@ -4,9 +4,11 @@ import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Blocks,
+  CalendarClock,
   Check,
   Eye,
   ExternalLink,
+  ImagePlus,
   LayoutGrid,
   Loader2,
   Lock,
@@ -33,7 +35,7 @@ import { sanitizeSections } from '@/features/store-builder/sanitizeSections'
 import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
-import { updateShop } from '@/services/shop.service'
+import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
 import { generateHomeLayout } from '@/features/onboarding/generateStorefront'
 import { profileFromShop } from '@/features/onboarding/storeProfile'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
@@ -254,6 +256,7 @@ function storeApplyDraft(shop: Shop): (template: StoreTemplate) => Promise<unkno
         // template_id for either (see publishStore, which only sets it when
         // this is present).
         ...(isRestoredDesignKey(template.key) ? {} : { templateId: template.key }),
+        scheduledAt: shop.builder_draft?.scheduledAt ?? null,
       },
     })
 }
@@ -322,6 +325,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
   const shared = {
     initialThemeColor: shop.builder_draft?.themeColor ?? shop.theme_color,
     initialThemeConfig: shop.builder_draft?.themeConfig ?? shop.theme_config,
+    initialScheduledAt: shop.builder_draft?.scheduledAt ?? null,
     storeApplyDraft: storeApplyDraft(shop),
     publish: (snap: BuilderSnapshot) => publishStore(shop, context, snap),
     invalidateKeys: [{ queryKey: ['my-shop'] }, { queryKey: ['tenant-shop'] }],
@@ -352,6 +356,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
             themeColor: snap.themeColor,
             themeConfig: snap.themeConfig,
             templates: shop.builder_draft?.templates,
+            scheduledAt: snap.scheduledAt ?? null,
           },
         }),
     }
@@ -381,6 +386,7 @@ function buildTarget(context: PreparedContext, shop: Shop): BuilderTarget {
               ...(shop.builder_draft?.templates ?? {}),
               [context.key]: snap.sections,
             },
+            scheduledAt: snap.scheduledAt ?? null,
           },
         }),
     }
@@ -571,6 +577,7 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
             publishesStore={publishesStore}
             maxCustomSections={plan.maxCustomSections}
             onRegisterSaver={registerSaver}
+            seoPage={context.kind === 'page' ? context.page : null}
           />
 
           <CreatePageDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePage} />
@@ -613,6 +620,7 @@ function BuilderEditor({
   publishesStore,
   maxCustomSections,
   onRegisterSaver,
+  seoPage,
 }: {
   shop: Shop
   removableBranding: boolean
@@ -633,6 +641,7 @@ function BuilderEditor({
   publishesStore: boolean
   maxCustomSections: number | null
   onRegisterSaver: (saver: (() => Promise<unknown>) | null) => void
+  seoPage?: StorePage | null
 }) {
   const builder = useBuilderState(target)
   const toast = useToast()
@@ -763,6 +772,11 @@ function BuilderEditor({
               {draftBadge && (
                 <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Brouillon</span>
               )}
+              {shop.builder_draft?.scheduledAt && (
+                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                  <CalendarClock size={12} aria-hidden /> Publication le {formatScheduledDate(shop.builder_draft.scheduledAt)}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -869,6 +883,7 @@ function BuilderEditor({
 
         const settingsPane = (
           <div className={`h-full overflow-y-auto bg-white p-4 ${isDesktop ? 'border-l border-gray-200' : ''}`}>
+            {seoPage && <PageSeoFields page={seoPage} shopId={shop.id} />}
             <SectionEditorPanel
               section={builder.selectedSection}
               shop={shop}
@@ -876,6 +891,7 @@ function BuilderEditor({
               templateId={shop.template_id}
               removableBranding={removableBranding}
               onChange={(config) => builder.selectedSection && builder.updateSectionConfig(builder.selectedSection.id, config)}
+              onMetaChange={(patch) => builder.selectedSection && builder.updateSectionMeta(builder.selectedSection.id, patch)}
             />
           </div>
         )
@@ -921,7 +937,15 @@ function BuilderEditor({
           })
         }
         onClose={() => setPublishConfirmOpen(false)}
-      />
+      >
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Ce qui va changer</p>
+          <PublishDiffList
+            snap={{ sections: builder.sections, themeColor: builder.themeColor, themeConfig: builder.themeConfig }}
+            published={target.publishedSnapshot}
+          />
+        </div>
+      </ConfirmDialog>
       <ConfirmDialog
         open={discardConfirmOpen}
         title="Annuler les modifications ?"
@@ -941,6 +965,169 @@ function BuilderEditor({
         }
         onClose={() => setDiscardConfirmOpen(false)}
       />
+    </div>
+  )
+}
+
+/* ─────────────────────── Shared publish helpers ─────────────────── */
+
+/** Résumé des écarts entre le brouillon et le publié, affiché dans la
+ *  confirmation de publication ("diff avant publier"). */
+function PublishDiffList({ snap, published }: { snap: BuilderSnapshot; published: BuilderSnapshot }) {
+  const diffs: string[] = []
+  if (snap.themeColor !== published.themeColor) diffs.push('Couleur principale modifiée')
+  if (JSON.stringify(snap.themeConfig) !== JSON.stringify(published.themeConfig)) diffs.push('Réglages du thème modifiés (police, boutons, espacements…)')
+  const liveIds = new Set(snap.sections.map((s) => s.id))
+  const publishedIds = new Set(published.sections.map((s) => s.id))
+  const added = snap.sections.filter((s) => !publishedIds.has(s.id)).length
+  const removed = published.sections.filter((s) => !liveIds.has(s.id)).length
+  if (added > 0) diffs.push(`${added} bloc${added > 1 ? 's' : ''} ajouté${added > 1 ? 's' : ''}`)
+  if (removed > 0) diffs.push(`${removed} bloc${removed > 1 ? 's' : ''} retiré${removed > 1 ? 's' : ''}`)
+  if (added === 0 && removed === 0 && JSON.stringify(snap.sections) !== JSON.stringify(published.sections)) {
+    diffs.push("Contenu ou ordre des blocs modifié")
+  }
+  if (diffs.length === 0) return <p className="text-sm text-gray-500">Aucune différence détectée avec la version en ligne.</p>
+  return (
+    <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+      {diffs.map((diff) => (
+        <li key={diff}>{diff}</li>
+      ))}
+    </ul>
+  )
+}
+
+function formatScheduledDate(iso: string): string {
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return iso
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date)
+}
+
+/** ISO → valeur `datetime-local` (heure locale du marchand). */
+function toLocalInputValue(iso: string): string {
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+/** Logo & bannière éditables depuis Personnaliser (même pipeline que les
+ *  Paramètres : compression + vignette + `?v=` anti-cache). */
+function ShopBrandFields({ shop }: { shop: Shop }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [uploading, setUploading] = useState<'logo' | 'banner' | null>(null)
+
+  const upload = async (kind: 'logo' | 'banner', file: File) => {
+    setUploading(kind)
+    try {
+      const { url, thumbUrl } = kind === 'logo' ? await uploadShopLogo(shop.id, file) : await uploadShopBanner(shop.id, file)
+      await updateShop(shop.id, kind === 'logo' ? { logo_url: url, logo_thumb_url: thumbUrl } : { banner_url: url })
+      await queryClient.refetchQueries({ queryKey: ['my-shop'] })
+      toast.success(kind === 'logo' ? 'Logo mis à jour.' : 'Bannière mise à jour.')
+    } catch {
+      toast.error("Échec de l'envoi. Réessayez.")
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const onFile = (kind: 'logo' | 'banner') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) void upload(kind, file)
+    e.target.value = ''
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/40 p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <ImagePlus size={13} aria-hidden /> Logo & bannière
+      </p>
+      <div className="flex items-center gap-3">
+        <label className="flex cursor-pointer items-center gap-2">
+          {shop.logo_url ? (
+            <img src={shop.logo_thumb_url ?? shop.logo_url} alt="Logo" className="h-10 w-10 rounded-lg border border-gray-200 object-cover" />
+          ) : (
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
+              <ImagePlus size={16} aria-hidden />
+            </span>
+          )}
+          <span className="text-xs font-medium text-brand-700 hover:text-brand-800">
+            {uploading === 'logo' ? 'Envoi…' : shop.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
+          </span>
+          <input type="file" accept="image/*" className="hidden" onChange={onFile('logo')} disabled={uploading !== null} />
+        </label>
+        <label className="flex cursor-pointer items-center gap-2">
+          {shop.banner_url ? (
+            <img src={shop.banner_url} alt="Bannière" className="h-10 w-24 rounded-lg border border-gray-200 object-cover" />
+          ) : (
+            <span className="flex h-10 w-24 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
+              <ImagePlus size={16} aria-hidden />
+            </span>
+          )}
+          <span className="text-xs font-medium text-brand-700 hover:text-brand-800">
+            {uploading === 'banner' ? 'Envoi…' : shop.banner_url ? 'Changer la bannière' : 'Ajouter une bannière'}
+          </span>
+          <input type="file" accept="image/*" className="hidden" onChange={onFile('banner')} disabled={uploading !== null} />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+/** Référencement d'une page personnalisée (titre + description méta,
+ *  utilisés par la vitrine via `StorePageView`). */
+function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [seoTitle, setSeoTitle] = useState(page.seo_title ?? '')
+  const [seoDescription, setSeoDescription] = useState(page.seo_description ?? '')
+  const [saving, setSaving] = useState(false)
+  const dirty = (seoTitle.trim() || null) !== page.seo_title || (seoDescription.trim() || null) !== page.seo_description
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await updatePage(page.id, { seo_title: seoTitle.trim() || null, seo_description: seoDescription.trim() || null })
+      await queryClient.invalidateQueries({ queryKey: ['shop-pages', shopId] })
+      toast.success('Référencement enregistré.')
+    } catch {
+      toast.error("Échec de l'enregistrement.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/40 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Référencement (Google, partage)</p>
+      <label className="block text-xs font-medium text-gray-600">Titre de la page</label>
+      <input
+        value={seoTitle}
+        onChange={(e) => setSeoTitle(e.target.value)}
+        placeholder={`${page.title} — nom de la boutique`}
+        maxLength={70}
+        className={`${controlClass()} mt-1 !text-xs`}
+      />
+      <label className="mt-2 block text-xs font-medium text-gray-600">Description</label>
+      <textarea
+        value={seoDescription}
+        onChange={(e) => setSeoDescription(e.target.value)}
+        placeholder="Résumé affiché dans les résultats de recherche…"
+        rows={2}
+        maxLength={160}
+        className={`${controlClass()} mt-1 !text-xs`}
+      />
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[11px] text-gray-400">{seoDescription.length}/160</span>
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty || saving}
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        >
+          {saving ? 'Enregistrement…' : 'Enregistrer le SEO'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -985,9 +1172,9 @@ function AppearanceMobileSwitcher({ value, onChange }: { value: AppearanceMobile
 
 /** The simplified look & feel tool: colors, typography, finitions and whole
  *  designs (Styles). One column of settings, one live preview across every
- *  page — no block list, no undo/redo, just "Prévisualiser" and "Publier".
- *  Edits the store-wide theme through the same home target/state as the
- *  block editor, so both tools share the same draft. */
+ *  page — undo/redo, draft save and whole-store publish included, like the
+ *  block editor. Edits the store-wide theme through the same home
+ *  target/state, so both tools share the same draft. */
 function AppearanceTool({
   shop,
   plan,
@@ -1009,6 +1196,28 @@ function AppearanceTool({
   const [previewTemplate, setPreviewTemplate] = useState<StoreTemplate | null>(null)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   const [applyConfirmOpen, setApplyConfirmOpen] = useState(false)
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [scheduleValue, setScheduleValue] = useState('')
+  const canDiscard = builder.dirty || shop.builder_draft?.sections != null
+
+  // Publication programmée échue : le brouillon se publie à l'ouverture (le
+  // cron serveur reste un suivi — voir la piste CMS). Une seule fois.
+  const autoPublishedRef = useRef(false)
+  useEffect(() => {
+    if (autoPublishedRef.current) return
+    const due = shop.builder_draft?.scheduledAt
+    if (!due || Number.isNaN(new Date(due).getTime()) || new Date(due).getTime() > Date.now()) return
+    if (builder.publishMutation.isPending) return
+    autoPublishedRef.current = true
+    builder.publishMutation.mutate(undefined, {
+      onSuccess: () => toast.success('Publication programmée effectuée.'),
+      onError: () => {
+        autoPublishedRef.current = false
+      },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop.builder_draft?.scheduledAt])
 
   // Dropping the previewed style the moment the merchant leaves the Styles
   // tab — same render-time reset pattern as the block editor, so the
@@ -1046,6 +1255,45 @@ function AppearanceTool({
     window.addEventListener(TOUR_PREPARE_EVENT, onPrepare)
     return () => window.removeEventListener(TOUR_PREPARE_EVENT, onPrepare)
   }, [])
+
+  /* Raccourcis clavier (annuler/rétablir), comme l'éditeur de mise en page. */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) builder.redo()
+        else builder.undo()
+      } else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault()
+        builder.redo()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [builder.undo, builder.redo])
+
+  /* Alerte avant fermeture de l'onglet avec des modifications non enregistrées. */
+  useEffect(() => {
+    if (!builder.dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [builder.dirty])
+
+  /* Restauration 1-clic d'une version d'historique : appliquée en brouillon,
+   * le marchand publie ensuite quand il est prêt. */
+  const handleRestore = (template: StoreTemplate) => {
+    builder.applyTemplate(template)
+    setPreviewTemplate(null)
+    toast.success('Version restaurée en brouillon — publiez pour la mettre en ligne.')
+  }
 
   const context: PreparedContext =
     previewPage === 'home' ? HOME_CONTEXT : { kind: 'system', key: previewPage, label: SYSTEM_LABELS[previewPage] }
@@ -1110,14 +1358,18 @@ function AppearanceTool({
       )}
       <div className="flex-1 overflow-y-auto p-4" data-guide="guide-appearance-settings">
         {tab === 'appearance' ? (
-          <ThemeEditorPanel
-            themeColor={builder.themeColor}
-            themeConfig={builder.themeConfig}
-            onThemeColorChange={builder.setThemeColor}
-            onThemeConfigChange={builder.setThemeConfig}
-          />
+          <>
+            <ShopBrandFields shop={shop} />
+            <ThemeEditorPanel
+              themeColor={builder.themeColor}
+              themeConfig={builder.themeConfig}
+              onThemeColorChange={builder.setThemeColor}
+              onThemeConfigChange={builder.setThemeConfig}
+              logoUrl={shop.logo_url}
+            />
+          </>
         ) : (
-          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} previewingVariantKey={previewTemplate?.variantKey ?? null} onPreview={setPreviewTemplate} />
+          <TemplateLibraryPanel shop={shop} previewingKey={previewTemplate?.key ?? null} previewingVariantKey={previewTemplate?.variantKey ?? null} onPreview={setPreviewTemplate} onRestore={handleRestore} />
         )}
       </div>
     </div>
@@ -1194,12 +1446,58 @@ function AppearanceTool({
             <Palette size={20} className="text-brand-600" aria-hidden />
             Apparence
           </h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-gray-500">
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${builder.dirty ? 'bg-amber-400' : 'bg-emerald-500'}`} aria-hidden />
             {builder.dirty ? 'Modifications non enregistrées' : 'Tout est enregistré'}
+            {builder.scheduledAt && (
+              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                <CalendarClock size={12} aria-hidden /> Publication le {formatScheduledDate(builder.scheduledAt)}
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200">
+            <button type="button" onClick={builder.undo} disabled={!builder.canUndo} title="Annuler (Ctrl+Z)" aria-label="Annuler" className="px-2.5 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Undo2 size={16} aria-hidden />
+            </button>
+            <button type="button" onClick={builder.redo} disabled={!builder.canRedo} title="Rétablir (Ctrl+Y)" aria-label="Rétablir" className="border-l border-gray-200 px-2.5 py-2 text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Redo2 size={16} aria-hidden />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDiscardConfirmOpen(true)}
+            disabled={!canDiscard || builder.discardMutation.isPending}
+            title="Revenir à la version publiée"
+            aria-label="Annuler les modifications"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3"
+          >
+            {builder.discardMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} aria-hidden />}
+            <span className="hidden sm:inline">Annuler les modifications</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => builder.saveDraftMutation.mutate(undefined, { onSuccess: () => toast.success('Brouillon enregistré.') })}
+            disabled={builder.saveDraftMutation.isPending}
+            aria-label="Enregistrer"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 sm:px-3"
+          >
+            {builder.saveDraftMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : builder.saveDraftMutation.isSuccess && !builder.dirty ? <Check size={14} className="text-emerald-600" /> : null}
+            <span className="hidden sm:inline">Enregistrer</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setScheduleValue(builder.scheduledAt ? toLocalInputValue(builder.scheduledAt) : '')
+              setScheduleOpen(true)
+            }}
+            aria-label="Programmer la publication"
+            title="Programmer la publication"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:px-3"
+          >
+            <CalendarClock size={14} aria-hidden /> <span className="hidden sm:inline">Programmer</span>
+          </button>
           <button
             type="button"
             onClick={handlePreview}
@@ -1249,7 +1547,98 @@ function AppearanceTool({
         tone="default"
         onConfirm={handlePublish}
         onClose={() => setPublishConfirmOpen(false)}
+      >
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Ce qui va changer</p>
+          <PublishDiffList
+            snap={{ sections: builder.sections, themeColor: builder.themeColor, themeConfig: builder.themeConfig }}
+            published={target.publishedSnapshot}
+          />
+        </div>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        title="Annuler les modifications ?"
+        description="Le design reviendra à ce qui est actuellement publié en ligne. Les modifications non publiées seront perdues — cette action est irréversible."
+        confirmLabel="Annuler les modifications"
+        pendingLabel="Annulation…"
+        pending={builder.discardMutation.isPending}
+        tone="danger"
+        onConfirm={() =>
+          builder.discardMutation.mutate(undefined, {
+            onSuccess: () => {
+              setDiscardConfirmOpen(false)
+              toast.info('Modifications annulées.')
+            },
+            onError: () => toast.error("Impossible d'annuler les modifications."),
+          })
+        }
+        onClose={() => setDiscardConfirmOpen(false)}
       />
+      <ConfirmDialog
+        open={scheduleOpen}
+        title="Programmer la publication"
+        description="Le brouillon actuel sera publié automatiquement à la date choisie, dès votre prochaine visite de la boutique (la publication automatique côté serveur arrive avec le CMS)."
+        confirmLabel="Programmer"
+        pendingLabel="Enregistrement…"
+        pending={builder.saveDraftMutation.isPending}
+        confirmDisabled={!scheduleValue}
+        tone="default"
+        onConfirm={async () => {
+          const date = new Date(scheduleValue)
+          if (!Number.isFinite(date.getTime())) {
+            toast.error('Date invalide.')
+            return
+          }
+          const iso = date.toISOString()
+          builder.setScheduledAt(iso)
+          try {
+            await builder.saveDraftMutation.mutateAsync({
+              sections: builder.sections,
+              themeColor: builder.themeColor,
+              themeConfig: builder.themeConfig,
+              scheduledAt: iso,
+            })
+            toast.success(`Publication programmée le ${formatScheduledDate(iso)}.`)
+            setScheduleOpen(false)
+          } catch {
+            toast.error("Impossible d'enregistrer la programmation.")
+          }
+        }}
+        onClose={() => setScheduleOpen(false)}
+      >
+        <div className="space-y-2">
+          <input
+            type="datetime-local"
+            value={scheduleValue}
+            onChange={(e) => setScheduleValue(e.target.value)}
+            className={`${controlClass()} mt-1`}
+          />
+          {builder.scheduledAt && (
+            <button
+              type="button"
+              onClick={async () => {
+                builder.setScheduledAt(null)
+                try {
+                  await builder.saveDraftMutation.mutateAsync({
+                    sections: builder.sections,
+                    themeColor: builder.themeColor,
+                    themeConfig: builder.themeConfig,
+                    scheduledAt: null,
+                  })
+                  toast.info('Programmation retirée.')
+                  setScheduleOpen(false)
+                } catch {
+                  toast.error('Impossible de retirer la programmation.')
+                }
+              }}
+              className="text-xs font-medium text-gray-500 hover:text-red-600"
+            >
+              Retirer la programmation actuelle
+            </button>
+          )}
+        </div>
+      </ConfirmDialog>
       <ConfirmDialog
         open={applyConfirmOpen}
         title="Appliquer ce style à toute la boutique ?"

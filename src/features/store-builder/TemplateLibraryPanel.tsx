@@ -173,6 +173,7 @@ export function TemplateLibraryPanel({
   previewingKey,
   previewingVariantKey = null,
   onPreview,
+  onRestore,
 }: {
   shop: Shop
   /** Key of the template currently shown in the live preview, if any. */
@@ -180,6 +181,8 @@ export function TemplateLibraryPanel({
   /** Variant of that template (null = base design). */
   previewingVariantKey?: string | null
   onPreview: (template: StoreTemplate) => void
+  /** 1-clic restore of a past publish (applied as draft, then published). */
+  onRestore?: (template: StoreTemplate) => void
 }) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -222,6 +225,7 @@ export function TemplateLibraryPanel({
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
+  const [query, setQuery] = useState('')
   /** Chosen look per template (variant key, absent = base design). Choosing a
    *  variant previews it immediately in the live preview — l'embarras du
    *  choix, style Shopify. */
@@ -268,23 +272,38 @@ export function TemplateLibraryPanel({
     },
   })
 
+  const normalizedQuery = query.trim().toLowerCase()
+  const matchesQuery = (haystack: string) => !normalizedQuery || haystack.toLowerCase().includes(normalizedQuery)
+  const visibleTemplates = templates.filter((t) => matchesQuery(`${t.label} ${t.description ?? ''}`))
+  const visibleSavedThemes = savedThemes.filter((t) => matchesQuery(t.name))
+
   return (
     <div>
       <p className="mb-1 text-sm text-gray-500">
         Un style redessine toute votre boutique d'un coup : couleurs, typographie et mise en page de l'accueil, du
         catalogue, de la fiche produit, du panier et de la commande — vos pages personnalisées ne sont pas touchées.
         Cliquez sur un style pour le prévisualiser avec vos propres données dans l'aperçu, puis appliquez-le si vous
-        l'aimez. Vos réglages précis restent modifiables ensuite dans l'onglet Thème.
+        l'aimez.
       </p>
-      <p className="mb-4 text-xs text-gray-400">
+      <p className="mb-3 text-xs text-gray-400">
         {vertical ? `Styles pour votre activité « ${vertical.label} ».` : 'Tous les styles.'}{' '}
         <Link to="/admin/parametres" className="font-medium text-brand-700 hover:text-brand-800">
           Changer de type de commerce
         </Link>{' '}
         pour voir d'autres styles.
       </p>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Rechercher un style…"
+        aria-label="Rechercher un style"
+        className="mb-4 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none"
+      />
       <div className="space-y-3">
-        {templates.map((template) => {
+        {visibleTemplates.length === 0 && (
+          <p className="text-xs text-gray-400">Aucun style ne correspond à « {query.trim()} ».</p>
+        )}
+        {visibleTemplates.map((template) => {
           const isCurrent = shop.template_id === template.key
           const chosenVariant = selectedVariants[template.key] || null
           const resolved = resolveTemplateVariant(template, chosenVariant)
@@ -365,13 +384,15 @@ export function TemplateLibraryPanel({
             <Save size={13} aria-hidden /> Enregistrer le style actuel
           </button>
         </div>
-        {savedThemes.length === 0 ? (
+        {visibleSavedThemes.length === 0 ? (
           <p className="text-xs text-gray-400">
-            Aucun style personnel pour l'instant. Enregistrez le design actuel de votre boutique pour le retrouver ou le dupliquer plus tard.
+            {savedThemes.length === 0
+              ? 'Aucun style personnel pour l’instant. Enregistrez le design actuel de votre boutique pour le retrouver ou le dupliquer plus tard.'
+              : 'Aucun style personnel ne correspond à cette recherche.'}
           </p>
         ) : (
           <div className="space-y-3">
-            {savedThemes.map((theme) => (
+            {visibleSavedThemes.map((theme) => (
               <SavedThemeRow
                 key={theme.id}
                 theme={theme}
@@ -403,28 +424,42 @@ export function TemplateLibraryPanel({
               const template = historyEntryToTemplate(entry, shop.business_type)
               const isPreviewing = previewingKey === template.key
               return (
-                <button
+                <div
                   key={entry.id}
-                  type="button"
-                  onClick={() => onPreview(template)}
-                  aria-pressed={isPreviewing}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left hover:border-brand-300 hover:bg-brand-50/40 ${
+                  className={`flex items-center gap-3 rounded-xl border p-3 ${
                     isPreviewing ? 'border-brand-500 ring-1 ring-brand-500' : 'border-gray-200'
                   }`}
                 >
-                  <TemplateThumbnail template={template} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
-                      {isPreviewing && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                          <Eye size={10} aria-hidden /> Aperçu
-                        </span>
-                      )}
+                  <button
+                    type="button"
+                    onClick={() => onPreview(template)}
+                    aria-pressed={isPreviewing}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <TemplateThumbnail template={template} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="block text-sm font-semibold text-gray-900">{template.label}</span>
+                        {isPreviewing && (
+                          <span className="flex shrink-0 items-center gap-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                            <Eye size={10} aria-hidden /> Aperçu
+                          </span>
+                        )}
+                      </span>
+                      <span className="block text-xs text-gray-500">{template.description}</span>
                     </span>
-                    <span className="block text-xs text-gray-500">{template.description}</span>
-                  </span>
-                </button>
+                  </button>
+                  {onRestore && (
+                    <button
+                      type="button"
+                      onClick={() => onRestore(template)}
+                      title="Restaurer cette version en brouillon"
+                      className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-brand-300 hover:text-brand-700"
+                    >
+                      <History size={13} aria-hidden /> Restaurer
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>

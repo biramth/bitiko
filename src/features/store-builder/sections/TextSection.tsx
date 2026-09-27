@@ -1,5 +1,5 @@
 import type { TextSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
@@ -33,7 +33,7 @@ export function TextRenderer({
               value={config.heading}
               onCommit={(heading) => patch({ heading })}
               placeholder="Titre"
-              className={`font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+              className={`font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
               style={{ fontFamily: 'var(--shop-font-heading)', ...resolveTextStyle(config.headingStyle) }}
               label="Titre"
             />

@@ -2,7 +2,7 @@ import type { Shop } from '@/types'
 import { Link } from 'react-router-dom'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import type { HeroLayout, HeroSectionConfig } from '@/types/builder'
-import { HEADING_SCALE } from '@/config/themeTokens'
+import { heroHeadingClass } from '@/config/themeTokens'
 import type { ThemeConfig } from '@/types/builder'
 import { uploadShopSectionVideo } from '@/services/shop.service'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
@@ -118,7 +118,7 @@ export function HeroRenderer({
           value={heading}
           onCommit={(value) => patch({ heading: value })}
           placeholder={shop.name}
-          className={`mt-2 max-w-2xl font-bold tracking-tight text-[var(--shop-text)] ${centered ? 'mx-auto' : ''} ${HEADING_SCALE[themeConfig.textScale]}`}
+          className={`mt-2 max-w-2xl font-bold tracking-tight text-[var(--shop-text)] ${centered ? 'mx-auto' : ''} ${heroHeadingClass(themeConfig)}`}
           style={{ fontFamily: 'var(--shop-font-heading)', ...resolveTextStyle(config.headingStyle) }}
           label="Titre"
         />

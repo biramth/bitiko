@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import type { PromoLayout, PromoSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { useInlineEdit } from '../inline/useInlineEdit'
 import { InlineText } from '../inline/InlineText'
@@ -72,7 +72,7 @@ export function PromoRenderer({
             value={config.heading}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre de la promotion"
-            className={`max-w-lg font-bold ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`max-w-lg font-bold ${sectionHeadingClass(themeConfig)}`}
             style={{ fontFamily: 'var(--shop-font-heading)', ...resolveTextStyle(config.headingStyle) }}
             label="Titre"
           />

@@ -6,6 +6,7 @@ import { isPreviewUpdateMessage, PREVIEW_READY, PREVIEW_SELECT } from '@/feature
 import { useIsDraftPreview } from '@/features/store-builder/useEmbeddedPreview'
 import { getPageBySlug, getPublishedPageBySlug } from '@/services/page.service'
 import { sanitizeSections, sectionVisibleWithRegistry } from '@/features/store-builder/sanitizeSections'
+import { isSectionScheduledVisible } from '@/types/builder'
 import { useStorefrontCapabilities } from '@/features/store-builder/useStorefrontCapabilities'
 import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -67,7 +68,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
   }, [isDraftPreview])
 
   usePageSeo({
-    title: page ? `${page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
+    title: page ? `${page.seo_title?.trim() || page.title} — ${shop?.name ?? vocab.siteKind}` : (shop?.name ? `${shop.name} — ${vocab.siteKind}` : vocab.siteKind),
     description: page?.seo_description ?? shop?.description ?? undefined,
     siteName: shop?.name,
   })
@@ -97,6 +98,7 @@ export function StorePageView({ pageSlug }: { pageSlug?: string }) {
         const Renderer = def?.Renderer
         if (!def || !Renderer || section.type === 'header' || section.type === 'footer') return null
         if (!section.visible) return null
+        if (!isDraftPreview && !isSectionScheduledVisible(section)) return null
         if (!sectionVisibleWithRegistry(section, def.capabilities, capabilities)) return null
         const content = <Renderer key={section.id} shop={shop} config={section.config} themeConfig={themeConfig} />
         if (!isEmbeddedPreview) return <div key={section.id}>{content}</div>

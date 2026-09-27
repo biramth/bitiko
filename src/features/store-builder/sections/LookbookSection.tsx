@@ -3,7 +3,7 @@ import { ImageOff, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
 import { uploadShopSectionImage } from '@/services/shop.service'
 import { createSectionId } from '@/config/defaultLayout'
 import type { LookbookImage, LookbookLayout, LookbookSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useInlineEdit } from '../inline/useInlineEdit'
@@ -35,7 +35,7 @@ export function LookbookRenderer({ config, themeConfig, sectionId, editable = fa
             value={config.heading}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />

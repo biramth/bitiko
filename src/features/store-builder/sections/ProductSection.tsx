@@ -30,7 +30,7 @@ import { useBreadcrumbStructuredData, type BreadcrumbCrumb } from '@/hooks/useBr
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import type { Product, ProductWithRelations, SelectedOption, Shop } from '@/types'
 import type { ProductLayout, ProductSectionConfig, ThemeConfig } from '@/types/builder'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
@@ -518,7 +518,7 @@ function ProductDetails({
             )}
             {config.showTitle && (
               <h1
-                className={`mt-2 font-heading font-bold tracking-tight text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}
+                className={`mt-2 font-heading font-bold tracking-tight text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
                 style={resolveTextStyle(config.headingStyle)}
               >
                 {product.name}
@@ -723,7 +723,7 @@ function RelatedProducts({
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] border-t border-[var(--shop-text)]/10 px-4 py-10 sm:px-6">
-      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Vous aimerez aussi</h2>
+      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}>Vous aimerez aussi</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {related.map((product) => (
           <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
@@ -751,7 +751,7 @@ function RecentlyViewedRow({ shop, product, themeConfig }: { shop: Shop; product
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] border-t border-[var(--shop-text)]/10 px-4 py-10 sm:px-6">
-      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Vu récemment</h2>
+      <h2 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}>Vu récemment</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {items.map((item) => (
           <Link key={item.id} to={`/produits/${item.slug}`} className="group block">

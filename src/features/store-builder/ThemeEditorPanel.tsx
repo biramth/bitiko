@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { AlertTriangle, ChevronDown, LayoutTemplate, MousePointerClick, Palette, Type, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, ChevronDown, LayoutTemplate, MousePointerClick, Palette, Sparkles, Store, Type, type LucideIcon } from 'lucide-react'
 import { contrastRatio, contrastWithWhite } from '@/utils/format'
-import { alphaOf } from '@/utils/color'
-import { RADIUS_CSS } from '@/config/themeTokens'
+import { alphaOf, ensureReadableAccent, softTint } from '@/utils/color'
+import { extractPaletteFromUrl } from '@/utils/extractColorFromImage'
+import { FONT_LABELS, RADIUS_CSS } from '@/config/themeTokens'
+import { THEME_PALETTES, applyPalette } from '@/config/themePalettes'
 import { ColorField } from './components/ColorField'
 import { VisualPicker } from './components/VisualPicker'
-import type { ContentWidth, FontChoice, RadiusScale, TextScale, ThemeConfig } from '@/types/builder'
+import type { ContentWidth, FontChoice, HeadingScale, RadiusScale, SectionSpacing, TextScale, ThemeConfig } from '@/types/builder'
 
 const labelClass = 'block text-sm font-medium text-gray-700'
 const selectClass =
@@ -204,11 +206,14 @@ export function ThemeEditorPanel({
   themeConfig,
   onThemeColorChange,
   onThemeConfigChange,
+  logoUrl,
 }: {
   themeColor: string
   themeConfig: ThemeConfig
   onThemeColorChange: (color: string) => void
   onThemeConfigChange: (config: ThemeConfig) => void
+  /** URL du logo de la boutique — active le bouton "couleurs de mon logo". */
+  logoUrl?: string | null
 }) {
   const isValidColor = HEX_WITH_ALPHA.test(themeColor)
   const lowContrast = isValidColor && contrastWithWhite(themeColor) < 3
@@ -223,9 +228,74 @@ export function ThemeEditorPanel({
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const toggleGroup = (id: string) => setOpenGroup((current) => (current === id ? null : id))
 
+  const [logoLoading, setLogoLoading] = useState(false)
+  const [logoEmpty, setLogoEmpty] = useState(false)
+  const applyLogoPalette = async () => {
+    if (!logoUrl || logoLoading) return
+    setLogoLoading(true)
+    setLogoEmpty(false)
+    try {
+      const { primary, secondary } = await extractPaletteFromUrl(logoUrl)
+      if (!primary) {
+        setLogoEmpty(true)
+        return
+      }
+      const readable = ensureReadableAccent(primary)
+      onThemeColorChange(readable)
+      onThemeConfigChange({
+        ...themeConfig,
+        secondaryColor: secondary ? softTint(secondary) : themeConfig.secondaryColor,
+        buttonColor: '',
+        buttonTextColor: '#ffffff',
+      })
+    } finally {
+      setLogoLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <AccordionGroup icon={Sparkles} title="Palettes" open={openGroup === 'palettes'} onToggle={() => toggleGroup('palettes')}>
+        <div className="grid grid-cols-2 gap-2">
+          {THEME_PALETTES.map((palette) => (
+            <button
+              key={palette.key}
+              type="button"
+              onClick={() => {
+                const next = applyPalette(themeConfig, palette)
+                onThemeColorChange(next.themeColor)
+                onThemeConfigChange(next.themeConfig)
+              }}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-left text-xs font-medium text-gray-700 transition-colors hover:border-brand-300 hover:text-brand-700"
+            >
+              <span className="flex h-5 w-9 shrink-0 overflow-hidden rounded-full border border-black/10" aria-hidden>
+                <span className="h-full w-1/2" style={{ backgroundColor: palette.swatch[0] }} />
+                <span className="h-full w-1/2" style={{ backgroundColor: palette.swatch[1] }} />
+              </span>
+              {palette.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400">Un clic applique accent, fond, texte et boutons. Vos réglages fins (police, arrondis…) sont conservés.</p>
+      </AccordionGroup>
+
       <AccordionGroup icon={Palette} title="Couleurs" open={openGroup === 'couleurs'} onToggle={() => toggleGroup('couleurs')}>
+        {logoUrl ? (
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={applyLogoPalette}
+              disabled={logoLoading}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-brand-300 bg-brand-50/50 px-3 py-2 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-60"
+            >
+              <Sparkles size={13} aria-hidden />
+              {logoLoading ? 'Analyse du logo…' : 'Utiliser les couleurs de mon logo'}
+            </button>
+            {logoEmpty && (
+              <p className="text-xs text-amber-600">Logo sans couleur distinctive (noir & blanc) — gardez la couleur actuelle ou choisissez une palette.</p>
+            )}
+          </div>
+        ) : null}
         <div className="space-y-1">
           <ColorField label="Couleur de la boutique" value={themeColor} placeholder="Auto" onChange={onThemeColorChange} />
           {lowContrast ? (
@@ -255,6 +325,34 @@ export function ThemeEditorPanel({
           value={themeConfig.secondaryColor}
           placeholder="Auto"
           onChange={(v) => set({ secondaryColor: v })}
+        />
+      </AccordionGroup>
+
+      <AccordionGroup icon={Store} title="En-tête & annonce" open={openGroup === 'header'} onToggle={() => toggleGroup('header')}>
+        <p className="text-xs text-gray-400">Vide = suit le reste de la boutique (aucun changement tant que vous ne réglez rien).</p>
+        <ColorField
+          label="Fond de l'en-tête"
+          value={themeConfig.headerBackgroundColor ?? ''}
+          placeholder="Auto"
+          onChange={(v) => set({ headerBackgroundColor: v })}
+        />
+        <ColorField
+          label="Texte de l'en-tête"
+          value={themeConfig.headerTextColor ?? ''}
+          placeholder="Auto"
+          onChange={(v) => set({ headerTextColor: v })}
+        />
+        <ColorField
+          label="Fond de la barre d'annonce"
+          value={themeConfig.announcementBackgroundColor ?? ''}
+          placeholder="Auto"
+          onChange={(v) => set({ announcementBackgroundColor: v })}
+        />
+        <ColorField
+          label="Texte de la barre d'annonce"
+          value={themeConfig.announcementTextColor ?? ''}
+          placeholder="Auto"
+          onChange={(v) => set({ announcementTextColor: v })}
         />
       </AccordionGroup>
 
@@ -315,10 +413,30 @@ export function ThemeEditorPanel({
             onChange={(e) => set({ font: e.target.value as FontChoice })}
             className={selectClass}
           >
-            <option value="sora-inter">Sora + Inter (par défaut)</option>
-            <option value="inter">Inter partout</option>
-            <option value="sora">Sora partout</option>
+            {(Object.keys(FONT_LABELS) as FontChoice[]).map((choice) => (
+              <option key={choice} value={choice}>
+                {FONT_LABELS[choice]}
+              </option>
+            ))}
           </select>
+          <p className="mt-1 text-xs text-gray-400">
+            <span style={{ fontFamily: 'var(--shop-font-heading)' }} className="font-bold">TitreExemple · </span>
+            <span style={{ fontFamily: 'var(--shop-font-body)' }}>Texte courant 123 — Livraison rapide à Dakar.</span>
+          </p>
+        </div>
+        <div>
+          <label className={labelClass}>Taille des titres</label>
+          <div className="mt-1">
+            <VisualPicker
+              value={themeConfig.headingScale ?? themeConfig.textScale}
+              onChange={(v) => set({ headingScale: v as HeadingScale })}
+              options={[
+                { value: 'sm', label: 'Petits', preview: <span className="font-heading text-sm font-bold">Aa</span> },
+                { value: 'base', label: 'Normaux', preview: <span className="font-heading text-base font-bold">Aa</span> },
+                { value: 'lg', label: 'Grands', preview: <span className="font-heading text-lg font-bold">Aa</span> },
+              ]}
+            />
+          </div>
         </div>
         <div>
           <label className={labelClass}>Taille des textes</label>
@@ -361,6 +479,18 @@ export function ThemeEditorPanel({
             <option value="narrow">Étroite</option>
             <option value="normal">Normale</option>
             <option value="wide">Large</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Espacement des blocs</label>
+          <select
+            value={themeConfig.sectionSpacing ?? 'normal'}
+            onChange={(e) => set({ sectionSpacing: e.target.value as SectionSpacing })}
+            className={selectClass}
+          >
+            <option value="compact">Resserré</option>
+            <option value="normal">Normal</option>
+            <option value="spacious">Aéré</option>
           </select>
         </div>
       </AccordionGroup>

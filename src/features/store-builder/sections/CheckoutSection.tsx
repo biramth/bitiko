@@ -23,7 +23,7 @@ import type { Shop } from '@/types'
 import type { CheckoutSectionConfig, ThemeConfig } from '@/types/builder'
 import type { OrderConfirmationState } from '@/pages/store/OrderConfirmationPage'
 import { trackEvent } from '@/lib/analytics'
-import { SECTION_HEADING_SCALE } from '@/config/themeTokens'
+import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
@@ -184,7 +184,7 @@ function CheckoutFlow({
   return (
     <div className="mx-auto max-w-[min(32rem,var(--shop-content-width))] px-4 py-8 sm:px-6">
       {showTitle && (
-        <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`}>Finaliser la commande</h1>
+        <h1 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}>Finaliser la commande</h1>
       )}
       <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-[var(--shop-text)]/65 min-[380px]:grid-cols-2" aria-label="Garanties de commande">
         <p className="border border-[var(--shop-text)]/10 px-3 py-2">Prix et stock vérifiés à la commande</p>
@@ -357,7 +357,7 @@ export function CheckoutRenderer({ shop, config, themeConfig }: { shop: Shop; co
     <>
       {config.heading && (
         <div className="mx-auto max-w-[min(32rem,var(--shop-content-width))] px-4 pt-8 sm:px-6">
-          <h1 className={`font-heading font-bold text-[var(--shop-text)] ${SECTION_HEADING_SCALE[themeConfig.textScale]}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1>
+          <h1 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`} style={resolveTextStyle(config.headingStyle)}>{config.heading}</h1>
         </div>
       )}
       <CheckoutFlow items={items} subtotal={subtotal} demo={isDemo} showTrustBadges={config.showTrustBadges !== false} showTitle={!config.heading} themeConfig={themeConfig} />
