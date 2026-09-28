@@ -393,10 +393,13 @@ describe('horaires par jour (0129)', () => {
 describe('outils de gestion (0130)', () => {
   const asOwner = () => db.exec(`set app.uid = '${OWNER}'`)
   const asGuest = () => db.exec(`set app.uid = ''`)
+  // Les rendez-vous de test tombent à aujourd'hui + 3 jours : en fin de mois, c'est le mois
+  // suivant. La période va donc du début du mois courant à la fin du mois de `day`.
   const monthRange = () => {
     const now = new Date()
+    const [dayYear, dayMonth] = day.split('-').map(Number)
     const from = new Date(now.getFullYear(), now.getMonth(), 1)
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const to = new Date(dayYear, dayMonth, 0)
     const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     return { from: iso(from), to: iso(to) }
   }
