@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Check, Clock, Gift, Minus, Phone, Play, Plus, ShoppingCart, Smartphone, Wallet, X, Zap } from 'lucide-react'
+import { ArrowRight, Check, Clock, Download, Gift, Minus, Percent, Phone, Play, Plus, RefreshCcw, ShieldCheck, ShoppingCart, Smartphone, X, Zap } from 'lucide-react'
 import { PLANS } from '@/config/plans'
 import { IconTile } from '@/components/ui/IconTile'
 import { formatPromoDate, useLandingPromo } from '@/features/billing/useLandingPromo'
@@ -8,7 +8,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import { useFaqStructuredData } from '@/hooks/useFaqStructuredData'
 import { useSoftwareStructuredData } from '@/hooks/useSoftwareStructuredData'
 import { Audiences, DemoVideo, FeatureGroups, HeroShots, Tour } from './landing/Sections'
-import { shopCategories, solutions, westAfrica } from './landing/content'
+import { realLife, shopCategories, solutions } from './landing/content'
 import { faq } from './landing/faq'
 import { Reveal, SectionEyebrow } from './landing/ui'
 import { SiteFooter, SiteNav } from './landing/Chrome'
@@ -54,12 +54,19 @@ function CountUpValue({ target, suffix = '' }: { target: number; suffix?: string
 }
 
 const comparisonRows = [
-  { before: 'Envoyer des photos une par une sur WhatsApp', after: 'Catalogue en ligne avec photos, prix, stock et lien à partager' },
-  { before: 'Se mettre d\'accord sur une heure par messages, oublier un rendez-vous', after: 'Le client réserve un créneau libre, tu confirmes d\'un clic' },
-  { before: 'Tenir un carnet de commandes et de rendez-vous à la main', after: 'Chaque commande et réservation est enregistrée et numérotée automatiquement' },
-  { before: 'Vendre du stock épuisé, doubler des rendez-vous sans le savoir', after: 'Stock et planning synchronisés en temps réel + alertes' },
-  { before: 'Faire ses comptes sur un cahier en fin de mois', after: 'Recettes comptées automatiquement, dépenses en 6 champs, bilan en PDF ou Excel' },
-  { before: 'Demander « t\'es dans quel quartier ? » à chaque client', after: 'Le client choisit sa ville, le tarif de livraison s\'applique' },
+  { before: 'Envoyer les photos une par une sur WhatsApp, répéter les prix', after: 'Un catalogue en ligne avec photos, prix et stock, sur un seul lien' },
+  { before: 'Se mettre d\'accord sur une heure en dix messages, oublier un rendez-vous', after: 'Le client réserve un créneau libre, tu confirmes d\'un clic' },
+  { before: 'Perdre des commandes dans la masse des conversations', after: 'Chaque commande et réservation est enregistrée, numérotée et suivie' },
+  { before: 'Vendre un article épuisé, doubler un rendez-vous sans le savoir', after: 'Stock et planning synchronisés en temps réel, avec alertes' },
+  { before: 'Calculer les totaux à la main et se tromper', after: 'Total, livraison et paiement calculés automatiquement' },
+  { before: 'Faire ses comptes sur un cahier en fin de mois', after: 'Recettes comptées toutes seules, bilan en PDF ou Excel' },
+]
+
+const commitments = [
+  { icon: Percent, title: 'Zéro commission, pour toujours', text: 'Tu gardes 100 % de tes ventes, quel que soit ton plan.' },
+  { icon: RefreshCcw, title: 'Sans engagement ni prélèvement', text: 'L\'abonnement se renouvelle à la main. Sans paiement, tu repasses au gratuit sans rien perdre.' },
+  { icon: Download, title: 'Tes données t\'appartiennent', text: 'Commandes et finances exportables en Excel à tout moment.' },
+  { icon: ShieldCheck, title: 'Ton activité bien gardée', text: 'Espace isolé, accès de l\'équipe par rôle, chaque intervention du support tracée.' },
 ]
 
 /* ─────────────────────── Components ────────────────────────── */
@@ -94,6 +101,22 @@ function FaqItem({
         </p>
       </div>
     </div>
+  )
+}
+
+function FaqList() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+  return (
+    <>
+      {faq.map((item, index) => (
+        <FaqItem
+          key={item.question}
+          {...item}
+          open={openIndex === index}
+          onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+        />
+      ))}
+    </>
   )
 }
 
@@ -204,9 +227,9 @@ function SquiggleUnderline() {
 
 export function LandingPage() {
   usePageSeo({
-    title: 'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
+    title: 'Boutique en ligne et prise de rendez-vous gratuites | Bitiko',
     description:
-      "Bitiko donne à chaque activité sa présence en ligne : boutique, rendez-vous avec horaires par jour, réservation de tables et finances simples (bilan PDF et Excel) — adaptée à ton métier, pilotée depuis ton téléphone. Fait pour l'Afrique de l'Ouest, gratuit pour commencer.",
+      'Crée ta boutique en ligne et ta prise de rendez-vous en 2 minutes. Commandes et réservations sur WhatsApp, stock et finances suivis. Gratuit, sans commission.',
     image: 'https://bitiko.shop/og/home.jpg',
     canonicalUrl: 'https://bitiko.shop/',
   })
@@ -252,23 +275,23 @@ export function LandingPage() {
               className="mx-auto mb-6 hidden w-fit animate-fade-up items-center gap-1.5 rounded-3xl border border-sand-200 py-1.5 pl-2.5 pr-3 text-xs font-medium text-ink-700 shadow-[inset_0_-2px_0_#E7E0D4] transition-colors hover:bg-sand-100 lg:inline-flex"
             >
               <Zap size={13} className="text-brand-500" aria-hidden />
-              Commerces et services d'Afrique de l'Ouest
+              Boutique, rendez-vous et finances, réunis
               <ArrowRight size={12} className="text-ink-700" aria-hidden />
             </a>
             <h1 className="mx-auto max-w-[620px] animate-fade-up font-heading text-[28px] font-semibold leading-[1.1] tracking-tight text-ink-900 [animation-delay:100ms] sm:text-4xl lg:mx-0 lg:max-w-none lg:text-5xl xl:text-[3.3rem]">
-              Vends, réserve et gère ton activité.{' '}
+              Mets ton activité en ligne.{' '}
               <span className="relative inline-block whitespace-normal sm:whitespace-nowrap">
-                Un seul outil
+                Tes clients font le reste
                 <SquiggleUnderline />
               </span>
               .
             </h1>
             <p className="mx-auto mt-5 max-w-[540px] animate-fade-up text-[15px] leading-relaxed text-[#605958] [animation-delay:200ms] sm:text-base lg:mx-0">
-              Bitiko est la plateforme tout-en-un des commerces et des services d’Afrique de l’Ouest : boutique en ligne, rendez-vous, réservation de tables et finances. Tes clients commandent ou réservent seuls, tu es prévenu tout de suite. Aucun code, aucune carte bancaire, aucune commission.
+              Boutique, prise de rendez-vous, réservation de tables et finances sur un seul lien à partager sur WhatsApp, Instagram ou TikTok. Chaque commande et chaque réservation t’arrive sur WhatsApp. Sans code, sans commission.
             </p>
             <div className="mb-8 mt-8 flex animate-fade-up flex-col items-center gap-3 [animation-delay:300ms] sm:flex-row lg:justify-start">
               <Link to="/admin/login" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700 sm:w-auto">
-                Créer mon espace gratuitement
+                Créer mon espace gratuit
                 <ArrowRight size={16} aria-hidden />
               </Link>
               <a href="#demo" className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100 sm:w-auto">
@@ -277,7 +300,7 @@ export function LandingPage() {
               </a>
             </div>
             <div className="flex animate-fade-up flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700/75 [animation-delay:400ms] lg:justify-start">
-              {['0 F pour lancer', 'Zéro commission', 'Prêt en 2 minutes', 'Sans carte bancaire'].map((t) => (
+              {['Gratuit pour démarrer', '0 % de commission', 'En ligne en 2 minutes', 'Sans carte bancaire'].map((t) => (
                 <span key={t} className="flex items-center gap-1">
                   <Check size={12} className="text-brand-500" aria-hidden /> {t}
                 </span>
@@ -323,10 +346,10 @@ export function LandingPage() {
         <section className="border-y border-sand-200 bg-white">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 py-8 sm:grid-cols-4 sm:py-10">
             {[
-              { icon: Clock, target: 2, suffix: ' min', label: 'Mise en ligne' },
-              { icon: ShoppingCart, target: 3, suffix: ' clics', label: 'Pour commander' },
-              { icon: Wallet, target: 0, suffix: ' F', label: 'Pour commencer' },
-              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Votre activité vend' },
+              { icon: Clock, target: 2, suffix: ' min', label: 'Pour être en ligne' },
+              { icon: Percent, target: 0, suffix: ' %', label: 'De commission sur tes ventes' },
+              { icon: ShoppingCart, target: 3, suffix: ' clics', label: 'Pour qu’un client commande' },
+              { icon: Smartphone, target: 24, suffix: 'h/24', label: 'Ta boutique reste ouverte' },
             ].map(({ icon: Icon, target, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center">
                 <IconTile icon={Icon} tone="gold" />
@@ -348,48 +371,34 @@ export function LandingPage() {
                 Ton activité mérite mieux qu'un carnet et 200 messages non lus.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Tes clients sont en ligne, pas ton organisation. Chaque commande, chaque rendez-vous, chaque compte passe par ta mémoire. Bitiko remet tout au même endroit.
+                Tes clients sont déjà en ligne. Ton organisation, pas encore : chaque commande, chaque rendez-vous, chaque compte passe par ta mémoire. Bitiko remet tout au même endroit.
               </p>
             </Reveal>
-            <div className="grid gap-8 lg:grid-cols-2">
-              <Reveal className="rounded-2xl border border-red-200 bg-red-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-red-500">Gérer sans Bitiko</p>
-                <ul className="space-y-3.5">
-                  {[
-                    'Envoyer des photos un par un sur WhatsApp — le client perd patience',
-                    'Noter les commandes et rendez-vous sur un carnet — des erreurs, des oublis',
-                    'Calculer les totaux à la main — tu te trompes, le client se plaint',
-                    'Vendre un article que tu n\'as plus en stock / doubler un rendez-vous',
-                    'Perdre des commandes et réservations dans la masse de messages',
-                    'Demander « tu es dans quel quartier ? » à chaque client',
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-3 text-sm font-medium text-ink-700/80">
-                      <X size={15} className="mt-0.5 shrink-0 text-red-500" aria-hidden /> {t}
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-              <Reveal delay={120} className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-7">
-                <p className="mb-5 font-mono text-xs font-semibold uppercase tracking-widest text-emerald-600">Gérer avec Bitiko</p>
-                <ul className="space-y-3.5">
-                  {[
-                    'Un vrai catalogue en ligne — ton client voit, compare, commande ou réserve à 23h',
-                    'Commandes, rendez-vous et réservations sur ton WhatsApp, formatés, et dans ton agenda',
-                    'Stock et planning mis à jour automatiquement — plus de double réservation ni rupture',
-                    'Secteurs et villes avec tarifs — le client choisit, le prix s\'applique',
-                    'Dashboard unifié — tu vois ventes, rendez-vous, stock et finances sans ouvrir un carnet',
-                    'Lien à partager sur WhatsApp, Facebook, Instagram — ton activité vit 24h/24',
-                  ].map((t) => (
-                    <li key={t} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                        <Check size={12} className="text-emerald-600" aria-hidden />
-                      </span>
-                      <span className="text-sm font-medium text-ink-700/80">{t}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            </div>
+            <Reveal delay={150} className="mx-auto max-w-4xl overflow-x-auto rounded-2xl border border-sand-200">
+              <div className="min-w-[560px]">
+                <div className="grid grid-cols-[1fr_1px_1fr] border-b border-sand-200 bg-ink-800 text-xs font-semibold uppercase tracking-wider text-white">
+                  <div className="px-3 py-3 sm:px-5">Sans Bitiko</div>
+                  <div className="bg-ink-700" />
+                  <div className="px-3 py-3 sm:px-5">Avec Bitiko</div>
+                </div>
+                {comparisonRows.map(({ before, after }, i) => (
+                  <div
+                    key={before}
+                    className={`grid grid-cols-[1fr_1px_1fr] transition-colors duration-200 hover:bg-emerald-50/30 ${i < comparisonRows.length - 1 ? 'border-b border-sand-100' : ''}`}
+                  >
+                    <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
+                      <X size={14} className="mt-0.5 shrink-0 text-red-400" aria-hidden />
+                      <span className="text-xs text-ink-700/70 sm:text-sm">{before}</span>
+                    </div>
+                    <div className="bg-sand-200" />
+                    <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
+                      <Check size={14} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden />
+                      <span className="text-xs font-medium text-ink-900 sm:text-sm">{after}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
 
@@ -434,14 +443,14 @@ export function LandingPage() {
                 <div className="rounded-xl bg-white p-3 shadow-sm">
                   <p className="text-xs leading-relaxed text-ink-900">
                     🛒 <strong>Nouvelle commande #0042</strong><br />
-                    👤 Awa Mbaye — 77 123 45 67<br />
-                    📍 Parcelles Assainies, Dakar<br />
+                    👤 Awa Mbaye<br />
+                    📍 8 rue des Palmiers — Centre-ville<br />
                     ━━━━━━━━━━━━━━<br />
                     2× Robe wax Aminata — 50 000 F<br />
                     Livraison — 1 500 F<br />
                     ━━━━━━━━━━━━━━<br />
                     💰 <strong>Total — 51 500 F</strong><br />
-                    💳 Paiement — Wave
+                    💳 Paiement — Mobile money
                   </p>
                 </div>
                 <p className="mt-2 text-[10px] text-emerald-700/60">Exemple de message reçu par le commerçant sur WhatsApp</p>
@@ -480,56 +489,22 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* ── COMPARISON TABLE ── */}
+        {/* ── PENSÉ POUR LA VRAIE VIE ── */}
         <section className="border-b border-sand-200 bg-white">
-          <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:py-32">
-            <Reveal className="text-center">
-              <SectionEyebrow>Avant / Après</SectionEyebrow>
-              <h2 className="mx-auto mb-14 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Ce qui change avec Bitiko.
-              </h2>
-            </Reveal>
-            <Reveal delay={150} className="overflow-x-auto rounded-2xl border border-sand-200">
-              <div className="min-w-[560px]">
-              <div className="grid grid-cols-[1fr_1px_1fr] border-b border-sand-200 bg-ink-800 text-xs font-semibold uppercase tracking-wider text-white">
-                <div className="px-3 py-3 sm:px-5">Sans Bitiko</div>
-                <div className="bg-ink-700" />
-                <div className="px-3 py-3 sm:px-5">Avec Bitiko</div>
-              </div>
-              {comparisonRows.map(({ before, after }, i) => (
-                <div
-                  key={i}
-                  className={`grid grid-cols-[1fr_1px_1fr] transition-colors duration-200 hover:bg-emerald-50/30 ${i < comparisonRows.length - 1 ? 'border-b border-sand-100' : ''}`}
-                >
-                  <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
-                    <X size={14} className="mt-0.5 shrink-0 text-red-400" />
-                    <span className="text-xs text-ink-700/70 sm:text-sm">{before}</span>
-                  </div>
-                  <div className="bg-sand-200" />
-                  <div className="flex items-start gap-2.5 px-3 py-3.5 sm:px-5">
-                    <Check size={14} className="mt-0.5 shrink-0 text-emerald-600" />
-                    <span className="text-xs font-medium text-ink-900 sm:text-sm">{after}</span>
-                  </div>
-                </div>
-              ))}
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ── PENSÉ POUR L'AFRIQUE DE L'OUEST ── */}
-        <section className="border-b border-sand-200">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-32">
             <Reveal className="text-center">
-              <SectionEyebrow>Pensé pour ici</SectionEyebrow>
-              <h2 className="mx-auto mb-14 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
+              <SectionEyebrow>Pensé pour la vraie vie</SectionEyebrow>
+              <h2 className="mx-auto mb-3 max-w-[700px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
                 Fait pour la façon dont tu travailles vraiment.
               </h2>
+              <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
+                Pas besoin de changer tes habitudes : Bitiko s’installe autour de ton téléphone, de WhatsApp et de ta façon d’encaisser.
+              </p>
             </Reveal>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {westAfrica.map(({ icon: Icon, title, description }, i) => (
+              {realLife.map(({ icon: Icon, title, description }, i) => (
                 <Reveal key={title} delay={i * 80}>
-                  <div className="h-full rounded-2xl border border-sand-200 bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
+                  <div className="h-full rounded-2xl border border-sand-200 bg-sand-50 p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5">
                     <IconTile icon={Icon} />
                     <h3 className="mt-5 font-heading text-sm font-semibold text-ink-900">{title}</h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-ink-700/70">{description}</p>
@@ -551,9 +526,9 @@ export function LandingPage() {
             </Reveal>
             <div className="grid gap-10 sm:grid-cols-3">
               {[
-                { n: '1', title: 'Décris ton activité', desc: 'Boutique, salon, restaurant… Nom, pays, WhatsApp. Bitiko te propose un modèle adapté à ton métier.' },
-                { n: '2', title: 'Ajoute ton offre', desc: 'Produits, prestations, tarifs, horaires. Tu peux importer ton catalogue en CSV.' },
-                { n: '3', title: 'Partage ton lien', desc: 'WhatsApp, Instagram, Facebook, bouche-à-oreille. Tes premiers clients commandent ou réservent seuls.' },
+                { n: '1', title: 'Décris ton activité', desc: 'Le nom, ton métier, ton WhatsApp. Bitiko prépare une vitrine adaptée, déjà remplie de textes à ton image.' },
+                { n: '2', title: 'Ajoute ton offre', desc: 'Produits, prestations, tarifs, horaires. Une minute par produit, ou tout ton catalogue d’un coup en CSV.' },
+                { n: '3', title: 'Partage ton lien', desc: 'Bio Instagram, statut WhatsApp, TikTok, carte de visite. Tes clients commandent et réservent seuls.' },
               ].map(({ n, title, desc }, i) => (
                 <Reveal key={n} delay={i * 120} className="relative text-center">
                   {i < 2 && <span className="absolute left-[calc(50%+2rem)] top-6 hidden h-px w-[calc(100%-4rem)] bg-gradient-to-r from-gold-400/40 to-gold-400/10 sm:block" />}
@@ -575,7 +550,7 @@ export function LandingPage() {
                 Un prix simple. Pas de commission.
               </h2>
               <p className="mx-auto mb-14 max-w-[600px] text-ink-700/75">
-                Commence gratuitement, passe à un plan payant quand ton activité grandit. Tu gardes 100% de tes ventes.
+                Commence gratuitement, sans limite de durée. Passe à un plan payant seulement quand ton activité grandit. Tu gardes 100 % de tes ventes.
               </p>
             </Reveal>
             <div className="grid gap-6 lg:grid-cols-3">
@@ -584,16 +559,16 @@ export function LandingPage() {
                 <div className="rounded-[20px] border border-sand-200 bg-white p-8 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-900/5">
                   <p className="text-sm font-bold text-ink-900">Découverte</p>
                   <div className="mt-3 flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold text-ink-900">0 F</span>
+                    <span className="text-4xl font-bold text-ink-900">Gratuit</span>
                   </div>
-                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour démarrer et tester.</p>
+                  <p className="mt-2 text-center text-sm text-ink-700/75">Pour démarrer, sans limite de durée.</p>
                   <div className="my-6 h-px w-full bg-sand-100" />
                   <ul className="space-y-3">
                     {[
                       'Vitrine en ligne complète',
                       `${PLANS.free.maxActiveProducts} produits et ${PLANS.free.maxActiveServices} prestations actifs`,
                       `Rendez-vous et réservations en ligne (${PLANS.free.maxMonthlyBookings} demandes / mois)`,
-                      'Commandes sur WhatsApp, livraison par secteurs',
+                      'Commandes sur WhatsApp, livraison par zones',
                       'Finances : bilan du mois, export Excel et PDF',
                       `Équipe de ${PLANS.free.maxTeamMembers} personnes`,
                     ].map((f) => (
@@ -676,7 +651,19 @@ export function LandingPage() {
                 </div>
               </Reveal>
             </div>
-            <p className="mt-8 text-center text-xs text-ink-700">Zéro commission sur tes ventes. Tu gardes 100% du prix de vente. Abonnement renouvelé à la main, sans prélèvement automatique.</p>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {commitments.map(({ icon: Icon, title, text }, i) => (
+                <Reveal key={title} delay={i * 60}>
+                  <div className="flex h-full gap-3 rounded-2xl border border-sand-200 bg-white p-4">
+                    <Icon size={18} className="mt-0.5 shrink-0 text-brand-600" aria-hidden />
+                    <div>
+                      <p className="text-sm font-semibold text-ink-900">{title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-ink-700/75">{text}</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -690,21 +677,7 @@ export function LandingPage() {
               </h2>
             </Reveal>
             <Reveal delay={100} className="mx-auto mt-10 max-w-xl">
-              {(() => {
-                const [openIndex, setOpenIndex] = useState<number | null>(null)
-                return (
-                  <>
-                    {faq.map((item, index) => (
-                      <FaqItem
-                        key={item.question}
-                        {...item}
-                        open={openIndex === index}
-                        onToggle={() => setOpenIndex(openIndex === index ? null : index)}
-                      />
-                    ))}
-                  </>
-                )
-              })()}
+              <FaqList />
             </Reveal>
           </div>
         </section>
@@ -714,16 +687,16 @@ export function LandingPage() {
           <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 lg:py-32">
             <Reveal>
               <h2 className="mx-auto max-w-[650px] font-heading text-3xl font-semibold text-ink-900 sm:text-4xl lg:text-5xl">
-                Prêt à remplir ton carnet de commandes et ton agenda ?
+                Ton lien peut être en ligne avant la fin de ton café.
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ink-700/70">
-                Lance ton activité gratuitement. Aucune carte bancaire. Aucune commission. Zéro engagement. Tu peux arrêter quand tu veux.
+                Crée ton espace en 2 minutes, partage ton lien, laisse tes clients commander et réserver. Gratuit, sans carte bancaire, sans engagement.
               </p>
               <Link to="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-                Créer mon espace gratuitement <ArrowRight size={16} aria-hidden />
+                Créer mon espace gratuit <ArrowRight size={16} aria-hidden />
               </Link>
               <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-ink-700">
-                {['0 F pour lancer', 'Zéro commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (
+                {['Gratuit pour démarrer', '0 % de commission', 'Sans carte bancaire', 'Sans engagement'].map((t) => (
                   <span key={t} className="flex items-center gap-1"><Check size={11} aria-hidden />{t}</span>
                 ))}
               </div>

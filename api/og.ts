@@ -116,8 +116,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     res.status(200).send(
       page(
-        'Bitiko — Le site de ton activité : boutique, rendez-vous, services',
-        'Vends, réserve et gère ton activité avec un seul outil : boutique en ligne, rendez-vous, réservation de tables et finances. Commandes sur WhatsApp. Gratuit pour commencer, sans commission.',
+        'Boutique en ligne et prise de rendez-vous gratuites | Bitiko',
+        'Mets ton activité en ligne, tes clients font le reste : boutique, rendez-vous, réservations et finances. Commandes sur WhatsApp. Gratuit, sans commission.',
         `${origin}/`,
         `${origin}/og/home.jpg`,
       ),

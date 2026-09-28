@@ -1,5 +1,5 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowRight, Check, ChevronRight } from 'lucide-react'
+import { ArrowRight, Check, ChevronRight, Play, X } from 'lucide-react'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { useJsonLd } from '@/hooks/useJsonLd'
 import { breadcrumbJsonLd, faqJsonLd, solutionJsonLd, SITE_ORIGIN } from '@/seo/jsonLd'
@@ -32,13 +32,20 @@ export function SolutionContent({ page }: { page: SolutionPageData }) {
               <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-700/80">{page.lead}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link to="/admin/login" className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-                  Créer mon espace gratuitement <ArrowRight size={16} aria-hidden />
+                  Créer mon espace gratuit <ArrowRight size={16} aria-hidden />
                 </Link>
-                <a href="/#demo" className="inline-flex items-center justify-center rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100">
+                <a href="/#demo" className="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-6 py-4 text-sm font-medium text-ink-900 transition-colors hover:bg-sand-100">
+                  <Play size={15} className="text-brand-600" aria-hidden />
                   Voir la démo
                 </a>
               </div>
-              <p className="mt-4 text-xs text-ink-700/60">0 F pour lancer · Zéro commission · Sans carte bancaire</p>
+              <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-700/75">
+                {['Gratuit pour démarrer', '0 % de commission', 'En ligne en 2 minutes', 'Sans carte bancaire'].map((t) => (
+                  <li key={t} className="flex items-center gap-1">
+                    <Check size={12} className="text-brand-500" aria-hidden /> {t}
+                  </li>
+                ))}
+              </ul>
             </div>
             <div className="flex items-end justify-center gap-4">
               {phones.slice(0, 2).map((shot, i) => (
@@ -49,9 +56,25 @@ export function SolutionContent({ page }: { page: SolutionPageData }) {
           </div>
         </section>
 
-        <section className="border-y border-sand-200 bg-white">
+        <section className="border-t border-sand-200 bg-ink-900">
+          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:py-20">
+            <SectionHeading light eyebrow="Tu te reconnais ?" title="Ce qui te fait perdre du temps (et des clients)" className="mb-10" />
+            <ul className="grid gap-4 sm:grid-cols-3">
+              {page.problems.map((problem, i) => (
+                <Reveal key={problem} delay={i * 80}>
+                  <li className="flex h-full gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm leading-relaxed text-ink-100/85">
+                    <X size={16} className="mt-0.5 shrink-0 text-red-300" aria-hidden />
+                    {problem}
+                  </li>
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="border-b border-sand-200 bg-white">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
-            <SectionHeading eyebrow="Pourquoi Bitiko" title="Ce que ça change concrètement" className="mb-12" />
+            <SectionHeading eyebrow="Avec Bitiko" title="Ce que ça change concrètement" className="mb-12" />
             <div className="grid gap-6 sm:grid-cols-2">
               {page.benefits.map((benefit, i) => (
                 <Reveal key={benefit.title} delay={i * 60}>
@@ -100,7 +123,7 @@ export function SolutionContent({ page }: { page: SolutionPageData }) {
         </section>
 
         <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:py-24">
-          <SectionHeading eyebrow="Questions fréquentes" title={`${page.navLabel} : vos questions`} className="mb-10" />
+          <SectionHeading eyebrow="Questions fréquentes" title="Tes questions, nos réponses" className="mb-10" />
           <dl className="divide-y divide-sand-200 rounded-2xl border border-sand-200 bg-white">
             {page.faq.map((item) => (
               <div key={item.question} className="px-6 py-5">
@@ -130,10 +153,10 @@ export function SolutionContent({ page }: { page: SolutionPageData }) {
 
         <section className="bg-gradient-to-br from-brand-100 to-sand-100">
           <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-            <h2 className="font-heading text-2xl font-semibold text-ink-900 sm:text-3xl">Lancez votre espace aujourd’hui</h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm text-ink-700/75">Gratuit pour démarrer, sans carte bancaire et sans commission sur vos ventes.</p>
+            <h2 className="font-heading text-2xl font-semibold text-ink-900 sm:text-3xl">Lance ton espace aujourd’hui</h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm text-ink-700/75">En ligne en 2 minutes. Gratuit pour démarrer, sans carte bancaire et sans commission sur tes ventes.</p>
             <Link to="/admin/login" className="mt-7 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-4 text-sm font-medium text-white shadow-md transition-colors hover:bg-brand-700">
-              Créer mon espace gratuitement <ArrowRight size={16} aria-hidden />
+              Créer mon espace gratuit <ArrowRight size={16} aria-hidden />
             </Link>
           </div>
         </section>

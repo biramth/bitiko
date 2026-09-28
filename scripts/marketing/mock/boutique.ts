@@ -56,7 +56,7 @@ export function buildBoutique(ctx: { shopId: string; now: Date; iso: (d: Date) =
     ['Robe wax Aminata', 25000, 14, 'k1', 'Nouveau'],
     ['Ensemble bazin Sokhna', 35000, 6, 'k2', null],
     ['Boubou brodé Ndeye', 45000, 3, 'k1', 'Best-seller'],
-    ['Sac en pagne Kaolack', 12000, 22, 'k3', null],
+    ['Sac en pagne Néné', 12000, 22, 'k3', null],
     ['Robe portefeuille Mame', 28000, 9, 'k1', null],
     ['Ensemble wax Ibrahima', 32000, 0, 'k2', null],
     ['Pochette wax Thioro', 6000, 40, 'k3', null],
@@ -67,7 +67,7 @@ export function buildBoutique(ctx: { shopId: string; now: Date; iso: (d: Date) =
     const image = { id: `i${i + 1}`, product_id: id, public_url: imageFor(i), storage_path: `mock/${id}`, sort_order: 0, created_at: iso(now) }
     return {
       id, shop_id: shopId, name, slug: name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      description: 'Tissu wax de qualité, coupe soignée, confectionné à Dakar.', price, stock, active: true, badge, category_id: categoryId,
+      description: 'Tissu wax de qualité, coupe soignée, cousu main dans notre atelier.', price, stock, active: true, badge, category_id: categoryId,
       option_fields: [], sort_order: i, created_at: ago(30 - i), updated_at: iso(now),
       category: categories.find((c) => c.id === categoryId), images: [image], variants: [],
     }
@@ -82,7 +82,7 @@ export function buildBoutique(ctx: { shopId: string; now: Date; iso: (d: Date) =
     ['Bineta Cissé', '+221772223344', 2, 43000],
   ]
   const customers = customersSeed.map(([name, phone, orders_count, total_spent], i) => ({
-    id: `cu${i + 1}`, shop_id: shopId, name, phone, email: null, address: 'Dakar', orders_count, total_spent,
+    id: `cu${i + 1}`, shop_id: shopId, name, phone, email: null, address: 'Centre-ville', orders_count, total_spent,
     first_order_at: ago(60 - i * 5), last_order_at: ago(i * 2), created_at: ago(60 - i * 5), updated_at: iso(now),
   }))
 
@@ -100,15 +100,15 @@ export function buildBoutique(ctx: { shopId: string; now: Date; iso: (d: Date) =
     const total = items.reduce((sum, item) => sum + item.subtotal, 0) + fee
     return {
       id: `o${i + 1}`, shop_id: shopId, order_number: `#${String(48 - i).padStart(4, '0')}`, customer_name: customer.name, customer_phone: customer.phone,
-      customer_email: null, customer_address: 'Parcelles Assainies, Dakar', delivery_zone_name: 'Dakar', delivery_fee: fee, payment_method: i % 2 ? 'mobile_money' : 'cod',
+      customer_email: null, customer_address: '8 rue des Palmiers, Centre-ville', delivery_zone_name: 'Centre-ville', delivery_fee: fee, payment_method: i % 2 ? 'mobile_money' : 'cod',
       notes: null, status, total, created_at: ago(Math.floor(i / 2), 9 + (i % 8)), updated_at: iso(now), items,
     }
   })
 
   const secteurs = [
-    { id: 'd1', shop_id: shopId, name: 'Dakar', fee: 1500, is_active: true, created_at: iso(now), updated_at: iso(now) },
-    { id: 'd2', shop_id: shopId, name: 'Rufisque et banlieue', fee: 2500, is_active: true, created_at: iso(now), updated_at: iso(now) },
-    { id: 'd3', shop_id: shopId, name: 'Thiès', fee: 4000, is_active: true, created_at: iso(now), updated_at: iso(now) },
+    { id: 'd1', shop_id: shopId, name: 'Centre-ville', fee: 1500, is_active: true, created_at: iso(now), updated_at: iso(now) },
+    { id: 'd2', shop_id: shopId, name: 'Banlieue', fee: 2500, is_active: true, created_at: iso(now), updated_at: iso(now) },
+    { id: 'd3', shop_id: shopId, name: 'Autres villes', fee: 4000, is_active: true, created_at: iso(now), updated_at: iso(now) },
   ]
 
   const topItems = [
@@ -116,7 +116,7 @@ export function buildBoutique(ctx: { shopId: string; now: Date; iso: (d: Date) =
     { name: 'Ensemble bazin Sokhna', kind: 'product', quantity: 28, amount: 980000 },
     { name: 'Robe wax Aminata', kind: 'product', quantity: 37, amount: 925000 },
     { name: 'Robe portefeuille Mame', kind: 'product', quantity: 24, amount: 672000 },
-    { name: 'Sac en pagne Kaolack', kind: 'product', quantity: 41, amount: 492000 },
+    { name: 'Sac en pagne Néné', kind: 'product', quantity: 41, amount: 492000 },
   ]
 
   return {

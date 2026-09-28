@@ -36,7 +36,49 @@ const shots = [
   { name: 'shop-boutique', profile: 'boutique', url: '/?boutique=wax-style', mobile: true },
   { name: 'shop-catalogue', profile: 'boutique', url: '/catalogue?boutique=wax-style', mobile: true },
   { name: 'shop-produit', profile: 'boutique', url: '/produits/robe-wax-aminata?boutique=wax-style', mobile: true },
+  // Restauration : « Le Comptoir de Moussa »
+  { name: 'resto-accueil', profile: 'restaurant', url: '/?boutique=comptoir-moussa', mobile: true },
+  { name: 'resto-carte', profile: 'restaurant', url: '/?boutique=comptoir-moussa', mobile: true, prepare: revealMenu },
+  { name: 'resto-table', profile: 'restaurant', url: '/?boutique=comptoir-moussa', mobile: true, prepare: fillTableBooking },
+  { name: 'resto-reservations', profile: 'restaurant', url: '/admin/reservations', desktop: true },
+  { name: 'resto-commandes', profile: 'restaurant', url: '/admin/commandes', desktop: true },
 ]
+
+async function revealMenu(page) {
+  await page.evaluate(() => {
+    const heading = [...document.querySelectorAll('h2')].find((h) => h.textContent?.includes('carte'))
+    heading?.scrollIntoView({ block: 'start' })
+    window.scrollBy(0, -96)
+  })
+  await page.waitForTimeout(600)
+}
+
+async function fillTableBooking(page) {
+  await page.locator('#resa-party').fill('4')
+  const date = new Date(Date.now() + 86400000)
+  const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  await page.locator('#resa-date').fill(iso)
+  await page.waitForTimeout(900)
+  await page.getByRole('radio', { name: '20:30' }).first().click().catch(() => {})
+  await page.waitForTimeout(300)
+  await page.locator('#resa-name').fill('Léa Martin').catch(() => {})
+  await page.locator('#resa-phone').fill('77 123 45 67').catch(() => {})
+  await page.evaluate(() => {
+    document.activeElement?.blur()
+    const heading = [...document.querySelectorAll('h2')].find((h) => h.textContent?.includes('Réserver une table'))
+    heading?.scrollIntoView({ block: 'start' })
+    window.scrollBy(0, -96)
+  })
+  await page.waitForTimeout(400)
+}
+
+/** Le bouton d'aide flottant masque le contenu : absent des visuels. */
+async function hideHelpButton(page) {
+  await page.evaluate(() => {
+    const help = [...document.querySelectorAll('button[aria-expanded]')].find((b) => /aide/.test(b.getAttribute('aria-label') ?? ''))
+    help?.parentElement?.style.setProperty('display', 'none', 'important')
+  })
+}
 
 async function revealHours(page) {
   await page.getByRole('button', { name: 'Modifier' }).first().click()
@@ -99,6 +141,7 @@ async function main() {
       const page = await context.newPage()
       await page.goto(BASE + shot.url)
       await settle(page)
+      if (shot.url.startsWith('/admin')) await hideHelpButton(page)
       if (shot.prepare) await shot.prepare(page)
       const png = path.join(TMP, `${shot.name}.png`)
       await page.screenshot({ path: png })
