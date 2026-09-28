@@ -67,9 +67,9 @@ async function main() {
   const cards = [
     {
       name: 'home',
-      eyebrow: 'Commerces et services d’Afrique de l’Ouest',
-      title: 'Vends, réserve et gère ton activité. <em>Un seul outil.</em>',
-      sub: 'Boutique en ligne, rendez-vous, réservation de tables et finances. Commandes sur WhatsApp.',
+      eyebrow: 'Boutique · Rendez-vous · Finances',
+      title: 'Mets ton activité en ligne. <em>Tes clients font le reste.</em>',
+      sub: 'Boutique, rendez-vous et finances sur un seul lien. Chaque commande arrive sur WhatsApp.',
       phone: 'shop-boutique',
       browser: 'shop-dashboard',
       size: 50,

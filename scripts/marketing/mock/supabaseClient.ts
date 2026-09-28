@@ -4,10 +4,12 @@
 import { STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { generateStorefront } from '@/features/onboarding/generateStorefront'
 import { buildBoutique } from './boutique'
+import { buildRestaurant } from './restaurant'
 
-// Profil : 'salon' (services, défaut) ou 'boutique' (commerce). Choisi par localStorage.mock_profile.
+// Profil : 'salon' (services, défaut), 'boutique' (commerce) ou 'restaurant'. Choisi par localStorage.mock_profile.
 const profile = (typeof localStorage !== 'undefined' && localStorage.getItem('mock_profile')) || 'salon'
 const isShop = profile === 'boutique'
+const isResto = profile === 'restaurant'
 
 const uid = '00000000-0000-0000-0000-00000000aaaa'
 const shopId = '00000000-0000-0000-0000-00000000bbbb'
@@ -25,13 +27,15 @@ const ymd = (monthOffset: number, day: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const template = STORE_TEMPLATE_BY_KEY[isShop ? 'mode' : 'institut']
+const template = STORE_TEMPLATE_BY_KEY[isShop ? 'mode' : isResto ? 'restauration' : 'institut']
 const storefront = generateStorefront({
   template,
   answers: {
     description: isShop
-      ? 'Robes, ensembles et accessoires en tissu wax, confectionnés à Dakar. Livraison partout au Sénégal.'
-      : 'Soins du visage, massages et onglerie à Dakar. Réservez votre moment en ligne.',
+      ? 'Robes, ensembles et accessoires en tissu wax, cousus main dans notre atelier. Livraison rapide à domicile.'
+      : isResto
+        ? 'Cuisine maison, grillades et plats du jour. Sur place, à emporter ou en livraison.'
+        : 'Soins du visage, massages et onglerie dans un cadre apaisant. Réservez votre moment en ligne.',
     audience: 'particuliers',
     homeDelivery: false,
     payOnDelivery: false,
@@ -47,15 +51,15 @@ const homeSections = storefront.layoutSections.filter((s) => s.type !== 'testimo
 const shop = {
   id: shopId,
   owner_id: uid,
-  name: isShop ? 'Wax & Style by Fatou' : 'Salon Awa Beauté',
-  slug: isShop ? 'wax-style' : 'salon-awa',
+  name: isShop ? 'Wax & Style by Fatou' : isResto ? 'Le Comptoir de Moussa' : 'Salon Awa Beauté',
+  slug: isShop ? 'wax-style' : isResto ? 'comptoir-moussa' : 'salon-awa',
   description: storefront.description,
   whatsapp_number: '+221771234567',
   currency: 'XOF',
   country_code: 'SN',
   logo_url: null,
   banner_url: null,
-  business_type: isShop ? 'mode' : 'beaute',
+  business_type: isShop ? 'mode' : isResto ? 'restauration' : 'beaute',
   business_type_id: null,
   theme_color: storefront.themeColor,
   theme_config: storefront.themeConfig,
@@ -63,7 +67,7 @@ const shop = {
   page_templates: storefront.pageTemplates,
   builder_draft: null,
   social_links: {},
-  address: isShop ? 'Marché HLM, Dakar' : 'Sacré-Cœur 3, Dakar',
+  address: isShop ? 'Marché central, allée B' : isResto ? '3 place du Marché' : '12 rue des Jardins',
   delivery_fee: 0,
   free_delivery_threshold: null,
   low_stock_threshold: 3,
@@ -120,7 +124,8 @@ const appointments = [
   appt('a10', 4, 9, 0, 'Diarra Faye', '+221776667788', 'confirmed', services[3], team[1]),
 ]
 
-const boutique = isShop ? buildBoutique({ shopId, now, iso }) : null
+const boutique = isShop ? buildBoutique({ shopId, now, iso }) : isResto ? buildRestaurant({ shopId, now, iso }) : null
+const hasServices = !isShop && !isResto
 const caps = boutique?.caps ?? ['HAS_SHOP', 'HAS_PRODUCTS', 'HAS_SERVICES', 'HAS_APPOINTMENTS', 'HAS_CALENDAR', 'HAS_ORDERS', 'HAS_CUSTOMERS', 'HAS_TEAM', 'HAS_ANALYTICS', 'HAS_REVIEWS', 'HAS_PROMOTIONS']
 
 const plan = (typeof localStorage !== 'undefined' && localStorage.getItem('mock_plan')) || 'pro'
@@ -131,10 +136,10 @@ const monthly = Array.from({ length: 24 }, (_, i) => {
   const growth = 0.7 + i * 0.03
   return {
     offset,
-    orders: Math.round(((isShop ? 470000 : 210000) + ((i * 37) % 5) * 12000) * growth / 1000) * 1000,
-    appointments: isShop ? 0 : Math.round((260000 + ((i * 53) % 4) * 15000) * growth / 1000) * 1000,
-    orderCount: 9 + (i % 4),
-    appointmentCount: isShop ? 0 : 24 + (i % 6) * 2,
+    orders: Math.round(((isShop ? 470000 : isResto ? 1450000 : 210000) + ((i * 37) % 5) * 12000) * growth / 1000) * 1000,
+    appointments: !hasServices ? 0 : Math.round((260000 + ((i * 53) % 4) * 15000) * growth / 1000) * 1000,
+    orderCount: (isResto ? 180 : 9) + (i % 4),
+    appointmentCount: !hasServices ? 0 : 24 + (i % 6) * 2,
   }
 })
 const financeEntries: Record<string, unknown>[] = []
@@ -153,10 +158,10 @@ const tables: Record<string, unknown[]> = {
   finance_entries: financeEntries,
   shop_subscriptions: plan === 'free' ? [] : [{ shop_id: shopId, plan, status: 'active', current_period_end: iso(new Date(Date.now() + 20 * 86400000)), updated_at: iso(now) }],
   shops: profile === 'noshop' ? [] : [shop],
-  services: isShop ? [] : services,
-  team_members: isShop ? [] : team,
-  appointments: isShop ? [] : appointments,
-  reservations: [],
+  services: hasServices ? services : [],
+  team_members: hasServices ? team : [],
+  appointments: hasServices ? appointments : [],
+  reservations: (boutique && 'reservations' in boutique ? boutique.reservations : []) as Row[],
   categories: boutique?.categories ?? [category],
   delivery_secteurs: boutique?.secteurs ?? [],
   delivery_villes: [],
@@ -164,14 +169,16 @@ const tables: Record<string, unknown[]> = {
   booking_settings: [{
     shop_id: shopId, timezone: 'Africa/Dakar', open_time: '09:00', close_time: '19:00', open_days: [1, 2, 3, 4, 5, 6], slot_minutes: 30,
     max_days_ahead: 60, table_capacity: 40, reservation_minutes: 90, updated_at: iso(now), closed_dates: [],
-    weekly_hours: {
-      '1': [['09:00', '13:00'], ['15:00', '19:00']],
-      '2': [['09:00', '13:00'], ['15:00', '19:00']],
-      '3': [['09:00', '13:00'], ['15:00', '19:00']],
-      '4': [['09:00', '13:00'], ['15:00', '19:00']],
-      '5': [['09:00', '13:00'], ['15:00', '18:00']],
-      '6': [['09:00', '17:00']],
-    },
+    weekly_hours: isResto
+      ? Object.fromEntries(['1', '2', '3', '4', '5', '6'].map((day) => [day, [['12:00', '15:00'], ['19:00', '23:00']]]))
+      : {
+          '1': [['09:00', '13:00'], ['15:00', '19:00']],
+          '2': [['09:00', '13:00'], ['15:00', '19:00']],
+          '3': [['09:00', '13:00'], ['15:00', '19:00']],
+          '4': [['09:00', '13:00'], ['15:00', '19:00']],
+          '5': [['09:00', '13:00'], ['15:00', '18:00']],
+          '6': [['09:00', '17:00']],
+        },
   }],
   automation_rules: [],
   orders: boutique?.orders ?? [],
@@ -189,6 +196,7 @@ function makeQuery(table: string) {
   let head = false
   let count = false
   let write: { op: 'update' | 'insert' | 'delete'; payload?: Row } | null = null
+  const sortKeys: [string, boolean][] = []
   const q: Record<string, unknown> = {}
   const chain = (fn: () => void) => () => { fn(); return q }
   Object.assign(q, {
@@ -207,9 +215,17 @@ function makeQuery(table: string) {
       return q
     },
     not: chain(() => {}),
-    order: (c: string, o?: { ascending?: boolean }) => {
-      const asc = o?.ascending !== false
-      rows.sort((a, b) => ((a[c] as string) > (b[c] as string) ? 1 : -1) * (asc ? 1 : -1))
+    order: (c: string, o?: { ascending?: boolean; foreignTable?: string }) => {
+      if (o?.foreignTable) return q
+      // Tri multi-clés comme Postgres : chaque .order() ajoute un critère secondaire.
+      sortKeys.push([c, o?.ascending !== false])
+      rows.sort((a, b) => {
+        for (const [key, asc] of sortKeys) {
+          if (a[key] === b[key]) continue
+          return ((a[key] as string) > (b[key] as string) ? 1 : -1) * (asc ? 1 : -1)
+        }
+        return 0
+      })
       return q
     },
     limit: (n: number) => { rows = rows.slice(0, n); return q },
@@ -239,7 +255,7 @@ function makeQuery(table: string) {
 /** Boutiques fictives pour l'outil Plateforme (non utilisé par les visuels marketing). */
 function platformShops() {
   const day = 86400000
-  const names = ['Salon Awa Beauté', 'Wax & Style by Fatou', 'Chez Moussa', 'Boutique Khady', 'Barber Ibou', 'Café Léa', 'Tech Dakar', 'Épicerie Sokhna', 'Ateliers Mame', 'Robes de Thiès']
+  const names = ['Salon Awa Beauté', 'Wax & Style by Fatou', 'Chez Moussa', 'Boutique Khady', 'Barber Ibou', 'Café Léa', 'Tech Corner', 'Épicerie Sokhna', 'Ateliers Mame', 'Robes de Mariam']
   return names.flatMap((name, i) =>
     [0, 1, 2].map((k) => {
       const n = i * 3 + k
@@ -323,7 +339,8 @@ export const supabase = {
       }
     }
     if (name === 'get_booking_slots' || name === 'get_reservation_slots') {
-      return { data: ['09:00', '09:30', '10:30', '11:00', '15:30', '16:00', '17:30'].map((h) => ({ slot_start: `${args.p_date}T${h}:00.000Z` })), error: null }
+      const hours = isResto ? ['12:00', '12:30', '13:30', '19:00', '19:30', '20:30', '21:00'] : ['09:00', '09:30', '10:30', '11:00', '15:30', '16:00', '17:30']
+      return { data: hours.map((h) => ({ slot_start: `${args.p_date}T${h}:00.000Z` })), error: null }
     }
     if (name === 'create_appointment') return { data: 'appt-new', error: null }
     return { data: [], error: null }

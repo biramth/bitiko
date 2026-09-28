@@ -6,31 +6,40 @@ import { SocialIcon } from '@/components/ui/SocialIcon'
 import { SOLUTION_PAGES } from '../solutions/data'
 
 const produitLinks = [
-  { label: 'Espace en ligne', href: '#fonctionnalites', description: 'Catalogue, panier, réservation, checkout' },
+  { label: 'Boutique en ligne', href: '#fonctionnalites', description: 'Catalogue, panier, stock, commandes WhatsApp' },
   { label: 'Rendez-vous & réservations', href: '#visite', description: 'Agenda, horaires par jour, tables' },
   { label: 'Finances & bilan', href: '#visite', description: 'Recettes, dépenses, export PDF et Excel' },
-  { label: 'Zones de livraison', href: '#fonctionnalites', description: 'Secteurs, villes, tarifs automatiques' },
+  { label: 'Démo vidéo', href: '#demo', description: 'Bitiko de la commande au bilan' },
 ]
+
+type MenuKey = 'produit' | 'solutions'
 
 /* ─────────────────────── Nav ─────────────────────────────── */
 
 export function SiteNav() {
   // Sur la page d'accueil les ancres restent locales ; ailleurs elles pointent vers l'accueil.
   const home = useLocation().pathname === '/' ? '' : '/'
-  const [produitOpen, setProduitOpen] = useState(false)
+  const [menu, setMenu] = useState<{ key: MenuKey; top: number; left: number } | null>(null)
+  const openMenu = menu?.key ?? null
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const closeTimer = useRef<number | undefined>(undefined)
+  const openAt = (key: MenuKey, anchor: HTMLElement) => {
+    window.clearTimeout(closeTimer.current)
+    const rect = anchor.getBoundingClientRect()
+    setMenu({ key, top: rect.bottom + 8, left: rect.left })
+  }
+  // Fermeture différée : laisse le temps à la souris de traverser l'espace entre le bouton et le menu.
+  const keepOpen = () => window.clearTimeout(closeTimer.current)
+  const hoverClose = () => {
+    window.clearTimeout(closeTimer.current)
+    closeTimer.current = window.setTimeout(() => setMenu(null), 150)
+  }
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (
-        headerRef.current &&
-        !headerRef.current.contains(e.target as Node)
-      ) {
-        setProduitOpen(false)
-      }
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) setMenu(null)
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
@@ -39,21 +48,27 @@ export function SiteNav() {
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 24)
-      setProduitOpen(false)
+      setMenu(null)
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const dropdownStyle: React.CSSProperties = produitOpen && triggerRef.current
-    ? {
-        position: 'fixed',
-        top: triggerRef.current.getBoundingClientRect().bottom + window.scrollY + 8,
-        left: triggerRef.current.getBoundingClientRect().left + window.scrollX,
-        zIndex: 40,
-      }
-    : {}
+  const menuButton = (key: MenuKey, label: string) => (
+    <div className="relative" onMouseEnter={(e) => openAt(key, e.currentTarget)} onMouseLeave={hoverClose}>
+      <button
+        type="button"
+        onClick={(e) => openAt(key, e.currentTarget)}
+        aria-expanded={openMenu === key}
+        aria-haspopup="true"
+        className="flex items-center gap-1 transition-opacity hover:opacity-70"
+      >
+        {label}
+        <ChevronDown size={14} className={`transition-transform ${openMenu === key ? 'rotate-180' : ''}`} />
+      </button>
+    </div>
+  )
 
   return (
     <header
@@ -69,31 +84,18 @@ export function SiteNav() {
             : 'max-w-6xl rounded-full border border-transparent bg-transparent'
         }`}
       >
-        {/* Left: logo + desktop center links */}
         <div className="flex items-center gap-8">
-          <Link to="/" className="shrink-0 transition-opacity hover:opacity-80">
+          <Link to="/" className="shrink-0 transition-opacity hover:opacity-80" aria-label="Bitiko, accueil">
             <Logo size={20} />
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-ink-700 lg:flex" aria-label="Navigation principale">
-            <div className="relative" onMouseEnter={() => setProduitOpen(true)} onMouseLeave={() => setProduitOpen(false)}>
-              <button
-                ref={triggerRef}
-                type="button"
-                onClick={() => setProduitOpen((v) => !v)}
-                aria-expanded={produitOpen}
-                aria-haspopup="true"
-                className="flex items-center gap-1 transition-opacity hover:opacity-70"
-              >
-                Produit
-                <ChevronDown size={14} className={`transition-transform ${produitOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-            <a href={`${home}#fonctionnalites`} className="transition-opacity hover:opacity-70">Fonctionnalités</a>
+            {menuButton('produit', 'Produit')}
+            {menuButton('solutions', 'Solutions')}
             <a href={`${home}#tarifs`} className="transition-opacity hover:opacity-70">Tarifs</a>
+            <a href={`${home}#faq`} className="transition-opacity hover:opacity-70">FAQ</a>
           </nav>
         </div>
 
-        {/* Right: auth buttons (desktop) */}
         <div className="hidden items-center gap-2 lg:flex">
           <Link to="/admin/login" className="rounded-full px-4 py-2.5 text-sm font-medium text-ink-800 transition-opacity hover:opacity-70">
             Connexion
@@ -103,7 +105,6 @@ export function SiteNav() {
           </Link>
         </div>
 
-        {/* Mobile: hamburger */}
         <button
           type="button"
           className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-900 lg:hidden"
@@ -115,48 +116,68 @@ export function SiteNav() {
         </button>
       </div>
 
-      {/* Dropdown rendered at header level to avoid clipping by rounded-full inner container */}
-      {produitOpen && triggerRef.current && (
+      {/* Menus rendus au niveau du header : le conteneur arrondi les rognerait. */}
+      {menu && (
         <div
-          style={dropdownStyle}
-          className="w-72 rounded-2xl border border-sand-200 bg-white p-2 shadow-xl"
+          style={{ position: 'fixed', top: menu.top, left: menu.left, zIndex: 40 }}
+          className={`${openMenu === 'solutions' ? 'w-80' : 'w-72'} rounded-2xl border border-sand-200 bg-white p-2 shadow-xl`}
           role="menu"
+          onMouseEnter={keepOpen}
+          onMouseLeave={hoverClose}
         >
-          {produitLinks.map(({ label, href, description }) => (
-            <a
-              key={label}
-              href={`${home}${href}`}
-              onClick={() => setProduitOpen(false)}
-              className="block rounded-xl px-3 py-2.5 hover:bg-sand-50"
-              role="menuitem"
-            >
-              <span className="block text-sm font-medium text-ink-900">{label}</span>
-              <span className="block text-xs text-ink-700/75">{description}</span>
-            </a>
-          ))}
+          {openMenu === 'produit'
+            ? produitLinks.map(({ label, href, description }) => (
+                <a
+                  key={label}
+                  href={`${home}${href}`}
+                  onClick={() => setMenu(null)}
+                  className="block rounded-xl px-3 py-2.5 hover:bg-sand-50"
+                  role="menuitem"
+                >
+                  <span className="block text-sm font-medium text-ink-900">{label}</span>
+                  <span className="block text-xs text-ink-700/75">{description}</span>
+                </a>
+              ))
+            : SOLUTION_PAGES.map((page) => (
+                <Link
+                  key={page.slug}
+                  to={`/solutions/${page.slug}`}
+                  onClick={() => setMenu(null)}
+                  className="block rounded-xl px-3 py-2.5 hover:bg-sand-50"
+                  role="menuitem"
+                >
+                  <span className="block text-sm font-medium text-ink-900">{page.navLabel}</span>
+                  <span className="block text-xs text-ink-700/75">{page.eyebrow}</span>
+                </Link>
+              ))}
         </div>
       )}
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="max-h-[70vh] overflow-y-auto rounded-b-2xl border-t border-sand-100 bg-white px-4 pb-4 pt-3 lg:hidden">
           <div className="space-y-1">
             <a href={`${home}#fonctionnalites`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Fonctionnalités</a>
-            <a href={`${home}#solutions`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Solutions</a>
+            <a href={`${home}#demo`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Démo vidéo</a>
             <a href={`${home}#tarifs`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">Tarifs</a>
             <a href={`${home}#faq`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-900 hover:bg-sand-50">FAQ</a>
           </div>
+          <p className="mt-3 border-t border-sand-100 px-3 pt-3 text-xs font-semibold uppercase tracking-wider text-ink-700/60">Solutions</p>
+          <div className="mt-1 space-y-1">
+            {SOLUTION_PAGES.map((page) => (
+              <Link key={page.slug} to={`/solutions/${page.slug}`} onClick={() => setMobileOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-ink-800 hover:bg-sand-50">
+                {page.navLabel}
+              </Link>
+            ))}
+          </div>
           <div className="mt-3 flex flex-col gap-2 border-t border-sand-100 pt-3">
             <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full border border-sand-200 px-4 py-2.5 text-center text-sm font-medium text-ink-800">Connexion</Link>
-            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer mon espace</Link>
+            <Link to="/admin/login" onClick={() => setMobileOpen(false)} className="rounded-full bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-md">Créer mon espace gratuit</Link>
           </div>
         </div>
       )}
     </header>
   )
 }
-
-/* ─────────────────── Phone Mockup ──────────────────────────── */
 
 /** Pied de page commun (accueil, pages solutions, pages légales) : maillage interne vers toutes les pages indexables. */
 export function SiteFooter() {
@@ -167,7 +188,8 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 text-sm min-[480px]:grid-cols-2 sm:px-6 lg:grid-cols-5">
         <div className="hidden lg:block">
           <Logo size={20} />
-          <p className="mt-6 text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
+          <p className="mt-4 max-w-[200px] text-xs leading-relaxed text-ink-700/80">La boutique en ligne, la prise de rendez-vous et les finances des petites entreprises.</p>
+          <p className="mt-4 text-xs text-ink-700">&copy; {new Date().getFullYear()} Bitiko</p>
         </div>
         <div>
           <p className="mb-5 text-sm font-semibold text-ink-900">Solutions</p>

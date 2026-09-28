@@ -3,7 +3,7 @@ export const LEGAL_META: Record<string, { title: string; description: string }> 
   'legal/cgu': {
     title: "Conditions générales d'utilisation — Bitiko",
     description:
-      "Conditions d'utilisation de Bitiko : création d'espace, commandes, rendez-vous, plans et tarifs, responsabilités. Plateforme pour les activités d'Afrique de l'Ouest.",
+      "Conditions d'utilisation de Bitiko : création d'espace, commandes, rendez-vous, plans et tarifs, responsabilités.",
   },
   'legal/confidentialite': {
     title: 'Politique de confidentialité — Bitiko',

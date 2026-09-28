@@ -2,7 +2,6 @@ import {
   BarChart3,
   CalendarClock,
   CreditCard,
-  Globe,
   LineChart,
   MapPinned,
   MessageCircleMore,
@@ -53,18 +52,18 @@ export const featureGroups: FeatureGroup[] = [
       },
       {
         icon: MapPinned,
-        title: 'Livraison par secteurs',
-        description: 'Dakar, Rufisque, Thiès… tu fixes tes tarifs, le client choisit sa ville, le prix s\'applique. Livraison offerte au-dessus d\'un montant.',
+        title: 'Livraison par zones',
+        description: 'Centre-ville, banlieue, autres villes : tu fixes tes tarifs, le client choisit sa zone, le prix s\'applique. Livraison offerte au-dessus d\'un montant.',
       },
       {
         icon: CreditCard,
         title: 'Espèces ou mobile money',
-        description: 'Paiement à la livraison, Wave, Orange Money : le client paie comme il veut, tu confirmes sur WhatsApp. Zéro commission.',
+        description: 'À la livraison, sur place ou par mobile money : le client paie comme il veut, tu confirmes sur WhatsApp. Zéro commission.',
       },
       {
         icon: MessageCircleMore,
         title: 'Commandes sur WhatsApp',
-        description: 'Chaque commande t\'arrive formatée : nom, articles, total, ville. Tu confirmes en un clic et tu réponds au client.',
+        description: 'Chaque commande t\'arrive formatée : nom, articles, total, adresse. Tu confirmes en un clic et tu réponds au client.',
       },
       {
         icon: Tag,
@@ -121,11 +120,12 @@ export const featureGroups: FeatureGroup[] = [
   },
 ]
 
-export const westAfrica: Feature[] = [
-  { icon: Globe, title: 'Ton pays, ta monnaie', description: 'Numéros de téléphone, fuseau horaire et devise (FCFA et autres) réglés selon ton pays.' },
-  { icon: Smartphone, title: 'Pensé pour le téléphone', description: 'Tes clients achètent et réservent depuis leur mobile. Toi, tu gères depuis le tien : pas d\'ordinateur obligatoire.' },
+/** « Pensé pour la vraie vie » : ce qui distingue Bitiko d'un site e-commerce classique. */
+export const realLife: Feature[] = [
+  { icon: Smartphone, title: 'Tout se fait au téléphone', description: 'Tes clients commandent et réservent depuis leur mobile. Toi, tu gères depuis le tien : aucun ordinateur obligatoire.' },
+  { icon: MessageCircleMore, title: 'WhatsApp au centre', description: 'Tu continues de parler à tes clients là où ils sont déjà. Bitiko range les commandes, WhatsApp garde la relation.' },
+  { icon: Wallet, title: 'Tu encaisses comme d\'habitude', description: 'Espèces ou mobile money, sans intermédiaire de paiement à configurer. Aucune commission sur tes ventes, jamais.' },
   { icon: UserRound, title: 'Ton équipe, avec des droits', description: 'Invite un manager ou un vendeur. Les finances restent réservées au propriétaire et aux managers.' },
-  { icon: Wallet, title: 'Wave, Orange Money, espèces', description: 'Tu gardes ta façon d\'encaisser. Aucune commission sur tes ventes, jamais.' },
 ]
 
 export interface Solution {
@@ -144,31 +144,23 @@ export const solutions: Solution[] = [
     tint: 'bg-rose-500/[0.08] text-rose-600 ring-rose-600/15',
     title: 'Mode, artisanat & décoration',
     description: 'Chaque pièce a ses photos, son prix, sa taille et son stock. Ta vitrine te ressemble, tes clientes commandent sans te poser dix fois les mêmes questions.',
-    tags: 'Robes • Bazin • Bijoux • Créations',
+    tags: 'Vêtements • Bijoux • Sacs • Créations',
     slug: 'mode-artisanat',
   },
   {
-    icon: Store,
+    icon: UtensilsCrossed,
     tint: 'bg-orange-500/[0.08] text-orange-600 ring-orange-600/15',
-    title: 'Épicerie, restauration & livraison',
-    description: 'Ton menu ou ton rayon en ligne, la livraison par quartier, la commande formatée sur WhatsApp. Réservation de tables pour le soir.',
-    tags: 'Plats • Courses • Livraison • Tables',
+    title: 'Restaurant, traiteur & livraison',
+    description: 'Ta carte en ligne, la livraison par zone, la commande formatée sur WhatsApp. Et la réservation de tables pour le soir.',
+    tags: 'Plats • À emporter • Livraison • Tables',
     slug: 'restaurant',
-  },
-  {
-    icon: LineChart,
-    tint: 'bg-fuchsia-500/[0.08] text-fuchsia-700 ring-fuchsia-600/15',
-    title: 'Beauté & cosmétiques',
-    description: 'Tes produits se vendent la nuit, tes soins se réservent en ligne. Stock à jour, clientes relancées, chiffres clairs.',
-    tags: 'Soins • Maquillage • Parfums • Rendez-vous',
-    slug: 'salon-coiffure-beaute',
   },
   {
     icon: CalendarClock,
     tint: 'bg-sky-500/[0.08] text-sky-700 ring-sky-600/15',
-    title: 'Coiffure, spa & bien-être',
-    description: 'Prestations, tarifs, rendez-vous avec tes vrais horaires, équipe, galerie. Ton salon se remplit sans que ton téléphone ne sonne.',
-    tags: 'Prestations • Rendez-vous • Équipe',
+    title: 'Coiffure, beauté & bien-être',
+    description: 'Prestations, tarifs, rendez-vous avec tes vrais horaires, équipe. Ton salon se remplit sans que ton téléphone ne sonne, et tes produits se vendent en ligne.',
+    tags: 'Prestations • Rendez-vous • Équipe • Produits',
     slug: 'salon-coiffure-beaute',
   },
   {
@@ -180,12 +172,20 @@ export const solutions: Solution[] = [
     slug: 'prestataires-services',
   },
   {
-    icon: Smartphone,
+    icon: Store,
     tint: 'bg-teal-600/[0.08] text-teal-700 ring-teal-600/15',
-    title: 'Électronique & multi-activités',
-    description: 'Vends des produits ET propose des services : Bitiko gère les deux dans le même espace, avec les mêmes finances.',
-    tags: 'Produits • Services • Livraison',
+    title: 'Épicerie, électronique & commerce',
+    description: 'Ton rayon en ligne avec le stock à jour, la livraison par zone et des commandes propres. Produits et services dans le même espace.',
+    tags: 'Produits • Stock • Livraison',
     slug: 'boutique-en-ligne',
+  },
+  {
+    icon: LineChart,
+    tint: 'bg-fuchsia-500/[0.08] text-fuchsia-700 ring-fuchsia-600/15',
+    title: 'Suivre ses finances',
+    description: 'Recettes comptées toutes seules, dépenses notées en quelques secondes, bénéfice du mois en un coup d\'œil. Bilan PDF et Excel inclus.',
+    tags: 'Recettes • Dépenses • Bilan',
+    slug: 'finances-commercants',
   },
 ]
 

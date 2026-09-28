@@ -42,7 +42,7 @@ const audiences = [
     icon: Store,
     kicker: 'Tu vends des produits',
     title: 'Ta boutique en ligne, prête en 2 minutes.',
-    description: 'Catalogue, panier, livraison par quartier, paiement en espèces ou mobile money. Chaque commande arrive sur ton WhatsApp.',
+    description: 'Catalogue, panier, livraison par zone, paiement en espèces ou mobile money. Chaque commande arrive sur ton WhatsApp.',
     points: ['Stock mis à jour à chaque vente', 'Vitrine à tes couleurs, sans code', 'Fichier clients et relances WhatsApp'],
     shot: { name: 'shop-catalogue', alt: 'Catalogue d\'une boutique Bitiko sur téléphone' },
     cta: 'Voir le côté commerce',
@@ -245,7 +245,7 @@ const TOUR: Record<string, TourTab> = {
         eyebrow: 'Commandes',
         title: 'Chaque commande, triée et suivie.',
         description: 'De « en attente » à « livrée », tu vois où en est chaque vente. Tu confirmes, tu marques payée ou livrée en un clic, et tu réponds au client sur WhatsApp.',
-        points: ['Commande WhatsApp formatée : nom, articles, total, ville', 'Statuts clairs et recherche par client ou numéro', 'Frais de livraison calculés selon le secteur'],
+        points: ['Commande WhatsApp formatée : nom, articles, total, adresse', 'Statuts clairs et recherche par client ou numéro', 'Frais de livraison calculés selon la zone'],
         shot: { name: 'shop-commandes', alt: 'Liste des commandes Bitiko avec statuts et boutons d\'action' },
       },
       {
@@ -313,6 +313,33 @@ const TOUR: Record<string, TourTab> = {
       ],
     },
   },
+  restaurant: {
+    label: 'Je tiens un restaurant',
+    blocks: [
+      {
+        eyebrow: 'Réservations de table',
+        title: 'Ton service du soir, préparé dès le matin.',
+        description: 'Les demandes de table arrivent dans une seule liste, avec le nombre de couverts attendus pour la journée. Tu confirmes pour garder la place, tu refuses pour la libérer, puis tu préviens ton client sur WhatsApp.',
+        points: ['Capacité de la salle et durée d’un repas respectées', 'Couverts attendus du jour en un coup d’œil', 'Services du midi et du soir, jours de fermeture'],
+        shot: { name: 'resto-reservations', alt: 'Réservations de table du jour : couverts attendus, demandes à confirmer' },
+      },
+      {
+        eyebrow: 'À emporter & livraison',
+        title: 'Les commandes arrivent propres, même pendant le coup de feu.',
+        description: 'Plats, quantités, total, adresse ou retrait sur place : chaque commande est complète et numérotée. Plus besoin de noter à la main entre deux appels, et aucune commission prélevée.',
+        points: ['Livraison par zone avec ses tarifs', 'Espèces ou mobile money', 'Statuts clairs : en attente, payée, livrée'],
+        shot: { name: 'resto-commandes', alt: 'Commandes à emporter et en livraison d’un restaurant, avec leur statut' },
+      },
+    ],
+    phones: {
+      heading: 'Ce que voient tes clients',
+      items: [
+        { name: 'resto-accueil', alt: 'Site d’un restaurant créé avec Bitiko, sur téléphone' },
+        { name: 'resto-carte', alt: 'Carte du restaurant avec entrées, plats et prix, sur téléphone' },
+        { name: 'resto-table', alt: 'Réservation d’une table sur téléphone' },
+      ],
+    },
+  },
   gestion: {
     label: 'Je pilote mon activité',
     blocks: [
@@ -343,7 +370,7 @@ const TOUR: Record<string, TourTab> = {
   },
 }
 
-const TAB_ORDER = ['commerce', 'services', 'gestion'] as const
+const TAB_ORDER = ['commerce', 'services', 'restaurant', 'gestion'] as const
 type TabKey = (typeof TAB_ORDER)[number]
 
 function TourRow({ block, reverse }: { block: TourBlock; reverse: boolean }) {

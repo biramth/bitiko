@@ -197,7 +197,7 @@ async function clientShopScene(browser) {
   await tap(page, frame.getByRole('button', { name: /Ajouter/i }).first(), { after: 1400 })
   await tap(page, frame.getByRole('link', { name: /Panier/ }).first(), { after: 1600 })
   await settle(page, 500)
-  await headline('Total et livraison calculés', 'Il choisit sa ville, le tarif s’applique, il paie en espèces ou en mobile money.')
+  await headline('Total et livraison calculés', 'Il choisit sa zone, le tarif s’applique, il paie en espèces ou en mobile money.')
   await sleep(2600)
   return endScene(scene, readyAt)
 }
@@ -209,8 +209,8 @@ async function clientSalonScene(browser) {
   const { frame, inner, headline, readyAt } = await openPhone(scene, {
     url: '/?boutique=salon-awa',
     kicker: 'Côté client',
-    title: 'Vos clients réservent en ligne',
-    sub: 'Depuis leur téléphone, à toute heure, sur votre site.',
+    title: 'Tes clients réservent en ligne',
+    sub: 'Depuis leur téléphone, à toute heure, sur ton site.',
   })
   await sleep(1200)
   await inner().evaluate(() => window.scrollTo({ top: 520, behavior: 'smooth' }))
@@ -231,7 +231,7 @@ async function clientSalonScene(browser) {
   await tap(page, frame.getByRole('radio', { name: '15:30' }), { after: 900 })
   await type(page, frame.locator('#book-name'), 'Fatou Ndiaye')
   await type(page, frame.locator('#book-phone'), '77 123 45 67')
-  await headline('Et c’est envoyé', 'Le commerçant est prévenu par email et dans son tableau de bord.')
+  await headline('Et c’est envoyé', 'Tu es prévenu sur WhatsApp et dans ton agenda.')
   await tap(page, frame.getByRole('button', { name: /Demander ce créneau/ }), { after: 2400 })
   return endScene(scene, readyAt)
 }
@@ -257,7 +257,7 @@ async function merchantShopScene(browser) {
   await caption(page, 'Côté commerçant : tes ventes du jour en un coup d’œil')
   await sleep(3400)
   await caption(page, 'Chaque commande arrive triée par statut')
-  await tap(page, page.getByRole('link', { name: 'Voir les commandes' }), { after: 1400 })
+  await tap(page, page.locator('main a[href="/admin/commandes"]').first(), { after: 1400 })
   await settle(page, 600)
   await sleep(2400)
   await tap(page, page.getByRole('button', { name: 'Confirmer', exact: true }).first(), { after: 1500 })
@@ -292,9 +292,9 @@ async function merchantSalonScene(browser) {
   const { page } = scene
   const readyAt = await openAdmin(scene)
 
-  await caption(page, 'Côté prestataire : votre journée en un coup d’œil')
+  await caption(page, 'Côté prestataire : ta journée en un coup d’œil')
   await sleep(3000)
-  await caption(page, 'Les demandes arrivent dans votre agenda')
+  await caption(page, 'Les demandes arrivent dans ton agenda')
   await tap(page, page.getByRole('link', { name: 'Agenda du jour' }), { after: 1200 })
   await settle(page, 500)
   await sleep(2000)
@@ -310,7 +310,7 @@ async function merchantSalonScene(browser) {
   await page.evaluate(() => window.scrollBy({ top: 320, behavior: 'smooth' }))
   await sleep(1800)
 
-  await caption(page, 'Vos prestations, vos prix, vos durées')
+  await caption(page, 'Tes prestations, tes prix, tes durées')
   await tap(page, page.getByRole('link', { name: 'Prestations' }).first(), { after: 1000 })
   await settle(page, 500)
   await sleep(3000)
@@ -336,20 +336,20 @@ async function main() {
   }
 
   await run('intro', () =>
-    cardScene(browser, 'intro', `<div class="card"><div class="logo">Bitiko</div><h1>Votre activité, en ligne et bien tenue</h1><p>Boutique, rendez-vous, réservations et finances<br/>dans un seul outil, pensé pour l’Afrique de l’Ouest.</p></div>`, 4200),
+    cardScene(browser, 'intro', `<div class="card"><div class="logo">Bitiko</div><h1>Ton activité en ligne. Tes clients font le reste.</h1><p>Boutique, rendez-vous, réservations et finances<br/>dans un seul outil, piloté depuis ton téléphone.</p></div>`, 4200),
   )
   await run('chapter-shop', () =>
-    cardScene(browser, 'chapter-shop', `<div class="card"><div class="logo">1 / 2</div><h1>Vous vendez des produits</h1><p>Boutique en ligne, commandes, stock et livraison.</p></div>`, 2600),
+    cardScene(browser, 'chapter-shop', `<div class="card"><div class="logo">1 / 2</div><h1>Tu vends des produits</h1><p>Boutique en ligne, commandes, stock et livraison.</p></div>`, 2600),
   )
   await run('client-shop', () => clientShopScene(browser))
   await run('merchant-shop', () => merchantShopScene(browser))
   await run('chapter-service', () =>
-    cardScene(browser, 'chapter-service', `<div class="card"><div class="logo">2 / 2</div><h1>Vous proposez des services</h1><p>Rendez-vous, horaires par jour et réservation de tables.</p></div>`, 2600),
+    cardScene(browser, 'chapter-service', `<div class="card"><div class="logo">2 / 2</div><h1>Tu proposes des services</h1><p>Rendez-vous, horaires par jour et réservation de tables.</p></div>`, 2600),
   )
   await run('client-salon', () => clientSalonScene(browser))
   await run('merchant-salon', () => merchantSalonScene(browser))
   await run('outro', () =>
-    cardScene(browser, 'outro', `<div class="card"><div class="logo">Bitiko</div><h1>Lancez votre espace en quelques minutes</h1><p>Gratuit pour démarrer. Sans carte bancaire. Zéro commission.</p><span class="pill">bitiko.shop</span></div>`, 4500),
+    cardScene(browser, 'outro', `<div class="card"><div class="logo">Bitiko</div><h1>Lance ton espace en 2 minutes</h1><p>Gratuit pour démarrer. Sans carte bancaire. Zéro commission.</p><span class="pill">bitiko.shop</span></div>`, 4500),
   )
   await browser.close()
 

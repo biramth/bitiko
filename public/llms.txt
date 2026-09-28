@@ -1,13 +1,13 @@
 # Bitiko
 
-Bitiko donne à chaque activité d'Afrique de l'Ouest sa présence en ligne :
-boutique e-commerce (catalogue, panier, commandes), prise de rendez-vous avec
+Bitiko met les petites entreprises en ligne en 2 minutes : boutique
+e-commerce (catalogue, panier, stock, commandes), prise de rendez-vous avec
 horaires différents chaque jour, réservation de tables, catalogue de
 prestations — adaptée au métier (commerçant, coiffeur, restaurant, artisan,
-prestataire). Commandes relayées sur WhatsApp, alertes email pour les
-rendez-vous, paiement en espèces ou mobile money. Outils de gestion : journal
-de recettes et dépenses, bilan simple exportable en PDF et Excel. Gratuit pour
-commencer, sans commission.
+prestataire). Commandes et réservations relayées sur WhatsApp, paiement en
+espèces ou mobile money, aucun compte à créer pour les clients. Outils de
+gestion : journal de recettes et dépenses, bilan simple exportable en PDF et
+Excel. Gratuit pour commencer, sans commission sur les ventes.
 
 - [Accueil](https://bitiko.shop/)
 - [Boutique en ligne](https://bitiko.shop/solutions/boutique-en-ligne)
