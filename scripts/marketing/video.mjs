@@ -10,6 +10,11 @@ const BASE = process.env.MARKETING_URL ?? 'http://localhost:5199'
 const OUT = path.resolve(import.meta.dirname, '../../public/marketing')
 const TMP = path.resolve(import.meta.dirname, '.tmp-video')
 const SIZE = { width: 1280, height: 720 }
+// Mode YouTube (YOUTUBE=1) : capture image par image en 1440p (screencast CDP, bien plus net que l'enregistrement
+// Playwright), musique de fond, sortie dans marketing-export/ (hors du site, non versionnée).
+const YOUTUBE = !!process.env.YOUTUBE
+const SCALE = YOUTUBE ? 2 : 1
+const EXPORT = path.resolve(import.meta.dirname, '../../marketing-export')
 rmSync(TMP, { recursive: true, force: true })
 mkdirSync(TMP, { recursive: true })
 mkdirSync(OUT, { recursive: true })
@@ -61,9 +66,10 @@ const OVERLAY = `
 async function newScene(browser, name, profile = 'salon') {
   const context = await browser.newContext({
     viewport: SIZE,
+    deviceScaleFactor: SCALE,
     locale: 'fr-FR',
     timezoneId: 'Africa/Dakar',
-    recordVideo: { dir: path.join(TMP, name), size: SIZE },
+    ...(YOUTUBE ? {} : { recordVideo: { dir: path.join(TMP, name), size: SIZE } }),
   })
   await context.addInitScript((mockProfile) => {
     localStorage.setItem('mock_profile', mockProfile)
@@ -72,11 +78,58 @@ async function newScene(browser, name, profile = 'salon') {
   }, profile)
   await context.addInitScript(OVERLAY)
   const page = await context.newPage()
-  return { context, page, t0: Date.now(), name }
+  const scene = { context, page, t0: Date.now(), name }
+  if (YOUTUBE) scene.screencast = await startScreencast(page, name)
+  return scene
+}
+
+/** Capture chaque image affichée (JPEG haute qualité) avec son horodatage. */
+async function startScreencast(page, name) {
+  const dir = path.join(TMP, name)
+  mkdirSync(dir, { recursive: true })
+  const session = await page.context().newCDPSession(page)
+  const frames = []
+  session.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    const file = path.join(dir, `${String(frames.length).padStart(5, '0')}.jpg`)
+    writeFileSync(file, Buffer.from(data, 'base64'))
+    frames.push({ file, t: metadata.timestamp ?? Date.now() / 1000 })
+    session.send('Page.screencastFrameAck', { sessionId }).catch(() => {})
+  })
+  await session.send('Page.startScreencast', { format: 'jpeg', quality: 94, maxWidth: SIZE.width * SCALE, maxHeight: SIZE.height * SCALE, everyNthFrame: 1 })
+  return { session, frames }
+}
+
+/** Assemble les images capturées en clip à 30 i/s, chaque image durant jusqu'à la suivante. */
+function encodeFrames(part, clip) {
+  const { frames, readyAt, endAt } = part
+  let first = 0
+  frames.forEach((frame, i) => { if (frame.t <= readyAt) first = i })
+  const kept = frames.slice(first)
+  if (kept.length === 0) throw new Error('aucune image capturée pour ' + clip)
+  const lines = []
+  kept.forEach((frame, i) => {
+    const start = Math.max(frame.t, readyAt)
+    const next = i + 1 < kept.length ? kept[i + 1].t : endAt
+    lines.push(`file '${frame.file.replaceAll('\\', '/')}'`, `duration ${Math.max(1 / 60, next - start).toFixed(4)}`)
+  })
+  lines.push(`file '${kept.at(-1).file.replaceAll('\\', '/')}'`)
+  const list = clip.replace(/\.mp4$/, '.txt')
+  writeFileSync(list, lines.join('\n'))
+  execFileSync('ffmpeg', [
+    '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list,
+    '-vf', `fps=30,scale=${SIZE.width * SCALE}:${SIZE.height * SCALE}:flags=lanczos,setsar=1,format=yuv420p`,
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-an', clip,
+  ])
 }
 
 /** Ferme la scène et renvoie { file, trim } (secondes à couper au début, avant le premier rendu utile). */
 async function endScene(scene, readyAt) {
+  if (scene.screencast) {
+    const endAt = Date.now() / 1000
+    await scene.screencast.session.send('Page.stopScreencast').catch(() => {})
+    await scene.context.close()
+    return { frames: scene.screencast.frames, readyAt: readyAt / 1000, endAt }
+  }
   const video = scene.page.video()
   const length = (Date.now() - readyAt) / 1000
   await scene.context.close()
@@ -324,6 +377,40 @@ async function merchantSalonScene(browser) {
   return endScene(scene, readyAt)
 }
 
+/** Version YouTube : musique originale mixée, miniature et chapitres prêts à coller dans la description. */
+function exportYoutube(silent, clips, duration, partial) {
+  mkdirSync(EXPORT, { recursive: true })
+  let cursor = 0
+  const starts = {}
+  for (const clip of clips) {
+    starts[clip.name] = cursor
+    cursor += clip.seconds
+  }
+  const wav = path.join(TMP, 'music.wav')
+  execFileSync('node', [path.join(import.meta.dirname, 'music.mjs'), duration.toFixed(2), wav, String(starts['chapter-service'] ?? 0)], { stdio: 'inherit' })
+  const out = path.join(EXPORT, partial ? 'bitiko-demo-youtube-partiel.mp4' : 'bitiko-demo-youtube.mp4')
+  execFileSync('ffmpeg', [
+    '-y', '-loglevel', 'error', '-i', silent, '-i', wav,
+    '-filter_complex', '[1:a]lowpass=f=13000,aecho=0.8:0.5:70|140:0.16|0.1,loudnorm=I=-16:TP=-1.5:LRA=9[a]',
+    '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-shortest', '-movflags', '+faststart', out,
+  ])
+  console.log('✓', out)
+  if (partial) return
+
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '2.5', '-i', out, '-frames:v', '1', '-vf', 'scale=1280:720:flags=lanczos', '-q:v', '2', path.join(EXPORT, 'bitiko-demo-miniature.jpg')])
+  // YouTube exige 0:00 en premier et au moins 10 s par chapitre : les cartons courts sont rattachés à la scène suivante.
+  const stamp = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
+  const chapters = [
+    ['0:00', 'Vendre en ligne : ce que voit ton client'],
+    [stamp(starts['merchant-shop']), 'Commandes, stock, vitrine et finances'],
+    [stamp(starts['chapter-service']), 'Prise de rendez-vous : ce que voit ton client'],
+    [stamp(starts['merchant-salon']), 'Agenda, horaires et prestations'],
+  ]
+  writeFileSync(path.join(EXPORT, 'chapitres-youtube.txt'), chapters.map(([time, label]) => `${time} ${label}`).join('\n') + '\n')
+  console.log('✓ miniature et chapitres dans', EXPORT)
+  if (!process.env.MARKETING_KEEP_TMP) rmSync(TMP, { recursive: true, force: true })
+}
+
 const ALL = ['intro', 'chapter-shop', 'client-shop', 'merchant-shop', 'chapter-service', 'client-salon', 'merchant-salon', 'outro']
 
 async function main() {
@@ -358,21 +445,24 @@ async function main() {
   const clips = order.map((name) => {
     const part = scenes[name]
     const clip = path.join(TMP, `${name}.mp4`)
-    execFileSync('ffmpeg', [
-      '-y', '-loglevel', 'error', '-ss', part.trim.toFixed(2), '-i', part.file,
-      '-vf', 'fps=30,scale=1280:720:flags=lanczos,setsar=1,format=yuv420p',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-an', clip,
-    ])
+    if (part.frames) encodeFrames(part, clip)
+    else
+      execFileSync('ffmpeg', [
+        '-y', '-loglevel', 'error', '-ss', part.trim.toFixed(2), '-i', part.file,
+        '-vf', 'fps=30,scale=1280:720:flags=lanczos,setsar=1,format=yuv420p',
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-an', clip,
+      ])
     const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', clip]).toString().trim())
     return { name, clip, seconds }
   })
   const list = path.join(TMP, 'clips.txt')
   writeFileSync(list, clips.map((c) => `file '${c.clip.replaceAll('\\', '/')}'`).join('\n'))
   const partial = !!only
-  const mp4 = path.join(partial ? TMP : OUT, partial ? 'partial.mp4' : 'demo.mp4')
+  const mp4 = YOUTUBE ? path.join(TMP, 'silent.mp4') : path.join(partial ? TMP : OUT, partial ? 'partial.mp4' : 'demo.mp4')
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', mp4])
   const duration = clips.reduce((sum, c) => sum + c.seconds, 0)
-  console.log(partial ? '✓ partiel' : '✓ demo.mp4', duration.toFixed(1), 's')
+  console.log(partial ? '✓ partiel' : '✓ vidéo', duration.toFixed(1), 's')
+  if (YOUTUBE) return exportYoutube(mp4, clips, duration, partial)
   if (partial) return
 
   // Chapitres (début en secondes) pour les boutons de la landing.

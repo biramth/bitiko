@@ -10,7 +10,12 @@ npm run marketing:serve      # 1er terminal : l'appli sur http://localhost:5199 
 npm run marketing:shots      # 2e terminal : captures → public/marketing/*.webp   (une seule : … -- dashboard)
 npm run marketing:video      # 2e terminal : vidéo → public/marketing/demo.mp4 + demo-poster.webp
 npm run marketing:og         # images de partage → public/og/*.jpg (sans serveur)
+YOUTUBE=1 npm run marketing:video   # version YouTube → marketing-export/ (1440p, musique, miniature, chapitres)
 ```
+
+La version YouTube capture chaque image affichée (screencast Chrome) au lieu de l'enregistrement Playwright, trop
+compressé, et ajoute une musique de fond **originale** générée par `music.mjs` (aucun droit tiers, pas de réclamation
+Content ID). `marketing-export/` n'est pas versionné.
 
 Prérequis : Chromium de Playwright (`npx playwright install chromium`) et `ffmpeg` dans le PATH.
 

@@ -44,3 +44,4 @@ playwright-report/
 
 # Visuels marketing : fichiers temporaires de génération
 scripts/marketing/.tmp*/
+marketing-export/
