@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Check, ImageOff, Search, Star } from 'lucide-react'
 import { FEATURED_FALLBACK_COUNT, useFeaturedProducts, useShopProducts } from '@/features/products/useProducts'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForProduct } from '@/features/promos/promoTargeting'
 import { ProductCard } from '@/features/products/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import type { Shop } from '@/types'
@@ -19,34 +22,42 @@ import { FadeImage } from '@/components/ui/FadeImage'
 export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId, editable = false }: { shop: Shop; config: FeaturedProductsSectionConfig; themeConfig: ThemeConfig; sectionId?: string; editable?: boolean }) {
   const patch = useInlineEdit(sectionId)
   const { data: products = [] } = useFeaturedProducts(shop.id, config.productIds)
+  const { data: promos } = useActiveShopPromos(shop.id)
   if (products.length === 0) return null
 
   return (
     <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-6 sm:px-6">
-      <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+      <div className="mb-6 flex items-end justify-between gap-3">
+        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
             as="h2"
             editable={editable}
             value={config.heading || 'Sélection'}
             onCommit={(heading) => patch({ heading })}
             placeholder="Titre"
-            className={`mb-6 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
+            className={`min-w-0 font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}
             style={resolveTextStyle(config.headingStyle)}
             label="Titre"
           />
         </InlineStyleToolbar>
+        {products.length > 0 && (
+          <Link to="/catalogue" className="shrink-0 text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)] hover:opacity-60">
+            Tout voir
+          </Link>
+        )}
+      </div>
       {(config.layout ?? 'grid') === 'carousel' ? (
         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
           {products.map((product, index) => (
             <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
+              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
           {products.map((product, index) => (
-            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
+            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
           ))}
         </div>
       )}

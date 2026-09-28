@@ -1,6 +1,8 @@
 import { Check, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useActiveServices } from '@/features/services/useServices'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForService } from '@/features/promos/promoTargeting'
 import { ServiceCard } from '@/features/services/ServiceCard'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -59,6 +61,7 @@ export function FeaturedServicesRenderer({
     limit: FALLBACK_COUNT,
   })
   const services = result?.services ?? []
+  const { data: promos } = useActiveShopPromos(shop.id)
 
   // Rien à mettre en avant : le visiteur ne voit pas de section vide, le commerçant si.
   if (!isLoading && !isError && services.length === 0 && !editable) return null
@@ -97,16 +100,16 @@ export function FeaturedServicesRenderer({
       {!isLoading && services.length > 0 && (
         (config.layout ?? 'grid') === 'carousel' ? (
           <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
-            {services.map((service) => (
-              <div key={service.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                <ServiceCard service={service} currency={shop.currency} />
-              </div>
-            ))}
+              {services.map((service) => (
+                <div key={service.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
+                  <ServiceCard service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
+                </div>
+              ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
             {services.map((service) => (
-              <ServiceCard key={service.id} service={service} currency={shop.currency} />
+              <ServiceCard key={service.id} service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
             ))}
           </div>
         )

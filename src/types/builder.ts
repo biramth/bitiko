@@ -22,6 +22,7 @@ export type CoreSectionType =
   | 'checkout'
   | 'flexible'
   | 'testimonials'
+  | 'social'
   // Service sections
   | 'services'
   | 'featured_services'
@@ -248,6 +249,11 @@ export interface PromoSectionConfig {
   bodyStyle?: TextStyleOverride
   buttonLabelStyle?: TextStyleOverride
   layout?: PromoLayout
+  /** Source du contenu : écrit ici (manuel, historique) ou promo gérée dans
+   *  la page Contenu (CMS). `promoId` = promo précise, sinon la dernière
+   *  promo « tout le site » en cours. */
+  source?: 'manual' | 'cms'
+  promoId?: string | null
 }
 
 export interface FaqSectionConfig {
@@ -259,6 +265,8 @@ export interface FaqSectionConfig {
   questionStyle?: TextStyleOverride
   answerStyle?: TextStyleOverride
   layout?: FaqLayout
+  /** Écrit ici (manuel) ou questions gérées dans la page Contenu (CMS). */
+  source?: 'manual' | 'cms'
 }
 
 export interface LookbookImage {
@@ -337,6 +345,28 @@ export interface TestimonialsSectionConfig {
   heading: string
   items: TestimonialItem[]
   headingStyle?: TextStyleOverride
+  /** Écrits ici (manuel) ou avis gérés dans la page Contenu (CMS, avec notes). */
+  source?: 'manual' | 'cms'
+}
+
+/** Publications réseaux sociaux intégrées (TikTok, Instagram, Facebook,
+ *  YouTube) : le commerçant colle l'URL de ses posts, la vitrine affiche les
+ *  lecteurs officiels. Rien n'est imposé : sans URL valide, le bloc est masqué
+ *  côté visiteur (même convention « vide = caché » que Témoignages et FAQ). */
+export type SocialEmbedPlatform = 'tiktok' | 'instagram' | 'facebook' | 'youtube'
+
+export interface SocialEmbedItem {
+  id: string
+  url: string
+}
+
+export interface SocialSectionConfig {
+  heading: string
+  items: SocialEmbedItem[]
+  headingStyle?: TextStyleOverride
+  layout?: GridLayout
+  /** Collées ici (manuel) ou publications gérées dans la page Contenu (CMS). */
+  source?: 'manual' | 'cms'
 }
 
 // ── Service section configs (PHASE-07+) ──
@@ -402,6 +432,7 @@ export type SectionConfigMap = {
   lookbook: LookbookSectionConfig
   flexible: FlexibleSectionConfig
   testimonials: TestimonialsSectionConfig
+  social: SocialSectionConfig
   // Service sections
   services: ServicesSectionConfig
   featured_services: FeaturedServicesSectionConfig

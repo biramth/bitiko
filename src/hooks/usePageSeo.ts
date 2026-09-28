@@ -118,6 +118,12 @@ export function usePageSeo({ title, description, image, noindex, canonicalUrl, s
       setMetaTag('name', 'description', description)
       setMetaTag('property', 'og:description', description)
       setMetaTag('name', 'twitter:description', description)
+    } else {
+      // Même survie que l'og:image ci-dessous : sans purge, la description de
+      // la page précédente restait dans le DOM après une navigation SPA.
+      removeMetaTag('name', 'description')
+      removeMetaTag('property', 'og:description')
+      removeMetaTag('name', 'twitter:description')
     }
     setMetaTag('property', 'og:title', title)
     setMetaTag('name', 'twitter:title', title)

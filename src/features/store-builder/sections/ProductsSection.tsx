@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { PackageSearch, Search } from 'lucide-react'
+import { PackageSearch } from 'lucide-react'
 import { useActiveProducts } from '@/features/products/useProducts'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForProduct } from '@/features/promos/promoTargeting'
+import { CatalogPagination, CatalogToolbar } from '../components/CatalogToolbar'
 import { useCategories } from '@/features/categories/useCategories'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ProductCard } from '@/features/products/ProductCard'
@@ -49,6 +52,10 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
   const products = fullToolbox ? (result?.products ?? []) : (result?.products ?? []).slice(0, config.limit)
   const total = result?.total ?? products.length
   const totalPages = fullToolbox ? Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE)) : 1
+  // Pastilles promo CMS (ciblage produit/catégorie) — une seule requête mise en cache par boutique.
+  const { data: promos } = useActiveShopPromos(shop.id)
+  const promoBadgeFor = (product: { id: string; category: { id: string } | null }) =>
+    badgeForProduct(promos ?? [], product)
 
   useEffect(() => {
     if (!fullToolbox) return
@@ -106,57 +113,38 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
       </div>
 
       {fullToolbox && (
-        <div className="mb-8 flex flex-col gap-4 border-b border-ink-900/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
-            <Search size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-[var(--shop-text)]/40" aria-hidden />
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Rechercher un produit…"
-              aria-label="Rechercher un produit"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 pl-6 pr-3 text-sm text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/40 focus:border-[var(--shop-text)] focus:outline-none"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <select
-              value={categorySlug}
-              onChange={(e) => {
-                setSearchInput('')
-                setSearchParams(
-                  (prev) => {
-                    const next = new URLSearchParams(prev)
-                    next.delete('q')
-                    if (e.target.value) next.set('categorie', e.target.value)
-                    else next.delete('categorie')
-                    next.delete('page')
-                    return next
-                  },
-                  { replace: true },
-                )
-              }}
-              aria-label="Filtrer par catégorie"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto sm:min-w-0 sm:flex-1"
-            >
-              <option value="">Toutes les catégories</option>
-              {categories?.map((c) => (
-                <option key={c.id} value={c.slug}>{c.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={sort}
-              onChange={(e) => setParam('tri', e.target.value)}
-              aria-label="Trier les produits"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto"
-            >
-              <option value="recent">Plus récents</option>
-              <option value="price_asc">Prix croissant</option>
-              <option value="price_desc">Prix décroissant</option>
-            </select>
-          </div>
-        </div>
+        <CatalogToolbar
+          searchInput={searchInput}
+          onSearchInput={setSearchInput}
+          searchPlaceholder="Rechercher un produit…"
+          searchLabel="Rechercher un produit"
+          categories={categories}
+          categorySlug={categorySlug}
+          allCategoriesLabel="Tout"
+          categoryLabel="Filtrer par catégorie"
+          onSelectCategory={(slug) => {
+            setSearchInput('')
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev)
+                next.delete('q')
+                if (slug) next.set('categorie', slug)
+                else next.delete('categorie')
+                next.delete('page')
+                return next
+              },
+              { replace: true },
+            )
+          }}
+          sort={sort}
+          sortOptions={[
+            { value: 'recent', label: 'Plus récents' },
+            { value: 'price_asc', label: 'Prix croissant' },
+            { value: 'price_desc', label: 'Prix décroissant' },
+          ]}
+          onSortChange={(value) => setParam('tri', value)}
+          sortLabel="Trier les produits"
+        />
       )}
 
       {!isLoading && !isError && fullToolbox && total > 0 && (
@@ -172,7 +160,7 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
         <EmptyState
           icon={PackageSearch}
           title={search ? 'Aucun produit trouvé' : 'Aucun produit pour le moment'}
-          description={search ? `Aucun résultat pour « ${search} ».` : 'Revenez bientôt, ou contactez-nous pour en savoir plus.'}
+          description={search ? `Aucun résultat pour « ${search} ».` : 'Nos nouveautés arrivent — écrivez-nous sur WhatsApp, on vous répond vite.'}
           action={search ? undefined : <ContactShopLink shop={shop} />}
         />
       )}
@@ -182,35 +170,30 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
               {products.map((product, index) => (
                 <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                  <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
+                  <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
               {products.map((product, index) => (
-                <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} />
+                <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
               ))}
             </div>
           )}
 
-          {fullToolbox && totalPages > 1 && (
-            <div className="mt-12 flex max-w-full flex-wrap items-center justify-center gap-1 overflow-x-auto pb-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSearchParams((prev) => {
-                    const next = new URLSearchParams(prev)
-                    next.set('page', String(p))
-                    return next
-                  }, { replace: true })}
-                  style={{ borderRadius: 'var(--shop-radius)' }}
-                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-[var(--shop-button)] text-[var(--shop-button-text)]' : 'text-[var(--shop-text)]/70 hover:bg-[var(--shop-text)]/10'}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+          {fullToolbox && (
+            <CatalogPagination
+              page={page}
+              totalPages={totalPages}
+              onPage={(p) =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev)
+                  next.set('page', String(p))
+                  return next
+                }, { replace: true })
+              }
+            />
           )}
         </>
       )}

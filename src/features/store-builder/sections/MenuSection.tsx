@@ -17,6 +17,8 @@ import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { FadeImage } from '@/components/ui/FadeImage'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForProduct } from '@/features/promos/promoTargeting'
 
 const DEFAULT_LIMIT = 48
 
@@ -54,6 +56,7 @@ export function MenuRenderer({
   })
   const { data: categories } = useCategories(shop.id)
   const items = result?.products ?? []
+  const { data: promos } = useActiveShopPromos(shop.id)
 
   if (isLoading) return <Spinner />
   if (isError) return <ErrorMessage />
@@ -96,7 +99,7 @@ export function MenuRenderer({
             )}
             <ul className="divide-y divide-[var(--shop-text)]/10">
               {group.items.map((item) => (
-                <MenuRow key={item.id} item={item} currency={shop.currency} showPrices={config.showPrices} />
+                <MenuRow key={item.id} item={item} currency={shop.currency} showPrices={config.showPrices} promoBadge={badgeForProduct(promos ?? [], item)} />
               ))}
             </ul>
           </div>
@@ -106,7 +109,7 @@ export function MenuRenderer({
   )
 }
 
-function MenuRow({ item, currency, showPrices }: { item: ProductWithRelations; currency: string; showPrices: boolean }) {
+function MenuRow({ item, currency, showPrices, promoBadge }: { item: ProductWithRelations; currency: string; showPrices: boolean; promoBadge?: string | null }) {
   const cover = item.images[0]?.thumb_url ?? item.images[0]?.public_url
   const soldOut = item.stock <= 0
   const { min, hasRange } = priceRange(item)
@@ -116,7 +119,7 @@ function MenuRow({ item, currency, showPrices }: { item: ProductWithRelations; c
         {cover && (
           <FadeImage
             src={cover}
-            alt=""
+            alt={item.name}
             loading="lazy"
             decoding="async"
             className="h-14 w-14 shrink-0 object-cover"
@@ -124,9 +127,16 @@ function MenuRow({ item, currency, showPrices }: { item: ProductWithRelations; c
           />
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-[var(--shop-text)] group-hover:underline group-hover:underline-offset-2">{item.name}</p>
+          <p className="font-medium text-[var(--shop-text)] group-hover:underline group-hover:underline-offset-2">
+            {item.name}
+            {promoBadge && (
+              <span className="ml-2 inline-block rounded-full bg-[var(--shop-accent)] px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
+                {promoBadge}
+              </span>
+            )}
+          </p>
           {item.description && <p className="mt-0.5 line-clamp-2 text-sm text-[var(--shop-text)]/60">{item.description}</p>}
-          {soldOut && <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--shop-text)]/50">Épuisé</p>}
+          {soldOut && <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--shop-text)]/50">Épuisé pour aujourd'hui</p>}
         </div>
         {showPrices && item.price > 0 && (
           <p className="shrink-0 whitespace-nowrap font-semibold text-[var(--shop-text)]">

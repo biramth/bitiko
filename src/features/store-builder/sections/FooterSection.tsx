@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { MapPin, MessageCircle, Store } from 'lucide-react'
+import { MapPin, MessageCircle } from 'lucide-react'
+import { ShopMonogram } from '@/components/ui/ShopMonogram'
 import type { Shop } from '@/types'
 import type { FooterSectionConfig } from '@/types/builder'
 import { Logo } from '@/components/ui/Logo'
@@ -65,7 +66,7 @@ export function FooterRenderer({
       {shop?.logo_url ? (
         <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : (
-        <Store size={20} aria-hidden />
+        <ShopMonogram name={shopName} size={32} />
       )}
       {shopName}
     </div>
@@ -100,7 +101,7 @@ export function FooterRenderer({
       {showWhatsapp && (
         <li>
           <a
-            href={whatsappHref(shop!.whatsapp_number!)}
+            href={`${whatsappHref(shop!.whatsapp_number!)}?text=${encodeURIComponent(`Bonjour ${shopName} !`)}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 hover:text-[var(--footer-text)]"
@@ -126,21 +127,6 @@ export function FooterRenderer({
   const branding = showBitikoBranding ? (
     <a href={platformUrl()} className="inline-flex items-center gap-1.5 text-xs text-[var(--footer-text)]/40 hover:text-[var(--footer-text)]/70">
       Propulsé par <Logo size={14} withWordmark={false} /> <span className="font-semibold">Bitiko</span>
-    </a>
-  ) : null
-
-  // Sur mobile le pied de page complet disparaît : la marque survit en
-  // pastille flottante au-dessus de la barre d'onglets (même breakpoint
-  // `sm` que MobileTabBar). L'option Pro « masquer » s'applique aussi ici.
-  const brandingPill = showBitikoBranding ? (
-    <a
-      href={platformUrl()}
-      aria-label="Propulsé par Bitiko"
-      style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom) + 0.75rem)' }}
-      className="fixed right-4 z-30 inline-flex animate-branding-bob items-center gap-1.5 rounded-full border border-white/15 bg-ink-900/85 py-1.5 pl-2 pr-3 text-[11px] font-medium text-white shadow-xl shadow-black/25 backdrop-blur sm:hidden"
-    >
-      <Logo size={16} withWordmark={false} />
-      Propulsé par <span className="font-bold text-gold-400">Bitiko</span>
     </a>
   ) : null
 
@@ -235,20 +221,38 @@ export function FooterRenderer({
     )
   }
 
+  const mobileBody = (
+    <div className="px-4 py-8 sm:hidden">
+      {brandMark}
+      {shop?.description && <p className="mt-3 text-sm text-[var(--footer-text)]/50">{shop.description}</p>}
+      {socials}
+      <div className="mt-5">{catalogueCta}</div>
+      {(showAddress || showWhatsapp) && (
+        <div className="mt-6">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--footer-text)]/50">Nous contacter</h3>
+          <ul className="mt-3 space-y-2.5 text-sm text-[var(--footer-text)]/80">{contactItems}</ul>
+        </div>
+      )}
+      <div className="mt-6 flex flex-col items-start gap-3 border-t border-[var(--footer-text)]/10 pt-4 text-xs text-[var(--footer-text)]/40">
+        {copyright}
+        {legalLinks}
+        {branding}
+      </div>
+    </div>
+  )
+
   return (
-    <>
-      <footer
-        className="hidden text-[var(--footer-text)] sm:block"
-        style={{
-          backgroundColor: footerBackground,
-          '--footer-text': footer.textColor || '#fffbf5',
-          '--footer-button': footer.buttonColor || 'var(--shop-button)',
-          '--footer-button-text': 'var(--shop-button-text)',
-        } as React.CSSProperties}
-      >
-        {body}
-      </footer>
-      {brandingPill}
-    </>
+    <footer
+      className="text-[var(--footer-text)]"
+      style={{
+        backgroundColor: footerBackground,
+        '--footer-text': footer.textColor || '#fffbf5',
+        '--footer-button': footer.buttonColor || 'var(--shop-button)',
+        '--footer-button-text': 'var(--shop-button-text)',
+      } as React.CSSProperties}
+    >
+      <div className="hidden sm:block">{body}</div>
+      {mobileBody}
+    </footer>
   )
 }

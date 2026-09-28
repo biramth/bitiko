@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, ImageOff, Plus } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
 import { thumbSrcSet } from '@/utils/image'
 import { StockBadge } from './StockBadge'
@@ -16,12 +16,15 @@ export function ProductCard({
   currency,
   lowStockThreshold,
   priority = false,
+  promoBadge = null,
 }: {
   product: ProductWithRelations
   currency: string
   lowStockThreshold?: number
   /** Carte visible dès l'ouverture de la page : image chargée sans délai. */
   priority?: boolean
+  /** Pastille promo CMS (ciblage produit/catégorie) — prioritaire sur le badge manuel. */
+  promoBadge?: string | null
 }) {
   const full = product.images[0]?.public_url
   const cover = product.images[0]?.thumb_url ?? full
@@ -67,8 +70,10 @@ export function ProductCard({
               className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${outOfStock ? 'opacity-50 grayscale' : ''}`}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-ink-200">
-              <ImageOff size={32} aria-hidden />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-[var(--shop-surface)]">
+              <span aria-hidden className="font-heading text-4xl font-bold text-[var(--shop-accent)]/35">
+                {[...product.name.trim()][0]?.toUpperCase() ?? '•'}
+              </span>
             </div>
           )}
           {outOfStock && (
@@ -76,9 +81,9 @@ export function ProductCard({
               Rupture
             </span>
           )}
-          {!outOfStock && product.badge && (
+          {!outOfStock && (promoBadge ?? product.badge) && (
             <span className="absolute left-3 top-3 bg-[var(--shop-accent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
-              {product.badge}
+              {promoBadge ?? product.badge}
             </span>
           )}
         </div>

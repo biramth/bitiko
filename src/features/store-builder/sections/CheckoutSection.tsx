@@ -219,7 +219,7 @@ function CheckoutFlow({
         ) : groupes.length === 0 && !freeUnlocked ? (
           <div className="mt-2 flex justify-between gap-4 text-sm text-[var(--shop-text)]/80">
             <span>Livraison</span>
-            <span className="text-right">À convenir avec le vendeur</span>
+            <span className="text-right">Confirmée avec le vendeur sur WhatsApp</span>
           </div>
         ) : (
           <div className="mt-2 flex justify-between text-sm text-emerald-600">

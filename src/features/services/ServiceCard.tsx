@@ -6,9 +6,11 @@ import { FadeImage } from '@/components/ui/FadeImage'
 interface ServiceCardProps {
   service: Service
   currency: string
+  /** Pastille promo CMS (ciblage prestation/catégorie). */
+  promoBadge?: string | null
 }
 
-export function ServiceCard({ service, currency }: ServiceCardProps) {
+export function ServiceCard({ service, currency, promoBadge = null }: ServiceCardProps) {
   return (
     <article className="group bg-[var(--shop-surface)] rounded-2xl border border-[var(--shop-border)] overflow-hidden transition-shadow hover:shadow-xl">
       {service.images?.[0] && (
@@ -20,9 +22,19 @@ export function ServiceCard({ service, currency }: ServiceCardProps) {
             decoding="async"
             className="w-full h-full object-cover transition-transform group-hover:scale-105"
           />
+          {promoBadge && (
+            <span className="absolute left-3 top-3 rounded-full bg-[var(--shop-accent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
+              {promoBadge}
+            </span>
+          )}
         </div>
       )}
       <div className="min-w-0 p-4">
+        {!service.images?.[0] && promoBadge && (
+          <span className="mb-2 inline-block rounded-full bg-[var(--shop-accent)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
+            {promoBadge}
+          </span>
+        )}
         <h3 className="break-words font-semibold text-[var(--shop-text)]">{service.name}</h3>
         {service.description && <p className="mt-1 line-clamp-2 break-words text-sm text-[var(--shop-text)]/60">{service.description}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--shop-text)]/60">

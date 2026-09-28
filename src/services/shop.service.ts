@@ -164,6 +164,17 @@ export async function updateShop(shopId: string, updates: Partial<Shop>): Promis
 
 const SHOP_ASSETS_BUCKET = 'shop-assets'
 
+/** Garde-fou avant envoi d'un logo/bannière : formats courants, 8 Mo max.
+/// Retourne le message d'erreur à afficher, ou `null` si le fichier est OK. */
+export function validateBrandImageFile(file: File): string | null {
+  if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+    return 'Format accepté : JPG, PNG, WebP ou GIF.'
+  }
+  if (file.size === 0) return 'Ce fichier est vide.'
+  if (file.size > 8 * 1024 * 1024) return 'Image trop lourde (8 Mo max) — compresse-la avant de réessayer.'
+  return null
+}
+
 async function uploadShopAsset(shopId: string, file: File, baseName: string): Promise<string> {
   const ext = file.name.split('.').pop()
   const path = `${shopId}/${baseName}.${ext}`
@@ -220,6 +231,19 @@ async function uploadShopLogoBanner(
   return { url: `${data.publicUrl}?v=${v}`, thumbUrl }
 }
 
+/** Supprime les fichiers logo/bannière d'une boutique (original + vignette).
+ *  Best-effort : les URLs versionnées (`?v=`) rendent les orphelins invisibles
+ *  de toute façon, donc un échec ici ne bloque jamais la suppression en base. */
+export async function removeShopBrandAssets(shopId: string, baseName: 'logo' | 'banner'): Promise<void> {
+  const { data, error } = await supabase.storage.from(SHOP_ASSETS_BUCKET).list(shopId)
+  if (error || !data) return
+  const paths = data
+    .map((f) => f.name)
+    .filter((name) => name === baseName || name.startsWith(`${baseName}.`) || name.startsWith(`${baseName}-`))
+    .map((name) => `${shopId}/${name}`)
+  if (paths.length === 0) return
+  await supabase.storage.from(SHOP_ASSETS_BUCKET).remove(paths)
+}
 /** Image for a builder block (image/promo sections) — one file per section id,
  *  or per `itemId` for a block holding several images (e.g. a Lookbook's
  *  photo grid), so each slot gets its own storage path instead of

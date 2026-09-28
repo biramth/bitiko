@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, Plus, ShoppingCart, Store, Trash2, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { ShopMonogram } from '@/components/ui/ShopMonogram'
 import type { Shop } from '@/types'
 import type { HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { useCart } from '@/features/cart/CartContext'
@@ -12,7 +12,7 @@ import { InlineText } from '../inline/InlineText'
 import { InlineLinkPopover } from '../inline/InlineLinkPopover'
 
 /** Resolves the header's nav links once so the desktop bar and the mobile
- *  menu panel render from the exact same source instead of duplicating the
+ *  chips row render from the exact same source instead of duplicating the
  *  custom-menu-vs-catalogue/contact logic. */
 function resolveHeaderNavLinks(
   header: HeaderSectionConfig,
@@ -49,7 +49,10 @@ const ghostLinkClass = 'inline-flex items-center rounded-lg border border-[var(-
 
 /** The storefront header. Layout presets: `left-logo` (original: logo left,
  *  links + cart right), `centered-logo` (logo centered, links in a row below)
- *  and `split` (links left, logo centered, cart right). */
+ *  and `split` (links left, logo centered, cart right). Sur mobile il n'y a
+ *  volontairement aucun menu burger : la navigation mobile, c'est la tab bar
+ *  du bas (StoreLayout) — un menu custom éventuel se reporte en rangée de
+ *  chips défilante sous le header, jamais en 2e nav. */
 export function HeaderRenderer({
   shop,
   header,
@@ -62,17 +65,7 @@ export function HeaderRenderer({
   editable: boolean
 }) {
   const { itemCount } = useCart()
-  const location = useLocation()
   const patch = useInlineEdit(sectionId)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  // Close the mobile menu on navigation — adjusted during render (React's
-  // documented pattern for resetting state when a value changes) rather than
-  // in an effect, so it takes effect before the new page paints.
-  const [lastPathname, setLastPathname] = useState(location.pathname)
-  if (location.pathname !== lastPathname) {
-    setLastPathname(location.pathname)
-    setMobileMenuOpen(false)
-  }
 
   const layout = header.layout ?? 'left-logo'
   const shopName = shop?.name ?? 'Boutique'
@@ -90,7 +83,7 @@ export function HeaderRenderer({
       {header.showLogo && shop?.logo_url ? (
         <img src={shop.logo_thumb_url ?? shop.logo_url} alt={shopName} className="h-8 w-8 shrink-0 object-cover" style={{ borderRadius: 'var(--shop-radius)' }} />
       ) : header.showLogo ? (
-        <Store size={20} className="shrink-0" aria-hidden />
+        <ShopMonogram name={shopName} size={32} />
       ) : null}
       <span className="truncate text-base sm:text-lg">{shopName}</span>
     </Link>
@@ -161,23 +154,14 @@ export function HeaderRenderer({
     </nav>
   ) : null
 
-  const menuButton =
-    navLinks.length > 0 ? (
-      <button
-        type="button"
-        onClick={() => setMobileMenuOpen((open) => !open)}
-        aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-        aria-expanded={mobileMenuOpen}
-        className="flex items-center -m-2 p-2 text-[var(--shop-header-text)] sm:hidden"
-      >
-        {mobileMenuOpen ? <X size={22} aria-hidden /> : <Menu size={22} aria-hidden />}
-      </button>
-    ) : null
-
+  // Panier masqué sur mobile : la tab bar du bas l'affiche déjà (même badge).
+  // Le header ne garde l'icône que sur desktop.
+  const cartLinkClass =
+    'relative -m-2 hidden items-center p-2 text-[var(--shop-header-text)] transition-opacity hover:opacity-60 sm:flex'
   const cart = !vocab.showCart ? null : (
     <Link
       to="/panier"
-      className="relative -m-2 flex items-center p-2 text-[var(--shop-header-text)] transition-opacity hover:opacity-60"
+      className={cartLinkClass}
       aria-label={`Panier, ${itemCount} article${itemCount > 1 ? 's' : ''}`}
     >
       <ShoppingCart size={22} aria-hidden strokeWidth={1.5} />
@@ -194,8 +178,7 @@ export function HeaderRenderer({
   if (layout === 'centered-logo') {
     bar = (
       <div className={rowClass}>
-        <div className="relative flex items-center justify-center px-10 sm:px-6">
-          <div className="absolute left-0 flex items-center">{menuButton}</div>
+        <div className="relative flex items-center justify-center sm:px-6">
           <div className="flex min-w-0 max-w-full justify-center">{logo}</div>
           <div className="absolute right-0 flex items-center">{cart}</div>
         </div>
@@ -206,7 +189,6 @@ export function HeaderRenderer({
     bar = (
       <div className={`${rowClass} grid grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-2 sm:gap-3`}>
         <div className="flex min-w-0 items-center">
-          {menuButton}
           {desktopNav}
         </div>
         <div className="flex min-w-0 justify-center">{logo}</div>
@@ -219,18 +201,18 @@ export function HeaderRenderer({
         {logo}
         <div className="flex shrink-0 items-center gap-4 sm:gap-7">
           {desktopNav}
-          {menuButton}
           {cart}
         </div>
       </div>
     )
   }
 
-  return (
-    <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-header-bg)]/95 backdrop-blur`}>
-      {bar}
-      {mobileMenuOpen && navLinks.length > 0 && (
-        <nav className="max-h-[70vh] overflow-y-auto border-t border-ink-900/10 px-4 py-2 sm:hidden">
+  // Menu custom sur mobile : rangée de chips défilante sous le header.
+  // Le menu stock (catalogue / réserver) vit déjà dans la tab bar : rien ici.
+  const mobileChips =
+    usesCustomMenu && navLinks.length > 0 ? (
+      <nav aria-label="Navigation" className="border-t border-ink-900/10 sm:hidden">
+        <div className="flex snap-x gap-2 overflow-x-auto px-4 py-2">
           {navLinks.map((link) =>
             link.external ? (
               <a
@@ -238,8 +220,7 @@ export function HeaderRenderer({
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:opacity-60' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:border-ink-900/40'}
+                className="shrink-0 snap-start whitespace-nowrap rounded-full border border-ink-900/15 px-3.5 py-1.5 text-xs font-semibold text-[var(--shop-header-text)]"
               >
                 {link.label}
               </a>
@@ -247,22 +228,20 @@ export function HeaderRenderer({
               <Link
                 key={link.key}
                 to={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={usesCustomMenu ? 'block px-1 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:opacity-60' : link.primary ? 'mt-2 block rounded-lg bg-[var(--shop-button)] px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)]' : 'mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)] hover:border-ink-900/40'}
+                className="shrink-0 snap-start whitespace-nowrap rounded-full border border-ink-900/15 px-3.5 py-1.5 text-xs font-semibold text-[var(--shop-header-text)]"
               >
                 {link.label}
               </Link>
             ),
           )}
-          <Link
-            to="/compte"
-            onClick={() => setMobileMenuOpen(false)}
-            className="mt-2 block rounded-lg border border-ink-900/15 px-4 py-2.5 text-center text-sm font-semibold uppercase tracking-widest text-[var(--shop-header-text)]/70 hover:border-ink-900/40"
-          >
-            Mon compte
-          </Link>
-        </nav>
-      )}
+        </div>
+      </nav>
+    ) : null
+
+  return (
+    <header className={`${header.sticky ? 'sticky top-0' : ''} z-20 border-b border-ink-900/10 bg-[var(--shop-header-bg)]/95 backdrop-blur`}>
+      {bar}
+      {mobileChips}
     </header>
   )
 }

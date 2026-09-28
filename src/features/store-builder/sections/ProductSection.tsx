@@ -15,6 +15,8 @@ import {
   ZoomIn,
 } from 'lucide-react'
 import { useProduct, useRelatedProducts } from '@/features/products/useProducts'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForProduct } from '@/features/promos/promoTargeting'
 import { StockBadge } from '@/features/products/StockBadge'
 import { ProductCard } from '@/features/products/ProductCard'
 import { useRecentlyViewed, type RecentlyViewedEntry } from '@/features/products/useRecentlyViewed'
@@ -134,6 +136,7 @@ function ProductDetails({
   lowStockThreshold,
   whatsappNumber,
   themeConfig,
+  promoBadge = null,
 }: {
   shop: Shop
   product: Product & {
@@ -146,6 +149,7 @@ function ProductDetails({
   lowStockThreshold: number
   whatsappNumber: string | null
   themeConfig: ThemeConfig
+  promoBadge?: string | null
 }) {
   const { addItem } = useCart()
   const toast = useToast()
@@ -280,20 +284,13 @@ function ProductDetails({
     trackEvent('view_item', { product_id: product.id, product_name: product.name, value: displayPrice, currency })
   }, [currency, displayPrice, product.id, product.name])
 
-  const handleShare = async () => {
-    const shareData = { title: product.name, text: `Découvre ${product.name}`, url: window.location.href }
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData)
-        trackEvent('share', { content_type: 'product', product_id: product.id })
-      } else {
-        await navigator.clipboard.writeText(window.location.href)
-        trackEvent('share', { content_type: 'product', product_id: product.id, method: 'copy_link' })
-        toast.success('Lien du produit copié.')
-      }
-    } catch {
-      // The share sheet can be dismissed by the customer; that is not an error.
-    }
+  const handleShare = () => {
+    // Partage WhatsApp d'abord (canal n°1 en Afrique de l'Ouest) : ouvre le
+    // sélecteur de contact avec le message déjà rempli. Le partage système
+    // reste disponible via le navigateur (URL copiable dans la barre).
+    const text = `Découvre ${product.name} (${formatCurrency(displayPrice, currency)}) : ${window.location.href}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+    trackEvent('share', { content_type: 'product', product_id: product.id, method: 'whatsapp' })
   }
 
   const ctaSentinelRef = useRef<HTMLDivElement>(null)
@@ -513,6 +510,13 @@ function ProductDetails({
           )}
 
           <div className={`md:pt-2 ${galleryRight ? 'md:order-1' : ''}`}>
+            {promoBadge && (
+              <p className="mb-2">
+                <span className="inline-block rounded-full bg-[var(--shop-accent)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--shop-button-text)]">
+                  {promoBadge}
+                </span>
+              </p>
+            )}
             {product.category && config.showTitle && (
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--shop-text)]/40">{product.category.name}</p>
             )}
@@ -643,25 +647,27 @@ function ProductDetails({
                 </button>
               </div>
             )}
-            <button
-              type="button"
-              onClick={handleShare}
-              style={{ borderRadius: 'var(--shop-radius)' }}
-              className="mt-3 flex w-full items-center justify-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-6 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)] hover:bg-[var(--shop-secondary-button)]"
-            >
-              <Share2 size={16} aria-hidden /> Partager ce produit
-            </button>
-            {whatsappNumber && (
-              <a
-                href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`À propos de « ${product.name} » : je voudrais en savoir plus.`)}`}
-                target="_blank"
-                rel="noreferrer"
+            <div className={`mt-3 grid gap-3 ${whatsappNumber ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button
+                type="button"
+                onClick={handleShare}
                 style={{ borderRadius: 'var(--shop-radius)' }}
-                className="mt-3 flex w-full items-center justify-center gap-2 border border-emerald-600/30 px-6 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                className="flex items-center justify-center gap-1.5 border border-[var(--shop-secondary-button-text)]/20 px-3 py-3 text-xs font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]"
               >
-                <MessageCircle size={16} aria-hidden /> Poser une question sur WhatsApp
-              </a>
-            )}
+                <Share2 size={15} aria-hidden /> Partager
+              </button>
+              {whatsappNumber && (
+                <a
+                  href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`À propos de « ${product.name} » : je voudrais en savoir plus.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ borderRadius: 'var(--shop-radius)' }}
+                  className="flex items-center justify-center gap-1.5 border border-[var(--shop-secondary-button-text)]/20 px-3 py-3 text-xs font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]"
+                >
+                  <MessageCircle size={15} aria-hidden /> Question ?
+                </a>
+              )}
+            </div>
             <div aria-live="polite">
               {added && (
                 <Link to="/panier" className="mt-3 inline-block text-sm font-medium text-[var(--shop-text)] underline underline-offset-2">
@@ -719,6 +725,7 @@ function RelatedProducts({
   themeConfig: ThemeConfig
 }) {
   const { data: related } = useRelatedProducts(shop.id, categoryId, excludeProductId, 4)
+  const { data: promos } = useActiveShopPromos(shop.id)
   if (!related || related.length === 0) return null
 
   return (
@@ -726,7 +733,7 @@ function RelatedProducts({
       <h2 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}>Vous aimerez aussi</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {related.map((product) => (
-          <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} />
+          <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} promoBadge={badgeForProduct(promos ?? [], product)} />
         ))}
       </div>
     </section>
@@ -783,6 +790,7 @@ export function ProductRenderer({ shop, config, themeConfig }: { shop: Shop; con
   const { slug } = useParams<{ slug: string }>()
   const isEmbeddedPreview = useIsEmbeddedPreview()
   const { data: product, isLoading, isError } = useProduct(shop?.id, slug)
+  const { data: promos } = useActiveShopPromos(shop?.id)
   const currency = shop.currency ?? 'XOF'
 
   if (!slug) {
@@ -818,6 +826,7 @@ export function ProductRenderer({ shop, config, themeConfig }: { shop: Shop; con
         lowStockThreshold={shop.low_stock_threshold}
         whatsappNumber={shop.whatsapp_number}
         themeConfig={themeConfig}
+        promoBadge={badgeForProduct(promos ?? [], { id: product.id, category: product.category_id ? { id: product.category_id } : null })}
       />
       {config.showRelatedProducts !== false && (
         <RelatedProducts shop={shop} categoryId={product.category_id} excludeProductId={product.id} themeConfig={themeConfig} />

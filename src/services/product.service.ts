@@ -129,6 +129,18 @@ export interface AdminProductFilters {
   page?: number
 }
 
+/** Id + nom de tous les produits (sélecteurs : promo, mise en avant…). */
+export async function listProductOptions(shopId: string): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('shop_id', shopId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) throw error
+  return (data ?? []) as { id: string; name: string }[]
+}
+
 export async function listShopProducts(
   shopId: string,
   filters: AdminProductFilters = {},
