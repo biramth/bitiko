@@ -88,6 +88,9 @@ const SettingsPage = lazy(() =>
 const StoreBuilderPage = lazy(() =>
   import('@/pages/admin/StoreBuilderPage').then((m) => ({ default: m.StoreBuilderPage })),
 )
+const ContentPage = lazy(() =>
+  import('@/pages/admin/ContentPage').then((m) => ({ default: m.ContentPage })),
+)
 const PlatformHomePage = lazy(() =>
   import('@/pages/platform/PlatformHomePage').then((m) => ({ default: m.PlatformHomePage })),
 )
@@ -291,6 +294,9 @@ export function PlatformRoutes() {
                 <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
                   <Route path="personnaliser" element={standalone(<StoreBuilderPage />)} />
                 </Route>
+              </Route>
+              <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
+                <Route path="contenu" element={standalone(<ContentPage />)} />
               </Route>
               {/* Facturation is now the "Changer d'abonnement" button in Mon
                   compte (Paramètres), opened as a pop-up — there is no

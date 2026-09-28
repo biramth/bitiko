@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
+import type { Shop } from '@/types'
 import type { PromoLayout, PromoSectionConfig, ThemeConfig } from '@/types/builder'
 import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
@@ -12,40 +13,68 @@ import { ColorField } from '../components/ColorField'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
+import { useShopPromos } from '@/features/cms/useCmsContent'
+import { isPromoLive } from '@/features/promos/promoTargeting'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { promoById, sitePromos } from '@/features/promos/promoTargeting'
+import type { ShopPromo } from '@/types/cms'
 
 function isExternal(url: string) {
   return /^https?:\/\//i.test(url)
 }
 
+function formatEndDate(iso: string | null): string | null {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+}
+
 export function PromoRenderer({
+  shop,
   config,
   themeConfig,
   sectionId,
   editable = false,
 }: {
+  shop?: Shop | null
   config: PromoSectionConfig
   themeConfig: ThemeConfig
   sectionId?: string
   editable?: boolean
 }) {
   const patch = useInlineEdit(sectionId)
-  if (!editable && !config.heading.trim()) return null
+  const cmsMode = config.source === 'cms'
+  const { data: promos, isLoading: promosLoading } = useActiveShopPromos(cmsMode ? shop?.id : undefined)
+  if (cmsMode && promosLoading) return null
+  const promo: ShopPromo | null = cmsMode
+    ? (promoById(promos ?? [], config.promoId) ?? sitePromos(promos ?? [])[0] ?? null)
+    : null
+  if (cmsMode && !promo && !editable) return null
+  if (!cmsMode && !editable && !config.heading.trim()) return null
+
+  const heading = cmsMode ? (promo?.title ?? '') : config.heading
+  const body = cmsMode ? (promo?.body ?? '') : config.body
+  const buttonLabelText = cmsMode ? (promo?.button_label ?? '') : config.buttonLabel
+  const buttonLink = cmsMode ? (promo?.button_link || '/catalogue') : config.buttonLink
+  const imageUrl = cmsMode ? promo?.image_url : null
+  const endDate = cmsMode ? formatEndDate(promo?.ends_at ?? null) : null
+  // En mode CMS le texte vient de la page Contenu : aperçu seul, pas d'édition inline.
+  const ro = cmsMode || !editable
 
   const buttonLabel = (
-    <InlineStyleToolbar editable={editable} display="inline" style={config.buttonLabelStyle} onCommit={(buttonLabelStyle) => patch({ buttonLabelStyle })} label="Style du bouton">
+    <InlineStyleToolbar editable={!ro} display="inline" style={config.buttonLabelStyle} onCommit={(buttonLabelStyle) => patch({ buttonLabelStyle })} label="Style du bouton">
       <InlineText
-        editable={editable}
-        value={config.buttonLabel}
-        onCommit={(buttonLabel) => patch({ buttonLabel })}
+        editable={!ro}
+        value={buttonLabelText}
+        onCommit={(value) => patch({ buttonLabel: value })}
         placeholder="Voir l'offre"
         style={resolveTextStyle(config.buttonLabelStyle)}
         label="Texte du bouton"
       />
     </InlineStyleToolbar>
   )
-  const button = (config.buttonLabel.trim() || editable) && (
+  const button = (buttonLabelText.trim() || editable) && (
     <span
-      className="mt-5 inline-flex items-center gap-2 bg-white px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-accent)]"
+      className="mt-5 inline-flex items-center gap-2 bg-[var(--shop-button)] px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-[var(--shop-button-text)] shadow-sm"
       style={{ borderRadius: 'var(--shop-radius)' }}
     >
       {buttonLabel}
@@ -57,6 +86,11 @@ export function PromoRenderer({
 
   return (
     <section className={`mx-auto px-4 py-6 sm:px-6 ${card ? 'max-w-3xl' : 'max-w-[var(--shop-content-width)]'}`}>
+      {cmsMode && editable && (
+        <p className="mx-auto mb-3 max-w-3xl rounded-lg bg-[var(--shop-surface)] px-3 py-2 text-center text-xs text-[var(--shop-text)]/60">
+          {promo ? `Promo « ${promo.title} » — gérée dans Contenu → Promos.` : 'Aucune promo en cours : crée-la dans Contenu → Promos.'}
+        </p>
+      )}
       <div
         className={
           card
@@ -65,25 +99,35 @@ export function PromoRenderer({
         }
         style={{ backgroundColor: config.backgroundColor || 'var(--shop-tertiary-button)', borderRadius: 'var(--shop-radius)' }}
       >
-        <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className={`mb-5 max-h-56 w-full object-cover ${card ? 'max-w-md' : 'max-w-lg'}`}
+            style={{ borderRadius: 'var(--shop-radius)' }}
+          />
+        )}
+        <InlineStyleToolbar editable={!ro} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
             as="h2"
-            editable={editable}
-            value={config.heading}
-            onCommit={(heading) => patch({ heading })}
+            editable={!ro}
+            value={heading}
+            onCommit={(value) => patch({ heading: value })}
             placeholder="Titre de la promotion"
             className={`max-w-lg font-bold ${sectionHeadingClass(themeConfig)}`}
             style={{ fontFamily: 'var(--shop-font-heading)', ...resolveTextStyle(config.headingStyle) }}
             label="Titre"
           />
         </InlineStyleToolbar>
-        {(config.body.trim() || editable) && (
-          <InlineStyleToolbar editable={editable} style={config.bodyStyle} onCommit={(bodyStyle) => patch({ bodyStyle })} label="Style du texte">
+        {(body.trim() || editable) && (
+          <InlineStyleToolbar editable={!ro} style={config.bodyStyle} onCommit={(bodyStyle) => patch({ bodyStyle })} label="Style du texte">
             <InlineText
               as="p"
-              editable={editable}
-              value={config.body}
-              onCommit={(body) => patch({ body })}
+              editable={!ro}
+              value={body}
+              onCommit={(value) => patch({ body: value })}
               placeholder="Texte"
               className="mt-2 max-w-md text-[var(--shop-tertiary-button-text)]/80"
               style={resolveTextStyle(config.bodyStyle)}
@@ -92,17 +136,22 @@ export function PromoRenderer({
             />
           </InlineStyleToolbar>
         )}
+        {endDate && (
+          <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-[var(--shop-tertiary-button-text)]/70">
+            Jusqu’au {endDate}
+          </p>
+        )}
         {button &&
-          (editable ? (
+          (editable && !cmsMode ? (
             <InlineLinkPopover url={config.buttonLink} onCommit={(buttonLink) => patch({ buttonLink })} editable>
               {button}
             </InlineLinkPopover>
-          ) : config.buttonLink && isExternal(config.buttonLink) ? (
-            <a href={config.buttonLink} target="_blank" rel="noreferrer">
+          ) : buttonLink && isExternal(buttonLink) ? (
+            <a href={buttonLink} target="_blank" rel="noreferrer">
               {button}
             </a>
           ) : (
-            <Link to={config.buttonLink || '/catalogue'}>{button}</Link>
+            <Link to={buttonLink || '/catalogue'}>{button}</Link>
           ))}
       </div>
     </section>
@@ -130,9 +179,42 @@ const PROMO_LAYOUTS: { value: PromoLayout; label: string; preview: React.ReactNo
   },
 ]
 
-export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectionConfig>) {
+export function PromoEditor({ config, onChange, shop }: SectionEditorProps<PromoSectionConfig>) {
+  const { data: promos } = useShopPromos(config.source === 'cms' ? shop.id : undefined)
+  const sitePromos = (promos ?? []).filter((p) => p.scope === 'site')
   return (
     <div className="space-y-4">
+      <div>
+        <label className={editorLabelClass}>Contenu</label>
+        <select
+          value={config.source ?? 'manual'}
+          onChange={(e) => onChange({ ...config, source: e.target.value as 'manual' | 'cms' })}
+          className={editorInputClass}
+        >
+          <option value="manual">Écrit ici (manuel)</option>
+          <option value="cms">Depuis la page Contenu (CMS)</option>
+        </select>
+        <p className={`mt-1 ${editorHelpClass}`}>Le CMS centralise tes promos (portée, dates, pastilles) — le bloc ne fait que les afficher.</p>
+      </div>
+      {config.source === 'cms' ? (
+        <div>
+          <label className={editorLabelClass}>Promo à afficher</label>
+          <select
+            value={config.promoId ?? ''}
+            onChange={(e) => onChange({ ...config, promoId: e.target.value || null })}
+            className={editorInputClass}
+          >
+            <option value="">Auto : dernière promo « tout le site » en cours</option>
+            {sitePromos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} {isPromoLive(p) ? '' : '(hors dates / masquée)'}
+              </option>
+            ))}
+          </select>
+          <p className={`mt-1 ${editorHelpClass}`}>Seules les promos « tout le site » s’affichent ici ; les promos produit / catégorie / prestation pastillent leurs cartes automatiquement.</p>
+        </div>
+      ) : (
+      <>
       <div>
         <label className={editorLabelClass}>Disposition</label>
         <div className="mt-1">
@@ -198,6 +280,8 @@ export function PromoEditor({ config, onChange }: SectionEditorProps<PromoSectio
           onChange={(backgroundColor) => onChange({ ...config, backgroundColor })}
         />
       </div>
+      </>
+      )}
     </div>
   )
 }

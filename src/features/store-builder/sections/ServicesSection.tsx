@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { PackageSearch, Search } from 'lucide-react'
+import { PackageSearch } from 'lucide-react'
 import { useActiveServices } from '@/features/services/useServices'
+import { useActiveShopPromos } from '@/features/cms/useCmsContent'
+import { badgeForService } from '@/features/promos/promoTargeting'
+import { CatalogPagination, CatalogToolbar } from '../components/CatalogToolbar'
 import { useCategories } from '@/features/categories/useCategories'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ServiceCard } from '@/features/services/ServiceCard'
@@ -52,6 +55,7 @@ export function ServicesRenderer({
   const services = fullToolbox ? (result?.services ?? []) : (result?.services ?? []).slice(0, config.limit)
   const total = result?.total ?? services.length
   const totalPages = fullToolbox ? Math.max(1, Math.ceil(total / SERVICES_PAGE_SIZE)) : 1
+  const { data: promos } = useActiveShopPromos(shop.id)
 
   useEffect(() => {
     if (!fullToolbox) return
@@ -109,59 +113,40 @@ export function ServicesRenderer({
       </div>
 
       {fullToolbox && (
-        <div className="mb-8 flex flex-col gap-4 border-b border-ink-900/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
-            <Search size={16} className="absolute left-0 top-1/2 -translate-y-1/2 text-[var(--shop-text)]/40" aria-hidden />
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Rechercher une prestation…"
-              aria-label="Rechercher une prestation"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 pl-6 pr-3 text-sm text-[var(--shop-text)] placeholder:text-[var(--shop-text)]/40 focus:border-[var(--shop-text)] focus:outline-none"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <select
-              value={categorySlug}
-              onChange={(e) => {
-                setSearchInput('')
-                setSearchParams(
-                  (prev) => {
-                    const next = new URLSearchParams(prev)
-                    next.delete('q')
-                    if (e.target.value) next.set('categorie', e.target.value)
-                    else next.delete('categorie')
-                    next.delete('page')
-                    return next
-                  },
-                  { replace: true },
-                )
-              }}
-              aria-label="Filtrer par catégorie"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto sm:min-w-0 sm:flex-1"
-            >
-              <option value="">Toutes les catégories</option>
-              {categories?.map((c) => (
-                <option key={c.id} value={c.slug}>{c.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={sort}
-              onChange={(e) => setParam('tri', e.target.value)}
-              aria-label="Trier les prestations"
-              className="w-full border-b border-[var(--shop-text)]/15 bg-transparent py-2 text-sm text-[var(--shop-text)] focus:border-[var(--shop-text)] focus:outline-none sm:w-auto"
-            >
-              <option value="manual">Ordre manuel</option>
-              <option value="price_asc">Prix croissant</option>
-              <option value="price_desc">Prix décroissant</option>
-              <option value="duration_asc">Durée croissante</option>
-              <option value="duration_desc">Durée décroissante</option>
-            </select>
-          </div>
-        </div>
+        <CatalogToolbar
+          searchInput={searchInput}
+          onSearchInput={setSearchInput}
+          searchPlaceholder="Rechercher une prestation…"
+          searchLabel="Rechercher une prestation"
+          categories={categories}
+          categorySlug={categorySlug}
+          allCategoriesLabel="Tout"
+          categoryLabel="Filtrer par catégorie"
+          onSelectCategory={(slug) => {
+            setSearchInput('')
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev)
+                next.delete('q')
+                if (slug) next.set('categorie', slug)
+                else next.delete('categorie')
+                next.delete('page')
+                return next
+              },
+              { replace: true },
+            )
+          }}
+          sort={sort}
+          sortOptions={[
+            { value: 'manual', label: 'Notre sélection' },
+            { value: 'price_asc', label: 'Prix croissant' },
+            { value: 'price_desc', label: 'Prix décroissant' },
+            { value: 'duration_asc', label: 'Durée croissante' },
+            { value: 'duration_desc', label: 'Durée décroissante' },
+          ]}
+          onSortChange={(value) => setParam('tri', value)}
+          sortLabel="Trier les prestations"
+        />
       )}
 
       {!isLoading && !isError && fullToolbox && total > 0 && (
@@ -177,7 +162,7 @@ export function ServicesRenderer({
         <EmptyState
           icon={PackageSearch}
           title={search ? 'Aucune prestation trouvée' : 'Aucune prestation pour le moment'}
-          description={search ? `Aucun résultat pour « ${search} ».` : 'Revenez bientôt, ou contactez-nous pour en savoir plus.'}
+          description={search ? `Aucun résultat pour « ${search} ».` : 'Nos prestations arrivent — écrivez-nous, on vous conseille avec plaisir.'}
           action={search ? undefined : <ContactShopLink shop={shop} />}
         />
       )}
@@ -187,35 +172,30 @@ export function ServicesRenderer({
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
               {services.map((service) => (
                 <div key={service.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                  <ServiceCard service={service} currency={shop.currency} />
+                  <ServiceCard service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
               {services.map((service) => (
-                <ServiceCard key={service.id} service={service} currency={shop.currency} />
+                <ServiceCard key={service.id} service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
               ))}
             </div>
           )}
 
-          {fullToolbox && totalPages > 1 && (
-            <div className="mt-12 flex max-w-full flex-wrap items-center justify-center gap-1 overflow-x-auto pb-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSearchParams((prev) => {
-                    const next = new URLSearchParams(prev)
-                    next.set('page', String(p))
-                    return next
-                  }, { replace: true })}
-                  style={{ borderRadius: 'var(--shop-radius)' }}
-                  className={`h-9 w-9 text-sm font-medium transition-colors ${p === page ? 'bg-[var(--shop-button)] text-[var(--shop-button-text)]' : 'text-[var(--shop-text)]/70 hover:bg-[var(--shop-text)]/10'}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+          {fullToolbox && (
+            <CatalogPagination
+              page={page}
+              totalPages={totalPages}
+              onPage={(p) =>
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev)
+                  next.set('page', String(p))
+                  return next
+                }, { replace: true })
+              }
+            />
           )}
         </>
       )}

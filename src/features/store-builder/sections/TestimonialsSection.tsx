@@ -1,4 +1,5 @@
-import { Plus, Quote, Trash2 } from 'lucide-react'
+import { Plus, Quote, Star, Trash2 } from 'lucide-react'
+import type { Shop } from '@/types'
 import type { TestimonialsSectionConfig, ThemeConfig } from '@/types/builder'
 import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
@@ -7,21 +8,48 @@ import { InlineText } from '../inline/InlineText'
 import { InlineStyleToolbar } from '../inline/InlineStyleToolbar'
 import { TextStyleField } from '../components/TextStyleControls'
 import { resolveTextStyle } from '@/config/textStyle'
+import { useActiveShopTestimonials } from '@/features/cms/useCmsContent'
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="flex gap-0.5" aria-label={`Note : ${rating} sur 5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <Star
+          key={i}
+          size={13}
+          aria-hidden
+          className={i < rating ? 'fill-gold-400 text-gold-400' : 'text-[var(--shop-text)]/20'}
+        />
+      ))}
+    </span>
+  )
+}
 
 export function TestimonialsRenderer({
+  shop,
   config,
   themeConfig,
   sectionId,
   editable = false,
 }: {
+  shop?: Shop | null
   config: TestimonialsSectionConfig
   themeConfig: ThemeConfig
   sectionId?: string
   editable?: boolean
 }) {
   const patch = useInlineEdit(sectionId)
-  const items = editable ? config.items : config.items.filter((item) => item.text.trim())
+  const cmsMode = config.source === 'cms'
+  const { data: cmsItems, isLoading: cmsLoading } = useActiveShopTestimonials(cmsMode ? shop?.id : undefined)
+  if (cmsMode && cmsLoading) return null
+  const items: { name: string; text: string; rating?: number | null; photoUrl?: string | null }[] = cmsMode
+    ? (cmsItems ?? []).map((t) => ({ name: t.name, text: t.text, rating: t.rating, photoUrl: t.photo_url }))
+    : editable
+      ? config.items
+      : config.items.filter((item) => item.text.trim())
   if (items.length === 0 && !editable) return null
+  // En mode CMS le contenu vient de la page Contenu : aperçu seul.
+  const ro = cmsMode || !editable
 
   const updateItem = (index: number, field: 'name' | 'text', value: string) => {
     patch({ items: config.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)) })
@@ -43,6 +71,11 @@ export function TestimonialsRenderer({
           />
         </InlineStyleToolbar>
       )}
+      {cmsMode && editable && (
+        <p className="mx-auto mt-6 max-w-3xl rounded-lg bg-[var(--shop-surface)] px-3 py-2 text-center text-xs text-[var(--shop-text)]/60">
+          {(cmsItems?.length ?? 0) > 0 ? 'Avis gérés dans Contenu → Avis.' : 'Aucun avis : ajoute-les dans Contenu → Avis.'}
+        </p>
+      )}
       <div className="-mx-4 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
         {items.map((item, index) => (
           <figure
@@ -50,9 +83,14 @@ export function TestimonialsRenderer({
             className="flex w-[82%] shrink-0 snap-start flex-col rounded-2xl border border-[var(--shop-text)]/10 bg-[var(--shop-bg)] p-5 shadow-sm sm:w-auto"
           >
             <Quote size={20} aria-hidden className="text-[var(--shop-accent)]" />
+            {item.rating ? (
+              <div className="mt-3">
+                <Stars rating={item.rating} />
+              </div>
+            ) : null}
             <InlineText
               as="p"
-              editable={editable}
+              editable={!ro}
               value={item.text}
               onCommit={(value) => updateItem(index, 'text', value)}
               placeholder="Écrivez le témoignage…"
@@ -60,9 +98,12 @@ export function TestimonialsRenderer({
               className="mt-3 flex-1 text-sm leading-relaxed text-[var(--shop-text)]/80"
               label="Témoignage"
             />
-            <figcaption className="mt-4">
+            <figcaption className="mt-4 flex items-center gap-2.5">
+              {item.photoUrl ? (
+                <img src={item.photoUrl} alt="" loading="lazy" decoding="async" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+              ) : null}
               <InlineText
-                editable={editable}
+                editable={!ro}
                 value={item.name}
                 onCommit={(value) => updateItem(index, 'name', value)}
                 placeholder="Nom de la cliente"
@@ -70,7 +111,7 @@ export function TestimonialsRenderer({
                 label="Nom"
               />
             </figcaption>
-            {editable && config.items.length > 1 && (
+            {!cmsMode && editable && config.items.length > 1 && (
               <button
                 type="button"
                 onClick={() => patch({ items: config.items.filter((_, i) => i !== index) })}
@@ -83,7 +124,7 @@ export function TestimonialsRenderer({
           </figure>
         ))}
       </div>
-      {editable && (
+      {editable && !cmsMode && (
         <button
           type="button"
           onClick={() => patch({ items: [...config.items, { name: '', text: '' }] })}
@@ -105,6 +146,22 @@ export function TestimonialsEditor({ config, onChange }: SectionEditorProps<Test
   return (
     <div className="space-y-4">
       <div>
+        <label className={editorLabelClass}>Contenu</label>
+        <select
+          value={config.source ?? 'manual'}
+          onChange={(e) => onChange({ ...config, source: e.target.value as 'manual' | 'cms' })}
+          className={editorInputClass}
+        >
+          <option value="manual">Écrit ici (manuel)</option>
+          <option value="cms">Depuis la page Contenu (CMS)</option>
+        </select>
+        <p className={`mt-1 ${editorHelpClass}`}>Le CMS ajoute notes en étoiles et photos — gérés dans Contenu → Avis.</p>
+      </div>
+      {config.source === 'cms' ? (
+        <p className={editorHelpClass}>Ce bloc affiche tes avis actifs, dans ton ordre. Ajoute-les dans Contenu → Avis.</p>
+      ) : (
+      <>
+      <div>
         <label className={editorLabelClass}>Titre</label>
         <input value={config.heading} onChange={(e) => onChange({ ...config, heading: e.target.value })} placeholder="Elles parlent de nous" className={editorInputClass} />
         <p className={`mt-1 ${editorHelpClass}`}>Vide = pas de titre au-dessus des avis.</p>
@@ -122,6 +179,8 @@ export function TestimonialsEditor({ config, onChange }: SectionEditorProps<Test
       ))}
       {config.items.length < 8 && <button type="button" onClick={() => onChange({ ...config, items: [...config.items, { name: '', text: '' }] })} className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800"><Plus size={15} /> Ajouter un témoignage</button>}
       <p className={editorHelpClass}>Un avis sans texte n'est pas affiché sur la boutique.</p>
+      </>
+      )}
     </div>
   )
 }

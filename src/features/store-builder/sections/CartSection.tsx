@@ -14,12 +14,11 @@ import { resolveTextStyle } from '@/config/textStyle'
 import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
-import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
 import { catalogCtaLabel, getStorefrontVocabulary } from '@/config/storefrontVocabulary'
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 import { DeliveryPaymentInfo } from '../components/DeliveryPaymentInfo'
-import { ImageOff, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
+import { Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
 import { FadeImage } from '@/components/ui/FadeImage'
 
 /** Progress toward the shop's free-delivery threshold — hidden when the shop
@@ -53,7 +52,6 @@ function FreeDeliveryProgress({ shop, subtotal }: { shop: Shop; subtotal: number
 
 export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config: CartSectionConfig; themeConfig: ThemeConfig }) {
   const { items: realItems, subtotal: realSubtotal, updateQuantity, removeItem } = useCart()
-  const toast = useToast()
   const isEmbeddedPreview = useIsEmbeddedPreview()
   const demo = isEmbeddedPreview && realItems.length === 0 ? buildDemoCart(shop) : null
   const items = demo ?? realItems
@@ -63,21 +61,13 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
   const aside = (config.layout ?? 'stacked') === 'summary-aside'
   const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
 
-  const handleShareCart = async () => {
+  const handleShareCart = () => {
+    // Partage WhatsApp d'abord (même logique que la fiche produit) : le résumé
+    // du panier arrive déjà rédigé dans la conversation.
     const lines = items.map((item) => `- ${item.name} x${item.quantity} : ${formatCurrency(item.price * item.quantity, currency)}`)
     const text = `Mon panier chez ${shop.name}\n${lines.join('\n')}\nTotal : ${formatCurrency(subtotal, currency)}\n\nJe souhaite confirmer cette sélection avec vous.`
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `Panier — ${shop.name}`, text })
-        trackEvent('share', { content_type: 'cart', item_count: items.length, value: subtotal, currency })
-      } else {
-        await navigator.clipboard.writeText(text)
-        trackEvent('share', { content_type: 'cart', item_count: items.length, value: subtotal, currency, method: 'copy_link' })
-        toast.success('Résumé du panier copié.')
-      }
-    } catch {
-      // The share sheet can be dismissed by the customer.
-    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+    trackEvent('share', { content_type: 'cart', item_count: items.length, value: subtotal, currency, method: 'whatsapp' })
   }
 
   if (!isDemo && items.length === 0) {
@@ -131,8 +121,10 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
               {item.imageUrl ? (
                 <FadeImage src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-ink-200">
-                  <ImageOff size={24} aria-hidden />
+                <div className="flex h-full w-full flex-col items-center justify-center bg-[var(--shop-surface)]">
+                  <span aria-hidden className="font-heading text-2xl font-bold text-[var(--shop-accent)]/35">
+                    {[...item.name.trim()][0]?.toUpperCase() ?? '•'}
+                  </span>
                 </div>
               )}
             </div>
@@ -218,6 +210,23 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
       <DeliveryPaymentInfo shop={shop} className="mt-6" />
       </div>
       </div>
+      {!isDemo && (
+        <div className="fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--shop-text)]/55">
+              {items.length} article{items.length > 1 ? 's' : ''}
+            </p>
+            <p className="truncate text-sm font-bold text-[var(--shop-text)]">{formatCurrency(subtotal, currency)}</p>
+          </div>
+          <Link
+            to="/commande"
+            style={{ borderRadius: 'var(--shop-radius)' }}
+            className="flex shrink-0 items-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-xs font-semibold uppercase tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90"
+          >
+            Commander <ArrowRight size={15} aria-hidden />
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

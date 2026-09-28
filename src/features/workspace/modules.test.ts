@@ -20,7 +20,7 @@ const COMMERCE_CAPS = new Set([
 describe('resolveModules', () => {
   it('shows every legacy module for a commerce capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'finance', 'customize'])
+    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'finance', 'customize', 'content'])
   })
 
   it('fails open to the full workspace when capabilities are unknown (null)', () => {
@@ -36,6 +36,7 @@ describe('resolveModules', () => {
       'team',
       'finance',
       'customize',
+      'content',
     ])
   })
 
@@ -51,7 +52,7 @@ describe('resolveModules', () => {
       'HAS_PROMOTIONS',
     ])
     const keys = resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'appointments', 'services', 'team', 'finance', 'customize'])
+    expect(keys).toEqual(['dashboard', 'appointments', 'services', 'team', 'finance', 'customize', 'content'])
   })
 
   it('keeps only ungated modules (dashboard, finance) for a known-but-empty capability set', () => {
@@ -86,7 +87,7 @@ describe('groupModules', () => {
   it('keeps ungrouped entries first, then group order of first appearance', () => {
     const groups = groupModules(resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }))
     expect(groups.map((g) => g.label)).toEqual([undefined, 'Ventes', 'Boutique', 'Équipe', 'Gestion'])
-    expect(groups[0]?.items.map((m) => m.key)).toEqual(['dashboard', 'customize'])
+    expect(groups[0]?.items.map((m) => m.key)).toEqual(['dashboard', 'customize', 'content'])
     expect(groups[1]?.items.map((m) => m.key)).toEqual(['orders', 'customers'])
   })
 

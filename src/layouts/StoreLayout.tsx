@@ -216,9 +216,10 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
   const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const digits = whatsappNumber?.replace(/\D/g, '') ?? ''
   const tab = (active: boolean) =>
-    `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
+    `relative flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] font-medium ${
       active ? 'text-[var(--shop-accent)]' : 'text-[var(--shop-text)]/55'
     }`
+  const tabLabel = 'max-w-full truncate'
   return (
     <>
       <div className="h-[calc(3.75rem+env(safe-area-inset-bottom))] bg-[var(--shop-bg)] sm:hidden" aria-hidden />
@@ -230,7 +231,7 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
         <div className="flex items-stretch px-2">
           <Link to="/" className={tab(pathname === '/')} aria-current={pathname === '/' ? 'page' : undefined}>
             <Home size={22} aria-hidden strokeWidth={pathname === '/' ? 2.25 : 1.75} />
-            Accueil
+            <span className={tabLabel}>Accueil</span>
           </Link>
           <Link
             to={vocab.catalogHref}
@@ -238,12 +239,12 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
             aria-current={pathname.startsWith(vocab.catalogHref) ? 'page' : undefined}
           >
             <LayoutGrid size={22} aria-hidden strokeWidth={pathname.startsWith(vocab.catalogHref) ? 2.25 : 1.75} />
-            {vocab.catalogLabel}
+            <span className={tabLabel}>{vocab.catalogLabel}</span>
           </Link>
           {vocab.booking && (
             <Link
               to={vocab.booking.href}
-              className="relative flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold text-[var(--shop-accent)]"
+              className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1 text-[10px] font-semibold text-[var(--shop-accent)]"
               aria-current={pathname.startsWith(vocab.booking.href) ? 'page' : undefined}
             >
               <span
@@ -252,7 +253,7 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
               >
                 <CalendarCheck size={20} aria-hidden strokeWidth={2} />
               </span>
-              {vocab.booking.shortLabel}
+              <span className={tabLabel}>{vocab.booking.shortLabel}</span>
             </Link>
           )}
           {vocab.showCart && (
@@ -269,13 +270,13 @@ function MobileTabBar({ whatsappNumber }: { whatsappNumber?: string | null }) {
                   </span>
                 )}
               </span>
-              {vocab.cartLabel}
+              <span className={tabLabel}>{vocab.cartLabel}</span>
             </Link>
           )}
           {digits && (
             <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className={tab(false)} aria-label="Contacter sur WhatsApp">
               <MessageCircle size={22} aria-hidden strokeWidth={1.75} />
-              WhatsApp
+              <span className={tabLabel}>WhatsApp</span>
             </a>
           )}
         </div>

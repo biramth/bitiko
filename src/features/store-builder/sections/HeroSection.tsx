@@ -1,6 +1,6 @@
 import type { Shop } from '@/types'
 import { Link } from 'react-router-dom'
-import { ArrowRight, MessageCircle } from 'lucide-react'
+import { ArrowRight, MessageCircle, ShieldCheck } from 'lucide-react'
 import type { HeroLayout, HeroSectionConfig } from '@/types/builder'
 import { heroHeadingClass } from '@/config/themeTokens'
 import type { ThemeConfig } from '@/types/builder'
@@ -15,7 +15,7 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchBlock, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
-import { getStorefrontVocabulary } from '@/config/storefrontVocabulary'
+import { getStorefrontVocabulary, catalogCtaLabel } from '@/config/storefrontVocabulary'
 import { thumbSrcSet } from '@/utils/image'
 import { useStorefrontCapabilities } from '../useStorefrontCapabilities'
 import { FadeImage } from '@/components/ui/FadeImage'
@@ -47,13 +47,22 @@ export function HeroRenderer({
   const side = showBanner && layout === 'image-side'
   const centered = layout === 'text-only'
   // Le bouton principal suit le métier : « Prendre rendez-vous » / « Réserver une
-  // table » quand le libellé n'a pas été personnalisé (un libellé choisi par le
-  // commerçant garde sa cible historique, le catalogue).
+  // table » quand le libellé n'a pas été personnalisé, sinon le CTA catalogue
+  // du métier (« Voir la carte », « Voir nos prestations »…). Un libellé choisi
+  // par le commerçant garde sa cible historique, le catalogue.
   const vocab = getStorefrontVocabulary(useStorefrontCapabilities(shop))
   const customPrimaryLabel = config.primaryButtonLabel?.trim()
   const bookingPrimary = !customPrimaryLabel && vocab.booking ? vocab.booking : null
-  const primaryLabel = customPrimaryLabel || bookingPrimary?.label || 'Découvrir la boutique'
+  const primaryLabel = customPrimaryLabel || bookingPrimary?.label || catalogCtaLabel(vocab)
   const whatsappLabel = config.whatsappButtonLabel?.trim() || 'Nous contacter'
+  // Micro-preuve sous les boutons, adaptée au parcours : une boutique sans
+  // bannière ni description reste crédible d'emblée.
+  const reassurance =
+    vocab.catalogLabel === 'La carte'
+      ? 'Réservation en ligne • Plats faits maison'
+      : vocab.booking
+        ? 'Réservation en ligne • Confirmation sur WhatsApp'
+        : 'Commande via WhatsApp • Paiement à la livraison'
 
   // The banner image itself is a shop-level asset (Réglages → Apparence), not
   // part of this section's config, so it isn't upload-on-hover like the other
@@ -79,7 +88,7 @@ export function HeroRenderer({
       ) : (
         <FadeImage
           src={shop.banner_url!}
-          alt=""
+          alt={shop.name}
           fetchPriority="high"
           srcSet={thumbSrcSet(shop.banner_thumb_url, shop.banner_url!)}
           sizes={side ? '(max-width: 768px) 100vw, 50vw' : '100vw'}
@@ -138,18 +147,18 @@ export function HeroRenderer({
           />
         </InlineStyleToolbar>
       )}
-      <div className={`mt-6 flex flex-wrap items-center gap-3 ${centered ? 'justify-center' : ''}`}>
+      <div className={`mt-6 flex items-stretch gap-3 ${centered ? 'justify-center' : ''}`}>
         <Link
           to={bookingPrimary?.href ?? vocab.catalogHref}
           style={{ borderRadius: 'var(--shop-radius)' }}
-          className="inline-flex w-full items-center justify-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 sm:w-auto"
+          className="inline-flex flex-1 items-center justify-center gap-2 bg-[var(--shop-button)] px-5 py-3 text-sm font-semibold text-[var(--shop-button-text)] transition-opacity hover:opacity-90 sm:flex-none"
         >
           <InlineStyleToolbar editable={editable} display="inline" style={config.primaryButtonLabelStyle} onCommit={(primaryButtonLabelStyle) => patch({ primaryButtonLabelStyle })} label="Style du bouton principal">
             <InlineText
               editable={editable}
               value={primaryLabel}
               onCommit={(value) => patch({ primaryButtonLabel: value })}
-              placeholder="Découvrir la boutique"
+              placeholder={catalogCtaLabel(vocab)}
               style={resolveTextStyle(config.primaryButtonLabelStyle)}
               label="Texte du bouton principal"
             />
@@ -158,11 +167,15 @@ export function HeroRenderer({
         </Link>
         {(shop.whatsapp_number || editable) && (
           <a
-            href={shop.whatsapp_number ? `https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}` : undefined}
+            href={
+              shop.whatsapp_number
+                ? `https://wa.me/${shop.whatsapp_number.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour ${shop.name} ! Je visite votre boutique.`)}`
+                : undefined
+            }
             target="_blank"
             rel="noreferrer"
             style={{ borderRadius: 'var(--shop-radius)' }}
-            className="inline-flex w-full items-center justify-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50 sm:w-auto"
+            className="inline-flex flex-1 items-center justify-center gap-2 border border-[var(--shop-secondary-button-text)]/20 px-5 py-3 text-sm font-semibold text-[var(--shop-secondary-button-text)] transition-colors hover:border-[var(--shop-secondary-button-text)]/50 sm:flex-none"
           >
             <MessageCircle size={16} aria-hidden />
             <InlineStyleToolbar editable={editable} display="inline" style={config.whatsappButtonLabelStyle} onCommit={(whatsappButtonLabelStyle) => patch({ whatsappButtonLabelStyle })} label="Style du bouton WhatsApp">
@@ -178,12 +191,27 @@ export function HeroRenderer({
           </a>
         )}
       </div>
+      <p className={`mt-4 flex items-center gap-1.5 text-xs text-[var(--shop-text)]/55 ${centered ? 'justify-center' : ''}`}>
+        <ShieldCheck size={14} aria-hidden className="shrink-0 text-[var(--shop-accent)]" />
+        {reassurance}
+      </p>
     </>
   )
 
+  // Sans bannière, le hero texte-seul hérite d'un fond teinté aux couleurs de
+  // la boutique (pastel + semis de points ton accent) : plus jamais un bloc
+  // texte nu sur fond blanc pour une boutique fraîche.
+  const fallbackBackdrop = !showBanner
+    ? {
+        backgroundColor: 'var(--shop-surface)',
+        backgroundImage: 'radial-gradient(color-mix(in srgb, var(--shop-accent) 16%, transparent) 1.2px, transparent 1.2px)',
+        backgroundSize: '18px 18px',
+      }
+    : undefined
+
   if (side) {
     return (
-      <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-8 sm:px-6 sm:py-12">
+      <section className="mx-auto max-w-[var(--shop-content-width)] px-4 py-8 sm:px-6 sm:py-12" style={fallbackBackdrop}>
         <div className="grid items-center gap-8 md:grid-cols-2">
           <div>{textBlock}</div>
           {banner}
@@ -193,7 +221,7 @@ export function HeroRenderer({
   }
 
   return (
-    <div>
+    <div style={fallbackBackdrop}>
       {banner}
       <section
         className={`mx-auto max-w-[var(--shop-content-width)] px-4 pb-6 sm:px-6 ${showBanner ? 'pt-6 sm:pt-8' : 'pt-8 sm:pt-12'} ${centered ? 'text-center' : ''}`}
@@ -296,7 +324,7 @@ export function HeroEditor({ config, onChange, shop, shopId, sectionId }: Sectio
           <input
             value={config.primaryButtonLabel ?? ''}
             onChange={(e) => onChange({ ...config, primaryButtonLabel: e.target.value })}
-            placeholder="Découvrir la boutique"
+            placeholder="Vide = auto (catalogue / réserver selon l'activité)"
             className={editorInputClass}
           />
           <TextStyleField label="Style" value={config.primaryButtonLabelStyle} onChange={(primaryButtonLabelStyle) => onChange({ ...config, primaryButtonLabelStyle })} />

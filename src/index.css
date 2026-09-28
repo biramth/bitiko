@@ -43,9 +43,6 @@
   --animate-blob: blob 12s ease-in-out infinite;
   --animate-marquee: marquee 28s linear infinite;
   --animate-toast-in: toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
-  /* Pastille « Propulsé par Bitiko » flottante (vitrines mobiles) : flottement
-     subtil pour rester visible sans distraire. */
-  --animate-branding-bob: branding-bob 3.2s ease-in-out infinite;
 }
 
 @keyframes fade-up {
@@ -99,16 +96,6 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes branding-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
   }
 }
 

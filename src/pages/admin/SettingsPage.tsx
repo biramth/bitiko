@@ -33,7 +33,7 @@ import { STORE_TEMPLATES, STORE_TEMPLATE_BY_KEY } from '@/config/storeTemplates'
 import { useBusinessTypeOptions } from '@/hooks/useBusinessTypeOptions'
 import { resolveBusinessTypeId } from '@/services/businessType.service'
 import { buildGeneratedTheme } from '@/features/onboarding/generateStorefront'
-import { updateShop, uploadShopBanner, uploadShopLogo } from '@/services/shop.service'
+import { updateShop, uploadShopBanner, uploadShopLogo, validateBrandImageFile } from '@/services/shop.service'
 import { listEnabledCountries } from '@/services/country.service'
 import { getCountryPreset, phonePlaceholder } from '@/config/countries'
 import { deleteAccount } from '@/services/account.service'
@@ -746,6 +746,12 @@ function SettingsForm({
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !shop) return
+    const invalid = validateBrandImageFile(file)
+    if (invalid) {
+      setError(invalid)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     setUploadingLogo(true)
     setError(null)
     try {
@@ -781,6 +787,12 @@ function SettingsForm({
   const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !shop) return
+    const invalid = validateBrandImageFile(file)
+    if (invalid) {
+      setError(invalid)
+      if (bannerInputRef.current) bannerInputRef.current.value = ''
+      return
+    }
     setUploadingBanner(true)
     setError(null)
     try {
@@ -921,7 +933,7 @@ function SettingsForm({
                     ) : (
                       <ImagePlus size={14} />
                     )}
-                    {uploadingLogo ? 'Envoi…' : 'Changer le logo'}
+                    {uploadingLogo ? 'Envoi…' : logoUrl ? 'Changer le logo' : 'Ajouter un logo'}
                   </button>
                   {logoUrl && (
                     <button
@@ -944,6 +956,9 @@ function SettingsForm({
                   className="hidden"
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Carré de préférence (JPG, PNG, WebP, 8 Mo max). Sans logo, l’initiale de ta boutique s’affiche en en-tête, pied de page, favicon et partages.
+              </p>
 
               <div>
                 <span className="block text-sm font-medium text-gray-700">Bannière de la boutique</span>
@@ -991,7 +1006,7 @@ function SettingsForm({
                   className="hidden"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Affichée en haut de la page d'accueil de votre boutique. Format large recommandé (ex. 1600×530px).
+                  Affichée en haut de la page d'accueil de votre boutique. Format large recommandé (ex. 1600×530px, JPG, PNG, WebP, 8 Mo max). Sans bannière, un fond aux couleurs de ta boutique est utilisé.
                 </p>
               </div>
 

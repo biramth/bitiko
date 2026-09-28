@@ -2,6 +2,7 @@ import {
   BookOpen,
   CalendarDays,
   LayoutDashboard,
+  Newspaper,
   Package,
   Scissors,
   ShoppingBag,
@@ -57,6 +58,9 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   // hors groupe, au niveau du tableau de bord. « Boutique » ne contient donc
   // plus que Produits et redevient 100 % commerce.
   { key: 'customize', label: 'Personnaliser', to: '/admin/personnaliser', icon: Wand2, guide: 'guide-nav-personnaliser', capabilities: ['HAS_SHOP'], enabled: true },
+  // Contenu (promos, avis, FAQ, réseaux) : géré ici, affiché au choix via les
+  // blocs — le début du CMS, hors groupe comme Personnaliser.
+  { key: 'content', label: 'Contenu', to: '/admin/contenu', icon: Newspaper, guide: 'guide-nav-contenu', capabilities: ['HAS_SHOP'], enabled: true },
 ]
 
 export interface ModuleContext {

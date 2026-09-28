@@ -104,7 +104,7 @@ export function CategoriesRenderer({ shop, config, themeConfig, sectionId, edita
               {category.image_url && (
                 <FadeImage
                   src={category.thumb_url ?? category.image_url}
-                  alt=""
+                  alt={category.name}
                   loading="lazy"
                   decoding="async"
                   srcSet={thumbSrcSet(category.thumb_url, category.image_url)}

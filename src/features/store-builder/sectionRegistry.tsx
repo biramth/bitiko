@@ -13,6 +13,7 @@ import {
   PanelTop,
   Quote,
   Scissors,
+  Share2,
   ShoppingBag,
   ShoppingCart,
   Star,
@@ -44,6 +45,7 @@ import type {
   ReservationsSectionConfig,
   SectionType,
   ServicesSectionConfig,
+  SocialSectionConfig,
   TeamSectionConfig,
   TextSectionConfig,
   TestimonialsSectionConfig,
@@ -63,6 +65,7 @@ import { PromoEditor, PromoRenderer } from './sections/PromoSection'
 import { ProductsEditor, ProductsRenderer } from './sections/ProductsSection'
 import { ReservationsEditor, ReservationsRenderer } from './sections/ReservationsSection'
 import { ServicesEditor, ServicesRenderer } from './sections/ServicesSection'
+import { SocialEditor, SocialRenderer } from './sections/SocialSection'
 import { TeamEditor, TeamRenderer } from './sections/TeamSection'
 import { TextEditor, TextRenderer } from './sections/TextSection'
 import { ProductEditor, ProductRenderer } from './sections/ProductSection'
@@ -302,6 +305,23 @@ export const CORE_SECTION_REGISTRY: Record<CoreSectionType, SectionDefinition> =
     }),
     Editor: TestimonialsEditor,
     Renderer: TestimonialsRenderer,
+  },
+  social: {
+    label: 'Réseaux sociaux',
+    description: 'Vos publications TikTok, Instagram, Facebook ou YouTube, intégrées à la page.',
+    icon: Share2,
+    color: 'from-fuchsia-500 to-fuchsia-700',
+    category: 'content',
+    pinned: false,
+    capabilities: [],
+    createDefault: () => ({
+      id: createSectionId('social'),
+      type: 'social',
+      visible: true,
+      config: { heading: 'Sur les réseaux', items: [] } satisfies SocialSectionConfig,
+    }),
+    Editor: SocialEditor,
+    Renderer: SocialRenderer,
   },
   flexible: {
     label: 'Section personnalisée',

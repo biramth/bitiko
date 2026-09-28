@@ -15,6 +15,7 @@ import {
   Redo2,
   RotateCcw,
   SlidersHorizontal,
+  Trash2,
   Undo2,
   Wand2,
 } from 'lucide-react'
@@ -36,7 +37,8 @@ import { sanitizeSections } from '@/features/store-builder/sanitizeSections'
 import { archivePublishedSnapshot } from '@/services/publishHistory.service'
 import { ensurePinnedSections } from '@/config/defaultLayout'
 import { buildDefaultSystemTemplate } from '@/config/defaultTemplates'
-import { updateShop, uploadShopBanner, uploadShopLogo, uploadShopSectionImage } from '@/services/shop.service'
+import { updateShop, removeShopBrandAssets, uploadShopBanner, uploadShopLogo, uploadShopSectionImage, validateBrandImageFile } from '@/services/shop.service'
+import { ShopMonogram } from '@/components/ui/ShopMonogram'
 import { generateHomeLayout } from '@/features/onboarding/generateStorefront'
 import { profileFromShop } from '@/features/onboarding/storeProfile'
 import { listShopPages, createPage, deletePage, updatePage } from '@/services/page.service'
@@ -219,11 +221,11 @@ function pathToKey(path: string, pages: StorePage[]): ActiveKey | null {
  *  own commerce block) — curated per page so combinations stay sensible
  *  (e.g. no second product grid on the checkout page). */
 const TEMPLATE_ADDABLE: Record<SystemTemplateKey, SectionType[]> = {
-  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
-  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
-  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
-  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq', 'flexible'],
-  not_found: ['text', 'hero', 'image', 'promo', 'faq', 'flexible'],
+  catalogue: ['products', 'categories', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'social', 'flexible'],
+  product: ['product', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'social', 'flexible'],
+  cart: ['cart', 'featured_products', 'hero', 'text', 'image', 'promo', 'faq', 'social', 'flexible'],
+  checkout: ['checkout', 'hero', 'text', 'image', 'promo', 'faq', 'social', 'flexible'],
+  not_found: ['text', 'hero', 'image', 'promo', 'faq', 'social', 'flexible'],
 }
 
 /** The one section type each system template can't do without — removing it
@@ -1014,24 +1016,51 @@ function toLocalInputValue(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-/** Logo & bannière éditables depuis Personnaliser (même pipeline que les
- *  Paramètres : compression + vignette + `?v=` anti-cache). */
+/** Identité visuelle depuis Personnaliser (modification immédiate, même
+ *  pipeline que les Paramètres). Les aperçus montrent le rendu réel : logo à
+ *  taille d'en-tête (ou monogramme de repli), bannière au ratio du hero. */
 function ShopBrandFields({ shop }: { shop: Shop }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState<'logo' | 'banner' | null>(null)
+  const [removing, setRemoving] = useState<'logo' | 'banner' | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const upload = async (kind: 'logo' | 'banner', file: File) => {
+    const invalid = validateBrandImageFile(file)
+    if (invalid) {
+      setError(invalid)
+      return
+    }
+    setError(null)
     setUploading(kind)
     try {
       const { url, thumbUrl } = kind === 'logo' ? await uploadShopLogo(shop.id, file) : await uploadShopBanner(shop.id, file)
-      await updateShop(shop.id, kind === 'logo' ? { logo_url: url, logo_thumb_url: thumbUrl } : { banner_url: url })
+      await updateShop(shop.id, kind === 'logo' ? { logo_url: url, logo_thumb_url: thumbUrl } : { banner_url: url, banner_thumb_url: thumbUrl })
       await queryClient.refetchQueries({ queryKey: ['my-shop'] })
       toast.success(kind === 'logo' ? 'Logo mis à jour.' : 'Bannière mise à jour.')
     } catch {
-      toast.error("Échec de l'envoi. Réessayez.")
+      setError("Échec de l'envoi. Réessayez.")
     } finally {
       setUploading(null)
+    }
+  }
+
+  const remove = async (kind: 'logo' | 'banner') => {
+    setError(null)
+    setRemoving(kind)
+    try {
+      await updateShop(
+        shop.id,
+        kind === 'logo' ? { logo_url: null, logo_thumb_url: null } : { banner_url: null, banner_thumb_url: null },
+      )
+      await removeShopBrandAssets(shop.id, kind)
+      await queryClient.refetchQueries({ queryKey: ['my-shop'] })
+      toast.success(kind === 'logo' ? 'Logo retiré.' : 'Bannière retirée.')
+    } catch {
+      setError('Échec de la suppression. Réessayez.')
+    } finally {
+      setRemoving(null)
     }
   }
 
@@ -1040,39 +1069,87 @@ function ShopBrandFields({ shop }: { shop: Shop }) {
     if (file) void upload(kind, file)
     e.target.value = ''
   }
+  const busy = uploading !== null || removing !== null
+  const removeButtonClass =
+    'flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50'
 
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50/40 p-3">
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
-        <ImagePlus size={13} aria-hidden /> Logo & bannière
+      <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <ImagePlus size={13} aria-hidden /> Identité visuelle
       </p>
-      <div className="flex items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2">
-          {shop.logo_url ? (
-            <img src={shop.logo_thumb_url ?? shop.logo_url} alt="Logo" className="h-10 w-10 rounded-lg border border-gray-200 object-cover" />
-          ) : (
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
-              <ImagePlus size={16} aria-hidden />
-            </span>
-          )}
-          <span className="text-xs font-medium text-brand-700 hover:text-brand-800">
-            {uploading === 'logo' ? 'Envoi…' : shop.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
-          </span>
-          <input type="file" accept="image/*" className="hidden" onChange={onFile('logo')} disabled={uploading !== null} />
-        </label>
-        <label className="flex cursor-pointer items-center gap-2">
+      {error && (
+        <p role="alert" className="mb-3 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-700">
+          {error}
+        </p>
+      )}
+      <div className="space-y-4">
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-gray-600">Logo — tel qu’en en-tête de boutique</p>
+          <div className="flex min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2">
+            {shop.logo_url ? (
+              <img src={shop.logo_thumb_url ?? shop.logo_url} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+            ) : (
+              <ShopMonogram name={shop.name} size={32} />
+            )}
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">{shop.name}</span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <label className="flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-brand-700 hover:text-brand-800">
+              <ImagePlus size={13} aria-hidden />
+              {uploading === 'logo' ? 'Envoi…' : shop.logo_url ? 'Changer' : 'Ajouter'}
+              <input type="file" accept="image/*" className="hidden" onChange={onFile('logo')} disabled={busy} />
+            </label>
+            {shop.logo_url && (
+              <button
+                type="button"
+                onClick={() => void remove('logo')}
+                disabled={busy}
+                aria-label="Retirer le logo"
+                className={removeButtonClass}
+              >
+                {removing === 'logo' ? 'Suppression…' : <><Trash2 size={13} aria-hidden /> Retirer</>}
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+            Carré de préférence (JPG, PNG, WebP, 8 Mo max). Sans logo, l’initiale de ta boutique s’affiche. Visible en
+            en-tête, pied de page, favicon et partages.
+          </p>
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-gray-600">Bannière — telle qu’en haut de l’accueil</p>
           {shop.banner_url ? (
-            <img src={shop.banner_url} alt="Bannière" className="h-10 w-24 rounded-lg border border-gray-200 object-cover" />
+            <img src={shop.banner_url} alt="" className="aspect-[16/5] w-full rounded-lg border border-gray-200 object-cover" />
           ) : (
-            <span className="flex h-10 w-24 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
-              <ImagePlus size={16} aria-hidden />
-            </span>
+            <div className="flex aspect-[16/5] w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400">
+              <ImagePlus size={18} aria-hidden />
+              <span className="px-4 text-center text-[11px]">Aucune bannière — l’accueil utilise un fond aux couleurs de ta boutique.</span>
+            </div>
           )}
-          <span className="text-xs font-medium text-brand-700 hover:text-brand-800">
-            {uploading === 'banner' ? 'Envoi…' : shop.banner_url ? 'Changer la bannière' : 'Ajouter une bannière'}
-          </span>
-          <input type="file" accept="image/*" className="hidden" onChange={onFile('banner')} disabled={uploading !== null} />
-        </label>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <label className="flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-brand-700 hover:text-brand-800">
+              <ImagePlus size={13} aria-hidden />
+              {uploading === 'banner' ? 'Envoi…' : shop.banner_url ? 'Changer' : 'Ajouter'}
+              <input type="file" accept="image/*" className="hidden" onChange={onFile('banner')} disabled={busy} />
+            </label>
+            {shop.banner_url && (
+              <button
+                type="button"
+                onClick={() => void remove('banner')}
+                disabled={busy}
+                aria-label="Retirer la bannière"
+                className={removeButtonClass}
+              >
+                {removing === 'banner' ? 'Suppression…' : <><Trash2 size={13} aria-hidden /> Retirer</>}
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+            Large recommandé (1600×530). Affichée en haut de l’accueil et dans l’aperçu quand tu partages ton lien sur
+            WhatsApp.
+          </p>
+        </div>
       </div>
     </div>
   )

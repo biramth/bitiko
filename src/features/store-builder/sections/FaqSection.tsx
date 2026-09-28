@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, HelpCircle, Plus, Trash2 } from 'lucide-react'
+import type { Shop } from '@/types'
 import type { FaqLayout, FaqSectionConfig, ThemeConfig } from '@/types/builder'
 import { sectionHeadingClass } from '@/config/themeTokens'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
@@ -10,22 +11,34 @@ import { TextStyleField } from '../components/TextStyleControls'
 import { VisualPicker } from '../components/VisualPicker'
 import { SwatchBar, SwatchFrame } from '../components/LayoutSwatch'
 import { resolveTextStyle } from '@/config/textStyle'
+import { useActiveShopFaqs } from '@/features/cms/useCmsContent'
 
 export function FaqRenderer({
+  shop,
   config,
   themeConfig,
   sectionId,
   editable = false,
 }: {
+  shop?: Shop | null
   config: FaqSectionConfig
   themeConfig: ThemeConfig
   sectionId?: string
   editable?: boolean
 }) {
   const patch = useInlineEdit(sectionId)
+  const cmsMode = config.source === 'cms'
+  const { data: cmsItems, isLoading: cmsLoading } = useActiveShopFaqs(cmsMode ? shop?.id : undefined)
+  if (cmsMode && cmsLoading) return null
   const grid = (config.layout ?? 'accordion') === 'grid'
-  const items = editable ? config.items : config.items.filter((item) => item.question.trim() && item.answer.trim())
+  const items = cmsMode
+    ? (cmsItems ?? []).map((f) => ({ question: f.question, answer: f.answer }))
+    : editable
+      ? config.items
+      : config.items.filter((item) => item.question.trim() && item.answer.trim())
   if (items.length === 0 && !editable) return null
+  // En mode CMS le contenu vient de la page Contenu : aperçu seul.
+  const ro = cmsMode || !editable
 
   const updateItem = (index: number, field: 'question' | 'answer', value: string) => {
     patch({ items: config.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)) })
@@ -35,6 +48,11 @@ export function FaqRenderer({
     <section
       className={`mx-auto px-4 py-10 sm:px-6 sm:py-14 ${grid ? 'max-w-[var(--shop-content-width)]' : 'max-w-[min(48rem,var(--shop-content-width))]'}`}
     >
+      {cmsMode && editable && (
+        <p className="mx-auto mb-3 max-w-3xl rounded-lg bg-[var(--shop-surface)] px-3 py-2 text-center text-xs text-[var(--shop-text)]/60">
+          {(cmsItems?.length ?? 0) > 0 ? 'Questions gérées dans Contenu → FAQ.' : 'Aucune question : ajoute-les dans Contenu → FAQ.'}
+        </p>
+      )}
       {(config.heading.trim() || editable) && (
         <InlineStyleToolbar editable={editable} style={config.headingStyle} onCommit={(headingStyle) => patch({ headingStyle })} label="Style du titre">
           <InlineText
@@ -59,7 +77,7 @@ export function FaqRenderer({
             key={index}
             question={item.question}
             answer={item.answer}
-            editable={editable}
+            editable={!ro}
             grid={grid}
             questionStyle={config.questionStyle}
             answerStyle={config.answerStyle}
@@ -67,11 +85,11 @@ export function FaqRenderer({
             onAnswerChange={(value) => updateItem(index, 'answer', value)}
             onQuestionStyleChange={(questionStyle) => patch({ questionStyle })}
             onAnswerStyleChange={(answerStyle) => patch({ answerStyle })}
-            onRemove={config.items.length > 1 ? () => patch({ items: config.items.filter((_, i) => i !== index) }) : undefined}
+            onRemove={!cmsMode && config.items.length > 1 ? () => patch({ items: config.items.filter((_, i) => i !== index) }) : undefined}
           />
         ))}
       </div>
-      {editable && (
+      {editable && !cmsMode && (
         <button
           type="button"
           onClick={() => patch({ items: [...config.items, { question: 'Nouvelle question', answer: 'Réponse…' }] })}
@@ -214,6 +232,22 @@ export function FaqEditor({ config, onChange }: SectionEditorProps<FaqSectionCon
   return (
     <div className="space-y-4">
       <div>
+        <label className={editorLabelClass}>Contenu</label>
+        <select
+          value={config.source ?? 'manual'}
+          onChange={(e) => onChange({ ...config, source: e.target.value as 'manual' | 'cms' })}
+          className={editorInputClass}
+        >
+          <option value="manual">Écrit ici (manuel)</option>
+          <option value="cms">Depuis la page Contenu (CMS)</option>
+        </select>
+        <p className={`mt-1 ${editorHelpClass}`}>Le CMS centralise tes questions — le bloc ne fait que les afficher.</p>
+      </div>
+      {config.source === 'cms' ? (
+        <p className={editorHelpClass}>Ce bloc affiche tes questions actives, dans ton ordre. Gère-les dans Contenu → FAQ.</p>
+      ) : (
+      <>
+      <div>
         <label className={editorLabelClass}>Disposition</label>
         <div className="mt-1">
           <VisualPicker
@@ -250,6 +284,8 @@ export function FaqEditor({ config, onChange }: SectionEditorProps<FaqSectionCon
       ))}
       {config.items.length < 8 && <button type="button" onClick={() => onChange({ ...config, items: [...config.items, { question: '', answer: '' }] })} className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800"><Plus size={15} /> Ajouter une question</button>}
       <p className={`flex items-center gap-1.5 ${editorHelpClass}`}><HelpCircle size={13} /> Répondez aux questions qui bloquent le plus souvent vos clients. Une question sans réponse n'est pas affichée.</p>
+      </>
+      )}
     </div>
   )
 }
