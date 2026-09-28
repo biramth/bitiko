@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { useToast } from '@/components/ui/Toast'
 import { ORDER_STATUS_ACTION_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, getLinearNext } from '@/config/constants'
 import { updateOrderStatus } from '@/services/order.service'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import type { DashboardStats } from '@/services/dashboard.service'
 import { formatCurrency, timeAgo } from '@/utils/format'
 import type { Order, OrderStatus } from '@/types'
@@ -63,6 +64,7 @@ export function CommerceDashboard({
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: OrderStatus }) => updateOrderStatus(id, status),
@@ -183,16 +185,17 @@ export function CommerceDashboard({
           )}
         </Card>
       ) : (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Analytics commerçantes</p>
-            <h3 className="mt-1 text-lg font-semibold text-gray-900">Comprenez ce qui se vend vraiment</h3>
-            <p className="mt-1 max-w-xl text-sm text-gray-600">Panier moyen, produits les plus vendus et tendances détaillées sont disponibles à partir de l’offre Essentiel.</p>
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-gray-900">Produits les plus vendus</h3>
+              <p className="mt-1 text-sm text-gray-500">Découvrez ce qui se vend le mieux dans votre boutique.</p>
+            </div>
+            <Button variant="secondary" onClick={() => openUpgrade('analytics')}>
+              Voir le détail
+            </Button>
           </div>
-          <Link to="/admin/parametres/compte?billing=1" className="mt-4 inline-flex shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:mt-0">
-            Voir les offres
-          </Link>
-        </div>
+        </Card>
       )}
     </div>
   )

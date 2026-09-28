@@ -19,8 +19,8 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { canAddTeamMember } from '@/config/plans'
-import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
-import { planLimitMessage } from '@/features/billing/planLimit'
+import { useUpgrade } from '@/features/billing/upgradeContext'
+import { isPlanLimitError } from '@/features/billing/planLimit'
 import { useToast } from '@/components/ui/Toast'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -44,6 +44,7 @@ export function TeamPage() {
   usePageSeo({ title: 'Mon équipe — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { plan } = useShopPlan(shop?.id)
+  const { openUpgrade } = useUpgrade()
   const queryClient = useQueryClient()
   const toast = useToast()
 
@@ -84,13 +85,13 @@ export function TeamPage() {
       setEditing(null)
       toast.success(editing ? 'Membre mis à jour.' : 'Membre ajouté.')
     },
-    onError: (e) => toast.error(planLimitMessage(e) ?? 'Enregistrement impossible.'),
+    onError: (e) => (isPlanLimitError(e) ? openUpgrade('team-members') : toast.error('Enregistrement impossible.')),
   })
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => updateTeamMember(id, { active }),
     onSuccess: () => invalidate(),
-    onError: (e) => toast.error(planLimitMessage(e) ?? 'Impossible de modifier ce membre.'),
+    onError: (e) => (isPlanLimitError(e) ? openUpgrade('team-members') : toast.error('Impossible de modifier ce membre.')),
   })
 
   const removeMutation = useMutation({
@@ -137,18 +138,12 @@ export function TeamPage() {
         title="Mon équipe"
         subtitle="Les personnes que vos clients voient sur votre site et peuvent choisir pour leur rendez-vous."
         actions={
-          <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate}>
+          <Button icon={<Plus size={15} aria-hidden />} onClick={() => (canCreate ? openCreate() : openUpgrade('team-members'))}>
             Ajouter une personne
           </Button>
         }
       />
 
-      <PlanLimitBanner
-        used={activeCount}
-        max={plan.maxTeamMembers}
-        singular="personne visible sur votre site"
-        plural="personnes visibles sur votre site"
-      />
 
       <div className="mt-5">
         {members.length === 0 ? (

@@ -11,7 +11,6 @@ import {
   ImagePlus,
   LayoutGrid,
   Loader2,
-  Lock,
   Palette,
   Redo2,
   RotateCcw,
@@ -21,6 +20,8 @@ import {
 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useUpgrade } from '@/features/billing/upgradeContext'
+import { isPlanLimitError } from '@/features/billing/planLimit'
 import type { Plan } from '@/config/plans'
 import { useBuilderState, type BuilderSnapshot, type BuilderTarget } from '@/features/store-builder/useBuilderState'
 import { BuilderSidebar } from '@/features/store-builder/BuilderSidebar'
@@ -65,22 +66,23 @@ export function StoreBuilderPage() {
 }
 
 function StoreBuilderLock() {
+  const { openUpgrade } = useUpgrade()
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center gap-4 rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-        <Lock size={24} aria-hidden />
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+        <Wand2 size={24} aria-hidden />
       </span>
-      <h1 className="font-heading text-xl font-bold text-gray-900">Personnalisez votre boutique</h1>
+      <h1 className="font-heading text-xl font-bold text-gray-900">Composez votre boutique à votre image</h1>
       <p className="text-sm text-gray-500">
-        Cette fonctionnalité est incluse dans les offres payantes. Passez à Essentiel ou Pro pour débloquer les
-        outils avancés de personnalisation.
+        Styles, blocs et pages personnalisées : le builder complet vous laisse construire exactement le site que vous imaginez.
       </p>
-      <Link
-        to="/admin/parametres/compte?billing=1"
-        className="mt-2 flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+      <button
+        type="button"
+        onClick={() => openUpgrade('builder-styles')}
+        className="mt-2 flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
       >
-        <Wand2 size={15} aria-hidden /> Passer à Pro
-      </Link>
+        Activer le builder complet
+      </button>
     </div>
   )
 }
@@ -445,6 +447,7 @@ function contextPreviewPath(context: PreparedContext, productSlug: string | null
 
 function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useShopPlan>['plan'] }) {
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const [mode, setMode] = useState<BuilderMode>(() => (searchParams.get('mode') === 'layout' ? 'layout' : 'appearance'))
@@ -510,8 +513,8 @@ function StoreBuilder({ shop, plan }: { shop: Shop; plan: ReturnType<typeof useS
 
   const handleCreatePage = async (title: string, slug: string) => {
     if (plan.maxCustomPages !== null && pages.length >= plan.maxCustomPages) {
-      toast.error(`Votre plan ${plan.label} est limité à ${plan.maxCustomPages} page${plan.maxCustomPages > 1 ? 's' : ''} personnalisée${plan.maxCustomPages > 1 ? 's' : ''}.`)
       setCreateOpen(false)
+      openUpgrade('custom-pages')
       return
     }
     const page = await createPage(shop.id, title, slug)
@@ -1081,6 +1084,8 @@ function ShopBrandFields({ shop }: { shop: Shop }) {
  *  retour immédiat, sans vocabulaire technique. */
 function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
   const toast = useToast()
+  const { plan } = useShopPlan(shopId)
+  const { openUpgrade } = useUpgrade()
   const queryClient = useQueryClient()
   const [seoTitle, setSeoTitle] = useState(page.seo_title ?? '')
   const [seoDescription, setSeoDescription] = useState(page.seo_description ?? '')
@@ -1098,6 +1103,10 @@ function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
   const { checks, done } = scorePageSeo({ title: page.title, seoTitle, seoDescription, ogImage })
 
   const save = async () => {
+    if (!plan.advancedSeo) {
+      openUpgrade('seo')
+      return
+    }
     setSaving(true)
     try {
       await updatePage(page.id, {
@@ -1108,8 +1117,9 @@ function PageSeoFields({ page, shopId }: { page: StorePage; shopId: string }) {
       })
       await queryClient.invalidateQueries({ queryKey: ['shop-pages', shopId] })
       toast.success('Référencement enregistré.')
-    } catch {
-      toast.error("Échec de l'enregistrement.")
+    } catch (error) {
+      if (isPlanLimitError(error)) openUpgrade('seo')
+      else toast.error("Échec de l'enregistrement.")
     } finally {
       setSaving(false)
     }
@@ -1274,6 +1284,7 @@ function AppearanceTool({
   onRegisterSaver: (saver: (() => Promise<unknown>) | null) => void
 }) {
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
   const { data: activeProducts } = useActiveProducts({ shopId: shop.id, sort: 'recent', page: 1 })
   const firstProductSlug = useMemo(() => activeProducts?.products[0]?.slug ?? null, [activeProducts])
 
@@ -1419,7 +1430,7 @@ function AppearanceTool({
 
   const settingsPane = (
     <div className={`flex h-full flex-col ${isDesktop ? 'border-r border-gray-200' : ''}`}>
-      {plan.advancedBuilder && (
+      {(
         <div className="p-2 pb-0">
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             <button
@@ -1434,7 +1445,7 @@ function AppearanceTool({
             </button>
             <button
               type="button"
-              onClick={() => setTab('styles')}
+              onClick={() => (plan.advancedBuilder ? setTab('styles') : openUpgrade('builder-styles'))}
               aria-pressed={tab === 'styles'}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-all ${
                 tab === 'styles' ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'

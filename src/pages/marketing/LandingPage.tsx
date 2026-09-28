@@ -630,6 +630,7 @@ export function LandingPage() {
                       'Builder complet et pages personnalisées',
                       'Images de catégories et promotions',
                       'Analytics standard et import CSV',
+                      'SEO avancé : titre, description et image de partage par page',
                     ].map((f, i) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm"><Check size={15} className="mt-0.5 shrink-0 text-brand-500" aria-hidden /><span className={i === 0 ? 'font-semibold text-ink-900' : 'text-ink-700/80'}>{f}</span></li>
                     ))}

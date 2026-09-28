@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Download, Lock, Pencil, Plus, Trash2, Wallet } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Pencil, Plus, Trash2, Wallet } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
-import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
-import { planLimitMessage } from '@/features/billing/planLimit'
+import { useUpgrade } from '@/features/billing/upgradeContext'
+import { isPlanLimitError } from '@/features/billing/planLimit'
 import type { Plan } from '@/config/plans'
 import type { Shop } from '@/types'
 import {
@@ -49,6 +49,7 @@ function monthPeriod(offset: number): Period {
 export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
   const currency = shop.currency
   const currencyLabel = currency === 'XOF' ? 'F CFA' : currency
 
@@ -83,7 +84,7 @@ export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
       toast.success(editing ? 'Saisie modifiée.' : 'Saisie ajoutée au journal.')
       setEditing(null)
     },
-    onError: (e) => toast.error(planLimitMessage(e) ?? 'Enregistrement impossible. Vérifiez les champs.'),
+    onError: (e) => (isPlanLimitError(e) ? openUpgrade('finance-entries') : toast.error('Enregistrement impossible. Vérifiez les champs.')),
   })
 
   const removeMutation = useMutation({
@@ -115,12 +116,11 @@ export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
         <div className="flex items-center rounded-xl border border-gray-200 bg-white shadow-sm">
           <button
             type="button"
-            onClick={() => setOffset(offset - 1)}
-            disabled={!previousAllowed}
+            onClick={() => (previousAllowed ? setOffset(offset - 1) : openUpgrade('finance-history'))}
             aria-label="Mois précédent"
-            className="rounded-l-xl p-2.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
+            className="rounded-l-xl p-2.5 text-gray-500 hover:bg-gray-50 hover:text-gray-900"
           >
-            {previousAllowed ? <ChevronLeft size={18} aria-hidden /> : <Lock size={16} aria-hidden />}
+            <ChevronLeft size={18} aria-hidden />
           </button>
           <p className="min-w-40 px-2 text-center text-sm font-semibold text-gray-900" aria-live="polite">{period.label}</p>
           <button
@@ -139,24 +139,12 @@ export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
               Exporter (CSV)
             </Button>
           )}
-          <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={limitReached}>
+          <Button icon={<Plus size={15} aria-hidden />} onClick={() => (limitReached ? openUpgrade('finance-entries') : openCreate())}>
             Ajouter une saisie
           </Button>
         </div>
       </div>
 
-      {!previousAllowed && offset === 0 && (
-        <p className="text-xs text-gray-400">
-          Le plan gratuit affiche le mois en cours. L’historique complet est inclus dès le plan Essentiel.
-        </p>
-      )}
-
-      <PlanLimitBanner
-        used={createdThisMonth}
-        max={plan.maxMonthlyFinanceEntries}
-        singular="saisie ce mois-ci"
-        plural="saisies ce mois-ci"
-      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card><p className="text-xs text-gray-500">Recettes saisies</p><p className="mt-1 break-words text-base font-semibold text-emerald-700 sm:text-lg">{formatCurrency(income, currency)}</p></Card>
@@ -192,7 +180,7 @@ export function JournalView({ shop, plan }: { shop: Shop; plan: Plan }) {
             title="Aucune saisie ce mois-ci"
             description="Notez vos dépenses (stock, loyer, transport…) et les ventes faites hors ligne : Bitiko calcule votre bénéfice avec vos commandes et rendez-vous."
             action={
-              <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={limitReached}>
+              <Button icon={<Plus size={15} aria-hidden />} onClick={() => (limitReached ? openUpgrade('finance-entries') : openCreate())}>
                 Ajouter ma première saisie
               </Button>
             }

@@ -1,31 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Lock } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/utils/format'
 import type { CategoryTotal, MonthTotals } from './bilan'
-
-/** Encadré « fonction d'un plan supérieur » : dit clairement ce qui manque et mène aux offres. */
-export function UpgradeHint({ title, children, planLabel }: { title: string; children: React.ReactNode; planLabel: string }) {
-  return (
-    <Card className="border-brand-100 bg-brand-50">
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700">
-          <Lock size={16} aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{title}</p>
-          <p className="mt-0.5 text-sm text-gray-600">{children}</p>
-          <Link
-            to="/admin/parametres/compte?billing=1"
-            className="mt-2 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-800"
-          >
-            Passer au plan {planLabel}
-          </Link>
-        </div>
-      </div>
-    </Card>
-  )
-}
 
 /** Répartition par catégorie : libellé, montant, part et barre proportionnelle. */
 export function BreakdownList({

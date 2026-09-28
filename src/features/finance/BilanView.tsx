@@ -12,7 +12,8 @@ import type { Plan } from '@/config/plans'
 import type { Shop } from '@/types'
 import { formatCurrency } from '@/utils/format'
 import { variation } from './bilan'
-import { BreakdownList, MonthBars, UpgradeHint } from './FinanceParts'
+import { BreakdownList, MonthBars } from './FinanceParts'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import { buildBilanCsv, downloadTextFile, exportFilename } from './exportCsv'
 import { PRESET_LABELS, isPeriodAllowed, previousPeriod, resolvePeriod, type PeriodPreset } from './periods'
 import { useBilan, useTopItems } from './useFinanceData'
@@ -49,6 +50,7 @@ function Kpi({ label, value, hint, tone, extra }: { label: string; value: string
 /** Onglet « Bilan » : ce que le commerce a gagné, dépensé et ce qu'il lui reste, sur une période,
  *  avec export selon le plan (CSV dès Essentiel, bilan PDF imprimable en Pro). */
 export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
+  const { openUpgrade } = useUpgrade()
   const [preset, setPreset] = useState<PeriodPreset>('this_month')
   const period = resolvePeriod(preset)
   const allowed = isPeriodAllowed(period, plan.financeHistoryMonths)
@@ -82,7 +84,7 @@ export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setPreset(key)}
+              onClick={() => (locked ? openUpgrade('finance-history') : setPreset(key))}
               className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                 active ? 'bg-ink-900 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50'
               }`}
@@ -98,11 +100,7 @@ export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
         Bilan de <strong className="font-semibold text-gray-800">{period.label}</strong>
       </p>
 
-      {!allowed ? (
-        <UpgradeHint title="Cette période demande un plan supérieur" planLabel="Essentiel">
-          Le plan gratuit affiche le mois en cours. Avec l’Essentiel, retrouvez jusqu’à 12 mois d’historique, le trimestre et l’année, et téléchargez votre bilan.
-        </UpgradeHint>
-      ) : current.isLoading ? (
+      {!allowed ? null : current.isLoading ? (
         <Spinner />
       ) : current.isError ? (
         <ErrorMessage />
@@ -141,9 +139,13 @@ export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
           </div>
 
           {!plan.financeComparison && (
-            <p className="flex items-center gap-1.5 text-xs text-gray-400">
-              <Lock size={11} aria-hidden /> La comparaison avec la période précédente est incluse dans le plan Pro.
-            </p>
+            <button
+              type="button"
+              onClick={() => openUpgrade('finance-comparison')}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 underline-offset-2 hover:text-gray-800 hover:underline"
+            >
+              <ArrowUpRight size={12} aria-hidden /> Comparer avec la période précédente
+            </button>
           )}
 
           <Card>

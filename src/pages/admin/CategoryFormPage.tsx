@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Eye, Loader2, Tags } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import { createCategory, generateUniqueCategorySlug, updateCategory, uploadCategoryImage } from '@/services/category.service'
 import { slugify } from '@/utils/format'
 import { useToast } from '@/components/ui/Toast'
@@ -45,6 +46,7 @@ function Card({
 export function CategoryFormPage() {
   usePageSeo({ title: 'Nouvelle catégorie — Bitiko', noindex: true })
   const navigate = useNavigate()
+  const { openUpgrade } = useUpgrade()
   const queryClient = useQueryClient()
   const toast = useToast()
   const { data: shop } = useMyShop()
@@ -214,7 +216,7 @@ export function CategoryFormPage() {
                   uploading={uploadingImage}
                   isPro={isPro}
                   availableColors={availableColors}
-                  onLockedFeature={() => navigate('/admin/parametres/compte?billing=1')}
+                  onLockedFeature={() => openUpgrade('category-tiles')}
                   onColorChange={setColor}
                   onFileSelected={handleFileSelected}
                   onRemoveImage={() => {
