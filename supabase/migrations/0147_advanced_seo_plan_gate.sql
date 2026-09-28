@@ -7,10 +7,11 @@
 -- l'API Supabase avec sa propre session, comme pour les plafonds fermés par
 -- 0027 et 0039. Cette migration applique la règle en base.
 --
---   ADVANCED_SEO   0 = non inclus · 1 = inclus   (free 0 · essential 1 · pro 1)
+--   MAX_PAGES_WITH_SEO   pages portant du SEO avancé   free 0 · essential illimité · pro illimité
 --
--- Lue dans `plan_limits` (source unique, modifiable sans déploiement), comme
--- les autres plafonds. Les bases du SEO (balises automatiques, sitemap,
+-- Lue dans `plan_limits` (source unique, modifiable sans déploiement, NULL =
+-- illimité), comme les autres plafonds ; passer free à 1 ouvrirait le SEO sur
+-- une page sans nouvelle migration. Les bases du SEO (balises automatiques, sitemap,
 -- aperçus de partage, redirections de slug) restent pour tous : seuls
 -- l'ajout et la modification de ces quatre champs sont contrôlés.
 -- Retirer une personnalisation (remettre à vide / false) reste toujours
@@ -19,9 +20,9 @@
 -- Idempotent, re-exécutable.
 
 insert into public.plan_limits (plan_key, code, max_value) values
-  ('free', 'ADVANCED_SEO', 0),
-  ('essential', 'ADVANCED_SEO', 1),
-  ('pro', 'ADVANCED_SEO', 1)
+  ('free', 'MAX_PAGES_WITH_SEO', 0),
+  ('essential', 'MAX_PAGES_WITH_SEO', null),
+  ('pro', 'MAX_PAGES_WITH_SEO', null)
 on conflict do nothing;
 
 create or replace function public.enforce_page_advanced_seo()
@@ -31,7 +32,8 @@ security definer
 set search_path = public
 as $$
 declare
-  v_included integer;
+  v_max integer;
+  v_count integer;
   v_changes_seo boolean;
 begin
   -- Ne compte que ce qui AJOUTE ou MODIFIE une valeur : remettre à vide est libre.
@@ -45,8 +47,18 @@ begin
     return new;
   end if;
 
-  v_included := public.plan_limit(public.effective_plan_key(new.shop_id), 'ADVANCED_SEO');
-  if coalesce(v_included, 0) < 1 then
+  v_max := public.plan_limit(public.effective_plan_key(new.shop_id), 'MAX_PAGES_WITH_SEO');
+  if v_max is null then
+    return new;
+  end if;
+
+  select count(*) into v_count
+  from public.pages
+  where shop_id = new.shop_id
+    and id <> new.id
+    and (seo_title is not null or seo_description is not null or og_image is not null or noindex is true);
+
+  if v_count >= v_max then
     raise exception 'plan_limit_exceeded: le plan actuel n''inclut pas le référencement avancé des pages'
       using errcode = '23514';
   end if;

@@ -30,7 +30,12 @@ beforeAll(async () => {
     create role anon; create role authenticated;
     create table public.shops(id uuid primary key);
     create table public.shop_subscriptions(shop_id uuid primary key, plan text not null, current_period_end timestamptz);
-    create table public.plan_limits(plan_key text not null, code text not null, max_value integer, primary key (plan_key, code));
+    create table public.plan_limits(
+      plan_key text not null,
+      code text not null check (code ~ '^MAX_[A-Z0-9_]+$'),
+      max_value integer check (max_value is null or max_value >= 0),
+      primary key (plan_key, code)
+    );
     create table public.pages(
       id uuid primary key default gen_random_uuid(),
       shop_id uuid not null references public.shops(id),
