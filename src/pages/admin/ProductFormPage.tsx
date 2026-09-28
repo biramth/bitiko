@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ListChecks, Eye, ImagePlus, Layers, Loader2, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import {
   countActiveProducts,
   createProduct,
@@ -107,6 +108,7 @@ function ProductForm({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -302,8 +304,7 @@ function ProductForm({
     const files = e.target.files
     if (!files || files.length === 0) return
     if (imageLimitReached) {
-      const limit = plan.maxProductImages
-      setError(limit ? `Limite du plan gratuit atteinte : ${limit} photos max par produit.` : "Impossible d'ajouter plus de photos.")
+      openUpgrade('product-photos')
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -335,8 +336,7 @@ function ProductForm({
 
   const handleVariantPhotoChange = (key: string, file: File) => {
     if (imageLimitReached) {
-      const limit = plan.maxProductImages
-      setError(limit ? `Limite du plan gratuit atteinte : ${limit} photos max par produit.` : "Impossible d'ajouter plus de photos.")
+      openUpgrade('product-photos')
       return
     }
     const url = URL.createObjectURL(file)
@@ -439,10 +439,8 @@ function ProductForm({
   // (migration 0046) mirrors this. Variants: 2 max on free.
   const plan = PLANS[planKey]
   const variantPhotoCount = variants.filter((v) => v.imageUrl || v.photoFile).length
-  const photoCount = images.length + variantPhotoCount
   const imageLimitReached = !canAddProductImage(plan, images.length, variantPhotoCount)
   const variantLimitReached = !canAddVariant(plan, variants.length)
-  const photoBudgetNote = plan.maxProductImages !== null ? `${photoCount} / ${plan.maxProductImages}` : null
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -688,28 +686,14 @@ function ProductForm({
 
               <Toggle
                 checked={effectiveActive}
-                onChange={(value) => setActive(limitReached ? false : value)}
-                disabled={limitReached}
+                onChange={(value) => (value && limitReached ? openUpgrade('products') : setActive(value))}
                 label="Produit actif"
                 description={
                   limitReached
-                    ? `Limite du plan gratuit atteinte (${maxActiveProducts} produits actifs).`
+                    ? 'Pour l’instant, ce produit reste en brouillon : il n’est pas encore visible sur votre boutique.'
                     : 'Visible et commandable dans la boutique.'
                 }
               />
-              {limitReached && (
-                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                  <Lock size={16} className="mt-0.5 shrink-0 text-amber-600" aria-hidden />
-                  <p className="text-sm text-amber-800">
-                    Vous avez atteint la limite de {maxActiveProducts} produits actifs du plan
-                    gratuit. Ce produit sera enregistré comme inactif.{' '}
-                    <Link to="/admin/parametres/compte?billing=1" className="font-semibold underline underline-offset-2">
-                      Passez à Pro
-                    </Link>{' '}
-                    pour activer des produits illimités.
-                  </p>
-                </div>
-              )}
             </FormCard>
 
             <FormCard icon={ImagePlus} title="Photos" description="Les photos affichées sur votre boutique.">
@@ -777,10 +761,8 @@ function ProductForm({
                 ))}
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={imageLimitReached}
-                  title={imageLimitReached ? `Limite : ${plan.maxProductImages} photos max par produit` : undefined}
-                  className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-brand-300 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-400"
+                  onClick={() => (imageLimitReached ? openUpgrade('product-photos') : fileInputRef.current?.click())}
+                  className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-brand-300 hover:text-brand-600"
                 >
                   <Upload size={20} />
                   <span className="text-xs">Ajouter</span>
@@ -791,22 +773,12 @@ function ProductForm({
                   accept="image/*"
                   multiple
                   onChange={handleFileChange}
-                  disabled={imageLimitReached}
                   className="hidden"
                 />
               </div>
               <p className="text-xs text-gray-500">
                 Glissez-déposez pour réorganiser. La première photo est utilisée comme miniature
                 dans le catalogue.{' '}
-                {photoBudgetNote && (
-                  <>
-                    <span className={imageLimitReached ? 'font-semibold text-amber-600' : ''}>
-                      {photoBudgetNote} photo{photoCount > 1 ? 's' : ''} utilisée{photoCount > 1 ? 's' : ''}
-                    </span>{' '}
-                    (photos produit + photos de variantes). Le plan gratuit plafonne à{' '}
-                    {plan.maxProductImages} photos par produit.
-                  </>
-                )}
               </p>
             </FormCard>
 
@@ -821,7 +793,6 @@ function ProductForm({
               <VariantsEditor
                 variants={variants}
                 setVariants={setVariants}
-                plan={plan}
                 basePrice={price}
                 imageLimitReached={imageLimitReached}
                 variantLimitReached={variantLimitReached}

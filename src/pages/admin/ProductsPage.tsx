@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ImageOff, Package, Pencil, Plus, Search, Tags, Trash2, Upload, X } from 'lucide-react'
 import { useShopRole } from '@/features/shop-settings/useShopRole'
@@ -8,7 +8,7 @@ import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useCategories } from '@/features/categories/useCategories'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { useShopProducts } from '@/features/products/useProducts'
-import { countActiveProducts, deleteProductCompletely, updateProduct } from '@/services/product.service'
+import { deleteProductCompletely, updateProduct } from '@/services/product.service'
 import { formatCurrency } from '@/utils/format'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { ADMIN_PRODUCTS_PAGE_SIZE } from '@/config/constants'
@@ -141,36 +141,6 @@ function InlineField({
   )
 }
 
-function PlanGauge({ active, max, label }: { active: number; max: number; label: string }) {
-  const pct = Math.min(100, Math.round((active / max) * 100))
-  return (
-    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="text-gray-500">{label} — produits actifs</span>
-        <span className="font-medium text-gray-900">
-          {active}/{max}
-        </span>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
-        <div
-          className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-brand-500'}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {pct >= 80 && (
-        <p className="mt-2 text-xs text-gray-500">
-          {pct >= 100
-            ? 'Limite atteinte : les nouveaux produits seront enregistrés inactifs. '
-            : 'Vous approchez de la limite des produits actifs. '}
-          <Link to="/admin/parametres/compte?billing=1" className="font-medium text-brand-700 underline underline-offset-2">
-            Passer à Pro
-          </Link>
-        </p>
-      )}
-    </div>
-  )
-}
-
 export function ProductsPage() {
   usePageSeo({ title: 'Produits — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
@@ -218,12 +188,6 @@ export function ProductsPage() {
     },
     lowStockThreshold,
   )
-
-  const { data: activeProductCount } = useQuery({
-    queryKey: ['active-product-count', shop?.id],
-    queryFn: () => countActiveProducts(shop?.id as string),
-    enabled: !!shop?.id,
-  })
 
   const products = data?.products ?? []
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ADMIN_PRODUCTS_PAGE_SIZE)) : 1
@@ -380,12 +344,6 @@ export function ProductsPage() {
               <X size={14} />
             </button>
           </span>
-        </div>
-      )}
-
-      {activeProductCount != null && PLANS[planKey].maxActiveProducts !== null && (
-        <div data-guide="guide-plan-produits">
-          <PlanGauge active={activeProductCount} max={PLANS[planKey].maxActiveProducts} label={PLANS[planKey].label} />
         </div>
       )}
 

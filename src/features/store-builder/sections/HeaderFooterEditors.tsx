@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Lock, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import type { FooterLayout, FooterSectionConfig, HeaderLayout, HeaderSectionConfig, NavigationLink } from '@/types/builder'
 import { editorHelpClass, editorInputClass, editorLabelClass, type SectionEditorProps } from './shared'
 import { TextStyleField } from '../components/TextStyleControls'
@@ -206,6 +206,7 @@ export function HeaderEditor({ config, onChange }: SectionEditorProps<HeaderSect
 }
 
 export function FooterEditor({ config, onChange, removableBranding }: SectionEditorProps<FooterSectionConfig>) {
+  const { openUpgrade } = useUpgrade()
   return (
     <div className="space-y-3">
       <div>
@@ -293,15 +294,10 @@ export function FooterEditor({ config, onChange, removableBranding }: SectionEdi
           Masquer « Propulsé par Bitiko »
         </label>
       ) : (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-          <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
-          <span>
-            Masquer « Propulsé par Bitiko » est réservé au plan Pro.{' '}
-            <Link to="/admin/parametres/compte?billing=1" className="font-semibold underline underline-offset-2 hover:text-amber-900">
-              Passer à Pro
-            </Link>
-          </span>
-        </div>
+        <label className={checkboxRow}>
+          <input type="checkbox" checked={false} onChange={() => openUpgrade('branding')} />
+          Masquer « Propulsé par Bitiko »
+        </label>
       )}
       <p className={editorHelpClass}>
         Le footer s'affiche sur toutes les pages. Les réseaux sociaux se règlent dans Paramètres → Contact.

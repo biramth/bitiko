@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import { AlertTriangle, Check, Download, Loader2, Upload } from 'lucide-react'
 import { bulkCreateProducts, type BulkProductRow } from '@/services/product.service'
 import { Dialog } from '@/components/ui/Dialog'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import { useToast } from '@/components/ui/Toast'
 import { normalizePrice } from '@/utils/price'
 import type { Category } from '@/types'
@@ -86,6 +87,7 @@ export function ProductImportDialog({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
+  const { openUpgrade } = useUpgrade()
   const [rows, setRows] = useState<ParsedRow[] | null>(null)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<{ created: number; inactive: number } | null>(null)
@@ -160,17 +162,31 @@ export function ProductImportDialog({
             {result.inactive > 0 && (
               <>
                 {' '}
-                {result.inactive} enregistré{result.inactive > 1 ? 's' : ''} inactif{result.inactive > 1 ? 's' : ''} (limite de produits actifs du plan gratuit atteinte).
+                {result.inactive} reste{result.inactive > 1 ? 'nt' : ''} en brouillon : pas encore visible{result.inactive > 1 ? 's' : ''} sur votre boutique.
               </>
             )}
           </p>
-          <button
-            type="button"
-            onClick={handleClose}
-            className={buttonClass({ size: 'lg', className: 'mt-4' })}
-          >
-            Fermer
-          </button>
+          <div className="mt-4 flex flex-col items-center gap-2">
+            {result.inactive > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose()
+                  openUpgrade('products')
+                }}
+                className={buttonClass()}
+              >
+                Rendre ces produits visibles
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClose}
+              className={buttonClass({ variant: result.inactive > 0 ? 'ghost' : 'primary' })}
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       ) : !rows ? (
         <div>

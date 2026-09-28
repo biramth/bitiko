@@ -2,7 +2,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { UpgradeHint } from '@/features/finance/FinanceParts'
 import { useBilan, useTopItems } from '@/features/finance/useFinanceData'
 import { PRESET_LABELS, isPeriodAllowed, monthLabel, resolvePeriod, type PeriodPreset } from '@/features/finance/periods'
 import { PageLoader } from '@/components/ui/PageLoader'
@@ -42,9 +41,9 @@ export function BilanPrintPage() {
   if (!allowed) {
     return (
       <div className="mx-auto max-w-xl p-6">
-        <UpgradeHint title="Cette période demande un plan supérieur" planLabel="Essentiel">
-          Le plan gratuit permet d’imprimer le bilan du mois en cours. L’Essentiel ouvre 12 mois d’historique, le trimestre et l’année.
-        </UpgradeHint>
+        <p className="text-sm text-gray-600">
+          Cette période n’est pas incluse dans votre offre actuelle : le bilan du mois en cours reste imprimable, et Essentiel ouvre l’historique plus loin.
+        </p>
         <Link to="/admin/gestion" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900">
           <ArrowLeft size={14} aria-hidden /> Retour aux finances
         </Link>

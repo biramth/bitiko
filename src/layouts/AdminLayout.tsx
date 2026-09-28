@@ -30,6 +30,7 @@ import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { endImpersonation, getImpersonation } from '@/lib/supportSession'
 import { PageLoader } from '@/components/ui/PageLoader'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
+import { UpgradeProvider } from '@/features/billing/UpgradeProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
 import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
@@ -420,6 +421,7 @@ export function AdminLayout() {
 
   return (
     <GuidedTourProvider>
+      <UpgradeProvider>
       <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-gray-50">
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
@@ -534,6 +536,7 @@ export function AdminLayout() {
       </div>
       </div>
       <GuidedTourButton />
+      </UpgradeProvider>
     </GuidedTourProvider>
   )
 }

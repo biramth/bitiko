@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus, Settings2, Tags, Trash2 } from 'lucide-react'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { useShopPlan } from '@/features/billing/useShopPlan'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import { themeTileColors } from '@/features/categories/categoryTile'
 import {
   deleteCategories,
@@ -383,7 +384,7 @@ function MoveDialog({
 
 export function CategoriesPage() {
   usePageSeo({ title: 'Catégories — Bitiko', noindex: true })
-  const navigate = useNavigate()
+  const { openUpgrade } = useUpgrade()
   const { data: shop } = useMyShop()
   const { planKey } = useShopPlan(shop?.id)
   const hasPaidPlan = planKey !== 'free'
@@ -809,7 +810,7 @@ export function CategoriesPage() {
         isPending={updateDetailsMutation.isPending}
         isPro={hasPaidPlan}
         availableColors={availableColors}
-        onLockedFeature={() => navigate('/admin/parametres/compte?billing=1')}
+        onLockedFeature={() => openUpgrade('category-tiles')}
         onClose={() => setEditTarget(null)}
       />
 

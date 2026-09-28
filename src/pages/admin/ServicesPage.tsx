@@ -17,8 +17,8 @@ import {
 import { formatCurrency } from '@/utils/format'
 import { useShopPlan } from '@/features/billing/useShopPlan'
 import { canAddService } from '@/config/plans'
-import { PlanLimitBanner } from '@/features/billing/PlanLimitBanner'
-import { planLimitMessage } from '@/features/billing/planLimit'
+import { useUpgrade } from '@/features/billing/upgradeContext'
+import { isPlanLimitError } from '@/features/billing/planLimit'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -56,6 +56,7 @@ export function ServicesPage() {
   usePageSeo({ title: 'Prestations — Bitiko', noindex: true })
   const { data: shop } = useMyShop()
   const { plan } = useShopPlan(shop?.id)
+  const { openUpgrade } = useUpgrade()
   const { data: categories = [] } = useCategories(shop?.id, 'service')
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -110,7 +111,7 @@ export function ServicesPage() {
       setEditing(null)
       toast.success(editing ? 'Prestation mise à jour.' : 'Prestation créée.')
     },
-    onError: (e) => toast.error(planLimitMessage(e) ?? 'Enregistrement impossible. Vérifiez les champs.'),
+    onError: (e) => (isPlanLimitError(e) ? openUpgrade('services') : toast.error('Enregistrement impossible. Vérifiez les champs.')),
   })
 
   const toggleMutation = useMutation({
@@ -119,7 +120,7 @@ export function ServicesPage() {
       invalidate()
       toast.success(v.active ? 'Prestation activée.' : 'Prestation désactivée.')
     },
-    onError: (e) => toast.error(planLimitMessage(e) ?? 'Impossible de modifier la prestation.'),
+    onError: (e) => (isPlanLimitError(e) ? openUpgrade('services') : toast.error('Impossible de modifier la prestation.')),
   })
 
   const removeMutation = useMutation({
@@ -178,19 +179,13 @@ export function ServicesPage() {
                 <ExternalLink size={14} aria-hidden /> Voir sur mon site
               </a>
             )}
-            <Button icon={<Plus size={15} aria-hidden />} onClick={openCreate} disabled={!canCreate} data-guide="guide-nouvelle-prestation">
+            <Button icon={<Plus size={15} aria-hidden />} onClick={() => (canCreate ? openCreate() : openUpgrade('services'))} data-guide="guide-nouvelle-prestation">
               Nouvelle prestation
             </Button>
           </>
         }
       />
 
-      <PlanLimitBanner
-        used={activeCount}
-        max={plan.maxActiveServices}
-        singular="prestation visible sur votre site"
-        plural="prestations visibles sur votre site"
-      />
 
       <div className="mt-5">
         {services.length === 0 ? (

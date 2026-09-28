@@ -1,4 +1,3 @@
-import { PLANS } from '@/config/plans'
 import type { GuidedTour } from './types'
 
 export const GUIDED_TOURS: GuidedTour[] = [
@@ -31,14 +30,14 @@ export const GUIDED_TOURS: GuidedTour[] = [
         prepare: 'admin-menu-open',
         capability: 'HAS_SERVICES',
         title: 'Prestations',
-        body: `Ce que tu proposes à tes clients : un nom, un prix, une durée. Le plan gratuit autorise ${PLANS.free.maxActiveServices} prestations actives.`,
+        body: `Ce que tu proposes à tes clients : un nom, un prix, une durée.`,
       },
       {
         target: '[data-guide="guide-nav-produits"]',
         prepare: 'admin-menu-open',
         capability: 'HAS_PRODUCTS',
         title: 'Produits',
-        body: `Ajoute, modifie et organise tes produits. Le plan gratuit autorise jusqu’à ${PLANS.free.maxActiveProducts} produits actifs et ${PLANS.free.maxProductImages} photos par produit.`,
+        body: `Ajoute, modifie et organise tes produits.`,
       },
       {
         target: '[data-guide="guide-nav-personnaliser"]',
@@ -75,17 +74,12 @@ export const GUIDED_TOURS: GuidedTour[] = [
       {
         target: '[data-guide="guide-nouveau-produit"]',
         title: 'Nouveau produit',
-        body: `Ce bouton ouvre un formulaire guidé : nom, prix, stock, photos… Le plan gratuit offre ${PLANS.free.maxProductImages} photos par produit, en comptant une photo par déclinaison (taille, couleur…).`,
+        body: `Ce bouton ouvre un formulaire guidé : nom, prix, stock, photos… Ajoute des photos et, si besoin, des déclinaisons (taille, couleur…).`,
       },
       {
         target: '[data-guide="guide-recherche-produit"]',
         title: 'Recherche et filtres',
         body: 'Ta vitrine grandit vite : recherche par nom, filtre par catégorie ou par niveau de stock.',
-      },
-      {
-        target: '[data-guide="guide-plan-produits"]',
-        title: 'Ta jauge de plan',
-        body: `Surveille cette jauge : le plan gratuit plafonne à ${PLANS.free.maxActiveProducts} produits actifs. Au-delà, tes produits sont enregistrés inactifs — passe à Essentiel pour en activer plus.`,
       },
       {
         title: 'Astuce',

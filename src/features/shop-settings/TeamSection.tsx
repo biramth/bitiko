@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Crown, MailPlus, Trash2, Users } from 'lucide-react'
+import { MailPlus, Trash2, Users } from 'lucide-react'
 import { useShopPlan } from '@/features/billing/useShopPlan'
-import { UpgradeTeaserDialog } from '@/features/billing/UpgradeTeaserDialog'
+import { useUpgrade } from '@/features/billing/upgradeContext'
 import {
   SHOP_MEMBER_ROLE_LABELS,
   inviteShopMember,
@@ -30,7 +30,7 @@ export function TeamSection({ shop }: { shop: Shop }) {
   const { plan, isLoading: planLoading } = useShopPlan(shop.id)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<ShopMemberRole>('vendeur')
-  const [upsellOpen, setUpsellOpen] = useState(false)
+  const { openUpgrade } = useUpgrade()
 
   const { data: members, isLoading, isError } = useQuery({
     queryKey: ['shop-members', shop.id],
@@ -68,23 +68,12 @@ export function TeamSection({ shop }: { shop: Shop }) {
 
   return (
     <div className="space-y-4">
-      {!plan.teamAccess && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-amber-500">
-            <Crown size={18} aria-hidden />
-          </span>
-          <p className="text-sm text-amber-800">
-            L'accès collaborateurs fait partie du plan Pro. Préparez votre invitation ci-dessous — on vous proposera
-            de passer au plan supérieur au moment de l'envoyer.
-          </p>
-        </div>
-      )}
       <form
         onSubmit={(e) => {
           e.preventDefault()
           if (!email.trim()) return
           if (!plan.teamAccess) {
-            setUpsellOpen(true)
+            openUpgrade('collaborators')
             return
           }
           inviteMutation.mutate()
@@ -174,13 +163,6 @@ export function TeamSection({ shop }: { shop: Shop }) {
         Manager : catalogue, commandes et clients comme vous. Vendeur : lecture + avancement des commandes.
         Paramètres, facturation et équipe restent au propriétaire.
       </p>
-
-      <UpgradeTeaserDialog
-        open={upsellOpen}
-        onClose={() => setUpsellOpen(false)}
-        feature="L'accès collaborateurs"
-        description="Passez au plan Pro pour inviter votre équipe sur cette boutique."
-      />
     </div>
   )
 }

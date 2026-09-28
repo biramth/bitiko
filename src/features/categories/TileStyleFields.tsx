@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Crown, ImageIcon, Loader2, Palette, Plus, X } from 'lucide-react'
+import { ImageIcon, Loader2, Palette, Plus, X } from 'lucide-react'
 
 export function TileStyleFields({
   color,
@@ -31,11 +31,6 @@ export function TileStyleFields({
       <div>
         <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
           <Palette size={14} aria-hidden /> Couleur de fond
-          {!isPro && (
-            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-              3 couleurs du thème
-            </span>
-          )}
         </label>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -65,8 +60,8 @@ export function TileStyleFields({
               type="button"
               onClick={() => (isPro ? onColorChange(color) : onLockedFeature())}
               aria-label="Couleur appliquée actuellement"
-              title="Couleur appliquée — disponible en version Pro"
-              className={`h-8 w-8 rounded-full border ${isPro ? '' : 'cursor-not-allowed opacity-70'}`}
+              title="Couleur appliquée"
+              className="h-8 w-8 rounded-full border"
               style={{ backgroundColor: color ?? undefined }}
             />
           )}
@@ -88,11 +83,10 @@ export function TileStyleFields({
             <button
               type="button"
               onClick={onLockedFeature}
-              aria-label="Personnaliser la couleur de fond (offre payante)"
-              title="Disponible avec une offre payante"
-              className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50"
+              aria-label="Personnaliser la couleur de fond"
+              className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
             >
-              <Crown size={12} className="text-amber-500" aria-hidden /> Couleur sur mesure
+              <Plus size={12} aria-hidden /> Couleur sur mesure
             </button>
           )}
           <input
@@ -105,19 +99,14 @@ export function TileStyleFields({
             tabIndex={-1}
           />
         </div>
-        {!isPro && (
-          <p className="mt-1 text-xs text-gray-500">
-            Couleurs issues des couleurs de votre boutique (titres, accent et arrière-plan).
-          </p>
-        )}
+        <p className="mt-1 text-xs text-gray-500">
+          Les couleurs proposées viennent de votre boutique : titres, accent et arrière-plan.
+        </p>
       </div>
 
       <div>
         <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
           <ImageIcon size={14} aria-hidden /> Image de couverture
-          {isPro && <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-            <Crown size={10} aria-hidden /> Essentiel+
-          </span>}
         </label>
 
         {isPro ? (
@@ -165,15 +154,9 @@ export function TileStyleFields({
           <button
             type="button"
             onClick={onLockedFeature}
-            className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-left transition-colors hover:bg-gray-100"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-8 text-sm text-gray-500 transition-colors hover:border-brand-300 hover:text-brand-600"
           >
-            <span className="flex items-center gap-2 text-sm text-gray-500">
-              <Crown size={16} className="text-amber-500" aria-hidden />
-              Les images de couverture sont disponibles avec Essentiel ou Pro.
-            </span>
-            <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
-              Voir les offres
-            </span>
+            <Plus size={16} aria-hidden /> Ajouter une image
           </button>
         )}
       </div>

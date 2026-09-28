@@ -55,6 +55,9 @@ export interface Plan {
   financeExport: 'none' | 'csv' | 'pdf'
   /** Comparaison avec la période précédente et synthèse annuelle. */
   financeComparison: boolean
+  /** Référencement avancé des pages (titre, description, image de partage, exclusion Google).
+   *  Les bases (balises automatiques, sitemap, aperçus de partage) restent pour tous. */
+  advancedSeo: boolean
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
@@ -81,6 +84,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: 1,
     financeExport: 'pdf',
     financeComparison: false,
+    advancedSeo: false,
   },
   essential: {
     key: 'essential',
@@ -103,6 +107,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: 12,
     financeExport: 'pdf',
     financeComparison: false,
+    advancedSeo: true,
   },
   pro: {
     key: 'pro',
@@ -125,6 +130,7 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: null,
     financeExport: 'pdf',
     financeComparison: true,
+    advancedSeo: true,
   },
 }
 
