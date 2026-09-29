@@ -4,14 +4,16 @@ import { deleteUserCompletely } from './_lib/userDeletion.js'
 import { sendEmail } from './_lib/resendEmail.js'
 import { proUpgradeRequestEmailHtml } from './_lib/emailTemplates.js'
 import { PLANS, type PlanKey } from '../src/config/plans.js'
+import { SUPPORT_EMAIL } from '../src/config/contact.js'
+import { isWebPushConfigured, sendWebPushToUsers } from './_lib/webPush.js'
 
-const ADMIN_EMAIL = 'papebiramethiombanee@gmail.com'
+const ADMIN_EMAIL = SUPPORT_EMAIL
 
 /**
  * Account-level serverless endpoint (account deletion + manual pro upgrade
  * request), consolidated into one function to stay under the Hobby plan's
  * function limit — the vercel.json rewrites map the readable URLs onto
- * `?action=`. Both actions act on the authenticated caller's own account.
+ * `?action=`. Every action acts on the authenticated caller's own account.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = typeof req.query.action === 'string' ? req.query.action : ''
@@ -21,6 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleDeleteAccount(req, res)
     case 'upgrade':
       return handleRequestProUpgrade(req, res)
+    case 'push-test':
+      return handlePushTest(req, res)
     default:
       res.status(404).json({ error: 'Action inconnue.' })
   }
@@ -189,6 +193,35 @@ async function handleRequestProUpgrade(req: VercelRequest, res: VercelResponse) 
     res.status(200).json({ sent: true })
   } catch (err) {
     console.error('request-pro-upgrade failed', err)
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
+  }
+}
+
+/** Notification de test vers les appareils de l'appelant, pour vérifier l'activation depuis l'admin. */
+async function handlePushTest(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+  if (!isWebPushConfigured()) {
+    res.status(503).json({ error: 'Les notifications ne sont pas encore disponibles.' })
+    return
+  }
+  const userId = await getUserIdFromAuthHeader(req.headers.authorization)
+  if (!userId) {
+    res.status(401).json({ error: 'Non authentifié.' })
+    return
+  }
+  try {
+    const result = await sendWebPushToUsers(getSupabaseAdmin(), [userId], {
+      title: 'Notifications activées',
+      body: 'Vous serez prévenu ici de chaque nouvelle commande ou demande de rendez-vous.',
+      url: '/admin',
+      tag: 'bitiko-push-test',
+    })
+    res.status(200).json(result)
+  } catch (err) {
+    console.error('push-test failed', err)
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue.' })
   }
 }

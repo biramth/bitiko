@@ -78,8 +78,8 @@ describe('dispatchEvents', () => {
         { id: 'r3', shop_id: 'shop-a', event_type: 'ORDER_PAID', channel: 'log', template: {} },
       ],
     })
-    // 2 exécutions : la règle journal r1 + l'email d'alerte par défaut d'une nouvelle commande (non journalisé, sans ligne en base).
-    expect(await dispatchEvents(admin)).toEqual({ processed: 1, runs: 2 })
+    // 3 exécutions : la règle journal r1 + l'email et le push par défaut d'une nouvelle commande (non journalisés, sans ligne en base).
+    expect(await dispatchEvents(admin)).toEqual({ processed: 1, runs: 3 })
     const runs = writes.filter((w) => w.table === 'automation_runs')
     expect(runs).toHaveLength(1)
     expect((runs[0].values as { rule_id: string }).rule_id).toBe('r1')
@@ -96,38 +96,61 @@ describe('dispatchEvents', () => {
 
 describe('resolveRules — alertes par défaut', () => {
   const event = { shop_id: 'shop-a', type: 'ORDER_CREATED' }
+  const emails = (rules: ReturnType<typeof resolveRules>) => rules.filter((r) => r.channel === 'email')
 
   it('envoie l’email d’alerte d’office quand le marchand n’a rien réglé', () => {
-    const resolved = resolveRules([], event)
+    const resolved = emails(resolveRules([], event))
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({ id: null, channel: 'email', event_type: 'ORDER_CREATED' })
     expect(resolved[0].template.subject).toContain('{{order_number}}')
   })
 
   it('respecte une désactivation explicite (pas d’email par défaut)', () => {
-    expect(resolveRules([rule({ enabled: false })], event)).toEqual([])
+    expect(emails(resolveRules([rule({ enabled: false })], event))).toEqual([])
   })
 
   it('utilise le message personnalisé du marchand plutôt que le défaut', () => {
     const custom = rule({ enabled: true, template: { subject: 'Hop !', body: 'Une vente' } })
-    const resolved = resolveRules([custom], event)
+    const resolved = emails(resolveRules([custom], event))
     expect(resolved.map((r) => r.id)).toEqual(['r1'])
     expect(resolved[0].template.subject).toBe('Hop !')
   })
 
   it('un canal journal seul n’empêche pas l’email par défaut', () => {
     const resolved = resolveRules([rule({ channel: 'log', enabled: true })], event)
-    expect(resolved.map((r) => r.channel).sort()).toEqual(['email', 'log'])
+    expect(resolved.map((r) => r.channel).sort()).toEqual(['email', 'log', 'push'])
   })
 
   it('couvre le stock, mais pas les événements sans alerte par défaut', () => {
-    expect(resolveRules([], { shop_id: 'shop-a', type: 'STOCK_LOW' })).toHaveLength(1)
-    expect(resolveRules([], { shop_id: 'shop-a', type: 'STOCK_OUT' })).toHaveLength(1)
+    expect(emails(resolveRules([], { shop_id: 'shop-a', type: 'STOCK_LOW' }))).toHaveLength(1)
+    expect(emails(resolveRules([], { shop_id: 'shop-a', type: 'STOCK_OUT' }))).toHaveLength(1)
     expect(resolveRules([], { shop_id: 'shop-a', type: 'ORDER_PAID' })).toEqual([])
   })
 
   it('ne mélange pas les boutiques', () => {
-    expect(resolveRules([rule({ shop_id: 'shop-b', enabled: false })], event)).toHaveLength(1)
+    expect(emails(resolveRules([rule({ shop_id: 'shop-b', enabled: false })], event))).toHaveLength(1)
+  })
+})
+
+describe('resolveRules — push par défaut', () => {
+  const pushes = (rules: ReturnType<typeof resolveRules>) => rules.filter((r) => r.channel === 'push')
+
+  it('prévient d’office des demandes client (commande, rendez-vous, réservation)', () => {
+    for (const type of ['ORDER_CREATED', 'APPOINTMENT_CREATED', 'RESERVATION_CREATED']) {
+      const resolved = pushes(resolveRules([], { shop_id: 'shop-a', type }))
+      expect(resolved).toHaveLength(1)
+      expect(resolved[0]).toMatchObject({ id: null, event_type: type })
+    }
+  })
+
+  it('pas de push pour le stock ni les changements de statut', () => {
+    expect(pushes(resolveRules([], { shop_id: 'shop-a', type: 'STOCK_OUT' }))).toEqual([])
+    expect(pushes(resolveRules([], { shop_id: 'shop-a', type: 'ORDER_PAID' }))).toEqual([])
+  })
+
+  it('respecte une règle push désactivée sans toucher à l’email', () => {
+    const resolved = resolveRules([rule({ channel: 'push', enabled: false })], { shop_id: 'shop-a', type: 'ORDER_CREATED' })
+    expect(resolved.map((r) => r.channel)).toEqual(['email'])
   })
 })
 

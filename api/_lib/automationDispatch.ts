@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from './resendEmail.js'
 import { merchantAlertEmailHtml } from './emailTemplates.js'
+import { isWebPushConfigured, sendWebPushToUsers } from './webPush.js'
 import { AUTOMATION_EVENTS } from '../../src/features/automations/events.js'
 
 /**
@@ -9,8 +10,9 @@ import { AUTOMATION_EVENTS } from '../../src/features/automations/events.js'
  * immédiat après une commande / réservation (une boutique) — voir
  * api/cron/automation-dispatch.ts et api/onboarding.ts?action=automation-kick.
  *
- * Canaux aujourd'hui : `log` (traçabilité, aucun effet externe) et `email`
- * (Resend, vers le propriétaire de la boutique). `whatsapp`/`sms`/`push`
+ * Canaux aujourd'hui : `log` (traçabilité, aucun effet externe), `email`
+ * (Resend, vers le propriétaire de la boutique) et `push` (Web Push, vers les
+ * appareils du propriétaire et des collaborateurs). `whatsapp`/`sms`
  * évaluent à `skipped/no_channel_adapter` tant que leurs fournisseurs n'existent
  * pas : le moteur ne dépend jamais des limites d'un canal.
  */
@@ -44,11 +46,13 @@ export function matchRules(
 
 /** Alertes envoyées par email d'office (commande, stock) : le marchand les désactive, il ne les active pas. */
 const DEFAULT_ALERTS = new Map(AUTOMATION_EVENTS.filter((e) => e.defaultEnabled).map((e) => [e.type, e]))
+/** Notifications push envoyées d'office (demandes client), même logique de désactivation. */
+const DEFAULT_PUSHES = new Map(AUTOMATION_EVENTS.filter((e) => e.defaultPush).map((e) => [e.type, e]))
 
 /**
- * Règles à exécuter pour un événement : les règles activées de la boutique, plus l'email d'alerte par défaut
- * quand l'événement en porte un et que le marchand n'a pas de règle email (activée ou non) pour lui.
- * Pure — testée.
+ * Règles à exécuter pour un événement : les règles activées de la boutique, plus l'email d'alerte et la
+ * notification push par défaut quand l'événement en porte et que le marchand n'a pas de règle (activée ou
+ * non) sur ce canal pour lui. Pure — testée.
  */
 export function resolveRules(
   rules: AutomationRule[],
@@ -66,6 +70,17 @@ export function resolveRules(
       channel: 'email',
       enabled: true,
       template: { subject: alert.defaultSubject, body: alert.defaultBody },
+    })
+  }
+  const push = DEFAULT_PUSHES.get(event.type)
+  if (push && !candidates.some((r) => r.channel === 'push')) {
+    active.push({
+      id: null,
+      shop_id: event.shop_id,
+      event_type: event.type,
+      channel: 'push',
+      enabled: true,
+      template: { subject: push.defaultSubject, body: push.defaultBody },
     })
   }
   return active
@@ -173,6 +188,26 @@ export async function dispatchEvents(
   return { processed, runs }
 }
 
+/** Boutique et variables rendues d'un événement, communes aux canaux. */
+async function loadEventContext(admin: SupabaseClient, event: BusinessEvent) {
+  const { data: shop } = await admin.from('shops').select('name, owner_id, currency').eq('id', event.shop_id).maybeSingle()
+  const { data: settings } = await admin.from('booking_settings').select('timezone').eq('shop_id', event.shop_id).maybeSingle()
+  const timeZone = (settings?.timezone as string | undefined) ?? 'Africa/Dakar'
+  const vars = eventVariables(event.payload, {
+    shopName: (shop?.name as string) ?? '',
+    when: formatEventWhen(event.payload.start_at, timeZone),
+    currency: (shop?.currency as string | undefined) ?? 'XOF',
+  })
+  return { shop, vars }
+}
+
+/** Comptes prévenus par push : le propriétaire et les collaborateurs qui ont rejoint la boutique. */
+async function shopTeamUserIds(admin: SupabaseClient, shopId: string, ownerId: string): Promise<string[]> {
+  const { data, error } = await admin.from('shop_members').select('user_id').eq('shop_id', shopId).not('user_id', 'is', null)
+  if (error) throw error
+  return [ownerId, ...(data ?? []).map((m) => m.user_id as string)]
+}
+
 async function executeRule(
   admin: SupabaseClient,
   event: BusinessEvent,
@@ -183,17 +218,10 @@ async function executeRule(
       return { status: 'sent', detail: { channel: 'log', event: event.type } }
     }
     if (rule.channel === 'email') {
-      const { data: shop } = await admin.from('shops').select('name, owner_id, currency').eq('id', event.shop_id).maybeSingle()
+      const { shop, vars } = await loadEventContext(admin, event)
       const owner = shop ? await admin.auth.admin.getUserById(shop.owner_id as string) : { data: { user: null } }
       const to = owner.data.user?.email
       if (!to) return { status: 'skipped', detail: { reason: 'no_owner_email' } }
-      const { data: settings } = await admin.from('booking_settings').select('timezone').eq('shop_id', event.shop_id).maybeSingle()
-      const timeZone = (settings?.timezone as string | undefined) ?? 'Africa/Dakar'
-      const vars = eventVariables(event.payload, {
-        shopName: (shop?.name as string) ?? '',
-        when: formatEventWhen(event.payload.start_at, timeZone),
-        currency: (shop?.currency as string | undefined) ?? 'XOF',
-      })
       const target = alertTarget(event.type)
       const rootDomain = process.env.VITE_ROOT_DOMAIN
       await sendEmail({
@@ -209,6 +237,20 @@ async function executeRule(
         }),
       })
       return { status: 'sent', detail: { channel: 'email', to: '[redacted]' } }
+    }
+    if (rule.channel === 'push') {
+      if (!isWebPushConfigured()) return { status: 'skipped', detail: { channel: 'push', reason: 'push_not_configured' } }
+      const { shop, vars } = await loadEventContext(admin, event)
+      if (!shop) return { status: 'skipped', detail: { channel: 'push', reason: 'no_shop' } }
+      const fallback = DEFAULT_PUSHES.get(event.type)
+      const result = await sendWebPushToUsers(admin, await shopTeamUserIds(admin, event.shop_id, shop.owner_id as string), {
+        title: renderTemplate(rule.template.subject || fallback?.defaultSubject || (shop.name as string), vars),
+        body: renderTemplate(rule.template.body || fallback?.defaultBody || '', vars),
+        url: alertTarget(event.type).path,
+        tag: event.id,
+      })
+      if (result.subscriptions === 0) return { status: 'skipped', detail: { channel: 'push', reason: 'no_subscription' } }
+      return { status: result.delivered > 0 ? 'sent' : 'failed', detail: { channel: 'push', ...result } }
     }
     return { status: 'skipped', detail: { channel: rule.channel, reason: 'no_channel_adapter' } }
   } catch (err) {

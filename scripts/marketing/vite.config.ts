@@ -20,6 +20,7 @@ export default defineConfig({
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('http://mock.local'),
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('mock'),
     'import.meta.env.VITE_VERCEL_ENV': JSON.stringify(''),
+    'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(''),
   },
   server: { port: 5199, strictPort: true, fs: { strict: false } },
   // Le film se tourne sur un build de production : navigation fluide, sans le chargement module par module du mode dev.
