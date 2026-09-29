@@ -23,6 +23,7 @@ Excel. Gratuit pour commencer, sans commission sur les ventes.
 - [FAQ](https://bitiko.shop/#faq)
 - [CGU](https://bitiko.shop/legal/cgu)
 - [Confidentialité](https://bitiko.shop/legal/confidentialite)
+- [Contact](mailto:contact@bitiko.shop)
 
 Chaque activité peut avoir une boutique sur `<slug>.bitiko.shop` (catalogue,
 produit, panier, commande) — sans obligation : un salon ou un restaurant peut

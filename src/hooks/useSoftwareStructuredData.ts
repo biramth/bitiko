@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { CONTACT_EMAIL, SUPPORT_EMAIL } from '@/config/contact'
 
 const SCRIPT_ID = 'software-structured-data'
 
@@ -17,6 +18,13 @@ export function useSoftwareStructuredData() {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'XOF' },
+      provider: {
+        '@type': 'Organization',
+        name: 'Bitiko',
+        url: 'https://bitiko.shop',
+        email: CONTACT_EMAIL,
+        contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: SUPPORT_EMAIL, availableLanguage: 'French' },
+      },
       description:
         'Boutique en ligne, prise de rendez-vous, réservation de tables et finances simples (bilan PDF et Excel) pour les commerces et les prestataires de services. Commandes sur WhatsApp, sans commission.',
     })
