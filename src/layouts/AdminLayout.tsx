@@ -34,6 +34,9 @@ import { UpgradeProvider } from '@/features/billing/UpgradeProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
 import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
+import { useShopRealtime } from '@/features/notifications/useShopRealtime'
+import { PushPromptBanner } from '@/features/notifications/PushSettings'
+import { refreshPushSubscription } from '@/lib/webPush'
 
 // One "Ventes" group (Commandes + Clients, the daily sales workflow) —
 // everything else stays top-level: with this few items, more groups would
@@ -364,6 +367,21 @@ export function AdminLayout() {
   const location = useLocation()
   const [impersonation] = useState(() => getImpersonation())
   const [quitting, setQuitting] = useState(false)
+  useShopRealtime(shop)
+  // « Ajouter à l'écran d'accueil » depuis l'admin installe l'espace commerçant, pas la landing.
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    if (!link) return
+    const previous = link.getAttribute('href')
+    link.setAttribute('href', '/manifest-admin.webmanifest')
+    return () => {
+      if (previous) link.setAttribute('href', previous)
+    }
+  }, [])
+  // Le mode support agit avec le compte du commerçant : jamais d'abonnement push sur l'appareil de l'équipe.
+  useEffect(() => {
+    if (!impersonation) void refreshPushSubscription().catch(() => {})
+  }, [impersonation])
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
@@ -529,6 +547,7 @@ export function AdminLayout() {
               </button>
             </div>
           )}
+          {!impersonation && <PushPromptBanner />}
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>

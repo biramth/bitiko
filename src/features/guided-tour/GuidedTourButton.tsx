@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowUpRight, Copy, HelpCircle, MessageCircle, Sparkles, X } from 'lucide-react'
+import { ArrowUpRight, Copy, HelpCircle, Mail, MessageCircle, Sparkles, X } from 'lucide-react'
+import { SUPPORT_EMAIL } from '@/config/contact'
 import { useGuidedTour } from './useGuidedTour'
 import { GUIDED_TOURS } from './tours'
 import { isTourSeen } from './storage'
@@ -125,8 +126,8 @@ export function GuidedTourButton() {
             )}
           </div>
 
-          <div className="shrink-0 border-t border-gray-100 p-2">
-            {support ? (
+          <div className="shrink-0 space-y-1 border-t border-gray-100 p-2">
+            {support && (
               <a
                 href={support}
                 target="_blank"
@@ -136,11 +137,17 @@ export function GuidedTourButton() {
                 <MessageCircle size={16} aria-hidden />
                 Écrire à l’équipe Bitiko sur WhatsApp
               </a>
-            ) : (
-              <p className="hidden px-2 py-1 text-[11px] leading-snug text-gray-400 sm:block">
-                Astuce : « ← » et « → » naviguent dans une visite, « Échap » la quitte.
-              </p>
             )}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Aide${shop?.name ? ` — ${shop.name}` : ''}`)}`}
+              className="flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Mail size={16} aria-hidden />
+              <span className="min-w-0">
+                Écrire au support
+                <span className="block truncate text-xs font-normal text-gray-500">{SUPPORT_EMAIL}</span>
+              </span>
+            </a>
           </div>
         </div>
       )}

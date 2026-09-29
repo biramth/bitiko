@@ -18,10 +18,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Switch } from '@/components/ui/Switch'
 import { TextAreaField, TextField } from '@/components/ui/Field'
 import { usePageSeo } from '@/hooks/usePageSeo'
+import { PushDeviceCard } from '@/features/notifications/PushSettings'
 
-/** Événements personnalisables : les commandes, si la boutique vend. Les demandes de
- *  rendez-vous et de réservation partent déjà d'office par email (voir l'encadré) :
- *  les proposer aussi ici enverrait deux emails pour la même demande. */
+/** Événements personnalisables par email : les commandes et le stock, si la boutique vend.
+ *  Les demandes de rendez-vous et de réservation n'ont pas d'email : elles arrivent par le
+ *  message WhatsApp du client, dans l'agenda en temps réel et en notification push (voir l'encadré). */
 function eventsForCapabilities(capabilities: Set<string> | null): AutomationEventDef[] {
   return AUTOMATION_EVENTS.filter((event) => {
     if (event.type.startsWith('ORDER_')) return capabilities === null || capabilities.has('HAS_ORDERS')
@@ -168,13 +169,14 @@ export function NotificationsPage() {
         title="Notifications"
         subtitle={`Ne ratez plus une vente : vous êtes prévenu par email${user?.email ? ` à l’adresse ${user.email}` : ''} dès qu’il se passe quelque chose. Désactivez ce qui ne vous sert pas.`}
       />
+      <PushDeviceCard />
       {(capabilities === null || capabilities.has('HAS_APPOINTMENTS') || capabilities.has('HAS_RESERVATIONS')) && (
         <Card className="mt-6 border-emerald-200 bg-emerald-50">
           <p className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-            <Mail size={15} aria-hidden /> Rendez-vous et réservations : déjà activé
+            <Bell size={15} aria-hidden /> Rendez-vous et réservations : déjà activé
           </p>
           <p className="mt-1 text-sm text-emerald-800">
-            Dès qu’un client demande un rendez-vous ou une table sur votre site, vous recevez automatiquement un email avec son nom, son numéro et l’horaire choisi.
+            Dès qu’un client demande un rendez-vous ou une table sur votre site, la demande s’affiche aussitôt dans votre agenda et vous recevez une notification sur les appareils où vous les avez activées. Le client vous envoie aussi sa demande sur WhatsApp. Aucun email n’est envoyé pour ces demandes.
           </p>
         </Card>
       )}

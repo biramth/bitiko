@@ -44,3 +44,7 @@ playwright-report/
 
 # Visuels marketing : fichiers temporaires de génération
 scripts/marketing/.tmp*/
+marketing-export/
+# Outils vidéo marketing : gardés en local, jamais versionnés
+scripts/marketing/video.mjs
+scripts/marketing/music.mjs

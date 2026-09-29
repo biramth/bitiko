@@ -121,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     const { supabase } = await import('@/lib/supabaseClient')
+    // Appareil partagé : le compte suivant ne doit pas recevoir les alertes de celui-ci.
+    await import('@/lib/webPush').then((m) => m.disablePush()).catch(() => {})
     await supabase.auth.signOut()
   }
 

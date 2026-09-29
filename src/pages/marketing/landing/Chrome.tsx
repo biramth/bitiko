@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { SocialIcon } from '@/components/ui/SocialIcon'
+import { CONTACT_EMAIL } from '@/config/contact'
 import { SOLUTION_PAGES } from '../solutions/data'
 
 const produitLinks = [
@@ -216,6 +217,7 @@ export function SiteFooter() {
             <li><Link to="/admin/login" className={linkClass}>Connexion</Link></li>
             <li><Link to="/admin/login" className={linkClass}>Créer mon espace</Link></li>
             <li><a href={`${home}#marche`} className={linkClass}>Comment ça marche</a></li>
+            <li><a href={`mailto:${CONTACT_EMAIL}`} className={linkClass}>Nous écrire</a></li>
             <li>
               <a href="https://www.instagram.com/bitiko.shop/" target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1.5 ${linkClass}`}>
                 <SocialIcon platform="instagram" size={14} /> Instagram

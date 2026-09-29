@@ -16,6 +16,8 @@ export interface AutomationEventDef {
   /** Alerte envoyée d'office au propriétaire tant qu'il ne l'a pas désactivée (les commandes et le stock, qui ne
    *  peuvent pas attendre le prochain passage sur le tableau de bord). */
   defaultEnabled?: boolean
+  /** Notification push envoyée d'office aux appareils de l'équipe qui l'ont activée : une demande client à traiter. */
+  defaultPush?: boolean
 }
 
 export const AUTOMATION_EVENTS: AutomationEventDef[] = [
@@ -24,6 +26,7 @@ export const AUTOMATION_EVENTS: AutomationEventDef[] = [
     label: 'Nouvelle commande',
     description: 'Dès qu’un client passe commande sur votre boutique.',
     defaultEnabled: true,
+    defaultPush: true,
     variables: ['order_number', 'total', 'customer_name', 'customer_phone', 'payment', 'shop_name'],
     sample: { order_number: '#0042', total: '51 500 F CFA', customer_name: 'Awa Mbaye', customer_phone: '+221771234567', payment: 'Mobile money', shop_name: 'Ma boutique' },
     variableLabels: {
@@ -83,6 +86,7 @@ export const AUTOMATION_EVENTS: AutomationEventDef[] = [
     type: 'APPOINTMENT_CREATED',
     label: 'Nouveau rendez-vous',
     description: 'Dès qu’un client demande un rendez-vous en ligne.',
+    defaultPush: true,
     variables: ['customer_name', 'service_name', 'when', 'shop_name'],
     sample: { customer_name: 'Fatou Ndiaye', service_name: 'Coupe femme', when: 'mardi 29 septembre à 10:00', shop_name: 'Mon salon' },
     variableLabels: { customer_name: 'Nom du client', service_name: 'Prestation', when: 'Jour et heure', shop_name: 'Nom de votre boutique' },
@@ -93,6 +97,7 @@ export const AUTOMATION_EVENTS: AutomationEventDef[] = [
     type: 'RESERVATION_CREATED',
     label: 'Nouvelle réservation de table',
     description: 'Dès qu’un client réserve une table en ligne.',
+    defaultPush: true,
     variables: ['customer_name', 'party_size', 'when', 'shop_name'],
     sample: { customer_name: 'Moussa Diallo', party_size: '4', when: 'vendredi 2 octobre à 20:00', shop_name: 'Mon restaurant' },
     variableLabels: { customer_name: 'Nom du client', party_size: 'Nombre de personnes', when: 'Jour et heure', shop_name: 'Nom de votre boutique' },

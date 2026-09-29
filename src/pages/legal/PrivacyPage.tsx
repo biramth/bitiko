@@ -1,4 +1,5 @@
 import { LegalLayout, LegalSection } from '@/components/legal/LegalLayout'
+import { CONTACT_EMAIL } from '@/config/contact'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { LEGAL_META } from '@/seo/legalMeta'
 
@@ -77,8 +78,7 @@ export function PrivacyPage() {
       <LegalSection title="7. Vos droits">
         <p>
           Toute personne (utilisateur ou client final) dispose d'un droit d'accès, de rectification et de suppression
-          de ses données personnelles. Pour l'exercer, contactez Bitiko à l'adresse indiquée sur la page d'accueil de
-          la plateforme ; pour une donnée saisie chez un utilisateur précis (ex. une commande ou un rendez-vous), le client
+          de ses données personnelles. Pour l'exercer, écrivez à Bitiko à <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-brand-700 hover:underline">{CONTACT_EMAIL}</a> ; pour une donnée saisie chez un utilisateur précis (ex. une commande ou un rendez-vous), le client
           peut aussi s'adresser directement à cet utilisateur, qui en est responsable.
         </p>
       </LegalSection>
@@ -105,7 +105,7 @@ export function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="10. Contact">
-        <p>Pour toute question relative à cette politique ou à l'exercice de vos droits, contactez-nous à l'adresse indiquée sur la page d'accueil de la plateforme.</p>
+        <p>Pour toute question relative à cette politique ou à l'exercice de vos droits, écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-brand-700 hover:underline">{CONTACT_EMAIL}</a>.</p>
       </LegalSection>
     </LegalLayout>
   )

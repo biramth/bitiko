@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout, LegalSection } from '@/components/legal/LegalLayout'
 import { PLANS } from '@/config/plans'
+import { CONTACT_EMAIL } from '@/config/contact'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import { LEGAL_META } from '@/seo/legalMeta'
 
@@ -174,7 +175,7 @@ export function TermsPage() {
       </LegalSection>
 
       <LegalSection title="14. Contact">
-        <p>Pour toute question relative aux présentes CGU, contactez-nous à l'adresse indiquée sur la page d'accueil de la plateforme.</p>
+        <p>Pour toute question relative aux présentes CGU, écrivez-nous à <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-brand-700 hover:underline">{CONTACT_EMAIL}</a>.</p>
       </LegalSection>
     </LegalLayout>
   )
