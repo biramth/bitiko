@@ -77,7 +77,6 @@
     { "source": "/api/campaigns/unsubscribe", "destination": "/api/onboarding?action=unsubscribe" },
     { "source": "/api/delete-account", "destination": "/api/account?action=delete" },
     { "source": "/api/request-pro-upgrade", "destination": "/api/account?action=upgrade" },
-    { "source": "/api/push-test", "destination": "/api/account?action=push-test" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [

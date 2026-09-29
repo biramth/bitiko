@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
-import { sendTestPush } from '@/lib/webPush'
 import { usePushNotifications } from './usePushNotifications'
 
 const PROMPT_DISMISSED_KEY = 'bitiko-push-prompt-dismissed-at'
@@ -98,25 +97,22 @@ export function PushPromptBanner() {
 export function PushDeviceCard() {
   const { state, enable, disable } = usePushNotifications()
   const toast = useToast()
-  const [busy, setBusy] = useState<'enable' | 'disable' | 'test' | null>(null)
+  const [busy, setBusy] = useState<'enable' | 'disable' | null>(null)
 
   if (state === null || state === 'unconfigured') return null
 
-  const run = async (action: 'enable' | 'disable' | 'test') => {
+  const run = async (action: 'enable' | 'disable') => {
     setBusy(action)
     try {
       if (action === 'enable') {
         const next = await enable()
         if (next === 'on') toast.success('C’est activé : vous serez prévenu sur cet appareil.')
-      } else if (action === 'disable') {
+      } else {
         await disable()
         toast.success('Notifications désactivées sur cet appareil.')
-      } else {
-        await sendTestPush()
-        toast.success('Notification de test envoyée.')
       }
-    } catch (err) {
-      toast.error(err instanceof Error && action === 'test' ? err.message : 'Action impossible. Réessayez dans un instant.')
+    } catch {
+      toast.error('Action impossible. Réessayez dans un instant.')
     } finally {
       setBusy(null)
     }
@@ -148,14 +144,9 @@ export function PushDeviceCard() {
               Activer sur cet appareil
             </Button>
           ) : (
-            <>
-              <Button size="sm" variant="secondary" onClick={() => run('test')} loading={busy === 'test'}>
-                Envoyer un test
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => run('disable')} loading={busy === 'disable'}>
-                Désactiver sur cet appareil
-              </Button>
-            </>
+            <Button size="sm" variant="ghost" onClick={() => run('disable')} loading={busy === 'disable'}>
+              Désactiver sur cet appareil
+            </Button>
           )}
         </div>
       )}
