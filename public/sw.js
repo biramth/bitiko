@@ -18,7 +18,7 @@ self.addEventListener('push', (event) => {
       const visibleAdmin = clients.some(
         (client) => client.visibilityState === 'visible' && new URL(client.url).pathname.startsWith('/admin'),
       )
-      if (visibleAdmin && data.tag !== 'bitiko-push-test') return undefined
+      if (visibleAdmin) return undefined
       return self.registration.showNotification(title, {
         body: data.body || '',
         icon: '/icon-192.png',

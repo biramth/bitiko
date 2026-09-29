@@ -84,15 +84,3 @@ export async function refreshPushSubscription(): Promise<void> {
   const subscription = await currentSubscription()
   if (subscription) await saveSubscription(subscription)
 }
-
-export async function sendTestPush(): Promise<void> {
-  const { data } = await supabase.auth.getSession()
-  const response = await fetch('/api/push-test', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` },
-  })
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? 'Envoi impossible.')
-  }
-}
