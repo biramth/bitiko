@@ -153,8 +153,11 @@ export function FooterRenderer({
     <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
       <Link to="/compte" className="hover:text-[var(--footer-text)]/70">Mon compte</Link>
       <a href={`${platformUrl()}/legal/cgu`} className="hover:text-[var(--footer-text)]/70">CGU</a>
+      <a href={`${platformUrl()}/legal/cgv`} className="hover:text-[var(--footer-text)]/70">CGV</a>
       <a href={`${platformUrl()}/legal/confidentialite`} className="hover:text-[var(--footer-text)]/70">Confidentialité</a>
       <a href={`${platformUrl()}/legal/cookies`} className="hover:text-[var(--footer-text)]/70">Cookies</a>
+      <a href={`${platformUrl()}/legal/mentions-legales`} className="hover:text-[var(--footer-text)]/70">Mentions légales</a>
+      <a href={`${platformUrl()}/legal/accessibilite`} className="hover:text-[var(--footer-text)]/70">Accessibilité</a>
     </p>
   )
 

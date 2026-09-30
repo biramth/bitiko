@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { contrastWithWhite } from './format'
-import { ensureReadableAccent, mixHex, softTint } from './color'
+import { contrastRatio, contrastWithWhite } from './format'
+import { ensureReadableAccent, mixHex, readableTextOn, softTint } from './color'
 
 describe('mixHex', () => {
   it('blends two hex colors linearly', () => {
@@ -35,6 +35,21 @@ describe('ensureReadableAccent', () => {
 
   it('returns invalid input unchanged', () => {
     expect(ensureReadableAccent('not-a-color')).toBe('not-a-color')
+  })
+})
+
+describe('readableTextOn', () => {
+  it('keeps the preferred color when it already clears WCAG AA', () => {
+    expect(readableTextOn('#7f1d1d', '#ffffff')).toBe('#ffffff')
+  })
+
+  it('swaps to ink on a light background', () => {
+    expect(readableTextOn('#fde047', '#ffffff')).toBe('#17152e')
+    expect(contrastRatio('#fde047', '#17152e')).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('keeps white on a dark background', () => {
+    expect(readableTextOn('#17152e', '#ffffff')).toBe('#ffffff')
   })
 })
 

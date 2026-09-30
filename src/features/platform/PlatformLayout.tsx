@@ -24,6 +24,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { useMyShop } from '@/features/shop-settings/useMyShop'
 import { can, roleLabel, type PlatformCapability } from '@/features/platform/permissions'
 import { usePlatformRole } from '@/features/platform/usePlatformRole'
+import { SkipLink } from '@/components/ui/SkipLink'
 
 interface Tool {
   to: string
@@ -202,6 +203,7 @@ export function PlatformLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      <SkipLink />
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto bg-ink-900 md:block">{sidebar}</aside>
 
       {mobileOpen && (
@@ -233,7 +235,7 @@ export function PlatformLayout() {
           </button>
         </header>
 
-        <main className="min-w-0 flex-1">
+        <main id="contenu" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
           <Outlet />
         </main>
       </div>

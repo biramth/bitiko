@@ -12,6 +12,7 @@ import {
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
 import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
+import { platformUrl } from '@/lib/tenant'
 import { phonePlaceholder } from '@/config/countries'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
@@ -59,6 +60,7 @@ function CheckoutFlow({
   const [customerEmail, setCustomerEmail] = useState('')
   const [deliveryVilleId, setDeliveryVilleId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
+  const [acceptedCgv, setAcceptedCgv] = useState(false)
   const whatsappWindowRef = useRef<Window | null>(null)
 
   const { data: secteurs = [] } = useQuery({
@@ -170,6 +172,7 @@ function CheckoutFlow({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!acceptedCgv) return
     const phone = normalizePhoneNumber(customerPhone, shop?.country_code)
     if (!phone.ok) {
       setPhoneError(PHONE_ERROR_MESSAGES[phone.error ?? 'invalid_length'])
@@ -232,7 +235,8 @@ function CheckoutFlow({
           <span className="text-lg font-bold">{formatCurrency(estimate, currency)}</span>
         </div>
         <p className="mt-2 text-xs text-[var(--shop-text)]/50">
-          Le total définitif est recalculé au moment de la commande (prix et stock à jour).
+          Le total définitif est recalculé au moment de la commande (prix et stock à jour). La vente n'est
+          définitive qu'à la confirmation du vendeur sur WhatsApp.
         </p>
       </div>
 
@@ -315,9 +319,26 @@ function CheckoutFlow({
           <ErrorMessage message="Impossible de créer la commande. Vérifiez votre panier et réessayez." />
         )}
 
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--shop-text)]">
+          <input
+            type="checkbox"
+            checked={acceptedCgv}
+            onChange={(e) => setAcceptedCgv(e.target.checked)}
+            required
+            className="mt-0.5 shrink-0 accent-[var(--shop-accent)]"
+          />
+          <span>
+            J'ai lu et j'accepte les{' '}
+            <a href={`${platformUrl()}/legal/cgv`} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+              conditions générales de vente
+            </a>
+            , dont le droit de rétractation de 14 jours et ses exceptions.
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={mutation.isPending || demo}
+          disabled={mutation.isPending || demo || !acceptedCgv}
           style={{ borderRadius: 'var(--shop-radius)' }}
           className="w-full break-words bg-[var(--shop-button)] px-4 py-4 text-xs font-semibold uppercase leading-relaxed tracking-widest text-[var(--shop-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60 sm:text-sm"
         >

@@ -1,4 +1,4 @@
-import { contrastWithWhite } from './format'
+import { contrastRatio, contrastWithWhite } from './format'
 
 /** Hex color math used to turn a logo's palette into a readable brand theme.
  *  The logo's accent is used as-is whenever it already passes the contrast bar
@@ -118,8 +118,7 @@ export function softTint(hex: string, intoWhite = 0.8): string {
  *  for normal text = 4.5:1). Buttons, category tiles and accents all put white
  *  text on this color, so a light logo color must be deepened to stay usable —
  *  the hue is preserved, only the value drops. */
-export function ensureReadableAccent(hex: string, minRatio: number = 4.5): string {
-  let accent = hex
+export function ensureReadableAccent(hex: string, minRatio: number = 4.5): string {  let accent = hex
   const channels = hexChannels(accent)
   if (!channels) return hex
   let guard = 0
@@ -128,4 +127,12 @@ export function ensureReadableAccent(hex: string, minRatio: number = 4.5): strin
     guard += 1
   }
   return accent
+}
+
+/** Returns `preferred` text color if it clears `minRatio` on `bg` (WCAG AA =
+ *  4.5:1), otherwise the most readable of white / ink. Guarantees button and
+ *  announcement labels stay legible whatever colors a merchant picks. */
+export function readableTextOn(bg: string, preferred = '#ffffff', minRatio = 4.5): string {
+  if (contrastRatio(bg, preferred) >= minRatio) return preferred
+  return contrastRatio(bg, '#ffffff') >= contrastRatio(bg, '#17152e') ? '#ffffff' : '#17152e'
 }

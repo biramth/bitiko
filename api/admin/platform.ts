@@ -146,7 +146,7 @@ async function logAudit(
   entry: {
     actorUserId: string
     actorEmail: string
-    action: 'support_access' | 'user_delete' | 'team_add' | 'biztype_save' | 'promo_save' | 'template_save'
+    action: 'support_access' | 'user_delete' | 'team_add' | 'team_update' | 'team_remove' | 'biztype_save' | 'promo_save' | 'template_save' | 'country_set' | 'campaign_send'
     targetUserId?: string
     targetShopId?: string
     details?: Record<string, unknown>
@@ -375,6 +375,14 @@ async function handleTeamUpdate(req: VercelRequest, res: VercelResponse) {
     const { error } = await admin.from('platform_members').update({ role }).eq('user_id', userId)
     if (error) throw error
 
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'team_update',
+      targetUserId: userId,
+      details: { previousRole: target.role, newRole: role },
+    })
+
     res.status(200).json({ ok: true })
   } catch (err) {
     console.error('platform team-update failed', err)
@@ -429,6 +437,14 @@ async function handleTeamRemove(req: VercelRequest, res: VercelResponse) {
 
     const { error } = await admin.from('platform_members').delete().eq('user_id', userId)
     if (error) throw error
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'team_remove',
+      targetUserId: userId,
+      details: { previousRole: target.role },
+    })
 
     res.status(200).json({ ok: true })
   } catch (err) {
@@ -497,6 +513,18 @@ async function handleSupportAccess(req: VercelRequest, res: VercelResponse) {
       email: owner.user.email,
     })
     if (linkError) throw linkError
+
+    // Information du commerçant : un accès support à son compte vient
+    // d'être ouvert. Best-effort — ne bloque jamais l'ouverture.
+    try {
+      await sendEmail({
+        to: owner.user.email,
+        subject: `Accès support à votre boutique « ${shop.name} »`,
+        html: `<p>Bonjour,</p><p>L'équipe Bitiko (${member.email}) vient d'ouvrir un accès support à votre boutique « ${shop.name} » pour vous aider. Chaque accès est enregistré. Si vous n'êtes à l'origine d'aucune demande d'aide, répondez directement à cet email.</p><p>L'équipe Bitiko</p>`,
+      })
+    } catch (err) {
+      console.warn('platform support-access notify failed', err instanceof Error ? err.message : err)
+    }
 
     res.status(200).json({
       tokenHash: link.properties.hashed_token,
@@ -819,6 +847,12 @@ async function handleCampaignSend(req: VercelRequest, res: VercelResponse) {
         .json({ error: result.reason === 'sent' ? 'Cette campagne a déjà été envoyée.' : 'Un envoi est déjà en cours pour cette campagne.' })
       return
     }
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'campaign_send',
+      details: { campaignId: id, totals: result.totals },
+    })
     res.status(200).json(result.totals)
   } catch (err) {
     console.error('platform campaign-send failed', err)
@@ -1845,6 +1879,18 @@ async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
     const next = nextSubscription({ current: currentSub, paidPlan: plan })
     const periodEnd = next.periodEnd
 
+    // Audit FIRST, fail-closed : la trace précède l'activation du plan.
+    await logAdminAudit(
+      {
+        actorUserId: admin.id,
+        actorEmail: admin.email,
+        action: 'payment_approve',
+        targetShopId: payment.shop_id,
+        details: { paymentId, plan, amount: verifiedPlan.priceXof },
+      },
+      true,
+    )
+
     const { error: updatePaymentError } = await supabase
       .from('wave_payments')
       .update({
@@ -1894,13 +1940,6 @@ async function handlePaymentApprove(req: VercelRequest, res: VercelResponse) {
       console.error('admin approve-payment: confirmation email failed', emailErr)
     }
 
-    await logAdminAudit({
-      actorUserId: admin.id,
-      actorEmail: admin.email,
-      action: 'payment_approve',
-      targetShopId: payment.shop_id,
-      details: { paymentId, plan, amount: verifiedPlan.priceXof },
-    })
     res.status(200).json({ status: 'succeeded' })
   } catch (err) {
     console.error('admin approve-payment failed', err)
@@ -1929,6 +1968,17 @@ async function handlePaymentReject(req: VercelRequest, res: VercelResponse) {
     }
     const cleanReason = typeof reason === 'string' ? reason.trim().slice(0, 300) : ''
 
+    // Audit FIRST, fail-closed : la trace précède le refus.
+    await logAdminAudit(
+      {
+        actorUserId: admin.id,
+        actorEmail: admin.email,
+        action: 'payment_reject',
+        details: { paymentId, reason: cleanReason || null },
+      },
+      true,
+    )
+
     const supabase = getSupabaseAdmin()
     const { error } = await supabase
       .from('wave_payments')
@@ -1937,12 +1987,6 @@ async function handlePaymentReject(req: VercelRequest, res: VercelResponse) {
       .eq('status', 'pending')
     if (error) throw error
 
-    await logAdminAudit({
-      actorUserId: admin.id,
-      actorEmail: admin.email,
-      action: 'payment_reject',
-      details: { paymentId, reason: cleanReason || null },
-    })
     res.status(200).json({ status: 'failed' })
   } catch (err) {
     console.error('admin reject-payment failed', err)
@@ -1997,6 +2041,13 @@ async function handleCountrySet(req: VercelRequest, res: VercelResponse) {
 
     const { error } = await admin.from('countries').update({ is_enabled: enabled }).eq('code', code)
     if (error) throw error
+
+    await logAudit({
+      actorUserId: member.id,
+      actorEmail: member.email,
+      action: 'country_set',
+      details: { code, enabled },
+    })
 
     res.status(200).json({ ok: true, code, enabled })
   } catch (err) {

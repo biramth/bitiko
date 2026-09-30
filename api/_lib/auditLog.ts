@@ -4,6 +4,8 @@ export type AdminAuditAction =
   | 'support_access'
   | 'user_delete'
   | 'team_add'
+  | 'team_update'
+  | 'team_remove'
   | 'biztype_save'
   | 'payment_approve'
   | 'payment_reject'
@@ -12,6 +14,8 @@ export type AdminAuditAction =
   | 'subscription_grant'
   | 'shop_suspend'
   | 'shop_unsuspend'
+  | 'country_set'
+  | 'campaign_send'
 
 /**
  * Records a sensitive backoffice action in admin_audit_log (service-role only,

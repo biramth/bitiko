@@ -29,6 +29,7 @@ import { claimShopInvites } from '@/services/team.service'
 import { DISPLAY_ROOT_DOMAIN, shopUrl } from '@/lib/tenant'
 import { endImpersonation, getImpersonation } from '@/lib/supportSession'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { SkipLink } from '@/components/ui/SkipLink'
 import { GuidedTourProvider } from '@/features/guided-tour/GuidedTourProvider'
 import { UpgradeProvider } from '@/features/billing/UpgradeProvider'
 import { GuidedTourButton } from '@/features/guided-tour/GuidedTourButton'
@@ -441,6 +442,7 @@ export function AdminLayout() {
     <GuidedTourProvider>
       <UpgradeProvider>
       <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-gray-50">
+      <SkipLink />
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-ink-900 transition-[width] duration-150 md:flex ${
           collapsed ? 'w-16' : 'w-60'
@@ -516,7 +518,7 @@ export function AdminLayout() {
           </div>
         )}
 
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main id="contenu" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto p-4 focus:outline-none sm:p-6 lg:p-8">
           {shop?.suspended_at && (
             <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
               <p className="text-sm font-semibold text-red-800">Votre boutique est suspendue</p>

@@ -19,6 +19,7 @@ import { themeConfigToCssVars } from '@/config/themeTokens'
 import { resolveTextStyle } from '@/config/textStyle'
 import { useShopFavicon } from '@/hooks/usePageSeo'
 import { PageLoader } from '@/components/ui/PageLoader'
+import { SkipLink } from '@/components/ui/SkipLink'
 import type { AnnouncementBarSectionConfig, FooterSectionConfig, HeaderSectionConfig } from '@/types/builder'
 
 const DEFAULT_ANNOUNCEMENT: AnnouncementBarSectionConfig = { message: '', linkLabel: '', linkUrl: '', dismissible: true }
@@ -313,6 +314,7 @@ export function StoreLayout() {
       className="flex min-h-screen flex-col bg-[var(--shop-bg)] text-[var(--shop-text)]"
       style={{ ...themeConfigToCssVars(themeColor, themeConfig), fontFamily: 'var(--shop-font-body)' } as React.CSSProperties}
     >
+      <SkipLink />
       <PreviewNavPing enabled={isEmbeddedPreview} />
       <PreviewClickTarget enabled={isEmbeddedPreview} sectionId={announcementSection?.id} label={CORE_SECTION_REGISTRY.announcement.label}>
         <AnnouncementBar shopId={shop?.id} sectionId={announcementSection?.id} config={announcement} editable={inlineEditable} />
@@ -321,7 +323,7 @@ export function StoreLayout() {
         <HeaderRenderer shop={shop} header={header} sectionId={headerSection?.id} editable={inlineEditable} />
       </PreviewClickTarget>
 
-      <main className="flex-1">
+      <main id="contenu" tabIndex={-1} className="flex-1 focus:outline-none">
         <Suspense fallback={<PageLoader />}>
           <Outlet />
         </Suspense>

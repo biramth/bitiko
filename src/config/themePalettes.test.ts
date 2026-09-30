@@ -47,12 +47,28 @@ describe('themeConfigToCssVars', () => {
     const vars = themeConfigToCssVars('#c2481c', {
       ...DEFAULT_THEME_CONFIG,
       headerBackgroundColor: '#111111',
-      announcementTextColor: '#222222',
+      announcementTextColor: '#ffffff',
       sectionSpacing: 'spacious',
     })
     expect(vars['--shop-header-bg']).toBe('#111111')
-    expect(vars['--shop-announcement-text']).toBe('#222222')
+    expect(vars['--shop-announcement-text']).toBe('#ffffff')
     expect(vars['--shop-section-gap']).toBe('4rem')
+  })
+
+  it('corrige un texte illisible sur son fond (WCAG AA 4.5:1)', () => {
+    // Texte sombre sur fond sombre : bascule vers blanc.
+    const dark = themeConfigToCssVars('#c2481c', {
+      ...DEFAULT_THEME_CONFIG,
+      announcementTextColor: '#222222',
+    })
+    expect(dark['--shop-announcement-text']).toBe('#ffffff')
+    // Texte blanc sur fond clair : bascule vers l'encre.
+    const light = themeConfigToCssVars('#ffffff', {
+      ...DEFAULT_THEME_CONFIG,
+      buttonColor: '#fde047',
+      buttonTextColor: '#ffffff',
+    })
+    expect(light['--shop-button-text']).toBe('#17152e')
   })
 })
 
