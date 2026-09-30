@@ -327,7 +327,11 @@ export function LoginPage() {
                 et la{' '}
                 <Link to="/legal/confidentialite" target="_blank" className="font-medium text-brand-700 hover:underline">
                   politique de confidentialité
-                </Link>
+                </Link>{' '}
+                (voir aussi la{' '}
+                <Link to="/legal/cookies" target="_blank" className="font-medium text-brand-700 hover:underline">
+                  politique cookies
+                </Link>)
               </span>
             </label>
 

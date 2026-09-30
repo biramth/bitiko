@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
-import { useAuth } from '@/features/auth/AuthContext'
 import { trackPageView } from '@/lib/selfAnalytics'
 
 /**
  * Records a page view on every navigation into our own `page_views` table.
  * Renders nothing; see src/lib/selfAnalytics.ts for the recording rules and
  * Supabase migration 0033 for the RLS + aggregation RPCs.
+ *
+ * CNIL: this measurement stays within the consent exemption (per-shop
+ * session, no account link, no URL params, easy opt-out) so it runs without
+ * the cookie banner — see `src/lib/selfAnalytics.ts` and `/legal/cookies`.
  *
  * Skips the merchant back-office (/admin/*) and the platform workspace
  * (/plateforme/*, plus the legacy /super-admin) entirely — this exists to
@@ -19,7 +22,6 @@ import { trackPageView } from '@/lib/selfAnalytics'
 export function SelfAnalytics() {
   const location = useLocation()
   const { shop } = useTenant()
-  const { user } = useAuth()
   const shopId = shop?.id ?? null
   const isBackOffice =
     location.pathname === '/admin' ||
@@ -30,14 +32,14 @@ export function SelfAnalytics() {
   useEffect(() => {
     if (isBackOffice) return
     // Analytics must never contend with first paint: record once idle.
-    const record = () => trackPageView({ path: location.pathname + location.search, shopId, userId: user?.id ?? null })
+    const record = () => trackPageView({ path: location.pathname, shopId })
     if (typeof window.requestIdleCallback === 'function') {
       const id = window.requestIdleCallback(record, { timeout: 5000 })
       return () => window.cancelIdleCallback(id)
     }
     const t = window.setTimeout(record, 2000)
     return () => window.clearTimeout(t)
-  }, [location.pathname, location.search, shopId, isBackOffice, user?.id])
+  }, [location.pathname, shopId, isBackOffice])
 
   return null
 }

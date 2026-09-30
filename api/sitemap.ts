@@ -88,6 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ),
       urlEntry(`${origin}/legal/cgu`, { changefreq: 'yearly', priority: '0.3' }),
       urlEntry(`${origin}/legal/confidentialite`, { changefreq: 'yearly', priority: '0.3' }),
+      urlEntry(`${origin}/legal/cookies`, { changefreq: 'yearly', priority: '0.3' }),
     )
   } else {
     const supabaseUrl = process.env.VITE_SUPABASE_URL

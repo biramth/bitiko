@@ -75,7 +75,6 @@ const shop = {
   onboarding_responses: null,
   template_id: null,
   organization_id: null,
-  ga_measurement_id: null,
   created_at: iso(now),
   updated_at: iso(now),
 }

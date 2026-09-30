@@ -62,9 +62,9 @@ Point important : `order_items` conserve `product_name` et `unit_price` au momen
 
 ## Analytiques
 
-- **Vercel Web Analytics + Speed Insights** : montés dans `src/main.tsx` (`@vercel/analytics` / `@vercel/speed-insights`), activité automatiquement visible dans le tableau de bord Vercel, sans configuration.
-- **Google Analytics 4 (optionnel, par boutique)** : le storefront charge le GA4 du commerçant si `shops.ga_measurement_id` est renseigné ([`GoogleAnalytics.tsx`](src/components/GoogleAnalytics.tsx)) — fonctionnalité Pro.
-- **Analytics maison (`page_views`)** : chaque vue de page (plateforme et storefronts) est enregistrée par le client dans `public.page_views` avec la clé publique ([`selfAnalytics.ts`](src/lib/selfAnalytics.ts), [`SelfAnalytics.tsx`](src/components/SelfAnalytics.tsx)). RLS : insertion libre, lecture réservée au propriétaire de la boutique. Les agrégats plateforme ne sortent que par les RPC `SECURITY DEFINER` `get_platform_stats()` / `get_platform_shops()` / `get_platform_orders()` (migration [`0033`](supabase/migrations/0033_platform_analytics.sql)), qui refusent quiconque n'est pas membre de l'équipe plateforme. **L'accès passe par la table `platform_members` (migration [`0048`](supabase/migrations/0048_platform_team.sql)) : pour ajouter/retirer un opérateur, on modifie ses lignes depuis l'espace `/plateforme` (outil Équipe) ou via SQL — plus aucune allowlist d'email en dur.** Un commerçant lit ses visites/visiteurs via `get_shop_visit_stats()` (migration [`0036`](supabase/migrations/0036_shop_visit_stats.sql)).
+- **Vercel Web Analytics + Speed Insights** : chargés en différé après consentement cookies (bannière, voir `/legal/cookies`), activité visible dans le tableau de bord Vercel, sans configuration.
+- **PostHog (produit, optionnel)** : pages vues et évènements `trackEvent`, chargé uniquement après consentement (`VITE_POSTHOG_KEY` vide = désactivé).
+- **Analytics maison (`page_views`)** : chaque vue de page (plateforme et storefronts) est enregistrée par le client dans `public.page_views` avec la clé publique, sans consentement préalable (mesure exemptée CNIL : session cloisonnée par boutique, 6 mois absolus, jamais liée à un compte, sans paramètres d'URL, purge à 13 mois, opt-out sur `/legal/cookies`) ([`selfAnalytics.ts`](src/lib/selfAnalytics.ts), [`SelfAnalytics.tsx`](src/components/SelfAnalytics.tsx)). RLS : insertion libre, lecture réservée au propriétaire de la boutique. Les agrégats plateforme ne sortent que par les RPC `SECURITY DEFINER` `get_platform_stats()` / `get_platform_shops()` / `get_platform_orders()` (migration [`0033`](supabase/migrations/0033_platform_analytics.sql)), qui refusent quiconque n'est pas membre de l'équipe plateforme. **L'accès passe par la table `platform_members` (migration [`0048`](supabase/migrations/0048_platform_team.sql)) : pour ajouter/retirer un opérateur, on modifie ses lignes depuis l'espace `/plateforme` (outil Équipe) ou via SQL — plus aucune allowlist d'email en dur.** Un commerçant lit ses visites/visiteurs via `get_shop_visit_stats()` (migration [`0036`](supabase/migrations/0036_shop_visit_stats.sql)).
 
 ## Prérequis
 
@@ -158,7 +158,7 @@ Voir [`.env.example`](.env.example). Ne jamais commiter `.env` ou `.env.local` (
 
 Deux familles de variables, à ne pas confondre :
 
-- **Client (`VITE_*`)** — exposées dans le bundle, lisibles par n'importe qui. Uniquement `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`, `VITE_DEV_SHOP_SLUG`, `VITE_GA_MEASUREMENT_ID`. À définir dans `.env` (local) **et** dans Vercel.
+- **Client (`VITE_*`)** — exposées dans le bundle, lisibles par n'importe qui. Uniquement `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_ROOT_DOMAIN`, `VITE_DEV_SHOP_SLUG`. À définir dans `.env` (local) **et** dans Vercel.
 - **Serveur (sans préfixe)** — jamais exposées au navigateur, lues uniquement par les fonctions `api/` : `SUPABASE_SERVICE_ROLE_KEY`, `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `CRON_SECRET` (**obligatoire** : sans elle les crons refusent toute requête). À définir **uniquement dans Vercel** (jamais dans un fichier `.env` commité).
 
 > La clé `service_role` bypasse les RLS : ne la mettez jamais derrière un préfixe `VITE_` et ne la commitez jamais.
