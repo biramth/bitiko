@@ -37,6 +37,7 @@ import { useWorkspaceModules } from '@/features/workspace/useWorkspaceModules'
 import { TOUR_PREPARE_EVENT } from '@/features/guided-tour/types'
 import { useShopRealtime } from '@/features/notifications/useShopRealtime'
 import { PushPromptBanner } from '@/features/notifications/PushSettings'
+import { EmailVerificationPrompt } from '@/features/auth/EmailVerificationPrompt'
 import { refreshPushSubscription } from '@/lib/webPush'
 
 // One "Ventes" group (Commandes + Clients, the daily sales workflow) —
@@ -527,6 +528,7 @@ export function AdminLayout() {
               </p>
             </div>
           )}
+          {!shop?.suspended_at && !impersonation && <EmailVerificationPrompt shop={shop} />}
           {impersonation && (
             <div className="mb-4 flex flex-col gap-2 rounded-xl border border-gold-300 bg-gold-400/15 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

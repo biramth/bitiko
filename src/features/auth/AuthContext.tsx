@@ -7,9 +7,10 @@ interface AuthContextValue {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string) => Promise<{ error: string | null; hasSession: boolean; alreadyExists: boolean }>
+  signUp: (email: string, password: string, options?: { marketingOptIn?: boolean }) => Promise<{ error: string | null; hasSession: boolean; alreadyExists: boolean }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
+  refreshEmailVerification: () => Promise<boolean>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateFullName: (fullName: string) => Promise<{ error: string | null }>
@@ -74,22 +75,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, options: { marketingOptIn?: boolean } = {}) => {
     const { supabase } = await import('@/lib/supabaseClient')
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: authCallbackUrl() },
+      options: {
+        emailRedirectTo: authCallbackUrl(),
+        // Reporté sur profiles.marketing_opt_in à l'onboarding (le profil n'existe pas encore).
+        ...(options.marketingOptIn ? { data: { marketing_opt_in: true } } : {}),
+      },
     })
     if (error) return { error: error.message, hasSession: false, alreadyExists: false }
-    if (data.session) setSession(data.session)
-    // With email confirmation on, an existing email (confirmed or not) comes
-    // back as an obfuscated user: no session, no email sent, and an empty
-    // identities array. Surface that so the page offers a resend instead of a
-    // dead-end "check your inbox" that will never receive anything.
-    const alreadyExists =
-      !data.session && !!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
-    return { error: null, hasSession: !!data.session, alreadyExists }
+    if (data.session) {
+      setSession(data.session)
+      return { error: null, hasSession: true, alreadyExists: false }
+    }
+    // Avec la confirmation d'email active, signUp ne rend jamais de session.
+    // L'Auth autorise la connexion d'un email non vérifié
+    // (mailer_allow_unverified_email_sign_ins) : on connecte donc tout de
+    // suite, le dashboard affiche un bandeau tant que l'email n'est pas
+    // confirmé. Si la connexion échoue (réglage absent), on retombe sur
+    // l'écran « vérifie ton email ».
+    const { data: signedIn } = await supabase.auth.signInWithPassword({ email, password })
+    if (signedIn.session) {
+      setSession(signedIn.session)
+      return { error: null, hasSession: true, alreadyExists: false }
+    }
+    // Un email déjà inscrit revient comme un utilisateur masqué : pas de
+    // session, aucun email envoyé, identities vide.
+    const alreadyExists = !!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
+    return { error: null, hasSession: false, alreadyExists }
   }
 
   const signInWithGoogle = async () => {
@@ -109,6 +125,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { emailRedirectTo: authCallbackUrl() },
     })
     return { error: error?.message ?? null }
+  }
+
+  // Le lien de confirmation peut être ouvert sur un autre appareil : la
+  // session locale garde alors un utilisateur « non vérifié » jusqu'au
+  // prochain rafraîchissement du jeton. On relit l'état côté Auth.
+  const refreshEmailVerification = async () => {
+    const { supabase } = await import('@/lib/supabaseClient')
+    const { data } = await supabase.auth.getUser()
+    if (!data.user?.email_confirmed_at) return false
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    if (refreshed.session) setSession(refreshed.session)
+    return true
   }
 
   const resetPasswordForEmail = async (email: string) => {
@@ -158,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signInWithGoogle,
         resendConfirmation,
+        refreshEmailVerification,
         resetPasswordForEmail,
         signOut,
         updateFullName,
