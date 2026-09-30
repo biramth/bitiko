@@ -102,14 +102,14 @@ export function FeaturedServicesRenderer({
           <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
               {services.map((service) => (
                 <div key={service.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                  <ServiceCard service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
+                  <ServiceCard service={service} currency={shop.currency} taxDisplay={shop.tax_display} promoBadge={badgeForService(promos ?? [], service)} />
                 </div>
               ))}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
             {services.map((service) => (
-              <ServiceCard key={service.id} service={service} currency={shop.currency} promoBadge={badgeForService(promos ?? [], service)} />
+              <ServiceCard key={service.id} service={service} currency={shop.currency} taxDisplay={shop.tax_display} promoBadge={badgeForService(promos ?? [], service)} />
             ))}
           </div>
         )

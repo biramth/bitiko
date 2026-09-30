@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Lock, Mail } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { useAuth } from '@/features/auth/AuthContext'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
+import { EmailVerificationStep } from '@/features/auth/EmailVerificationStep'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Turnstile } from '@/components/ui/Turnstile'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -17,7 +18,7 @@ const TURNSTILE_ENABLED = !!import.meta.env.VITE_TURNSTILE_SITE_KEY
 const inputClass =
   'w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none'
 
-type Step = 'email' | 'login' | 'signup' | 'checkEmail' | 'confirmEmail'
+type Step = 'email' | 'login' | 'signup' | 'verify'
 
 /**
  * Unified "email first" entry point (à la Linear/Notion): the merchant
@@ -31,7 +32,7 @@ type Step = 'email' | 'login' | 'signup' | 'checkEmail' | 'confirmEmail'
  */
 export function LoginPage() {
   usePageSeo({ title: 'Connexion — Bitiko', noindex: true })
-  const { session, signIn, signUp, resendConfirmation } = useAuth()
+  const { session, signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -44,10 +45,12 @@ export function LoginPage() {
 
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [unconfirmed, setUnconfirmed] = useState(false)
-  const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
+  // Écran de confirmation : mot de passe connu (détection automatique) et
+  // email tout juste envoyé (compte à rebours avant renvoi).
+  const [verify, setVerify] = useState<{ password: string | null; justSent: boolean }>({ password: null, justSent: false })
 
   const passwordRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -63,16 +66,19 @@ export function LoginPage() {
     setStep('email')
     setPassword('')
     setError(null)
-    setUnconfirmed(false)
-    setResent(false)
     setCheckError(null)
+  }
+
+  const goToVerify = (knownPassword: string | null, justSent: boolean) => {
+    setVerify({ password: knownPassword, justSent })
+    setError(null)
+    setStep('verify')
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setCheckingEmail(true)
     setCheckError(null)
-    setResent(false)
     try {
       const res = await fetch('/api/check-email', {
         method: 'POST',
@@ -82,10 +88,10 @@ export function LoginPage() {
       const body = await res.json()
       if (!res.ok) throw new Error(body.error ?? 'Impossible de vérifier cet email.')
       const status = typeof body.status === 'string' ? body.status : body.exists ? 'confirmed' : 'none'
-      // Unconfirmed accounts get the resend step: sending them to the login
-      // form would just loop on "email not confirmed" and make them redo the
-      // whole signup for an account whose row already exists.
-      setStep(status === 'unconfirmed' ? 'confirmEmail' : status === 'confirmed' ? 'login' : 'signup')
+      // Un compte non confirmé va droit à l'écran de confirmation (renvoi du
+      // lien) : le formulaire de connexion bouclerait sur « email non confirmé ».
+      if (status === 'unconfirmed') goToVerify(null, false)
+      else setStep(status === 'confirmed' ? 'login' : 'signup')
     } catch (err) {
       setCheckError(err instanceof Error ? err.message : 'Impossible de vérifier cet email.')
       setTurnstileToken(null)
@@ -99,12 +105,11 @@ export function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    setUnconfirmed(false)
     const { error: signInError } = await signIn(email, password)
     setLoading(false)
     if (signInError) {
       if (signInError.toLowerCase().includes('email not confirmed')) {
-        setUnconfirmed(true)
+        goToVerify(password, false)
       } else {
         setError('Mot de passe incorrect.')
       }
@@ -127,7 +132,7 @@ export function LoginPage() {
       setError(BREACHED_PASSWORD_MESSAGE)
       return
     }
-    const result = await signUp(email, password)
+    const result = await signUp(email, password, { marketingOptIn })
     setLoading(false)
     if (result.error) {
       setError(
@@ -138,26 +143,14 @@ export function LoginPage() {
       return
     }
     if (result.alreadyExists) {
-      setResent(false)
-      setStep('confirmEmail')
+      goToVerify(password, false)
       return
     }
     trackEvent('sign_up', { method: 'email' })
     if (result.hasSession) {
       navigate('/admin/onboarding', { replace: true })
     } else {
-      setStep('checkEmail')
-    }
-  }
-
-  const handleResend = async () => {
-    setResent(false)
-    setError(null)
-    const { error: resendError } = await resendConfirmation(email)
-    if (resendError) {
-      setError(resendError)
-    } else {
-      setResent(true)
+      goToVerify(password, true)
     }
   }
 
@@ -180,21 +173,29 @@ export function LoginPage() {
       <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-gold-300 opacity-20 blur-3xl" aria-hidden />
 
       <div className="relative w-full max-w-sm rounded-2xl border border-sand-200 bg-white p-5 shadow-xl shadow-ink-900/5 sm:p-8">
-        <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <Logo size={40} withWordmark={false} />
-          <h1 className="font-heading text-xl font-bold text-ink-900">Espace boutique</h1>
-          <p className="text-sm text-gray-500">
-            {step === 'signup' ? 'Crée ton compte pour commencer' : 'Connectez-vous pour gérer votre boutique'}
-          </p>
-        </div>
+        {step === 'verify' ? (
+          <div className="mb-6 flex justify-center">
+            <Logo size={32} withWordmark={false} />
+          </div>
+        ) : (
+          <>
+            <div className="mb-8 flex flex-col items-center gap-2 text-center">
+              <Logo size={40} withWordmark={false} />
+              <h1 className="font-heading text-xl font-bold text-ink-900">Espace boutique</h1>
+              <p className="text-sm text-gray-500">
+                {step === 'signup' ? 'Crée ton compte pour commencer' : 'Connectez-vous pour gérer votre boutique'}
+              </p>
+            </div>
 
-        <GoogleSignInButton label="Continuer avec Google" />
+            <GoogleSignInButton label="Continuer avec Google" />
 
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-sand-200" />
-          <span className="text-xs font-medium text-gray-400">ou avec votre email</span>
-          <div className="h-px flex-1 bg-sand-200" />
-        </div>
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-sand-200" />
+              <span className="text-xs font-medium text-gray-400">ou avec votre email</span>
+              <div className="h-px flex-1 bg-sand-200" />
+            </div>
+          </>
+        )}
 
         {step === 'email' && (
           <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -262,19 +263,6 @@ export function LoginPage() {
 
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-            {unconfirmed && (
-              <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                <p>Ton email n'est pas encore confirmé.</p>
-                {resent ? (
-                  <p className="mt-1 font-medium">Email renvoyé — vérifie ta boîte de réception.</p>
-                ) : (
-                  <button type="button" onClick={handleResend} className="mt-1 font-medium underline hover:no-underline">
-                    Renvoyer l'email de confirmation
-                  </button>
-                )}
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -335,6 +323,16 @@ export function LoginPage() {
               </span>
             </label>
 
+            <label className="flex items-start gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={marketingOptIn}
+                onChange={(e) => setMarketingOptIn(e.target.checked)}
+                className="mt-0.5 accent-brand-600"
+              />
+              <span>Je veux recevoir les nouveautés et offres Bitiko par email (désinscription en un clic).</span>
+            </label>
+
             <button
               type="submit"
               disabled={loading || !acceptedTerms}
@@ -346,40 +344,18 @@ export function LoginPage() {
           </form>
         )}
 
-        {step === 'checkEmail' && (
-          <div className="text-center">
-            <h2 className="text-base font-semibold text-gray-900">Vérifie ton email</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Un email de confirmation a été envoyé à <strong>{email}</strong>. Clique sur le lien puis reviens ici
-              pour créer ta boutique.
-            </p>
-            {resent ? (
-              <p className="mt-3 text-sm font-medium text-emerald-700">Email renvoyé.</p>
-            ) : (
-              <button type="button" onClick={handleResend} className="mt-3 text-sm font-medium text-brand-700 underline hover:no-underline">
-                Renvoyer l'email
-              </button>
-            )}
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-          </div>
-        )}
-
-        {step === 'confirmEmail' && (
-          <div className="text-center">
-            <h2 className="text-base font-semibold text-gray-900">Confirme ton email</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Un compte existe déjà pour <strong>{email}</strong>, mais son adresse n'est pas encore confirmée.
-              Confirme-la pour te connecter.
-            </p>
-            {resent ? (
-              <p className="mt-3 text-sm font-medium text-emerald-700">Email renvoyé — vérifie ta boîte de réception.</p>
-            ) : (
-              <button type="button" onClick={handleResend} className="mt-3 text-sm font-medium text-brand-700 underline hover:no-underline">
-                Renvoyer l'email de confirmation
-              </button>
-            )}
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-          </div>
+        {step === 'verify' && (
+          <EmailVerificationStep
+            email={email}
+            password={verify.password}
+            justSent={verify.justSent}
+            onChangeEmail={backToEmail}
+            onLogin={() => {
+              setPassword('')
+              setError(null)
+              setStep('login')
+            }}
+          />
         )}
 
         {step === 'email' && (

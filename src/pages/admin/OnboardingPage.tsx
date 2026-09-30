@@ -180,7 +180,13 @@ export function OnboardingPage() {
       if (alreadyCreated) return alreadyCreated
       const { firstName, lastName } = readUserNames(owner.user_metadata)
       // Le numéro personnel n'est plus demandé : le WhatsApp de la boutique sert de contact.
-      await ensureProfile(owner.id, 'owner', { firstName, lastName, phone: whatsappCheck.value, countryCode })
+      await ensureProfile(owner.id, 'owner', {
+        firstName,
+        lastName,
+        phone: whatsappCheck.value,
+        countryCode,
+        marketingOptIn: owner.user_metadata?.marketing_opt_in === true,
+      })
       return createShop({
         ownerId: owner.id,
         name: name.trim(),

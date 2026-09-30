@@ -17,7 +17,7 @@ import { createAppointment, getBookingSlots } from '@/services/appointment.servi
 import { bookingErrorMessage } from '@/services/bookingSettings.service'
 import { kickAutomations } from '@/services/bookingNotify.service'
 import { buildBookingWhatsAppMessage, buildWhatsAppUrl } from '@/utils/whatsappMessage'
-import { formatCurrency } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
 import type { Shop } from '@/types'
 import type { AppointmentsSectionConfig, ThemeConfig } from '@/types/builder'
@@ -170,7 +170,7 @@ export function AppointmentsRenderer({
                 <option value="">Choisir…</option>
                 {services.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} · {s.duration} min · {formatCurrency(s.price, shop.currency)}
+                    {s.name} · {s.duration} min · {formatPrice(s.price, shop.currency, shop.tax_display)}
                   </option>
                 ))}
               </select>

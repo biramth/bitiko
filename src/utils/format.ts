@@ -24,6 +24,17 @@ export function formatCurrency(amount: number, currency: string = 'XOF'): string
   }).format(value)
 }
 
+export type TaxDisplay = 'net' | 'ttc'
+
+/** Prix vitrine selon le statut fiscal de la boutique : 'ttc' ajoute le
+ *  suffixe TTC, 'net' affiche le montant tel quel (vendeur non assujetti —
+ *  la mention figure au checkout et dans les CGV). Aucun calcul de taxe :
+ *  les totaux sont toujours les prix affichés. */
+export function formatPrice(amount: number, currency: string = 'XOF', taxDisplay?: string | null): string {
+  const price = formatCurrency(amount, currency)
+  return taxDisplay === 'ttc' ? `${price} TTC` : price
+}
+
 export function slugify(value: string): string {
   return value
     .normalize('NFD')

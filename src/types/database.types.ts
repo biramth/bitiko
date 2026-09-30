@@ -1403,6 +1403,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          marketing_opt_in: boolean
           phone: string | null
           role: string
         }
@@ -1413,6 +1414,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          marketing_opt_in?: boolean
           phone?: string | null
           role?: string
         }
@@ -1423,6 +1425,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          marketing_opt_in?: boolean
           phone?: string | null
           role?: string
         }
@@ -1556,6 +1559,7 @@ export type Database = {
           payment_instructions: string | null
           slug: string
           suspended_at: string | null
+          tax_display: string
           social_links: Record<string, string>
           template_id: string | null
           theme_color: string
@@ -1589,6 +1593,7 @@ export type Database = {
           payment_instructions?: string | null
           slug: string
           suspended_at?: string | null
+          tax_display?: string
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -1622,6 +1627,7 @@ export type Database = {
           payment_instructions?: string | null
           slug?: string
           suspended_at?: string | null
+          tax_display?: string
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string

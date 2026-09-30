@@ -7,7 +7,7 @@ interface AuthContextValue {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string) => Promise<{ error: string | null; hasSession: boolean; alreadyExists: boolean }>
+  signUp: (email: string, password: string, options?: { marketingOptIn?: boolean }) => Promise<{ error: string | null; hasSession: boolean; alreadyExists: boolean }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>
@@ -74,12 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, options: { marketingOptIn?: boolean } = {}) => {
     const { supabase } = await import('@/lib/supabaseClient')
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: authCallbackUrl() },
+      options: {
+        emailRedirectTo: authCallbackUrl(),
+        // Reporté sur profiles.marketing_opt_in à l'onboarding (le profil n'existe pas encore).
+        ...(options.marketingOptIn ? { data: { marketing_opt_in: true } } : {}),
+      },
     })
     if (error) return { error: error.message, hasSession: false, alreadyExists: false }
     if (data.session) setSession(data.session)

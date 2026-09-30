@@ -39,6 +39,7 @@ export function PrivacyPage() {
           <li>Faire fonctionner le compte utilisateur et son espace (authentification, sauvegarde du catalogue, de l'agenda et des réglages).</li>
           <li>Permettre au client final de passer une commande, de demander un rendez-vous ou de réserver une table, et à l'utilisateur de la traiter (nom, téléphone, adresse transmis à l'utilisateur pour la livraison ou la prestation).</li>
           <li>Envoyer les emails de service à l'utilisateur : alerte à chaque nouvelle demande, rappels d'échéance de l'abonnement, informations sur le compte.</li>
+          <li>Envoyer les nouveautés et offres de Bitiko, uniquement aux utilisateurs qui l'ont accepté (case non cochée par défaut à l'inscription, modifiable à tout moment dans « Mon compte » ou par le lien de désinscription de chaque email).</li>
           <li>Permettre à l'utilisateur de suivre ses recettes et dépenses et d'éditer un bilan de gestion.</li>
           <li>Facturer les plans payants et prévenir la fraude.</li>
           <li>Mesurer la fréquentation des espaces pour améliorer la plateforme.</li>
@@ -49,7 +50,7 @@ export function PrivacyPage() {
         <p>
           Le traitement repose sur l'exécution du contrat conclu avec l'utilisateur (CGU) pour la gestion du compte
           et de l'espace, sur l'exécution de la commande, du rendez-vous ou de la réservation pour les données du client
-          final, sur votre consentement pour les traceurs tiers et sur l'intérêt légitime pour la mesure
+          final, sur votre consentement pour les traceurs tiers et les emails de nouveautés et offres, et sur l'intérêt légitime pour la mesure
           d'audience interne exemptée (voir la <Link to="/legal/cookies" className="font-medium text-brand-700 hover:underline">politique cookies</Link>),
           et sur l'intérêt légitime de Bitiko pour la prévention de la fraude et la sécurité
           de la plateforme.
@@ -75,6 +76,10 @@ export function PrivacyPage() {
           (comptabilité, litige en cours). Les données d'une commande, d'un rendez-vous ou d'une réservation sont conservées le temps nécessaire à
           leur traitement et à la gestion d'éventuels litiges ou obligations comptables. Le retour d'un compte au plan
           gratuit, faute de renouvellement, ne supprime pas ses données.
+        </p>
+        <p>
+          Un compte dont l'adresse email n'a pas été confirmée est supprimé au bout de 24 heures. Le journal des accès du personnel de support et l'historique des campagnes d'emails sont conservés
+          3 ans. Les abonnements aux notifications d'un appareil resté inactif sont supprimés au bout de 13 mois.
         </p>
       </LegalSection>
 

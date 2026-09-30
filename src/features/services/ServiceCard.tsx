@@ -1,16 +1,18 @@
 import { Scissors } from 'lucide-react'
 import type { Service } from '@/features/services/useServices'
-import { formatCurrency } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { FadeImage } from '@/components/ui/FadeImage'
 
 interface ServiceCardProps {
   service: Service
   currency: string
+  /** Statut fiscal d'affichage de la boutique ('ttc' ajoute le suffixe TTC). */
+  taxDisplay?: string | null
   /** Pastille promo CMS (ciblage prestation/catégorie). */
   promoBadge?: string | null
 }
 
-export function ServiceCard({ service, currency, promoBadge = null }: ServiceCardProps) {
+export function ServiceCard({ service, currency, taxDisplay, promoBadge = null }: ServiceCardProps) {
   return (
     <article className="group bg-[var(--shop-surface)] rounded-2xl border border-[var(--shop-border)] overflow-hidden transition-shadow hover:shadow-xl">
       {service.images?.[0] && (
@@ -49,7 +51,7 @@ export function ServiceCard({ service, currency, promoBadge = null }: ServiceCar
           )}
         </div>
         <p className="mt-3 font-bold text-brand-600">
-          {formatCurrency(service.price, currency)}
+          {formatPrice(service.price, currency, taxDisplay)}
         </p>
       </div>
     </article>

@@ -170,14 +170,14 @@ export function ProductsRenderer({ shop, config, themeConfig, sectionId, editabl
             <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
               {products.map((product, index) => (
                 <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-                  <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
+                  <ProductCard product={product} currency={shop.currency} taxDisplay={shop.tax_display} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
               {products.map((product, index) => (
-                <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
+                <ProductCard key={product.id} product={product} currency={shop.currency} taxDisplay={shop.tax_display} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={promoBadgeFor(product)} />
               ))}
             </div>
           )}
