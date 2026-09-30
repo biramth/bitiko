@@ -235,6 +235,7 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-2.5">
             <li><Link to="/legal/cgu" className={linkClass}>Conditions d'utilisation</Link></li>
             <li><Link to="/legal/confidentialite" className={linkClass}>Confidentialité</Link></li>
+            <li><Link to="/legal/cookies" className={linkClass}>Cookies</Link></li>
           </ul>
         </div>
       </div>

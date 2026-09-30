@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { LegalLayout, LegalSection } from '@/components/legal/LegalLayout'
 import { CONTACT_EMAIL } from '@/config/contact'
 import { usePageSeo } from '@/hooks/usePageSeo'
@@ -11,7 +12,7 @@ export function PrivacyPage() {
   usePageSeo(LEGAL_META['legal/confidentialite'])
 
   return (
-    <LegalLayout title="Politique de confidentialité" updatedAt="26 septembre 2026">
+    <LegalLayout title="Politique de confidentialité" updatedAt="30 septembre 2026">
       <LegalSection title="1. Qui traite vos données">
         <p>
           Bitiko est responsable du traitement des données des utilisateurs professionnels qui créent un espace sur la
@@ -48,7 +49,9 @@ export function PrivacyPage() {
         <p>
           Le traitement repose sur l'exécution du contrat conclu avec l'utilisateur (CGU) pour la gestion du compte
           et de l'espace, sur l'exécution de la commande, du rendez-vous ou de la réservation pour les données du client
-          final, et sur l'intérêt légitime de Bitiko pour la mesure d'audience, la prévention de la fraude et la sécurité
+          final, sur votre consentement pour les traceurs tiers et sur l'intérêt légitime pour la mesure
+          d'audience interne exemptée (voir la <Link to="/legal/cookies" className="font-medium text-brand-700 hover:underline">politique cookies</Link>),
+          et sur l'intérêt légitime de Bitiko pour la prévention de la fraude et la sécurité
           de la plateforme.
         </p>
       </LegalSection>
@@ -57,10 +60,10 @@ export function PrivacyPage() {
         <p>Les données sont hébergées et traitées par les prestataires suivants, chacun soumis à ses propres engagements de sécurité :</p>
         <ul className="list-disc space-y-1 pl-5">
           <li><strong>Supabase</strong> — base de données, authentification et stockage des fichiers (photos d'espace et d'éléments).</li>
-          <li><strong>Vercel</strong> — hébergement de l'application, mesure de fréquentation et de performance (Vercel Analytics et Speed Insights).</li>
+          <li><strong>Vercel</strong> — hébergement de l'application, mesure de fréquentation et de performance (Vercel Analytics et Speed Insights, chargés uniquement après votre consentement).</li>
           <li><strong>Resend</strong> — envoi des emails de service (alertes de nouvelle demande, rappels d'échéance).</li>
           <li><strong>Wave</strong> — traitement des paiements Mobile Money pour les abonnements payants.</li>
-          <li><strong>Google</strong> — connexion avec un compte Google (si l'utilisateur la choisit) et Google Analytics pour la mesure d'audience de la plateforme et des espaces dont l'utilisateur a renseigné son propre identifiant de mesure (données de navigation, pas les données saisies lors d'une commande ou d'une réservation).</li>
+          <li><strong>Google</strong> — connexion avec un compte Google, uniquement si l'utilisateur la choisit (données d'identification, pas de mesure d'audience : Bitiko n'utilise plus Google Analytics).</li>
           <li><strong>Have I Been Pwned</strong> — vérification, au moment du choix d'un mot de passe, qu'il n'a pas déjà fuité : seuls les cinq premiers caractères d'une empreinte du mot de passe sont envoyés, jamais le mot de passe lui-même.</li>
         </ul>
       </LegalSection>
@@ -85,11 +88,18 @@ export function PrivacyPage() {
 
       <LegalSection title="8. Cookies et mesure d'audience">
         <p>
-          Les espaces hébergés sur Bitiko utilisent le stockage local du navigateur pour le panier d'achat (nécessaire
-          au fonctionnement du service, pas de consentement requis). Bitiko mesure aussi la fréquentation de ses pages
-          avec un outil interne (page consultée, provenance, identifiant de visite aléatoire conservé localement, sans
-          cookie ni lien avec un compte), avec Vercel Analytics et Speed Insights, et, lorsqu'elle est activée, avec
-          Google Analytics, qui peut déposer des cookies pour compter les visites de façon agrégée.
+          Les espaces hébergés sur Bitiko utilisent le stockage local du navigateur pour le panier d'achat
+          (nécessaire au fonctionnement du service, pas de consentement requis). La fréquentation des pages
+          est mesurée par un outil interne exempté de consentement (page consultée sans ses paramètres
+          d'adresse, boutique visitée, hôte du site de provenance, identifiant de visite aléatoire cloisonné
+          par boutique et limité à 6 mois, jamais lié à un compte, données supprimées à 13 mois), auquel vous
+          pouvez vous opposer à tout moment.
+        </p>
+        <p>
+          Aucun outil tiers (Vercel Analytics et Speed Insights, PostHog hébergé dans l'Union européenne) ne
+          se charge avant votre choix via la bannière « Tout accepter / Tout refuser », valable 6 mois et
+          retirable à tout moment. Le détail, outil par outil, figure dans notre{' '}
+          <Link to="/legal/cookies" className="font-medium text-brand-700 hover:underline">politique cookies</Link>.
         </p>
       </LegalSection>
 

@@ -6,6 +6,7 @@ import { SolutionPage } from '@/pages/marketing/SolutionPage'
 import { SOLUTION_PAGES } from '@/pages/marketing/solutions/data'
 import { TermsPage } from '@/pages/legal/TermsPage'
 import { PrivacyPage } from '@/pages/legal/PrivacyPage'
+import { CookiesPage } from '@/pages/legal/CookiesPage'
 import { renderPrerenderedHtml } from '@/seo/prerenderHtml'
 
 export const assemble = renderPrerenderedHtml
@@ -16,6 +17,7 @@ export const PAGES: { name: string; path: string }[] = [
   ...SOLUTION_PAGES.map((page) => ({ name: `solutions-${page.slug}`, path: `/solutions/${page.slug}` })),
   { name: 'legal-cgu', path: '/legal/cgu' },
   { name: 'legal-confidentialite', path: '/legal/confidentialite' },
+  { name: 'legal-cookies', path: '/legal/cookies' },
 ]
 
 interface Captured {
@@ -37,6 +39,7 @@ export function renderPage(path: string) {
           <Route path="/solutions/:slug" element={<SolutionPage />} />
           <Route path="/legal/cgu" element={<TermsPage />} />
           <Route path="/legal/confidentialite" element={<PrivacyPage />} />
+          <Route path="/legal/cookies" element={<CookiesPage />} />
         </Routes>
       </StaticRouter>
     </QueryClientProvider>,

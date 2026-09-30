@@ -10,4 +10,9 @@ export const LEGAL_META: Record<string, { title: string; description: string }> 
     description:
       'Comment Bitiko protège vos données : compte, commandes, rendez-vous, équipe, finances. Hébergement, sous-traitants, durée de conservation et vos droits.',
   },
+  'legal/cookies': {
+    title: 'Politique cookies — Bitiko',
+    description:
+      'Quels traceurs Bitiko utilise, pourquoi, combien de temps, et comment accepter, refuser ou retirer votre consentement.',
+  },
 }

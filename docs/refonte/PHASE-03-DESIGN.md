@@ -33,7 +33,7 @@ Fonctions structurantes : `create_order` (seule écriture commandes, invitée in
 | `name`, `whatsapp_number`, `address`, `currency` | → activity (le shop hérite par défaut) | Identité pro partagée entre établissements |
 | `payment_instructions` | → activity (+ override shop plus tard) ; **sortir de la lecture publique** (D2.6) | Encaissement de l'activité |
 | `slug`, `template_id`, `layout_sections`, `theme_config`, `builder_draft`, `page_templates`, `theme_color`, `banner_url`, `logo_url` | **restent au shop** | Vitrine / URL / design = le morceau commerce |
-| `delivery_fee`, `free_delivery_threshold`, `low_stock_threshold`, `ga_measurement_id` | restent au shop | Paramètres de l'établissement |
+| `delivery_fee`, `free_delivery_threshold`, `low_stock_threshold` | restent au shop | Paramètres de l'établissement |
 | `description`, `social_links` | restent au shop (vitrine), copiables depuis l'activity | Contenu public |
 | `custom_domain` | **supprimé en 0019** — à reconstruire proprement (PHASE-10+, à partir d'Essentiel) | Ne pas ressusciter l'ancien modèle |
 

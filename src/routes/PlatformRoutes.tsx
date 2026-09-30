@@ -36,6 +36,9 @@ const TermsPage = lazy(() => import('@/pages/legal/TermsPage').then((m) => ({ de
 const PrivacyPage = lazy(() =>
   import('@/pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })),
 )
+const CookiesPage = lazy(() =>
+  import('@/pages/legal/CookiesPage').then((m) => ({ default: m.CookiesPage })),
+)
 const LoginPage = lazy(() => import('@/pages/admin/LoginPage').then((m) => ({ default: m.LoginPage })))
 const OnboardingPage = lazy(() =>
   import('@/pages/admin/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
@@ -147,6 +150,7 @@ export function PlatformRoutes() {
       <Route path="solutions/:slug" element={standalone(<SolutionPage />)} />
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
+      <Route path="legal/cookies" element={standalone(<CookiesPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
       <Route element={<ProtectedRoute />}>
         {/* /super-admin is superseded by the /plateforme workspace (per-tool

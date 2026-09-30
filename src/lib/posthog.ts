@@ -2,11 +2,11 @@ import posthog from 'posthog-js'
 
 /**
  * PostHog init, kept out of the hot path: only the lazy-loaded
- * `PostHogTracking` component (mounted by `DeferredThirdParty`) imports this
- * file, so `posthog-js` never lands in the main bundle. `trackEvent`/
- * `reportError` in `src/lib/analytics.ts` stay zero-cost by calling
- * `window.posthogCapture` instead of importing this module directly — the
- * same pattern `GoogleAnalytics` uses with `window.gtag`.
+ * `PostHogTracking` component (mounted by `DeferredThirdParty`, itself gated
+ * on cookie consent) imports this file, so `posthog-js` never lands in the
+ * main bundle. `trackEvent`/`reportError` in `src/lib/analytics.ts` stay
+ * zero-cost by calling `window.posthogCapture` instead of importing this
+ * module directly.
  */
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined

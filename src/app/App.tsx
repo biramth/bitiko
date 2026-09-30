@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { ScrollToTop } from '@/components/ScrollToTop'
-import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import { SelfAnalytics } from '@/components/SelfAnalytics'
+import { CookieBanner } from '@/components/CookieBanner'
 import { PageLoader } from '@/components/ui/PageLoader'
 
 // Only one of the two apps is ever rendered for a given visitor, so each is its
@@ -17,8 +17,8 @@ export function App() {
   return (
     <>
       <ScrollToTop />
-      <GoogleAnalytics />
       <SelfAnalytics />
+      <CookieBanner />
       <Suspense fallback={<PageLoader />}>
         {tenant.type === 'platform' ? <PlatformRoutes /> : <StoreApp />}
       </Suspense>
