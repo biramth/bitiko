@@ -1554,7 +1554,6 @@ export type Database = {
           name: string
           onboarding_responses: StoreProfileAnswers | null
           organization_id: string | null
-          owner_email_verified: boolean
           owner_id: string
           page_templates: SystemTemplateMap
           payment_instructions: string | null
@@ -1589,7 +1588,6 @@ export type Database = {
           name: string
           onboarding_responses?: StoreProfileAnswers | null
           organization_id?: string | null
-          owner_email_verified?: boolean
           owner_id: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
@@ -1624,7 +1622,6 @@ export type Database = {
           name?: string
           onboarding_responses?: StoreProfileAnswers | null
           organization_id?: string | null
-          owner_email_verified?: boolean
           owner_id?: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null

@@ -1,4 +1,4 @@
-import { lazy, useState } from 'react'
+import { lazy } from 'react'
 import { Route, Routes, useSearchParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenant/TenantContext'
 import { DraftPreviewProvider } from '@/features/store-builder/useEmbeddedPreview'
@@ -7,7 +7,6 @@ import { ShopNotFoundPage } from '@/pages/store/ShopNotFoundPage'
 import { StoreShell } from '@/components/ui/StoreShell'
 import { StoreNotFoundPage } from '@/pages/store/StoreNotFoundPage'
 import { ShopSuspendedPage } from '@/pages/store/ShopSuspendedPage'
-import { ShopComingSoonPage } from '@/pages/store/ShopComingSoonPage'
 
 // Each storefront page is its own chunk (StoreLayout already wraps <Outlet/> in
 // a Suspense boundary), so the home page doesn't ship the checkout funnel.
@@ -33,10 +32,6 @@ function StoreIndexRoute() {
 
 export function StoreApp() {
   const { isLoading, notFound, shop } = useTenant()
-  // L'aperçu de l'éditeur (?preview=draft) montre la boutique même hors ligne ;
-  // capturé une fois, les liens internes de l'aperçu perdant le paramètre.
-  const [searchParams] = useSearchParams()
-  const [isDraftPreview] = useState(() => searchParams.get('preview') === 'draft')
 
   if (isLoading) {
     return <StoreShell />
@@ -44,7 +39,6 @@ export function StoreApp() {
 
   if (notFound) return <ShopNotFoundPage />
   if (shop?.suspended_at) return <ShopSuspendedPage shopName={shop.name} />
-  if (shop && shop.owner_email_verified === false && !isDraftPreview) return <ShopComingSoonPage shopName={shop.name} />
 
   return (
     <DraftPreviewProvider>

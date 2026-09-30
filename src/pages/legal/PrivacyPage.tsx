@@ -78,8 +78,7 @@ export function PrivacyPage() {
           gratuit, faute de renouvellement, ne supprime pas ses données.
         </p>
         <p>
-          Un compte dont l'adresse email n'a jamais été confirmée et qui n'a créé aucun espace est supprimé au bout de
-          7 jours. Le journal des accès du personnel de support et l'historique des campagnes d'emails sont conservés
+          Un compte dont l'adresse email n'a pas été confirmée est supprimé au bout de 24 heures. Le journal des accès du personnel de support et l'historique des campagnes d'emails sont conservés
           3 ans. Les abonnements aux notifications d'un appareil resté inactif sont supprimés au bout de 13 mois.
         </p>
       </LegalSection>
