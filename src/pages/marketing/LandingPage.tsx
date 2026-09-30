@@ -12,6 +12,7 @@ import { realLife, shopCategories, solutions } from './landing/content'
 import { faq } from './landing/faq'
 import { Reveal, SectionEyebrow } from './landing/ui'
 import { SiteFooter, SiteNav } from './landing/Chrome'
+import { SkipLink } from '@/components/ui/SkipLink'
 
 /** Counts up from 0 to `target` once the element scrolls into view — the
  * small "alive" detail both reference sites use on their stat strips. */
@@ -240,6 +241,7 @@ export function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 font-sans text-ink-800">
+      <SkipLink />
       {promo ? (
         <div className="bg-brand-600 px-4 py-2 text-center text-xs text-white sm:text-sm">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1">
@@ -265,7 +267,7 @@ export function LandingPage() {
       ) : null}
       <SiteNav />
 
-      <main className="relative mx-auto w-full">
+      <main id="contenu" tabIndex={-1} className="relative mx-auto w-full focus:outline-none">
         {/* ── HERO ── */}
         <section className="relative mx-auto max-w-6xl overflow-hidden px-4 pb-10 pt-12 sm:overflow-visible sm:px-6 lg:flex lg:items-center lg:gap-12 lg:pt-20">
           <HeroBackdrop />

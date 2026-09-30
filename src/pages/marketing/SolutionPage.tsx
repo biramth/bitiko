@@ -4,6 +4,7 @@ import { usePageSeo } from '@/hooks/usePageSeo'
 import { useJsonLd } from '@/hooks/useJsonLd'
 import { breadcrumbJsonLd, faqJsonLd, solutionJsonLd, SITE_ORIGIN } from '@/seo/jsonLd'
 import { SiteFooter, SiteNav } from './landing/Chrome'
+import { SkipLink } from '@/components/ui/SkipLink'
 import { BrowserShot, PhoneShot, Reveal, SectionHeading } from './landing/ui'
 import { SOLUTION_BY_SLUG, type SolutionPageData } from './solutions/data'
 
@@ -15,8 +16,9 @@ export function SolutionContent({ page }: { page: SolutionPageData }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 font-sans text-ink-800">
+      <SkipLink />
       <SiteNav />
-      <main className="w-full">
+      <main id="contenu" tabIndex={-1} className="w-full focus:outline-none">
         <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 lg:pt-16">
           <nav aria-label="Fil d’Ariane" className="mb-6 flex flex-wrap items-center gap-1 text-xs text-ink-700/70">
             <Link to="/" className="hover:text-ink-900">Accueil</Link>

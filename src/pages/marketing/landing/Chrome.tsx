@@ -234,8 +234,11 @@ export function SiteFooter() {
           <p className="mb-5 text-sm font-semibold text-ink-900">Informations légales</p>
           <ul className="flex flex-col gap-2.5">
             <li><Link to="/legal/cgu" className={linkClass}>Conditions d'utilisation</Link></li>
+            <li><Link to="/legal/cgv" className={linkClass}>Conditions de vente</Link></li>
             <li><Link to="/legal/confidentialite" className={linkClass}>Confidentialité</Link></li>
             <li><Link to="/legal/cookies" className={linkClass}>Cookies</Link></li>
+            <li><Link to="/legal/mentions-legales" className={linkClass}>Mentions légales</Link></li>
+            <li><Link to="/legal/accessibilite" className={linkClass}>Accessibilité</Link></li>
           </ul>
         </div>
       </div>

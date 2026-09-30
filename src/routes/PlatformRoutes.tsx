@@ -39,6 +39,15 @@ const PrivacyPage = lazy(() =>
 const CookiesPage = lazy(() =>
   import('@/pages/legal/CookiesPage').then((m) => ({ default: m.CookiesPage })),
 )
+const LegalNoticePage = lazy(() =>
+  import('@/pages/legal/LegalNoticePage').then((m) => ({ default: m.LegalNoticePage })),
+)
+const SalesTermsPage = lazy(() =>
+  import('@/pages/legal/SalesTermsPage').then((m) => ({ default: m.SalesTermsPage })),
+)
+const AccessibilityPage = lazy(() =>
+  import('@/pages/legal/AccessibilityPage').then((m) => ({ default: m.AccessibilityPage })),
+)
 const LoginPage = lazy(() => import('@/pages/admin/LoginPage').then((m) => ({ default: m.LoginPage })))
 const OnboardingPage = lazy(() =>
   import('@/pages/admin/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
@@ -151,6 +160,9 @@ export function PlatformRoutes() {
       <Route path="legal/cgu" element={standalone(<TermsPage />)} />
       <Route path="legal/confidentialite" element={standalone(<PrivacyPage />)} />
       <Route path="legal/cookies" element={standalone(<CookiesPage />)} />
+      <Route path="legal/mentions-legales" element={standalone(<LegalNoticePage />)} />
+      <Route path="legal/cgv" element={standalone(<SalesTermsPage />)} />
+      <Route path="legal/accessibilite" element={standalone(<AccessibilityPage />)} />
       <Route path="auth/callback" element={standalone(<AuthCallbackPage />)} />
       <Route element={<ProtectedRoute />}>
         {/* /super-admin is superseded by the /plateforme workspace (per-tool

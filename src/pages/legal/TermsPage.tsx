@@ -13,7 +13,7 @@ export function TermsPage() {
   usePageSeo(LEGAL_META['legal/cgu'])
 
   return (
-    <LegalLayout title="Conditions générales d'utilisation" updatedAt="26 septembre 2026">
+    <LegalLayout title="Conditions générales d'utilisation" updatedAt="30 septembre 2026">
       <LegalSection title="1. Objet">
         <p>
           Bitiko est une plateforme qui permet à un professionnel (« vous », « l'utilisateur ») de créer et gérer
@@ -60,6 +60,7 @@ export function TermsPage() {
       <LegalSection title="4. Obligations de l'utilisateur">
         <ul className="list-disc space-y-1 pl-5">
           <li>Décrire ses éléments (produits ou prestations) de façon exacte et non trompeuse (prix, durée, disponibilité, description, photos).</li>
+          <li>Afficher sur sa vitrine son identité professionnelle, ses prix (toutes taxes comprises ou prix nets selon son statut fiscal), ses zones, tarifs et délais de livraison, et ses propres conditions de vente, de rétractation et de réclamation.</li>
           <li>Respecter le droit de la consommation applicable à ses ventes et prestations (information précontractuelle, droit de rétractation le cas échéant, garanties légales) ainsi que la réglementation du pays où il exerce.</li>
           <li>Traiter les commandes, rendez-vous, réservations et livraisons de bonne foi et dans les délais annoncés à ses clients, et prévenir ses clients en cas d'empêchement.</li>
           <li>Ne pas utiliser la plateforme pour vendre des produits ou services illégaux, contrefaits ou dangereux.</li>
@@ -124,7 +125,16 @@ export function TermsPage() {
             politique de confidentialité
           </Link>
           . Le personnel de support de Bitiko n'accède aux données d'un espace que pour aider l'utilisateur, et chaque
-          accès est enregistré.
+          accès est enregistré et notifié au propriétaire par email. Les conditions applicables aux achats des
+          clients finaux figurent dans les{' '}
+          <Link to="/legal/cgv" className="font-medium text-brand-700 hover:underline">
+            conditions générales de vente
+          </Link>
+          , et l'identité de l'éditeur dans les{' '}
+          <Link to="/legal/mentions-legales" className="font-medium text-brand-700 hover:underline">
+            mentions légales
+          </Link>
+          .
         </p>
       </LegalSection>
 

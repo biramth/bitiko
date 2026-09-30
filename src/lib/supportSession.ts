@@ -20,6 +20,9 @@ export interface SupportContext {
   startedAt: string
 }
 
+/** Durée de vie d'une session support : au-delà, le contexte est oublié. */
+export const SUPPORT_SESSION_TTL_MS = 2 * 60 * 60 * 1000
+
 interface SavedSession {
   access_token: string
   refresh_token: string
@@ -50,6 +53,15 @@ export function getImpersonation(): SupportContext | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as SupportContext
     if (!parsed.shopId || !parsed.shopName) return null
+    const startedAt = Date.parse(parsed.startedAt)
+    if (Number.isNaN(startedAt) || Date.now() - startedAt > SUPPORT_SESSION_TTL_MS) {
+      try {
+        localStorage.removeItem(CONTEXT_KEY)
+      } catch {
+        // ignore
+      }
+      return null
+    }
     return parsed
   } catch {
     return null
