@@ -33,12 +33,15 @@ import { EmptyState } from '@/components/ui/EmptyState'
 
 export function MetricCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint?: string; icon: LucideIcon }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Icon size={16} aria-hidden /> {label}
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-shadow hover:shadow-md">
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-900/[0.06] text-ink-800">
+          <Icon size={15} aria-hidden />
+        </span>
+        <span className="truncate text-[13px] font-medium text-gray-500">{label}</span>
       </div>
-      <p className="mt-1.5 text-2xl font-semibold text-gray-900">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-gray-400">{hint}</p>}
+      <p className="mt-2 truncate text-[22px] font-bold tracking-tight text-gray-900 tabular-nums">{value}</p>
+      {hint && <p className="mt-0.5 truncate text-xs text-gray-400">{hint}</p>}
     </div>
   )
 }

@@ -45,29 +45,29 @@ export function CollapsibleZone({
   }
 
   return (
-    <section className="mt-8">
-      <div className="flex items-center justify-between gap-3">
+    <section className="mt-5 sm:mt-6">
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:px-4">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="flex min-w-0 items-center gap-2 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-left transition-colors hover:bg-gray-50"
         >
-          <Icon size={18} aria-hidden className="shrink-0 text-gray-400" />
-          <h2 className="truncate text-lg font-semibold text-gray-900">{title}</h2>
-          <ChevronDown
-            size={16}
-            aria-hidden
-            className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-          />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-900/[0.06] text-ink-800">
+            <Icon size={16} aria-hidden />
+          </span>
+          <h2 className="min-w-0 flex-1 truncate font-heading text-[16px] font-semibold text-gray-900">{title}</h2>
+          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}>
+            <ChevronDown size={15} aria-hidden />
+          </span>
         </button>
         {to && (
-          <Link to={to} className="shrink-0 text-sm font-medium text-brand-700">
+          <Link to={to} className="shrink-0 rounded-lg px-2 py-1.5 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50">
             {linkLabel}
           </Link>
         )}
       </div>
-      {open && children}
+      {open && <div className="animate-fade-up">{children}</div>}
     </section>
   )
 }

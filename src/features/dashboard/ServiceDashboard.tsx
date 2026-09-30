@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, CalendarDays, Clock, Scissors, Users, type LucideIcon } from 'lucide-react'
+import { ArrowRight, BookOpen, CalendarDays, Check, Clock, Scissors, Users, type LucideIcon } from 'lucide-react'
 import { listShopServices } from '@/services/service.service'
 import { listShopTeamMembers } from '@/services/teamMember.service'
 import {
@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/Toast'
 import { BOOKING_STATUS_TONE, type BookingStatus } from '@/features/booking/bookingStatus'
 import { formatClock, formatLongDate } from '@/features/booking/bookingHelpers'
 import { localDateIso } from '@/utils/format'
+import { DashboardIdleNotice, DashboardSectionHeader, type DashboardAccent } from './dashboardUi'
 
 function ShortcutTile({
   icon: Icon,
@@ -31,53 +32,69 @@ function ShortcutTile({
   value,
   hint,
   to,
+  accent = 'ink',
 }: {
   icon: LucideIcon
   label: string
   value: string
   hint?: string
   to: string
+  accent?: DashboardAccent
 }) {
+  const pills: Record<DashboardAccent, string> = {
+    emerald: 'bg-emerald-100 text-emerald-700',
+    sky: 'bg-sky-100 text-sky-700',
+    brand: 'bg-brand-100 text-brand-700',
+    ink: 'bg-ink-900/[0.06] text-ink-800',
+    violet: 'bg-violet-100 text-violet-700',
+    amber: 'bg-amber-100 text-amber-800',
+  }
   return (
-    <Link to={to} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
-          <Icon size={17} aria-hidden />
+    <Link
+      to={to}
+      className="group block rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:-translate-y-px hover:border-brand-200 hover:shadow-md"
+    >
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${pills[accent]}`}>
+          <Icon size={18} aria-hidden />
         </span>
-        <div className="min-w-0">
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="mt-0.5 text-2xl font-semibold text-gray-900">{value}</p>
-          {hint && <p className="mt-0.5 text-xs text-gray-400">{hint}</p>}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium text-gray-500">{label}</p>
+          <p className="mt-0.5 text-2xl font-bold tracking-tight text-gray-900">{value}</p>
         </div>
+        <ArrowRight size={16} aria-hidden className="shrink-0 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" />
       </div>
+      {hint && <p className="mt-2 text-xs text-gray-400">{hint}</p>}
     </Link>
   )
 }
 
-function DayHeading({ icon: Icon, title, count, pending, to, linkLabel }: {
+function DayHeading({ icon, title, count, pending, to, linkLabel, accent }: {
   icon: LucideIcon
   title: string
   count: number
   pending: number
   to: string
   linkLabel: string
+  accent?: DashboardAccent
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-          <Icon size={16} aria-hidden className="text-gray-400" /> {title}
-          <span className="text-sm font-normal text-gray-500">
-            {count === 0 ? 'rien de prévu' : `${count} prévu${count > 1 ? 's' : ''}`}
-          </span>
-        </h3>
-        {pending > 0 && (
-          <p className="mt-0.5 text-sm font-medium text-amber-700">
-            {pending} à confirmer
-          </p>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <DashboardSectionHeader icon={icon} title={title} accent={accent} />
+        {count === 0 ? (
+          <span className="shrink-0 text-sm font-normal text-gray-400">rien de prévu</span>
+        ) : (
+          <Badge tone="neutral">{count} prévu{count > 1 ? 's' : ''}</Badge>
         )}
+        {pending > 0 && <Badge tone="warning">{pending} à confirmer</Badge>}
       </div>
-      <Link to={to} className="text-sm font-medium text-brand-700 hover:text-brand-800">{linkLabel}</Link>
+      <Link
+        to={to}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
+      >
+        {linkLabel} <ArrowRight size={14} aria-hidden />
+      </Link>
     </div>
   )
 }
@@ -169,13 +186,17 @@ export function ServiceDashboard({
   const activeServices = services.filter((s) => s.active)
 
   return (
-    <div className="mt-4 space-y-6">
-      <p className="text-sm text-gray-500">Aujourd’hui — {formatLongDate(today)}</p>
+    <div className="mt-4 space-y-4 sm:space-y-5">
+      <p className="flex items-center gap-2 text-[13px] font-medium text-gray-500">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+        Aujourd’hui — <span className="capitalize text-gray-700">{formatLongDate(today)}</span>
+      </p>
 
       {showAppointments && (
-        <Card>
+        <Card className="rounded-2xl">
           <DayHeading
             icon={CalendarDays}
+            accent="brand"
             title="Rendez-vous du jour"
             count={liveAppointments.length}
             pending={pendingAppointments}
@@ -183,31 +204,33 @@ export function ServiceDashboard({
             linkLabel="Ouvrir l’agenda"
           />
           {liveAppointments.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">
-              Aucun rendez-vous aujourd’hui. Partagez le lien de votre site pour recevoir des demandes.
-            </p>
+            <DashboardIdleNotice message="Aucun rendez-vous aujourd’hui. Partagez le lien de votre site pour recevoir des demandes." />
           ) : (
             <ul className="mt-3 divide-y divide-gray-100">
               {liveAppointments.map((rdv) => {
                 const status = rdv.status as BookingStatus
+                const isPending = status === 'pending'
                 return (
-                  <li key={rdv.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                    <span className="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold text-gray-900">
+                  <li key={rdv.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-2 py-2.5 transition-colors hover:bg-gray-50 ${isPending ? 'bg-amber-50/40 hover:bg-amber-50/70' : ''}`}>
+                    <span className="flex w-16 shrink-0 items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-[13px] font-bold tabular-nums text-gray-900">
                       <Clock size={13} aria-hidden className="text-gray-400" /> {formatClock(rdv.start_at)}
                     </span>
-                    <span className="min-w-0 flex-1 text-sm text-gray-700">
-                      <span className="font-medium text-gray-900">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'}</span>
+                    <span className="min-w-0 flex-1 basis-40 text-sm text-gray-700">
+                      <span className="font-semibold text-gray-900">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'}</span>
                       {' — '}
                       {rdv.customer_name}
                     </span>
                     <Badge tone={BOOKING_STATUS_TONE[status] ?? 'neutral'}>
                       {APPOINTMENT_STATUS_LABELS[status as AppointmentStatus] ?? rdv.status}
                     </Badge>
-                    {status === 'pending' && (
+                    {isPending && (
                       <Button
                         size="sm"
+                        icon={<Check size={14} aria-hidden />}
                         disabled={appointmentMutation.isPending}
                         onClick={() => appointmentMutation.mutate({ id: rdv.id, status: 'confirmed' })}
+                        className="min-h-9"
+                        aria-label={`Confirmer le rendez-vous de ${rdv.customer_name} à ${formatClock(rdv.start_at)}`}
                       >
                         Confirmer
                       </Button>
@@ -218,15 +241,15 @@ export function ServiceDashboard({
             </ul>
           )}
           {laterAppointments.length > 0 && (
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
-              <ul className="mt-2 space-y-1 text-sm text-gray-600">
+            <div className="mt-4 rounded-xl bg-gray-50/70 px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
                 {laterAppointments.map((rdv) => (
                   <li key={rdv.id} className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="w-40 shrink-0 capitalize text-gray-500">
+                    <span className="w-40 shrink-0 capitalize tabular-nums text-gray-500">
                       {new Date(rdv.start_at).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} · {formatClock(rdv.start_at)}
                     </span>
-                    <span className="text-gray-800">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'} — {rdv.customer_name}</span>
+                    <span className="min-w-0 text-gray-800">{rdv.service?.name ?? rdv.service_name ?? 'Prestation'} — {rdv.customer_name}</span>
                   </li>
                 ))}
               </ul>
@@ -236,9 +259,10 @@ export function ServiceDashboard({
       )}
 
       {showReservations && (
-        <Card>
+        <Card className="rounded-2xl">
           <DayHeading
             icon={BookOpen}
+            accent="violet"
             title="Réservations de table du jour"
             count={liveReservations.length}
             pending={pendingReservations}
@@ -246,27 +270,31 @@ export function ServiceDashboard({
             linkLabel="Ouvrir le registre"
           />
           {liveReservations.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">Aucune réservation aujourd’hui.</p>
+            <DashboardIdleNotice message="Aucune réservation aujourd’hui." />
           ) : (
             <ul className="mt-3 divide-y divide-gray-100">
               {liveReservations.map((resa) => {
                 const status = resa.status as BookingStatus
+                const isPending = status === 'pending'
                 return (
-                  <li key={resa.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                    <span className="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold text-gray-900">
+                  <li key={resa.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-2 py-2.5 transition-colors hover:bg-gray-50 ${isPending ? 'bg-amber-50/40 hover:bg-amber-50/70' : ''}`}>
+                    <span className="flex w-16 shrink-0 items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-[13px] font-bold tabular-nums text-gray-900">
                       <Clock size={13} aria-hidden className="text-gray-400" /> {formatClock(resa.start_at)}
                     </span>
-                    <span className="min-w-0 flex-1 text-sm text-gray-700">
-                      <span className="font-medium text-gray-900">{resa.customer_name}</span> · {resa.party_size} personne{resa.party_size > 1 ? 's' : ''}
+                    <span className="min-w-0 flex-1 basis-40 text-sm text-gray-700">
+                      <span className="font-semibold text-gray-900">{resa.customer_name}</span> · {resa.party_size} personne{resa.party_size > 1 ? 's' : ''}
                     </span>
                     <Badge tone={BOOKING_STATUS_TONE[status] ?? 'neutral'}>
                       {RESERVATION_STATUS_LABELS[status as ReservationStatus] ?? resa.status}
                     </Badge>
-                    {status === 'pending' && (
+                    {isPending && (
                       <Button
                         size="sm"
+                        icon={<Check size={14} aria-hidden />}
                         disabled={reservationMutation.isPending}
                         onClick={() => reservationMutation.mutate({ id: resa.id, status: 'confirmed' })}
+                        className="min-h-9"
+                        aria-label={`Confirmer la réservation de ${resa.customer_name} à ${formatClock(resa.start_at)}`}
                       >
                         Confirmer
                       </Button>
@@ -277,15 +305,15 @@ export function ServiceDashboard({
             </ul>
           )}
           {laterReservations.length > 0 && (
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
-              <ul className="mt-2 space-y-1 text-sm text-gray-600">
+            <div className="mt-4 rounded-xl bg-gray-50/70 px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Prochains jours</p>
+              <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
                 {laterReservations.map((resa) => (
                   <li key={resa.id} className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="w-40 shrink-0 capitalize text-gray-500">
+                    <span className="w-40 shrink-0 capitalize tabular-nums text-gray-500">
                       {new Date(resa.start_at).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} · {formatClock(resa.start_at)}
                     </span>
-                    <span className="text-gray-800">{resa.customer_name} · {resa.party_size} pers.</span>
+                    <span className="min-w-0 text-gray-800">{resa.customer_name} · {resa.party_size} pers.</span>
                   </li>
                 ))}
               </ul>
@@ -295,19 +323,21 @@ export function ServiceDashboard({
       )}
 
       {(showServices || showTeam) && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           {showServices && (
             <ShortcutTile
               icon={Scissors}
+              accent="brand"
               label="Prestations sur votre site"
               value={String(activeServices.length)}
-              hint={services.length !== activeServices.length ? `${services.length - activeServices.length} masquée${services.length - activeServices.length > 1 ? 's' : ''}` : 'Gérer mes prestations'}
+              hint={services.length !== activeServices.length ? `${services.length - activeServices.length} masquée${services.length - activeServices.length > 1 ? 's' : ''} — gérer` : 'Gérer mes prestations'}
               to="/admin/prestations"
             />
           )}
           {showTeam && (
             <ShortcutTile
               icon={Users}
+              accent="sky"
               label="Personnes dans votre équipe"
               value={String(team.filter((m) => m.active).length)}
               hint="Gérer mon équipe"
