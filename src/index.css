@@ -43,6 +43,7 @@
   --animate-blob: blob 12s ease-in-out infinite;
   --animate-marquee: marquee 28s linear infinite;
   --animate-toast-in: toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-cookie-modal: cookie-modal 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes fade-up {
@@ -92,6 +93,17 @@
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cookie-modal {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
   }
   to {
     opacity: 1;
