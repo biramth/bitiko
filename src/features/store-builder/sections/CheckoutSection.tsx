@@ -11,7 +11,7 @@ import {
   setOrderCustomerEmail,
 } from '@/services/order.service'
 import { listDeliverySecteurs, listDeliveryVilles } from '@/services/deliverySecteur.service'
-import { formatCurrency, resolveZoneDeliveryFee } from '@/utils/format'
+import { formatCurrency, formatPrice, resolveZoneDeliveryFee } from '@/utils/format'
 import { platformUrl } from '@/lib/tenant'
 import { phonePlaceholder } from '@/config/countries'
 import { PHONE_ERROR_MESSAGES, formatPhoneNumberForDisplay, normalizePhoneNumber } from '@/utils/phone'
@@ -232,9 +232,12 @@ function CheckoutFlow({
         )}
         <div className="mt-3 flex justify-between border-t border-[var(--shop-text)]/10 pt-3 font-semibold text-[var(--shop-text)]">
           <span>Total estimé</span>
-          <span className="text-lg font-bold">{formatCurrency(estimate, currency)}</span>
+          <span className="text-lg font-bold">{formatPrice(estimate, currency, shop.tax_display)}</span>
         </div>
         <p className="mt-2 text-xs text-[var(--shop-text)]/50">
+          {shop.tax_display === 'ttc'
+            ? 'Prix toutes taxes comprises. '
+            : 'Prix nets : le vendeur ne facture pas de TVA. '}
           Le total définitif est recalculé au moment de la commande (prix et stock à jour). La vente n'est
           définitive qu'à la confirmation du vendeur sur WhatsApp.
         </p>

@@ -11,6 +11,7 @@ import {
   ImagePlus,
   Loader2,
   MapPin,
+  Megaphone,
   MessageCircle,
   Package,
   Pencil,
@@ -49,7 +50,7 @@ import {
   updateDeliverySecteur,
   updateDeliveryVille,
 } from '@/services/deliverySecteur.service'
-import { contrastWithWhite, formatCurrency, normalizeCurrency, whatsappHref } from '@/utils/format'
+import { contrastWithWhite, formatCurrency, formatPrice, normalizeCurrency, whatsappHref } from '@/utils/format'
 import { PHONE_ERROR_MESSAGES, normalizePhoneNumber } from '@/utils/phone'
 import { PRICE_ERROR_MESSAGES, normalizePrice } from '@/utils/price'
 import { extractPaletteFromFile } from '@/utils/extractColorFromImage'
@@ -60,6 +61,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Lock } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { getMarketingOptIn, setMarketingOptIn } from '@/services/profile.service'
 import { usePageSeo } from '@/hooks/usePageSeo'
 import type { DeliverySecteur } from '@/types'
 import { buttonClass } from '@/components/ui/styles'
@@ -101,6 +103,45 @@ function Card({
       </header>
       <div className="space-y-4 p-4 sm:p-5">{children}</div>
     </section>
+  )
+}
+
+/** Consentement aux emails de campagne (nouveautés, offres) — jamais coché par
+ *  défaut. Les emails liés au compte (bienvenue, abonnement) partent quoi qu'il arrive. */
+function MarketingEmailsCard({ userId }: { userId: string }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const { data: optIn, isLoading } = useQuery({
+    queryKey: ['marketing-opt-in', userId],
+    queryFn: () => getMarketingOptIn(userId),
+  })
+  const mutation = useMutation({
+    mutationFn: (next: boolean) => setMarketingOptIn(userId, next),
+    onSuccess: (_, next) => {
+      queryClient.setQueryData(['marketing-opt-in', userId], next)
+      toast.success(next ? 'Vous recevrez les nouveautés Bitiko.' : 'Vous ne recevrez plus les emails de campagne.')
+    },
+    onError: () => toast.error("Impossible d'enregistrer votre choix. Réessayez."),
+  })
+
+  return (
+    <Card icon={Megaphone} title="Nouveautés et offres" description="Emails occasionnels de l'équipe Bitiko.">
+      <label className="flex items-start gap-3 text-sm text-gray-700">
+        <input
+          type="checkbox"
+          checked={optIn === true}
+          disabled={isLoading || mutation.isPending}
+          onChange={(e) => mutation.mutate(e.target.checked)}
+          className="mt-0.5 accent-brand-600"
+        />
+        <span>
+          Je veux recevoir les nouveautés, conseils et offres Bitiko par email.
+          <span className="mt-0.5 block text-xs text-gray-500">
+            Les emails liés à votre compte (bienvenue, abonnement, rappels) sont envoyés dans tous les cas.
+          </span>
+        </span>
+      </label>
+    </Card>
   )
 }
 
@@ -277,6 +318,8 @@ function AccountSection({ shop }: { shop: NonNullable<ReturnType<typeof useMySho
           Non modifiable directement — contactez le support si vous devez changer d'adresse.
         </p>
       </Card>
+
+      {user && <MarketingEmailsCard userId={user.id} />}
 
       <Card
         icon={Lock}
@@ -465,6 +508,7 @@ function SettingsForm({
   const [paymentInstructions, setPaymentInstructions] = useState(shop.payment_instructions ?? '')
   const [countryCode, setCountryCode] = useState(shop.country_code ?? 'SN')
   const [currency, setCurrency] = useState(shop.currency)
+  const [taxDisplay, setTaxDisplay] = useState(shop.tax_display === 'ttc' ? 'ttc' : 'net')
   const [address, setAddress] = useState(shop.address ?? '')
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>(shop.social_links ?? {})
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url)
@@ -505,6 +549,7 @@ function SettingsForm({
       paymentInstructions,
       countryCode,
       currency,
+      taxDisplay,
       address,
       socialLinks,
       logoUrl,
@@ -683,6 +728,7 @@ function SettingsForm({
         payment_instructions: paymentInstructions.trim() || null,
         country_code: countryCode,
         currency: normalizeCurrency(currency),
+        tax_display: taxDisplay,
         address: address.trim() || null,
         social_links: Object.fromEntries(
           Object.entries(socialLinks)
@@ -1153,7 +1199,26 @@ function SettingsForm({
                   ))}
                 </datalist>
                 <p className="mt-1 text-xs text-gray-500">
-                  Exemple d'affichage : {formatCurrency(12500, currency) || '—'}
+                  Exemple d'affichage : {formatPrice(12500, currency, taxDisplay) || '—'}
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="taxDisplay" className="block text-sm font-medium text-gray-700">
+                  TVA sur vos prix
+                </label>
+                <select
+                  id="taxDisplay"
+                  value={taxDisplay}
+                  onChange={(e) => setTaxDisplay(e.target.value === 'ttc' ? 'ttc' : 'net')}
+                  className={inputClass}
+                >
+                  <option value="net">Je ne facture pas de TVA (prix nets)</option>
+                  <option value="ttc">Mes prix incluent la TVA (TTC)</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Indiqué sur votre vitrine et au moment de la commande. Aucun montant n'est recalculé : vos clients paient
+                  le prix affiché.
                 </p>
               </div>
 

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { PartyPopper, Share2, ShoppingBag, Truck } from 'lucide-react'
 import { useCart } from '@/features/cart/CartContext'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatPrice } from '@/utils/format'
 import { formatOptionsInline, optionsKey } from '@/utils/productOptions'
 import { useIsEmbeddedPreview } from '../useEmbeddedPreview'
 import { buildDemoCart } from '../demoCart'
@@ -152,7 +152,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
                   </button>
                 )}
               </div>
-              <p className="text-sm text-[var(--shop-text)]/50">{formatCurrency(item.price, currency)} / unité</p>
+              <p className="text-sm text-[var(--shop-text)]/50">{formatPrice(item.price, currency, shop.tax_display)} / unité</p>
 
               <div className="mt-2 flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -183,7 +183,7 @@ export function CartRenderer({ shop, config, themeConfig }: { shop: Shop; config
             Continuer mes achats
           </Link>
         </div>
-        <span className="text-lg font-bold text-[var(--shop-text)]">{formatCurrency(subtotal, currency)}</span>
+        <span className="text-lg font-bold text-[var(--shop-text)]">{formatPrice(subtotal, currency, shop.tax_display)}</span>
       </div>
       <p className="mt-2 text-xs text-[var(--shop-text)]/60">Livraison calculée à l'étape suivante.</p>
 

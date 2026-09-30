@@ -1403,6 +1403,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          marketing_opt_in: boolean
           phone: string | null
           role: string
         }
@@ -1413,6 +1414,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          marketing_opt_in?: boolean
           phone?: string | null
           role?: string
         }
@@ -1423,6 +1425,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          marketing_opt_in?: boolean
           phone?: string | null
           role?: string
         }
@@ -1551,11 +1554,13 @@ export type Database = {
           name: string
           onboarding_responses: StoreProfileAnswers | null
           organization_id: string | null
+          owner_email_verified: boolean
           owner_id: string
           page_templates: SystemTemplateMap
           payment_instructions: string | null
           slug: string
           suspended_at: string | null
+          tax_display: string
           social_links: Record<string, string>
           template_id: string | null
           theme_color: string
@@ -1584,11 +1589,13 @@ export type Database = {
           name: string
           onboarding_responses?: StoreProfileAnswers | null
           organization_id?: string | null
+          owner_email_verified?: boolean
           owner_id: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug: string
           suspended_at?: string | null
+          tax_display?: string
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string
@@ -1617,11 +1624,13 @@ export type Database = {
           name?: string
           onboarding_responses?: StoreProfileAnswers | null
           organization_id?: string | null
+          owner_email_verified?: boolean
           owner_id?: string
           page_templates?: SystemTemplateMap
           payment_instructions?: string | null
           slug?: string
           suspended_at?: string | null
+          tax_display?: string
           social_links?: Record<string, string>
           template_id?: string | null
           theme_color?: string

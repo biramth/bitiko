@@ -24,7 +24,7 @@ import { useCart } from '@/features/cart/CartContext'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { trackEvent } from '@/lib/analytics'
-import { formatCurrency } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { thumbSrcSet } from '@/utils/image'
 import { MAX_OPTION_TEXT_LENGTH, parseOptionFields, resolveSelection } from '@/utils/productOptions'
 import { effectivePrice } from '@/utils/productPricing'
@@ -288,7 +288,7 @@ function ProductDetails({
     // Partage WhatsApp d'abord (canal n°1 en Afrique de l'Ouest) : ouvre le
     // sélecteur de contact avec le message déjà rempli. Le partage système
     // reste disponible via le navigateur (URL copiable dans la barre).
-    const text = `Découvre ${product.name} (${formatCurrency(displayPrice, currency)}) : ${window.location.href}`
+    const text = `Découvre ${product.name} (${formatPrice(displayPrice, currency, shop.tax_display)}) : ${window.location.href}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
     trackEvent('share', { content_type: 'product', product_id: product.id, method: 'whatsapp' })
   }
@@ -530,7 +530,7 @@ function ProductDetails({
             )}
             {config.showPrice && (
               <p className="mt-4 text-xl font-semibold text-[var(--shop-text)]">
-                {formatCurrency(displayPrice, currency)}
+                {formatPrice(displayPrice, currency, shop.tax_display)}
               </p>
             )}
             {hasVariants && (
@@ -685,7 +685,7 @@ function ProductDetails({
         <div className="fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-3 border-t border-[var(--shop-text)]/10 bg-[var(--shop-bg)] px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden">
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-[var(--shop-text)]/60">{product.name}</p>
-            <p className="text-sm font-bold text-[var(--shop-text)]">{formatCurrency(displayPrice, currency)}</p>
+            <p className="text-sm font-bold text-[var(--shop-text)]">{formatPrice(displayPrice, currency, shop.tax_display)}</p>
           </div>
           <button
             onClick={handleAddToCart}
@@ -733,7 +733,7 @@ function RelatedProducts({
       <h2 className={`font-heading font-bold text-[var(--shop-text)] ${sectionHeadingClass(themeConfig)}`}>Vous aimerez aussi</h2>
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
         {related.map((product) => (
-          <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} promoBadge={badgeForProduct(promos ?? [], product)} />
+          <ProductCard key={product.id} product={product} currency={shop.currency} taxDisplay={shop.tax_display} lowStockThreshold={shop.low_stock_threshold} promoBadge={badgeForProduct(promos ?? [], product)} />
         ))}
       </div>
     </section>
@@ -778,7 +778,7 @@ function RecentlyViewedRow({ shop, product, themeConfig }: { shop: Shop; product
             <p className="mt-3 truncate text-sm text-[var(--shop-text)] group-hover:underline group-hover:decoration-[var(--shop-text)]/40 group-hover:underline-offset-2">
               {item.name}
             </p>
-            <p className="text-sm font-semibold text-[var(--shop-text)]">{formatCurrency(item.price, shop.currency)}</p>
+            <p className="text-sm font-semibold text-[var(--shop-text)]">{formatPrice(item.price, shop.currency, shop.tax_display)}</p>
           </Link>
         ))}
       </div>

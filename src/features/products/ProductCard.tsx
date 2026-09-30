@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Plus } from 'lucide-react'
-import { formatCurrency } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { thumbSrcSet } from '@/utils/image'
 import { StockBadge } from './StockBadge'
 import { useCart } from '@/features/cart/CartContext'
@@ -14,12 +14,15 @@ import { FadeImage } from '@/components/ui/FadeImage'
 export function ProductCard({
   product,
   currency,
+  taxDisplay,
   lowStockThreshold,
   priority = false,
   promoBadge = null,
 }: {
   product: ProductWithRelations
   currency: string
+  /** Statut fiscal d'affichage de la boutique ('ttc' ajoute le suffixe TTC). */
+  taxDisplay?: string | null
   lowStockThreshold?: number
   /** Carte visible dès l'ouverture de la page : image chargée sans délai. */
   priority?: boolean
@@ -96,7 +99,7 @@ export function ProductCard({
           </h3>
           <p className="text-sm font-semibold text-[var(--shop-text)]">
             {hasRange && <span className="mr-1 text-xs font-normal opacity-70">À partir de</span>}
-            {formatCurrency(min, currency)}
+            {formatPrice(min, currency, taxDisplay)}
           </p>
           {hasVariants && shownVariantNames && (
             <p className="text-xs text-[var(--shop-text)]/55">{shownVariantNames}</p>

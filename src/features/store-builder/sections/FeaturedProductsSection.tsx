@@ -50,14 +50,14 @@ export function FeaturedProductsRenderer({ shop, config, themeConfig, sectionId,
         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:thin]">
           {products.map((product, index) => (
             <div key={product.id} className="w-[70%] shrink-0 snap-start sm:w-[40%] lg:w-[24%]">
-              <ProductCard product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
+              <ProductCard product={product} currency={shop.currency} taxDisplay={shop.tax_display} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
           {products.map((product, index) => (
-            <ProductCard key={product.id} product={product} currency={shop.currency} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
+            <ProductCard key={product.id} product={product} currency={shop.currency} taxDisplay={shop.tax_display} lowStockThreshold={shop.low_stock_threshold} priority={index < 4} promoBadge={badgeForProduct(promos ?? [], product)} />
           ))}
         </div>
       )}

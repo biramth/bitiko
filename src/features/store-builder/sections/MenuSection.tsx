@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { UtensilsCrossed } from 'lucide-react'
 import { useActiveProducts } from '@/features/products/useProducts'
 import { useCategories } from '@/features/categories/useCategories'
-import { formatCurrency } from '@/utils/format'
+import { formatPrice } from '@/utils/format'
 import { priceRange } from '@/utils/productPricing'
 import { Spinner } from '@/components/ui/Spinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -99,7 +99,7 @@ export function MenuRenderer({
             )}
             <ul className="divide-y divide-[var(--shop-text)]/10">
               {group.items.map((item) => (
-                <MenuRow key={item.id} item={item} currency={shop.currency} showPrices={config.showPrices} promoBadge={badgeForProduct(promos ?? [], item)} />
+                <MenuRow key={item.id} item={item} currency={shop.currency} taxDisplay={shop.tax_display} showPrices={config.showPrices} promoBadge={badgeForProduct(promos ?? [], item)} />
               ))}
             </ul>
           </div>
@@ -109,7 +109,7 @@ export function MenuRenderer({
   )
 }
 
-function MenuRow({ item, currency, showPrices, promoBadge }: { item: ProductWithRelations; currency: string; showPrices: boolean; promoBadge?: string | null }) {
+function MenuRow({ item, currency, taxDisplay, showPrices, promoBadge }: { item: ProductWithRelations; currency: string; taxDisplay?: string | null; showPrices: boolean; promoBadge?: string | null }) {
   const cover = item.images[0]?.thumb_url ?? item.images[0]?.public_url
   const soldOut = item.stock <= 0
   const { min, hasRange } = priceRange(item)
@@ -141,7 +141,7 @@ function MenuRow({ item, currency, showPrices, promoBadge }: { item: ProductWith
         {showPrices && item.price > 0 && (
           <p className="shrink-0 whitespace-nowrap font-semibold text-[var(--shop-text)]">
             {hasRange && <span className="mr-1 text-xs font-normal opacity-70">dès</span>}
-            {formatCurrency(min, currency)}
+            {formatPrice(min, currency, taxDisplay)}
           </p>
         )}
       </Link>
