@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ChevronRight, Eye, PackageX, ShoppingBag, Wallet, AlertTriangle, type LucideIcon } from 'lucide-react'
+import { ChartColumn, Eye, PackageX, ShoppingBag, TrendingUp, Wallet, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -11,36 +11,32 @@ import { useUpgrade } from '@/features/billing/upgradeContext'
 import type { DashboardStats } from '@/services/dashboard.service'
 import { formatCurrency, timeAgo } from '@/utils/format'
 import type { Order, OrderStatus } from '@/types'
-
-function Kpi({ icon: Icon, label, value, hint, to }: { icon: LucideIcon; label: string; value: string; hint?: string; to?: string }) {
-  const body = (
-    <div className="h-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Icon size={15} aria-hidden /> {label}
-      </div>
-      <p className="mt-2 break-words text-xl font-semibold text-gray-900 sm:text-2xl">{value}</p>
-      <p className="mt-0.5 min-h-4 text-xs text-gray-400">{hint}</p>
-    </div>
-  )
-  return to ? <Link to={to} className="block min-w-0">{body}</Link> : <div className="min-w-0">{body}</div>
-}
+import { DashboardIdleNotice, DashboardKpi, DashboardOkNotice, DashboardSectionHeader } from './dashboardUi'
 
 function OrderRow({ order, currency, onAdvance, busy }: { order: Order; currency: string; onAdvance: (status: OrderStatus) => void; busy: boolean }) {
   const next = getLinearNext(order.status)
+  const isUrgent = order.status === 'pending'
   return (
-    <li className="flex items-center gap-3 py-3">
-      <Link to={`/admin/commandes/${order.id}`} className="min-w-0 flex-1">
+    <li className={`flex items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-gray-50 ${isUrgent ? 'bg-amber-50/40 hover:bg-amber-50/70' : ''}`}>
+      <Link to={`/admin/commandes/${order.id}`} className="min-w-0 flex-1 rounded-lg focus-visible:outline-none">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-medium text-brand-700">{order.order_number}</span>
+          <span className="font-semibold text-brand-700">{order.order_number}</span>
           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ORDER_STATUS_COLORS[order.status]}`}>{ORDER_STATUS_LABELS[order.status]}</span>
         </p>
-        <p className="mt-0.5 truncate text-sm text-gray-700">
-          {order.customer_name} · <span className="font-medium text-gray-900">{formatCurrency(Number(order.total), currency)}</span>
+        <p className="mt-1 truncate text-sm text-gray-700">
+          {order.customer_name} · <span className="font-semibold text-gray-900">{formatCurrency(Number(order.total), currency)}</span>
         </p>
-        <p className="text-xs text-gray-400">{timeAgo(order.created_at)}</p>
+        <p className="mt-0.5 text-xs tabular-nums text-gray-400">{timeAgo(order.created_at)}</p>
       </Link>
       {next && (
-        <Button size="sm" variant={order.status === 'pending' ? 'primary' : 'secondary'} disabled={busy} onClick={() => onAdvance(next)} className="shrink-0">
+        <Button
+          size="sm"
+          variant={isUrgent ? 'primary' : 'secondary'}
+          disabled={busy}
+          onClick={() => onAdvance(next)}
+          className="min-h-9 shrink-0"
+          aria-label={`${ORDER_STATUS_ACTION_LABELS[next]} — ${order.order_number}`}
+        >
           {ORDER_STATUS_ACTION_LABELS[next]}
         </Button>
       )}
@@ -78,58 +74,61 @@ export function CommerceDashboard({
   })
 
   return (
-    <div className="mt-6 space-y-6">
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-              <ShoppingBag size={17} className="text-gray-400" aria-hidden /> Commandes à traiter
-              {stats.ordersToProcess.length > 0 && <Badge tone="warning">{stats.ordersToProcessCount}</Badge>}
-            </h3>
-            <Link to="/admin/commandes" className="inline-flex items-center gap-0.5 text-sm font-medium text-brand-700 hover:text-brand-800">
-              Toutes <ChevronRight size={14} aria-hidden />
-            </Link>
-          </div>
+    <div className="mt-5 space-y-4 sm:space-y-5">
+      <div className="grid gap-4 xl:grid-cols-5">
+        <Card className="rounded-2xl xl:col-span-3">
+          <DashboardSectionHeader
+            icon={ShoppingBag}
+            title="Commandes à traiter"
+            count={stats.ordersToProcessCount}
+            countTone="warning"
+            actionTo="/admin/commandes"
+            actionLabel="Toutes"
+            accent="brand"
+          />
           {stats.ordersToProcess.length === 0 ? (
-            <div className="mt-4 flex items-center gap-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              <CheckCircle2 size={18} className="shrink-0" aria-hidden />
-              <span>{stats.totalOrders === 0 ? 'Aucune commande pour le moment. Partagez le lien de votre site pour recevoir la première.' : 'Tout est à jour : aucune commande n’attend votre action.'}</span>
-            </div>
+            <DashboardOkNotice>
+              {stats.totalOrders === 0 ? 'Aucune commande pour le moment. Partagez le lien de votre site pour recevoir la première.' : 'Tout est à jour : aucune commande n’attend votre action.'}
+            </DashboardOkNotice>
           ) : (
-            <ul className="mt-2 divide-y divide-gray-100">
-              {stats.ordersToProcess.map((order) => (
-                <OrderRow
-                  key={order.id}
-                  order={order}
-                  currency={currency}
-                  busy={statusMutation.isPending}
-                  onAdvance={(status) => statusMutation.mutate({ id: order.id, status })}
-                />
-              ))}
-            </ul>
+            <>
+              <p className="mt-2 text-xs text-gray-400">Les plus anciennes d’abord — un client attend votre réponse.</p>
+              <ul className="mt-1 divide-y divide-gray-100">
+                {stats.ordersToProcess.map((order) => (
+                  <OrderRow
+                    key={order.id}
+                    order={order}
+                    currency={currency}
+                    busy={statusMutation.isPending}
+                    onAdvance={(status) => statusMutation.mutate({ id: order.id, status })}
+                  />
+                ))}
+              </ul>
+            </>
           )}
         </Card>
 
-        <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-              <AlertTriangle size={17} className="text-gray-400" aria-hidden /> Stock à surveiller
-            </h3>
-            <Link to="/admin/produits?stock=low" className="inline-flex items-center gap-0.5 text-sm font-medium text-brand-700 hover:text-brand-800">
-              Voir <ChevronRight size={14} aria-hidden />
-            </Link>
-          </div>
+        <Card className="rounded-2xl xl:col-span-2">
+          <DashboardSectionHeader
+            icon={TriangleAlert}
+            title="Stock à surveiller"
+            count={stats.stockAlerts.length}
+            countTone={stats.stockAlerts.some((p) => p.stock === 0) ? 'danger' : 'warning'}
+            actionTo="/admin/produits?stock=low"
+            actionLabel="Voir"
+            accent="amber"
+          />
           {stats.stockAlerts.length === 0 ? (
-            <div className="mt-4 flex items-center gap-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              <CheckCircle2 size={18} className="shrink-0" aria-hidden />
-              <span>Aucun produit sous le seuil d’alerte ({lowStockThreshold}).</span>
-            </div>
+            <DashboardOkNotice>Aucun produit sous le seuil d’alerte ({lowStockThreshold}).</DashboardOkNotice>
           ) : (
             <ul className="mt-2 divide-y divide-gray-100">
               {stats.stockAlerts.map((product) => (
                 <li key={product.id}>
-                  <Link to={`/admin/produits/${product.id}`} className="flex items-center justify-between gap-3 py-3 text-sm hover:text-brand-700">
-                    <span className="min-w-0 truncate text-gray-800">{product.name}</span>
+                  <Link
+                    to={`/admin/produits/${product.id}`}
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors hover:bg-gray-50"
+                  >
+                    <span className="min-w-0 truncate font-medium text-gray-800">{product.name}</span>
                     {product.stock === 0 ? (
                       <Badge tone="danger" className="shrink-0"><PackageX size={12} aria-hidden /> Rupture</Badge>
                     ) : (
@@ -143,22 +142,25 @@ export function CommerceDashboard({
         </Card>
       </div>
 
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${advancedAnalytics ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
-        <Kpi icon={Wallet} label="CA aujourd’hui" value={formatCurrency(stats.revenueToday, currency)} hint={`${stats.ordersToday} commande${stats.ordersToday > 1 ? 's' : ''}`} to="/admin/commandes" />
-        <Kpi icon={Eye} label="Visites aujourd’hui" value={String(stats.visitsToday)} hint={`${stats.visitors30d} visiteurs sur 30 jours`} />
-        <Kpi icon={ShoppingBag} label="Commandes" value={String(stats.totalOrders)} hint={`${stats.activeProducts} produit${stats.activeProducts > 1 ? 's' : ''} actif${stats.activeProducts > 1 ? 's' : ''}`} to="/admin/commandes" />
-        <Kpi icon={Wallet} label="CA total" value={formatCurrency(stats.salesTotal, currency)} hint="hors commandes annulées" />
-        {advancedAnalytics && <Kpi icon={ShoppingBag} label="Panier moyen" value={formatCurrency(stats.averageOrderValue, currency)} />}
+      <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${advancedAnalytics ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+        <DashboardKpi icon={Wallet} accent="emerald" label="CA aujourd’hui" value={formatCurrency(stats.revenueToday, currency)} hint={`${stats.ordersToday} commande${stats.ordersToday > 1 ? 's' : ''}`} to="/admin/commandes" />
+        <DashboardKpi icon={Eye} accent="sky" label="Visites aujourd’hui" value={String(stats.visitsToday)} hint={`${stats.visitors30d} visiteurs · 30 j`} />
+        <DashboardKpi icon={ShoppingBag} accent="brand" label="Commandes" value={String(stats.totalOrders)} hint={`${stats.activeProducts} produit${stats.activeProducts > 1 ? 's' : ''} actif${stats.activeProducts > 1 ? 's' : ''}`} to="/admin/commandes" />
+        <DashboardKpi icon={TrendingUp} accent="ink" label="CA total" value={formatCurrency(stats.salesTotal, currency)} hint="hors commandes annulées" />
+        {advancedAnalytics && <div className="col-span-2 sm:col-span-1"><DashboardKpi icon={ChartColumn} accent="violet" label="Panier moyen" value={formatCurrency(stats.averageOrderValue, currency)} /></div>}
       </div>
 
       {advancedAnalytics ? (
-        <Card>
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900">Produits les plus vendus</h3>
-            <Link to="/admin/produits" className="text-sm font-medium text-brand-700">Gérer les produits</Link>
-          </div>
+        <Card className="rounded-2xl">
+          <DashboardSectionHeader
+            icon={ChartColumn as LucideIcon}
+            title="Produits les plus vendus"
+            actionTo="/admin/produits"
+            actionLabel="Gérer les produits"
+            accent="violet"
+          />
           {stats.topProducts.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-500">Les meilleures ventes apparaîtront après votre première commande.</p>
+            <DashboardIdleNotice message="Les meilleures ventes apparaîtront après votre première commande." />
           ) : (
             <ol className="mt-3 divide-y divide-gray-100">
               {stats.topProducts.map((product, index) => {
@@ -167,16 +169,16 @@ export function CommerceDashboard({
                   <li key={product.name} className="py-3 text-sm">
                     <div className="flex items-center justify-between gap-4">
                       <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{index + 1}</span>
-                        <span className="truncate text-gray-800">{product.name}</span>
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${index === 0 ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700'}`}>{index + 1}</span>
+                        <span className="truncate font-medium text-gray-800">{product.name}</span>
                       </span>
-                      <span className="shrink-0 text-right">
+                      <span className="shrink-0 text-right tabular-nums">
                         <strong className="block text-gray-900">{product.quantity} vendu{product.quantity > 1 ? 's' : ''}</strong>
                         <span className="text-xs text-gray-500">{formatCurrency(product.revenue, currency)}</span>
                       </span>
                     </div>
-                    <div className="ml-10 mt-2 h-1.5 rounded-full bg-gray-100">
-                      <div className="h-1.5 rounded-full bg-brand-400" style={{ width: `${barWidth}%` }} />
+                    <div className="ml-10 mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all" style={{ width: `${barWidth}%` }} />
                     </div>
                   </li>
                 )
@@ -185,13 +187,18 @@ export function CommerceDashboard({
           )}
         </Card>
       ) : (
-        <Card>
+        <Card className="rounded-2xl border-brand-100 bg-gradient-to-br from-brand-50/70 to-white">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-base font-semibold text-gray-900">Produits les plus vendus</h3>
-              <p className="mt-1 text-sm text-gray-500">Découvrez ce qui se vend le mieux dans votre boutique.</p>
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+                <ChartColumn size={18} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-semibold text-gray-900">Produits les plus vendus</h3>
+                <p className="mt-1 text-sm text-gray-500">Découvrez ce qui se vend le mieux dans votre boutique.</p>
+              </div>
             </div>
-            <Button variant="secondary" onClick={() => openUpgrade('analytics')}>
+            <Button variant="secondary" onClick={() => openUpgrade('analytics')} className="min-h-10">
               Voir le détail
             </Button>
           </div>
