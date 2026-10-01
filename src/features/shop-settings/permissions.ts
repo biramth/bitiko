@@ -10,12 +10,13 @@ export type Area =
   | 'team_settings'
   | 'notifications'
   | 'catalog_write'
+  | 'notes'
 
 const DENIED: Record<ShopRole, Area[]> = {
   owner: [],
   manager: ['billing', 'team_settings', 'notifications'],
   // Le vendeur suit les commandes, les clients et l'agenda ; il ne touche ni aux chiffres, ni au catalogue, ni aux réglages.
-  vendeur: ['finance', 'customize', 'settings', 'billing', 'team_settings', 'notifications', 'catalog_write'],
+  vendeur: ['finance', 'customize', 'settings', 'billing', 'team_settings', 'notifications', 'catalog_write', 'notes'],
 }
 
 /** Rôle inconnu (chargement) : autorisé, pour ne pas faire clignoter l'interface du propriétaire. */

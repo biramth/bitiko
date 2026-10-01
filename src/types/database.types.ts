@@ -204,6 +204,264 @@ export type Database = {
           },
         ]
       }
+      shop_notes: {
+        Row: {
+          body: string
+          color: string
+          created_at: string
+          created_by: string | null
+          id: string
+          pinned: boolean
+          shop_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pinned?: boolean
+          shop_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pinned?: boolean
+          shop_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_notes_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tontines: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string
+          frequency: string
+          goal_label: string | null
+          id: string
+          installment_amount: number
+          name: string
+          note: string | null
+          shop_id: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          frequency?: string
+          goal_label?: string | null
+          id?: string
+          installment_amount: number
+          name: string
+          note?: string | null
+          shop_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          frequency?: string
+          goal_label?: string | null
+          id?: string
+          installment_amount?: number
+          name?: string
+          note?: string | null
+          shop_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tontines_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tontine_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          finance_entry_id: string | null
+          id: string
+          installment_amount: number | null
+          joined_on: string
+          name: string
+          note: string | null
+          phone: string | null
+          settled_amount: number | null
+          settled_on: string | null
+          settlement_kind: string | null
+          settlement_note: string | null
+          shop_id: string
+          status: string
+          target_amount: number
+          target_label: string | null
+          tontine_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          finance_entry_id?: string | null
+          id?: string
+          installment_amount?: number | null
+          joined_on?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          settled_amount?: number | null
+          settled_on?: string | null
+          settlement_kind?: string | null
+          settlement_note?: string | null
+          shop_id: string
+          status?: string
+          target_amount: number
+          target_label?: string | null
+          tontine_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          finance_entry_id?: string | null
+          id?: string
+          installment_amount?: number | null
+          joined_on?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          settled_amount?: number | null
+          settled_on?: string | null
+          settlement_kind?: string | null
+          settlement_note?: string | null
+          shop_id?: string
+          status?: string
+          target_amount?: number
+          target_label?: string | null
+          tontine_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tontine_members_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "finance_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tontine_members_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tontine_members_tontine_id_fkey"
+            columns: ["tontine_id"]
+            isOneToOne: false
+            referencedRelation: "tontines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tontine_contributions: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          member_id: string
+          note: string | null
+          paid_on: string
+          payment_method: string | null
+          shop_id: string
+          tontine_id: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id: string
+          note?: string | null
+          paid_on?: string
+          payment_method?: string | null
+          shop_id?: string
+          tontine_id?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_id?: string
+          note?: string | null
+          paid_on?: string
+          payment_method?: string | null
+          shop_id?: string
+          tontine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tontine_contributions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "tontine_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tontine_contributions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tontine_contributions_tontine_id_fkey"
+            columns: ["tontine_id"]
+            isOneToOne: false
+            referencedRelation: "tontines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_settings: {
         Row: {
           close_time: string
@@ -2071,6 +2329,40 @@ export type Database = {
       finance_top_items: {
         Args: { p_from: string; p_limit?: number; p_shop_id: string; p_to: string }
         Returns: { amount: number; kind: string; name: string; quantity: number }[]
+      }
+      cancel_tontine_contribution: {
+        Args: { p_contribution_id: string; p_reason: string }
+        Returns: undefined
+      }
+      reopen_tontine_member: {
+        Args: { p_member_id: string }
+        Returns: undefined
+      }
+      settle_tontine_member: {
+        Args: { p_kind: string; p_member_id: string; p_note?: string | null; p_record_income?: boolean; p_settled_on: string }
+        Returns: number
+      }
+      shop_notes_feed: {
+        Args: { p_limit?: number; p_shop_id: string }
+        Returns: {
+          amount: number | null
+          note: string
+          noted_at: string
+          on_date: string | null
+          person: string | null
+          source: string
+          sub_id: string | null
+          target_id: string
+          title: string
+        }[]
+      }
+      tontine_member_balances: {
+        Args: { p_tontine_id: string }
+        Returns: { contributions_count: number; last_paid_on: string | null; member_id: string; saved: number }[]
+      }
+      tontine_summaries: {
+        Args: { p_shop_id: string }
+        Returns: { collected: number; members_count: number; paid_out: number; settled_members: number; tontine_id: string }[]
       }
       get_booking_slots: {
         Args: { p_date: string; p_service_id: string; p_shop_id: string; p_team_member_id: string | null }

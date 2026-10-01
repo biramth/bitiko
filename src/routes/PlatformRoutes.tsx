@@ -81,6 +81,9 @@ const AppointmentsPage = lazy(() =>
   import('@/pages/admin/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })),
 )
 const FinancePage = lazy(() => import('@/pages/admin/FinancePage').then((m) => ({ default: m.FinancePage })))
+const TontinesPage = lazy(() => import('@/pages/admin/TontinesPage').then((m) => ({ default: m.TontinesPage })))
+const TontineDetailPage = lazy(() => import('@/pages/admin/TontineDetailPage').then((m) => ({ default: m.TontineDetailPage })))
+const NotesPage = lazy(() => import('@/pages/admin/NotesPage').then((m) => ({ default: m.NotesPage })))
 const OrderPrintPage = lazy(() =>
   import('@/pages/admin/OrderPrintPage').then((m) => ({ default: m.OrderPrintPage })),
 )
@@ -305,6 +308,11 @@ export function PlatformRoutes() {
               </Route>
               <Route element={<RequireArea area="finance" />}>
                 <Route path="gestion" element={standalone(<FinancePage />)} />
+                <Route path="tontines" element={standalone(<TontinesPage />)} />
+                <Route path="tontines/:id" element={standalone(<TontineDetailPage />)} />
+              </Route>
+              <Route element={<RequireArea area="notes" />}>
+                <Route path="notes" element={standalone(<NotesPage />)} />
               </Route>
               <Route element={<RequireArea area="customize" />}>
                 <Route element={<RequireCapabilities capabilities={['HAS_SHOP']} />}>
