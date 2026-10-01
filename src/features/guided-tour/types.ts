@@ -27,6 +27,8 @@ export interface TourStep {
   /** Capability HAS_* requise : l'étape est retirée pour un métier qui ne
    *  l'a pas (ex. pas de « Commandes » pour un salon). Inconnue = conservée. */
   capability?: string
+  /** Zone d'accès requise : l'étape est retirée pour un rôle qui ne voit pas cet élément (ex. Gestion pour un vendeur). */
+  area?: Area
 }
 
 export interface GuidedTour {

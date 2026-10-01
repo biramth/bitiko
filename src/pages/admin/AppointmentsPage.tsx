@@ -172,10 +172,11 @@ export function AppointmentsPage() {
         subtitle="Vos clients réservent sur votre site : leurs demandes arrivent ici. Confirmez-les pour bloquer le créneau."
         actions={
           <>
-          <Button variant="secondary" icon={<Clock size={15} aria-hidden />} onClick={() => document.getElementById('booking-hours')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Button data-guide="guide-rdv-horaires" variant="secondary" icon={<Clock size={15} aria-hidden />} onClick={() => document.getElementById('booking-hours')?.scrollIntoView({ behavior: 'smooth' })}>
             Mes horaires
           </Button>
           <Button
+            data-guide="guide-rdv-ajouter"
             icon={<Plus size={15} aria-hidden />}
             onClick={() => {
               createMutation.reset()
@@ -198,7 +199,7 @@ export function AppointmentsPage() {
         </Card>
       )}
 
-      <div className="mt-5 flex flex-col gap-4">
+      <div className="mt-5 flex flex-col gap-4" data-guide="guide-rdv-agenda">
         <DayNavigator
           date={date}
           onChange={(next) => {

@@ -75,7 +75,7 @@ export function TontinesPage() {
       <PageHeader
         title="Tontines"
         subtitle="Vos clients épargnent chez vous pour Tabaski, la rentrée ou les fêtes : notez chaque versement, suivez les retards et faites la remise."
-        actions={tontines.length > 0 && <Button icon={<Plus size={15} aria-hidden />} onClick={startCreate}>Nouvelle tontine</Button>}
+        actions={tontines.length > 0 && <Button data-guide="guide-nouvelle-tontine" icon={<Plus size={15} aria-hidden />} onClick={startCreate}>Nouvelle tontine</Button>}
       />
 
       <div className="mt-5 space-y-4">
@@ -89,7 +89,7 @@ export function TontinesPage() {
               icon={PiggyBank}
               title="Lancez votre première tontine"
               description="Choisissez un montant et un rythme, inscrivez vos clients, puis encaissez leurs versements en un geste. Bitiko tient le carnet : l’argent reste entre vos mains."
-              action={<Button icon={<Plus size={15} aria-hidden />} onClick={startCreate}>Créer une tontine</Button>}
+              action={<Button data-guide="guide-nouvelle-tontine" icon={<Plus size={15} aria-hidden />} onClick={startCreate}>Créer une tontine</Button>}
             />
           </Card>
         ) : (
