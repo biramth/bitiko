@@ -1,6 +1,6 @@
 # PHASE 24 — Tontine commerciale et notes
 
-> État : 🟨 EN COURS — 2026-10-01 (code prêt ; **migrations 0156, 0157 et 0158 appliquées sur dev** le 2026-10-01, prod non touchée).
+> État : 🟨 EN COURS — 2026-10-01 (code prêt ; **migrations 0156 → 0159 appliquées sur dev et prod** le 2026-10-01).
 
 ## Objectif
 
@@ -41,7 +41,7 @@ multipliées par le versement du membre et plafonnées à son objectif. L'object
 - **Mes notes** : bloc-notes libre (`shop_notes`, 0157) — saisie rapide, titre facultatif, couleur, épinglage, recherche sans
   accents, modification et suppression. Propriétaire et managers seulement (une note peut contenir des prix d'achat).
 - **Toutes les notes** : le bloc-notes plus toutes les notes laissées sur les fiches, regroupées par la fonction
-  `shop_notes_feed` (0158) : note interne des commandes, journal des finances, tontines (tontine, membre, versement, remise,
+  `shop_notes_feed` (0158, corrigée par 0159 : `reservations` n'a pas de `updated_at` en prod) : note interne des commandes, journal des finances, tontines (tontine, membre, versement, remise,
   motif d'annulation), rendez-vous et réservations (colonnes prêtes, aucun écran ne les remplit encore). Filtre par origine,
   recherche, lien « Ouvrir la fiche » (une note de membre ouvre directement sa fiche via `?membre=`). Lecture seule : chaque note
   se modifie sur sa fiche d'origine. Pas de plafond par plan.

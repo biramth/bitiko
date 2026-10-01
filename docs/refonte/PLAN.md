@@ -74,7 +74,7 @@ OLD SYSTEM → COMPATIBILITY LAYER → NEW SYSTEM → MIGRATION → REMOVE LEGAC
 | 21 | [Back-office commerçant](PHASE-21-backoffice-commerce.md) | Dashboard commerce, commandes (détail, bon imprimable, export), droits par rôle | 18, 19 | 🟨 EN COURS — 2026-09-26 |
 | 22 | [Alertes marchand et back-office équipe](PHASE-22-alertes-et-backoffice-equipe.md) | Alertes commande/stock par défaut, pilotage plateforme (boutiques, abonnements, journal) | 18, 21 | 🟨 EN COURS — 2026-09-26 (0131–0132 appliquées sur dev, 0133 appliquée sur dev) |
 | 23 | [Référencement (SEO)](PHASE-23-referencement-seo.md) | Prérendu des pages publiques, pages solutions par métier, maillage, données structurées | 20 | 🟨 EN COURS — 2026-09-26 |
-| 24 | [Tontine commerciale et notes](PHASE-24-tontines.md) | Registre de l'épargne des clients (Tabaski, rentrée…) : versements saisis à la main, retards, reçus WhatsApp, remise ; bloc-notes et vue de toutes les notes | 19 | 🟨 EN COURS — 2026-10-01 (0156–0158 appliquées sur dev) |
+| 24 | [Tontine commerciale et notes](PHASE-24-tontines.md) | Registre de l'épargne des clients (Tabaski, rentrée…) : versements saisis à la main, retards, reçus WhatsApp, remise ; bloc-notes et vue de toutes les notes | 19 | 🟨 EN COURS — 2026-10-01 (0156–0159 appliquées sur dev et prod) |
 
 ## 4. Livrable de fin de phase (obligatoire, format imposé)
 

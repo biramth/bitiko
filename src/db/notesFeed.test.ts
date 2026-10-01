@@ -3,7 +3,7 @@ import path from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-/** Migration 0158 sur un vrai Postgres (PGlite) : toutes les notes des fiches, réservées au propriétaire et aux managers. */
+/** Migrations 0158-0159 sur un vrai Postgres (PGlite) : toutes les notes des fiches, réservées au propriétaire et aux managers. */
 
 const MIGRATIONS = path.resolve(import.meta.dirname, '../../supabase/migrations')
 const read = (name: string) => readFileSync(path.join(MIGRATIONS, name), 'utf8')
@@ -35,7 +35,7 @@ beforeAll(async () => {
     create table public.shop_subscriptions(shop_id uuid primary key, plan text not null, status text not null default 'active', current_period_end timestamptz);
     create table public.orders(id uuid primary key default gen_random_uuid(), shop_id uuid not null, order_number text not null, customer_name text not null, total numeric(12,2) not null default 0, notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
     create table public.appointments(id uuid primary key default gen_random_uuid(), shop_id uuid not null, customer_name text not null, service_name text, start_at timestamptz not null, notes text, created_at timestamptz not null default now());
-    create table public.reservations(id uuid primary key default gen_random_uuid(), shop_id uuid not null, customer_name text not null, party_size integer not null, start_at timestamptz not null, notes text, updated_at timestamptz not null default now());
+    create table public.reservations(id uuid primary key default gen_random_uuid(), shop_id uuid not null, customer_name text not null, party_size integer not null, start_at timestamptz not null, notes text, created_at timestamptz not null default now());
     insert into public.shops(id, owner_id) values ('${SHOP}', '${OWNER}'), ('${OTHER_SHOP}', '00000000-0000-0000-0000-0000000000b2');
     insert into public.shop_members values ('${SHOP}', '${MANAGER}', 'manager'), ('${SHOP}', '${VENDEUR}', 'vendeur');
   `)
@@ -46,7 +46,9 @@ beforeAll(async () => {
   await db.exec(read('0130_finance_tools.sql').split('-- ── Recettes automatiques')[0])
   await db.exec(read('0156_tontines.sql'))
   await db.exec(read('0158_notes_feed.sql'))
-  await db.exec(read('0158_notes_feed.sql'))
+  // Comme en prod : `reservations` sans `updated_at` (0159).
+  await db.exec(read('0159_notes_feed_reservations_fix.sql'))
+  await db.exec(read('0159_notes_feed_reservations_fix.sql'))
 
   await db.exec(`
     insert into orders(shop_id, order_number, customer_name, total, notes, updated_at) values
