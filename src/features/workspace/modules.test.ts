@@ -20,7 +20,7 @@ const COMMERCE_CAPS = new Set([
 describe('resolveModules', () => {
   it('shows every legacy module for a commerce capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, COMMERCE_CAPS, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'finance', 'customize', 'content'])
+    expect(keys).toEqual(['dashboard', 'orders', 'customers', 'products', 'team', 'finance', 'tontines', 'notes', 'customize', 'content'])
   })
 
   it('fails open to the full workspace when capabilities are unknown (null)', () => {
@@ -35,6 +35,8 @@ describe('resolveModules', () => {
       'services',
       'team',
       'finance',
+      'tontines',
+      'notes',
       'customize',
       'content',
     ])
@@ -52,12 +54,12 @@ describe('resolveModules', () => {
       'HAS_PROMOTIONS',
     ])
     const keys = resolveModules(WORKSPACE_MODULES, caps, { teamAccess: true }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'appointments', 'services', 'team', 'finance', 'customize', 'content'])
+    expect(keys).toEqual(['dashboard', 'appointments', 'services', 'team', 'finance', 'tontines', 'notes', 'customize', 'content'])
   })
 
   it('keeps only ungated modules (dashboard, finance) for a known-but-empty capability set', () => {
     const keys = resolveModules(WORKSPACE_MODULES, new Set(), { teamAccess: false }).map((m) => m.key)
-    expect(keys).toEqual(['dashboard', 'finance'])
+    expect(keys).toEqual(['dashboard', 'finance', 'tontines', 'notes'])
   })
 
   it('hides disabled modules and applies entitlement gates', () => {

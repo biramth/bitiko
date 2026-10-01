@@ -3,9 +3,11 @@ import {
   CalendarDays,
   LayoutDashboard,
   Newspaper,
+  PiggyBank,
   Package,
   Scissors,
   ShoppingBag,
+  StickyNote,
   Users,
   Wand2,
   Wallet,
@@ -54,6 +56,10 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
   // Finances : recettes, dépenses et bilan. Aucune capability requise (tout commerce a des
   // chiffres) ; la page elle-même est réservée au propriétaire et aux managers.
   { key: 'finance', label: 'Finances', to: '/admin/gestion', icon: Wallet, group: 'Gestion', guide: 'guide-nav-finances', enabled: true },
+  // Tontine commerciale : registre de l'épargne des clients, mêmes accès que Finances.
+  { key: 'tontines', label: 'Tontines', to: '/admin/tontines', icon: PiggyBank, group: 'Gestion', enabled: true },
+  // Bloc-notes libre du commerçant (propriétaire et managers).
+  { key: 'notes', label: 'Notes', to: '/admin/notes', icon: StickyNote, group: 'Gestion', enabled: true },
   // Personnaliser concerne tout le site client (vitrine), pas le commerce :
   // hors groupe, au niveau du tableau de bord. « Boutique » ne contient donc
   // plus que Produits et redevient 100 % commerce.

@@ -55,6 +55,10 @@ export interface Plan {
   financeExport: 'none' | 'csv' | 'pdf'
   /** Comparaison avec la période précédente et synthèse annuelle. */
   financeComparison: boolean
+  /** Tontines commerciales en cours. Miroir de plan_limits MAX_ACTIVE_TONTINES. */
+  maxActiveTontines: number | null
+  /** Membres par tontine. Miroir de MAX_TONTINE_MEMBERS. */
+  maxTontineMembers: number | null
   /** Référencement avancé des pages (titre, description, image de partage, exclusion Google).
    *  Les bases (balises automatiques, sitemap, aperçus de partage) restent pour tous. */
   advancedSeo: boolean
@@ -84,6 +88,8 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: 1,
     financeExport: 'pdf',
     financeComparison: false,
+    maxActiveTontines: 1,
+    maxTontineMembers: 20,
     advancedSeo: false,
   },
   essential: {
@@ -107,6 +113,8 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: 12,
     financeExport: 'pdf',
     financeComparison: false,
+    maxActiveTontines: 3,
+    maxTontineMembers: 100,
     advancedSeo: true,
   },
   pro: {
@@ -130,6 +138,8 @@ export const PLANS: Record<PlanKey, Plan> = {
     financeHistoryMonths: null,
     financeExport: 'pdf',
     financeComparison: true,
+    maxActiveTontines: null,
+    maxTontineMembers: null,
     advancedSeo: true,
   },
 }

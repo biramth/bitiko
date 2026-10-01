@@ -27,6 +27,7 @@ export const EXPENSE_CATEGORIES: FinanceCategory[] = [
  *  et les rendez-vous terminés sont comptés automatiquement). */
 export const INCOME_CATEGORIES: FinanceCategory[] = [
   { code: 'vente_comptoir', label: 'Ventes en boutique / au comptoir', kind: 'income', hint: 'Clients venus sans commander en ligne' },
+  { code: 'tontine', label: 'Remises de tontine', kind: 'income', hint: 'Marchandise remise à un membre de tontine (ajouté depuis Tontines)' },
   { code: 'autres_recettes', label: 'Autres recettes', kind: 'income', hint: 'Subvention, prêt reçu, vente de matériel…' },
 ]
 

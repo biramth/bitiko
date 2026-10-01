@@ -17,6 +17,8 @@ export type UpgradeMomentKey =
   | 'finance-history'
   | 'finance-comparison'
   | 'finance-entries'
+  | 'tontines'
+  | 'tontine-members'
   | 'category-tiles'
   | 'analytics'
   | 'seo'
@@ -153,6 +155,26 @@ const BUILDERS: Record<UpgradeMomentKey, Builder> = {
     title: 'Vos comptes s’étoffent.',
     body: 'Avec Essentiel, notez autant de dépenses et de recettes que nécessaire, sans plafond mensuel.',
     cta: continueWith('essential'),
+  }),
+  tontines: quota({
+    essential: {
+      title: 'Vos clients épargnent pour plusieurs occasions ?',
+      body: `Avec Essentiel, menez jusqu'à ${PLANS.essential.maxActiveTontines} tontines en même temps (Tabaski, rentrée, fêtes…).`,
+    },
+    pro: {
+      title: 'Vos tontines se multiplient.',
+      body: 'Avec Pro, menez autant de tontines que vous le souhaitez.',
+    },
+  }),
+  'tontine-members': quota({
+    essential: {
+      title: 'Votre tontine attire du monde.',
+      body: `Avec Essentiel, accueillez jusqu'à ${PLANS.essential.maxTontineMembers} membres par tontine.`,
+    },
+    pro: {
+      title: 'Votre tontine attire encore plus de monde.',
+      body: 'Avec Pro, accueillez autant de membres que vous le souhaitez.',
+    },
   }),
   'category-tiles': () => ({
     plan: 'essential',

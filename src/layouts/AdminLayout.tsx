@@ -122,7 +122,7 @@ function SidebarNav({ collapsed, onNavigate = () => {} }: { collapsed: boolean; 
   // (still loading) keeps everything visible to avoid flicker for owners.
   const { role: shopRole } = useShopRole()
   // Chaque rôle ne voit que ce qu'il peut utiliser (voir permissions.ts) : finances et vitrine hors du vendeur.
-  const NAV_AREAS: Record<string, Area> = { finance: 'finance', customize: 'customize' }
+  const NAV_AREAS: Record<string, Area> = { finance: 'finance', tontines: 'finance', notes: 'notes', customize: 'customize' }
   const groups = allGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => !NAV_AREAS[item.key] || canAccess(shopRole, NAV_AREAS[item.key])) }))
     .filter((group) => group.items.length > 0)
