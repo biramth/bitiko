@@ -74,7 +74,7 @@ export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
 
   return (
     <div className="space-y-5">
-      <div role="tablist" aria-label="Période du bilan" className="flex flex-wrap gap-1.5">
+      <div role="tablist" aria-label="Période du bilan" data-guide="guide-bilan-periode" className="flex flex-wrap gap-1.5">
         {PRESETS.map((key) => {
           const locked = !isPeriodAllowed(resolvePeriod(key), plan.financeHistoryMonths)
           const active = key === preset
@@ -204,22 +204,24 @@ export function BilanView({ shop, plan }: { shop: Shop; plan: Plan }) {
             </Card>
           </div>
 
-          <Card>
-            <h2 className="text-base font-semibold text-gray-900">Télécharger votre bilan</h2>
-            <p className="mt-0.5 text-sm text-gray-500">Pour votre comptable, votre banque ou vos archives.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="secondary" icon={<Download size={15} aria-hidden />} onClick={downloadCsv}>
-                Tableur Excel (CSV)
-              </Button>
-              <Link
-                to={`/admin/gestion/bilan?periode=${preset}`}
-                target="_blank"
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
-              >
-                <FileText size={15} aria-hidden /> Bilan PDF imprimable
-              </Link>
-            </div>
-          </Card>
+          <div data-guide="guide-bilan-export">
+            <Card>
+              <h2 className="text-base font-semibold text-gray-900">Télécharger votre bilan</h2>
+              <p className="mt-0.5 text-sm text-gray-500">Pour votre comptable, votre banque ou vos archives.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="secondary" icon={<Download size={15} aria-hidden />} onClick={downloadCsv}>
+                  Tableur Excel (CSV)
+                </Button>
+                <Link
+                  to={`/admin/gestion/bilan?periode=${preset}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
+                >
+                  <FileText size={15} aria-hidden /> Bilan PDF imprimable
+                </Link>
+              </div>
+            </Card>
+          </div>
 
           <p className="text-xs text-gray-400">
             Bilan simple, à titre de gestion : recettes = commandes payées ou livrées + rendez-vous terminés + recettes saisies ; dépenses = celles de votre journal. Ce n’est pas une comptabilité légale.

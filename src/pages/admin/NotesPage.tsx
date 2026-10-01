@@ -96,7 +96,7 @@ export function NotesPage() {
     <div className="space-y-5">
       <PageHeader title="Notes" subtitle="Rappels, idées, infos fournisseurs… tout ce que vous ne voulez pas oublier, au même endroit." />
 
-      <div role="tablist" aria-label="Notes affichées" className="grid grid-cols-2 gap-2 sm:inline-grid sm:grid-cols-[repeat(2,max-content)]">
+      <div role="tablist" aria-label="Notes affichées" data-guide="guide-notes-onglets" className="grid grid-cols-2 gap-2 sm:inline-grid sm:grid-cols-[repeat(2,max-content)]">
         {([
           { key: 'mine', label: 'Mes notes', hint: 'Le bloc-notes', icon: NotebookPen },
           { key: 'all', label: 'Toutes les notes', hint: 'Commandes, tontines, finances…', icon: Layers },
@@ -219,6 +219,7 @@ function Composer({ pending, onCreate }: { pending: boolean; onCreate: (input: N
 
   return (
     <form
+      data-guide="guide-notes-saisie"
       className={`rounded-xl p-4 shadow-sm ring-1 ${noteCardClass(color)}`}
       onSubmit={async (e) => {
         e.preventDefault()

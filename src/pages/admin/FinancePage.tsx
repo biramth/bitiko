@@ -46,7 +46,7 @@ export function FinancePage() {
         subtitle="Suivez ce que vous gagnez et ce que vous dépensez, et sortez votre bilan en un clic."
       />
 
-      <div role="tablist" aria-label="Sections des finances" className="mt-5 grid grid-cols-2 gap-2 sm:inline-grid sm:grid-cols-[repeat(2,max-content)]">
+      <div role="tablist" aria-label="Sections des finances" data-guide="guide-finance-onglets" className="mt-5 grid grid-cols-2 gap-2 sm:inline-grid sm:grid-cols-[repeat(2,max-content)]">
         {TABS.map(({ key, label, hint, icon: Icon }) => {
           const active = key === tab
           return (

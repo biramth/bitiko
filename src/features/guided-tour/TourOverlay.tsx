@@ -128,6 +128,7 @@ function TooltipCard({
   onPrev,
   onNext,
   onClose,
+  onFinish,
 }: {
   step: TourStep
   total: number
@@ -136,8 +137,15 @@ function TooltipCard({
   onPrev: () => void
   onNext: () => void
   onClose: () => void
+  onFinish: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const primaryRef = useRef<HTMLButtonElement>(null)
+
+  // Le focus suit la visite : Entrée ou Espace font avancer, comme au clavier d'un lecteur d'écran.
+  useEffect(() => {
+    primaryRef.current?.focus({ preventScroll: true })
+  }, [index])
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
   const [dock, setDock] = useState<'top' | 'bottom' | null>(null)
 
@@ -167,7 +175,9 @@ function TooltipCard({
   return (
     <div
       ref={ref}
-      role="tooltip"
+      role="group"
+      aria-roledescription="étape"
+      aria-label={`Étape ${index + 1} sur ${total} : ${step.title}`}
       className={`pointer-events-auto fixed z-[51] rounded-2xl border border-sand-200 bg-white p-4 shadow-2xl shadow-ink-900/20 ${
         dock ? 'max-h-[45vh] touch-pan-y overflow-y-auto' : 'w-80 max-w-[calc(100vw-2rem)]'
       }`}
@@ -201,16 +211,21 @@ function TooltipCard({
           <X size={15} aria-hidden />
         </button>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-gray-600">{step.body}</p>
+      <p className="mt-2 text-sm leading-relaxed text-gray-600" aria-live="polite">{step.body}</p>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1" aria-hidden>
-          {Array.from({ length: total }, (_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 rounded-full transition-all ${i === index ? 'w-4 bg-brand-600' : 'w-1.5 bg-gray-200'}`}
-            />
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1" aria-hidden>
+            {Array.from({ length: total }, (_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${i === index ? 'w-4 bg-brand-600' : i < index ? 'w-1.5 bg-brand-300' : 'w-1.5 bg-gray-200'}`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] tabular-nums text-gray-400">
+            {index + 1}/{total}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           {!isFirst && (
@@ -223,8 +238,9 @@ function TooltipCard({
             </button>
           )}
           <button
+            ref={primaryRef}
             type="button"
-            onClick={isLast ? onClose : onNext}
+            onClick={isLast ? onFinish : onNext}
             className="flex min-h-11 items-center gap-1 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 sm:min-h-0 sm:px-3 sm:text-xs"
           >
             {isLast ? 'Terminer' : 'Suivant'}
@@ -245,12 +261,14 @@ export function TourOverlay({
   onPrev,
   onNext,
   onClose,
+  onFinish,
 }: {
   tour: GuidedTour
   stepIndex: number
   onPrev: () => void
   onNext: () => void
   onClose: () => void
+  onFinish: () => void
 }) {
   const step = tour.steps[stepIndex]
   const highlight = useHighlightRect(step?.target, stepIndex)
@@ -287,6 +305,7 @@ export function TourOverlay({
           onPrev={onPrev}
           onNext={onNext}
           onClose={onClose}
+          onFinish={onFinish}
         />
       ) : null}
     </div>,
